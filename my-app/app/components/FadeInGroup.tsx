@@ -40,6 +40,7 @@ export default function FadeInGroup({
     <div ref={ref} className={className}>
       {children.map((child, i) => (
         <div
+          // biome-ignore lint/suspicious/noArrayIndexKey: static list, order never changes
           key={i}
           className={itemClassName}
           style={{

@@ -1535,8 +1535,8 @@ p {
   max-width: 28ch;
 }
 @media (max-width: 699px) {
-  .values-icon {
-    margin-top: -12px !important;
+  .values-head h2 .values-icon {
+    margin-top: -12px;
   }
 }
 .values-list {
@@ -1724,7 +1724,7 @@ p {
   margin: 16px 0;
   padding-left: 0;
 }
-.policy-list li {
+.policy-section-body .policy-list li {
   font-size: 15.5px;
   color: var(--grey-700);
   line-height: 1.65;
@@ -1786,8 +1786,8 @@ p {
   text-transform: uppercase;
   color: var(--grey-500);
 }
-.policy-vendor p {
-  margin-bottom: 0 !important;
+.policy-section-body .policy-vendor p {
+  margin-bottom: 0;
 }
 
 /* =========================================================
