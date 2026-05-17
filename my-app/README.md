@@ -42,7 +42,7 @@ GitHub Actions uses two Vercel workflows:
 - `.github/workflows/preview.yaml` runs on pushes to non-`main` branches and creates Vercel Preview deployments.
 - `.github/workflows/production.yaml` runs on pushes to `main` and creates Vercel Production deployments.
 
-Each workflow installs dependencies with `pnpm install --frozen-lockfile`, then runs `pnpm lint`, `pnpm test:run`, and `pnpm build` from this `my-app` directory before deploying with the Vercel CLI.
+Each workflow installs dependencies with `pnpm install --frozen-lockfile`, then runs `pnpm lint` and `pnpm test:run` from this `my-app` directory. The Vercel CLI then pulls the matching Vercel environment variables and runs `vercel build` before deploying the prebuilt output.
 
 Preview deployments only run after branch pushes, because GitHub does not expose repository secrets to forked pull requests.
 
