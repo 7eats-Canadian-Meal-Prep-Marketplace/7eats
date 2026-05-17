@@ -40,7 +40,7 @@ export default function FadeInGroup({
     <div ref={ref} className={className}>
       {children.map((child, i) => (
         <div
-          key={child.key}
+          key={i}
           className={itemClassName}
           style={{
             opacity: active ? 1 : 0,
