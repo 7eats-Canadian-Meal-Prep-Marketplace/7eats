@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import CalendlyButton from "./CalendlyButton";
 
 interface CtaSectionProps {
@@ -11,15 +12,39 @@ export default function CtaSection({
   isTeamPage: _isTeamPage = false,
 }: CtaSectionProps) {
   const [email, setEmail] = useState("");
-  const [status, setStatus] = useState<"idle" | "success">("idle");
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setStatus("success");
-    setTimeout(() => {
-      setStatus("idle");
+
+    let response: Response;
+    try {
+      response = await fetch("/api/waitlist", {
+        method: "POST",
+        body: JSON.stringify({ email }),
+      });
+    } catch {
+      toast.error("Something went wrong. Please try again.");
+      return;
+    }
+
+    if (response.status === 200) {
+      toast.success("You're on the list!");
       setEmail("");
-    }, 2400);
+      return;
+    }
+
+    if (response.status === 409) {
+      toast.info("You're already on the list.");
+      setEmail("");
+      return;
+    }
+
+    if (response.status === 429) {
+      toast.error("Too many attempts. Try again later.");
+      return;
+    }
+
+    toast.error("Something went wrong. Please try again.");
   }
 
   return (
@@ -50,7 +75,7 @@ export default function CtaSection({
                 onChange={(e) => setEmail(e.target.value)}
               />
               <button type="submit" className="btn btn-primary">
-                {status === "success" ? "Added to waitlist" : "Notify me"}
+                Notify me
               </button>
             </div>
             <p className="cta-trust">
