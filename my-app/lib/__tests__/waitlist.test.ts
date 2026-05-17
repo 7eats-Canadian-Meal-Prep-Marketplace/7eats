@@ -1,9 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const mockReturning = vi.fn();
-const mockOnConflictDoNothing = vi.fn(() => ({ returning: mockReturning }));
-const mockValues = vi.fn(() => ({ onConflictDoNothing: mockOnConflictDoNothing }));
-const mockInsert = vi.fn(() => ({ values: mockValues }));
+let mockReturning = vi.fn();
+let mockOnConflictDoNothing: ReturnType<typeof vi.fn>;
+let mockValues: ReturnType<typeof vi.fn>;
+let mockInsert: ReturnType<typeof vi.fn>;
+
+// Create a factory function to build fresh mock chains
+function createMockChain() {
+  mockReturning = vi.fn();
+  mockOnConflictDoNothing = vi.fn(() => ({ returning: mockReturning }));
+  mockValues = vi.fn(() => ({ onConflictDoNothing: mockOnConflictDoNothing }));
+  mockInsert = vi.fn(() => ({ values: mockValues }));
+}
+
+createMockChain();
 
 vi.mock("@/db", () => ({
   db: { insert: mockInsert },
@@ -16,6 +26,7 @@ vi.mock("@/db/schema", () => ({
 describe("addToWaitlist", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    createMockChain();
   });
 
   it("returns true when a new row is inserted", async () => {
