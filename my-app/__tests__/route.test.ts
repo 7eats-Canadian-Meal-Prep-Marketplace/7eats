@@ -5,9 +5,9 @@ vi.mock("@/lib/hash", () => ({ hashIp: vi.fn(() => "hashed-ip") }));
 vi.mock("@/lib/rate-limit", () => ({ logAndCheckRateLimit: vi.fn() }));
 vi.mock("@/lib/waitlist", () => ({ addToWaitlist: vi.fn() }));
 
+import { POST } from "@/app/api/waitlist/route";
 import { logAndCheckRateLimit } from "@/lib/rate-limit";
 import { addToWaitlist } from "@/lib/waitlist";
-import { POST } from "@/app/api/waitlist/route";
 
 function makeRequest(
   body: unknown,
@@ -28,7 +28,7 @@ describe("POST /api/waitlist", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(logAndCheckRateLimit).mockResolvedValue(true);
-    vi.mocked(addToWaitlist).mockResolvedValue(undefined);
+    vi.mocked(addToWaitlist).mockResolvedValue(true);
   });
 
   it("returns 200 and calls addToWaitlist for a valid signup", async () => {
@@ -43,10 +43,17 @@ describe("POST /api/waitlist", () => {
     );
   });
 
-  it("returns 200 for a duplicate email (idempotent)", async () => {
+  it("returns 409 for a duplicate email", async () => {
+    vi.mocked(addToWaitlist).mockResolvedValue(false);
+
     const res = await POST(makeRequest({ email: "existing@example.com" }));
-    expect(res.status).toBe(200);
-    expect((await res.json()).success).toBe(true);
+    const body = await res.json();
+
+    expect(res.status).toBe(409);
+    expect(body).toEqual({
+      success: false,
+      message: "You're already on the list.",
+    });
   });
 
   it("returns 429 when rate limited", async () => {
