@@ -15,7 +15,9 @@ describe("addToWaitlist", () => {
     vi.clearAllMocks();
 
     mockOnConflictDoNothing = vi.fn().mockResolvedValue([]);
-    mockValues = vi.fn(() => ({ onConflictDoNothing: mockOnConflictDoNothing }));
+    mockValues = vi.fn(() => ({
+      onConflictDoNothing: mockOnConflictDoNothing,
+    }));
     vi.mocked(db.insert).mockReturnValue({ values: mockValues } as any);
   });
 

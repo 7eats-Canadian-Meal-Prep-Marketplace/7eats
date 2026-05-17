@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(bash *)",
+      "Bash(pnpm approve-builds *)",
+      "Bash(pnpm lint *)",
+      "Bash(pnpm format *)",
+      "Bash(grep -E \"^app\\\\\\\\\")",
+      "Bash(git restore *)",
+      "Bash(dir C:\\\\Users\\\\hntnz\\\\Documents\\\\7eats\\\\my-app\\\\public *)",
+      "Bash(dir C:\\\\Users\\\\hntnz\\\\Documents\\\\7eats *)"
+    ]
+  }
+}
