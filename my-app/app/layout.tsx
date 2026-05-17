@@ -41,7 +41,6 @@ export default function RootLayout({
         <BackToTop />
         <Toaster
           position="top-center"
-          expand={false}
           richColors={false}
           closeButton
         />

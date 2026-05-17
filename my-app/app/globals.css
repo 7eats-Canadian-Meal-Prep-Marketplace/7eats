@@ -1519,6 +1519,9 @@ p {
   --error-bg: var(--ink-2);
   --error-border: var(--grey-900);
   --error-text: var(--white);
+  --info-bg: var(--ink-2);
+  --info-border: var(--grey-900);
+  --info-text: var(--white);
   --border-radius: var(--radius-sm);
   font-family: var(--font);
 }
