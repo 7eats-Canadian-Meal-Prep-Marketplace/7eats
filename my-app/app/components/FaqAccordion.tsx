@@ -19,7 +19,7 @@ const FAQ_ITEMS: FaqItem[] = [
     id: "how-much",
     question: "How much do I keep per order?",
     answer:
-      "We charge a small platform fee to cover payment processing and operations. Details will be shared before launch. Founding cooks, the first 30 in Toronto, pay nothing for their first 90 days.",
+      "We charge a small platform fee to cover payment processing and operations. Details will be shared before launch. The first 30 cooks to join keep every dollar they make for 90 days straight.",
   },
   {
     id: "how-pickup",
@@ -37,13 +37,13 @@ const FAQ_ITEMS: FaqItem[] = [
     id: "need-cert",
     question: "Do I need a food-handler certificate to join?",
     answer:
-      "Yes. Ontario requires it for anyone preparing food commercially. If you don't have one yet, founding cooks get their certification sponsored by 7eats as part of the founding cook package.",
+      "Yes. Ontario requires it for anyone preparing food commercially. If you don't have one yet, we can point you in the right direction to get certified before you go live.",
   },
   {
     id: "which-neighbourhoods",
     question: "Which neighbourhoods is 7eats launching in?",
     answer:
-      "We're starting hyper-local in Scarborough, North York, and Etobicoke first, expanding into the rest of the GTA through 2026. If you're in a neighbourhood not listed, join the waitlist and we'll notify you when we reach you.",
+      "We're launching in Toronto. Join the waitlist and we'll reach out as soon as we're live in your area.",
   },
 ];
 
