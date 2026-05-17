@@ -11,11 +11,15 @@ function makeRequest(headers: Record<string, string>): NextRequest {
 
 describe("waitlistSchema", () => {
   it("accepts a valid email", () => {
-    expect(waitlistSchema.safeParse({ email: "user@example.com" }).success).toBe(true);
+    expect(
+      waitlistSchema.safeParse({ email: "user@example.com" }).success,
+    ).toBe(true);
   });
 
   it("rejects an invalid email format", () => {
-    expect(waitlistSchema.safeParse({ email: "not-an-email" }).success).toBe(false);
+    expect(waitlistSchema.safeParse({ email: "not-an-email" }).success).toBe(
+      false,
+    );
   });
 
   it("rejects a missing email field", () => {
@@ -24,7 +28,8 @@ describe("waitlistSchema", () => {
 
   it("rejects extra fields (strict mode)", () => {
     expect(
-      waitlistSchema.safeParse({ email: "user@example.com", role: "cook" }).success
+      waitlistSchema.safeParse({ email: "user@example.com", role: "cook" })
+        .success,
     ).toBe(false);
   });
 });

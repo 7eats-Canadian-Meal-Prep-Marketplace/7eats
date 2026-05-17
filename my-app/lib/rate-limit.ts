@@ -16,8 +16,8 @@ export async function logAndCheckRateLimit(ipHash: string): Promise<boolean> {
     .where(
       and(
         eq(rateLimitLog.ipHash, ipHash),
-        gt(rateLimitLog.attemptedAt, windowStart)
-      )
+        gt(rateLimitLog.attemptedAt, windowStart),
+      ),
     );
 
   return result[0].count <= MAX_ATTEMPTS;

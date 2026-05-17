@@ -5,13 +5,13 @@ vi.mock("@/lib/hash", () => ({ hashIp: vi.fn(() => "hashed-ip") }));
 vi.mock("@/lib/rate-limit", () => ({ logAndCheckRateLimit: vi.fn() }));
 vi.mock("@/lib/waitlist", () => ({ addToWaitlist: vi.fn() }));
 
+import { POST } from "@/app/api/waitlist/route";
 import { logAndCheckRateLimit } from "@/lib/rate-limit";
 import { addToWaitlist } from "@/lib/waitlist";
-import { POST } from "@/app/api/waitlist/route";
 
 function makeRequest(
   body: unknown,
-  overrideHeaders: Record<string, string> = {}
+  overrideHeaders: Record<string, string> = {},
 ): NextRequest {
   return new NextRequest("http://localhost/api/waitlist", {
     method: "POST",
@@ -28,7 +28,7 @@ describe("POST /api/waitlist", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(logAndCheckRateLimit).mockResolvedValue(true);
-    vi.mocked(addToWaitlist).mockResolvedValue(undefined);
+    vi.mocked(addToWaitlist).mockResolvedValue(true);
   });
 
   it("returns 200 and calls addToWaitlist for a valid signup", async () => {
@@ -37,13 +37,23 @@ describe("POST /api/waitlist", () => {
 
     expect(res.status).toBe(200);
     expect(body).toEqual({ success: true, message: "You're on the list!" });
-    expect(vi.mocked(addToWaitlist)).toHaveBeenCalledWith("user@example.com", "hashed-ip");
+    expect(vi.mocked(addToWaitlist)).toHaveBeenCalledWith(
+      "user@example.com",
+      "hashed-ip",
+    );
   });
 
-  it("returns 200 for a duplicate email (idempotent)", async () => {
+  it("returns 409 for a duplicate email", async () => {
+    vi.mocked(addToWaitlist).mockResolvedValue(false);
+
     const res = await POST(makeRequest({ email: "existing@example.com" }));
-    expect(res.status).toBe(200);
-    expect((await res.json()).success).toBe(true);
+    const body = await res.json();
+
+    expect(res.status).toBe(409);
+    expect(body).toEqual({
+      success: false,
+      message: "You're already on the list.",
+    });
   });
 
   it("returns 429 when rate limited", async () => {
@@ -61,7 +71,10 @@ describe("POST /api/waitlist", () => {
 
   it("returns 400 for wrong content-type", async () => {
     const res = await POST(
-      makeRequest({ email: "user@example.com" }, { "content-type": "text/plain" })
+      makeRequest(
+        { email: "user@example.com" },
+        { "content-type": "text/plain" },
+      ),
     );
     expect(res.status).toBe(400);
     expect((await res.json()).success).toBe(false);
@@ -69,7 +82,10 @@ describe("POST /api/waitlist", () => {
 
   it("returns 400 for a bot user-agent", async () => {
     const res = await POST(
-      makeRequest({ email: "user@example.com" }, { "user-agent": "python-requests/2.31.0" })
+      makeRequest(
+        { email: "user@example.com" },
+        { "user-agent": "python-requests/2.31.0" },
+      ),
     );
     expect(res.status).toBe(400);
   });
@@ -94,7 +110,9 @@ describe("POST /api/waitlist", () => {
   });
 
   it("returns 500 and does not leak error details on unexpected error", async () => {
-    vi.mocked(logAndCheckRateLimit).mockRejectedValue(new Error("DB connection failed"));
+    vi.mocked(logAndCheckRateLimit).mockRejectedValue(
+      new Error("DB connection failed"),
+    );
 
     const res = await POST(makeRequest({ email: "user@example.com" }));
     const body = await res.json();

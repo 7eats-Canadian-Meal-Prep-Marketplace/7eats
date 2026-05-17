@@ -22,8 +22,10 @@ describe("logAndCheckRateLimit", () => {
 
     vi.mocked(db.insert).mockReturnValue({
       values: vi.fn().mockResolvedValue([]),
-    } as any);
-    vi.mocked(db.select).mockReturnValue({ from: mockFrom } as any);
+    } as unknown as ReturnType<typeof db.insert>);
+    vi.mocked(db.select).mockReturnValue({
+      from: mockFrom,
+    } as unknown as ReturnType<typeof db.select>);
   });
 
   it("inserts a log row and returns true when under the limit", async () => {
