@@ -41,7 +41,7 @@ export default function CookieBanner() {
   if (!visible) return null;
 
   return (
-    <div className="cookie-banner" role="region" aria-label="Cookie consent">
+    <section className="cookie-banner" aria-label="Cookie consent">
       <div className="cookie-banner-inner">
         <p className="cookie-banner-text">
           This site uses essential cookies only. We do not use analytics or
@@ -74,6 +74,6 @@ export default function CookieBanner() {
           </button>
         </div>
       </div>
-    </div>
+    </section>
   );
 }
