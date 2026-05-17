@@ -31,36 +31,36 @@ export default function CookieBanner() {
   return (
     <div className="cookie-banner" role="dialog" aria-label="Cookie consent">
       <div className="cookie-banner-inner">
-      <p className="cookie-banner-text">
-        This site uses essential cookies only. We do not use analytics or
-        tracking cookies.{" "}
-        <Link href="/privacy" className="cookie-banner-link">
-          Privacy Policy
-        </Link>
-      </p>
-      <div className="cookie-banner-actions">
-        <button
-          type="button"
-          className="cookie-btn cookie-btn-ghost"
-          onClick={() => dismiss("refused")}
-        >
-          Refuse all
-        </button>
-        <button
-          type="button"
-          className="cookie-btn cookie-btn-secondary"
-          onClick={() => dismiss("essential")}
-        >
-          Essential only
-        </button>
-        <button
-          type="button"
-          className="cookie-btn cookie-btn-primary"
-          onClick={() => dismiss("accepted")}
-        >
-          Accept all
-        </button>
-      </div>
+        <p className="cookie-banner-text">
+          This site uses essential cookies only. We do not use analytics or
+          tracking cookies.{" "}
+          <Link href="/privacy" className="cookie-banner-link">
+            Privacy Policy
+          </Link>
+        </p>
+        <div className="cookie-banner-actions">
+          <button
+            type="button"
+            className="cookie-btn cookie-btn-ghost"
+            onClick={() => dismiss("refused")}
+          >
+            Refuse all
+          </button>
+          <button
+            type="button"
+            className="cookie-btn cookie-btn-secondary"
+            onClick={() => dismiss("essential")}
+          >
+            Essential only
+          </button>
+          <button
+            type="button"
+            className="cookie-btn cookie-btn-primary"
+            onClick={() => dismiss("accepted")}
+          >
+            Accept all
+          </button>
+        </div>
       </div>
     </div>
   );

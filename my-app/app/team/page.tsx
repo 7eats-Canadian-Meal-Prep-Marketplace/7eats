@@ -22,9 +22,7 @@ export default function TeamPage() {
         <div className="wrap">
           <div className="founders-head">
             <span className="eyebrow">Our story</span>
-            <h2 className="h-xl">
-              Built by people who live the problem.
-            </h2>
+            <h2 className="h-xl">Built by people who live the problem.</h2>
             <p className="lead">
               We are students juggling internships, tight budgets, and the daily
               reality of spending too much on food. We built 7eats because we
@@ -70,7 +68,9 @@ export default function TeamPage() {
               </p>
             </div>
             <div className="why-sign">
-              <span className="why-sign-name">Mohamad, Hendrik &amp; Adnane</span>
+              <span className="why-sign-name">
+                Mohamad, Hendrik &amp; Adnane
+              </span>
               <span className="why-sign-meta">
                 Co-founders, 7eats &middot; Toronto
               </span>
@@ -85,7 +85,20 @@ export default function TeamPage() {
           <div className="values-head">
             <span className="eyebrow">Our values</span>
             <h2 className="h-xl" style={{ marginTop: 18 }}>
-              <Image src="/7eats-icon-red.svg" alt="7eats" width={48} height={48} className="values-icon" style={{ display: "inline-block", verticalAlign: "top", marginRight: 12, marginTop: -4 }} /> rules we don&apos;t break.
+              <Image
+                src="/7eats-icon-red.svg"
+                alt="7eats"
+                width={48}
+                height={48}
+                className="values-icon"
+                style={{
+                  display: "inline-block",
+                  verticalAlign: "top",
+                  marginRight: 12,
+                  marginTop: -4,
+                }}
+              />{" "}
+              rules we don&apos;t break.
             </h2>
           </div>
           <div className="values-list">

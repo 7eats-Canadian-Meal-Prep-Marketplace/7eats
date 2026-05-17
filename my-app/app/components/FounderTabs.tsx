@@ -58,8 +58,7 @@ const FOUNDERS: Founder[] = [
     city: "Laval",
     linkedin: "https://www.linkedin.com/in/adnane-bejja-112398327/",
     portraitTag: "PORTRAIT · 800 × 1000",
-    portraitNote:
-      "Founder portrait - Adnane, natural light. Vertical crop.",
+    portraitNote: "Founder portrait - Adnane, natural light. Vertical crop.",
     image: "/adnane_profile.jpg",
     bio: [
       "Adnane is a software engineering student at Concordia University and a software developer at Intact Financial Corporation. He grew up in Laval, where the best food in his neighbourhood was almost never in a restaurant. It was made at home, shared within a circle, and invisible to everyone outside it.",

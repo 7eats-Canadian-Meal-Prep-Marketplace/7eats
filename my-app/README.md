@@ -37,16 +37,14 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 
 ## CI/CD
 
-GitHub Actions runs the workflow in `.github/workflows/ci-cd.yml` for pull requests and pushes to `main`.
+GitHub Actions uses two Vercel workflows:
 
-The `ci` job installs dependencies with `pnpm install --frozen-lockfile`, then runs `pnpm lint`, `pnpm test:run`, and `pnpm build` from this `my-app` directory.
+- `.github/workflows/preview.yaml` runs on pushes to non-`main` branches and creates Vercel Preview deployments.
+- `.github/workflows/production.yaml` runs on pushes to `main` and creates Vercel Production deployments.
 
-After CI passes, the `deploy` job uses the Vercel CLI to deploy:
+Each workflow installs dependencies with `pnpm install --frozen-lockfile`, then runs `pnpm lint` and `pnpm test:run` from this `my-app` directory. The Vercel CLI then pulls the matching Vercel environment variables and runs `vercel build` before deploying the prebuilt output.
 
-- Pull requests deploy to a Vercel Preview environment.
-- Pushes to `main` deploy to Vercel Production.
-
-Preview deployments only run for pull requests opened from this repository, because GitHub does not expose repository secrets to forked pull requests.
+Preview deployments only run after branch pushes, because GitHub does not expose repository secrets to forked pull requests.
 
 Configure these GitHub repository secrets before expecting deployments to run:
 
