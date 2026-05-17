@@ -111,19 +111,17 @@ export default function Header({ activePage = "home" }: HeaderProps) {
         </div>
         <div className="nav-mobile-links">
           <Link href="/waitlist" onClick={closeNav}>
-            Home <span className="chev">&rarr;</span>
+            Home
           </Link>
           <Link href="/team" onClick={closeNav}>
-            Meet the team <span className="chev">&rarr;</span>
+            Meet the team
           </Link>
         </div>
         <div className="nav-mobile-cta">
           <Link href="#cta" className="btn btn-primary" onClick={closeNav}>
             Join the waitlist
           </Link>
-          <CalendlyButton className="btn btn-ghost">
-            Book a call
-          </CalendlyButton>
+          <CalendlyButton className="btn btn-ghost">Book a call</CalendlyButton>
         </div>
       </aside>
     </>

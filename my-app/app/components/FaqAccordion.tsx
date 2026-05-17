@@ -13,13 +13,13 @@ const FAQ_ITEMS: FaqItem[] = [
     id: "what-kind",
     question: "What kind of cook is 7eats for?",
     answer:
-      "For our first year we're onboarding independent cooks who already hold a valid food-handler certification and cook out of a permitted space. If you have your cert and a kitchen - you're our person.",
+      "For our first year we're onboarding independent cooks who already hold a valid food handler certification and cook out of a permitted space. If you have your cert and a kitchen, you're our person.",
   },
   {
     id: "how-much",
     question: "How much do I keep per order?",
     answer:
-      "You keep 92% of every order. We charge a flat 8% to cover payment processing and the platform. Founding cooks - the first 50 in Toronto - pay nothing for their first 90 days.",
+      "We charge a small platform fee to cover payment processing and operations. Details will be shared before launch. Founding cooks, the first 30 in Toronto, pay nothing for their first 90 days.",
   },
   {
     id: "how-pickup",
@@ -37,13 +37,13 @@ const FAQ_ITEMS: FaqItem[] = [
     id: "need-cert",
     question: "Do I need a food-handler certificate to join?",
     answer:
-      "Yes - Ontario requires it for anyone preparing food commercially. If you don't have one yet, founding cooks get their certification sponsored by 7eats as part of the founding cook package.",
+      "Yes. Ontario requires it for anyone preparing food commercially. If you don't have one yet, founding cooks get their certification sponsored by 7eats as part of the founding cook package.",
   },
   {
     id: "which-neighbourhoods",
     question: "Which neighbourhoods is 7eats launching in?",
     answer:
-      "We're starting hyper-local - Scarborough, North York, and Etobicoke first, expanding into the rest of the GTA through 2026. If you're in a neighbourhood not listed, join the waitlist and we'll notify you when we reach you.",
+      "We're starting hyper-local in Scarborough, North York, and Etobicoke first, expanding into the rest of the GTA through 2026. If you're in a neighbourhood not listed, join the waitlist and we'll notify you when we reach you.",
   },
 ];
 

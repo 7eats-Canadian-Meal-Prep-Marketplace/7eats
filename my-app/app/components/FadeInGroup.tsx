@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { type ReactElement, useEffect, useRef, useState } from "react";
 
 interface Props {
   className?: string;
   itemClassName?: string;
   threshold?: number;
   staggerMs?: number;
-  children: React.ReactNode[];
+  children: ReactElement[];
 }
 
 export default function FadeInGroup({
@@ -30,7 +30,7 @@ export default function FadeInGroup({
           observer.disconnect();
         }
       },
-      { threshold, rootMargin: "-40px 0px" }
+      { threshold, rootMargin: "-40px 0px" },
     );
     observer.observe(el);
     return () => observer.disconnect();
@@ -40,6 +40,7 @@ export default function FadeInGroup({
     <div ref={ref} className={className}>
       {children.map((child, i) => (
         <div
+          // biome-ignore lint/suspicious/noArrayIndexKey: static list, order never changes
           key={i}
           className={itemClassName}
           style={{

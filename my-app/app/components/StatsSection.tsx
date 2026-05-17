@@ -97,7 +97,7 @@ export default function StatsSection() {
           observer.disconnect();
         }
       },
-      { threshold: 0.5, rootMargin: "-80px 0px" }
+      { threshold: 0.5, rootMargin: "-80px 0px" },
     );
 
     observer.observe(el);

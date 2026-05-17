@@ -1,8 +1,9 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 
-type FounderId = "amara" | "dev" | "leyla";
+type FounderId = "amara" | "dev" | "adnane";
 
 interface Founder {
   id: FounderId;
@@ -11,6 +12,7 @@ interface Founder {
   linkedin: string;
   portraitTag: string;
   portraitNote: string;
+  image?: string;
   bio: string[];
   quote: string;
   email: string;
@@ -18,29 +20,13 @@ interface Founder {
 
 const FOUNDERS: Founder[] = [
   {
-    id: "amara",
-    name: "Mohamad Addasi",
-    city: "Montreal",
-    linkedin: "https://www.linkedin.com/in/mohamad-addasi/",
-    portraitTag: "PORTRAIT · 800 × 1000",
-    portraitNote:
-      "Founder portrait - Mohamad, warm natural light. Vertical crop.",
-    bio: [
-      "Mohamad is a software engineering student at Concordia University, currently a software development intern at Autodesk and previously a data science intern at Intact. What drives him is not technology for its own sake but the kind of systems that quietly make something difficult feel simple for the people using them.",
-      "7eats is exactly that kind of problem. Talented cooks exist in every neighbourhood, already running informal businesses with minimal infrastructure behind them. Mohamad saw the gap and knew what it would take to close it.",
-    ],
-    quote:
-      "There are incredible cooks hiding in plain sight. Customers want variety and do not know where to look. That gap only exists because nobody built the right connector yet.",
-    email: "maddasi04@gmail.com",
-  },
-  {
     id: "dev",
     name: "Hendrik Tebeng",
     city: "Toronto",
     linkedin: "https://www.linkedin.com/in/hendrik-tebeng/",
     portraitTag: "PORTRAIT · 800 × 1000",
-    portraitNote:
-      "Founder portrait - Hendrik, natural light. Vertical crop.",
+    portraitNote: "Founder portrait - Hendrik, natural light. Vertical crop.",
+    image: "/hendrik_profile.png",
     bio: [
       "Hendrik is a software engineering student at Concordia University and an intern at CIBC. Between school, work, and projects, cooking became a challenge early on. He started looking into meal prep as a way to stay on top of it and realized how hard it was to find the right options.",
       "Moving to Toronto sharpened the problem. Many apartments do not come with a kitchen, so ordering out stops being a choice and becomes a reflex. He watched people around him spend hundreds a month on food, feel bad about it, and do it all over again the following week. That cycle of guilt needed a fix.",
@@ -50,25 +36,42 @@ const FOUNDERS: Founder[] = [
     email: "hendriktebeng@gmail.com",
   },
   {
-    id: "leyla",
-    name: "Leyla Haddad",
-    city: "City placeholder",
-    linkedin: "https://linkedin.com",
+    id: "amara",
+    name: "Mohamad Addasi",
+    city: "Montreal",
+    linkedin: "https://www.linkedin.com/in/mohamad-addasi/",
     portraitTag: "PORTRAIT · 800 × 1000",
     portraitNote:
-      "Founder portrait - Leyla, sharp, mid-conversation in a kitchen. Vertical crop.",
+      "Founder portrait - Mohamad, warm natural light. Vertical crop.",
+    image: "/mohamad_profile.jpg",
     bio: [
-      "Leyla spent her twenties running operations for a fast-growing meal-kit company before opening a small commissary kitchen in North York that has hosted forty independent food businesses to date.",
-      "She handles cook onboarding, food-safety certification, and the part of the business where things actually have to happen on time. She also tests every dish that goes live on the platform.",
+      "Mohamad is a software engineering student at Concordia University, currently a software development intern at Autodesk and previously a data science intern at Intact. What drives him is not technology for its own sake but the kind of systems that quietly make something difficult feel simple for the people using them.",
+      "7eats is exactly that kind of problem. Talented cooks exist in every neighbourhood, already running informal businesses with minimal infrastructure behind them. Mohamad saw the gap and knew what it would take to close it.",
     ],
     quote:
-      "A platform without trust is a phone book. We're not trying to be the biggest. We're trying to be the one cooks recommend to their cousins.",
-    email: "leyla@7eats.ca",
+      "There are incredible cooks hiding in plain sight. Customers want variety and do not know where to look. That gap only exists because nobody built the right connector yet.",
+    email: "maddasi04@gmail.com",
+  },
+  {
+    id: "adnane",
+    name: "Adnane Bejja",
+    city: "Laval",
+    linkedin: "https://www.linkedin.com/in/adnane-bejja-112398327/",
+    portraitTag: "PORTRAIT · 800 × 1000",
+    portraitNote: "Founder portrait - Adnane, natural light. Vertical crop.",
+    image: "/adnane_profile.jpg",
+    bio: [
+      "Adnane is a software engineering student at Concordia University and a software developer at Intact Financial Corporation. He grew up in Laval, where the best food in his neighbourhood was almost never in a restaurant. It was made at home, shared within a circle, and invisible to everyone outside it.",
+      "That gap felt obvious once you noticed it. Talented cooks were already earning through word of mouth, but growing beyond their circle meant hitting a ceiling. Adnane builds the infrastructure behind the platform. The parts that have to be invisible until the day a cook gets their first order and everything just works.",
+    ],
+    quote:
+      "Every city has people who cook better than most restaurants. They just never had the infrastructure to prove it. That is what we are building.",
+    email: "adnanebejja14@gmail.com",
   },
 ];
 
 export default function FounderTabs() {
-  const [activeId, setActiveId] = useState<FounderId>("amara");
+  const [activeId, setActiveId] = useState<FounderId>("dev");
 
   return (
     <>
@@ -97,12 +100,22 @@ export default function FounderTabs() {
         >
           <div>
             <div className="founder-portrait">
-              <div className="placeholder">
-                <div>
-                  <span className="ph-tag">{founder.portraitTag}</span>
-                  <em className="ph-note">{founder.portraitNote}</em>
+              {founder.image ? (
+                <Image
+                  src={founder.image}
+                  alt={`${founder.name} portrait`}
+                  fill
+                  style={{ objectFit: "cover", objectPosition: "center top" }}
+                  sizes="(max-width: 900px) 100vw, 45vw"
+                />
+              ) : (
+                <div className="placeholder">
+                  <div>
+                    <span className="ph-tag">{founder.portraitTag}</span>
+                    <em className="ph-note">{founder.portraitNote}</em>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
           <div className="founder-body">
