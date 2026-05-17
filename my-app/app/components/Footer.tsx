@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import CalendlyButton from "@/app/components/CalendlyButton";
 
 export default function Footer() {
   return (
@@ -28,10 +29,7 @@ export default function Footer() {
               <li>
                 <Link href="/team">Meet the team</Link>
               </li>
-              <li>
-                <Link href="#how">How it works</Link>
-              </li>
-              <li>
+<li>
                 <Link href="#faq">FAQ</Link>
               </li>
             </ul>
@@ -46,13 +44,7 @@ export default function Footer() {
                 <Link href="#offer">Founding cook offer</Link>
               </li>
               <li>
-                <a
-                  href="https://calendly.com/maddasi04"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Book a call
-                </a>
+                <CalendlyButton>Book a call</CalendlyButton>
               </li>
             </ul>
           </div>

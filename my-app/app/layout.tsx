@@ -13,11 +13,36 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://7eats.ca"),
   title: "7eats - The Canadian Meal Prep Marketplace",
   description:
     "7eats connects meal prep cooks with customers across Canada. List your menu, get discovered, and grow beyond your personal network.",
   icons: {
     icon: "/favicon.svg",
+  },
+  openGraph: {
+    title: "7eats - The Canadian Meal Prep Marketplace",
+    description:
+      "7eats connects meal prep cooks with customers across Canada. List your menu, get discovered, and grow beyond your personal network.",
+    url: "https://7eats.ca",
+    siteName: "7eats",
+    images: [
+      {
+        url: "/7eats-icon-full.jpg",
+        width: 1080,
+        height: 1080,
+        alt: "7eats - The Canadian meal prep marketplace",
+      },
+    ],
+    locale: "en_CA",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "7eats - The Canadian Meal Prep Marketplace",
+    description:
+      "7eats connects meal prep cooks with customers across Canada. List your menu, get discovered, and grow beyond your personal network.",
+    images: ["/7eats-icon-full.jpg"],
   },
 };
 

@@ -12,11 +12,13 @@ export default function BannerFlash() {
     <div className="flash" data-flash>
       <div className="flash-inner">
         <span className="flash-text">
-          First <strong>50 cooks</strong> in Toronto keep <strong>100%</strong>{" "}
+          First <strong>30 cooks</strong> in Toronto keep <strong>100%</strong>{" "}
           of earnings for 90 days &middot;{" "}
-          <Link className="flash-link" href="#offer">
-            See the offer
-          </Link>
+          <span className="flash-offer">
+            <Link className="flash-link" href="#offer">
+              See the offer
+            </Link>
+          </span>
         </span>
       </div>
       <button

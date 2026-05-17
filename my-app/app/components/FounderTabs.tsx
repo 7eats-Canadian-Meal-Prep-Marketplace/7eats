@@ -1,8 +1,9 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 
-type FounderId = "amara" | "dev" | "leyla";
+type FounderId = "amara" | "dev" | "adnane";
 
 interface Founder {
   id: FounderId;
@@ -11,6 +12,7 @@ interface Founder {
   linkedin: string;
   portraitTag: string;
   portraitNote: string;
+  image?: string;
   bio: string[];
   quote: string;
   email: string;
@@ -25,6 +27,7 @@ const FOUNDERS: Founder[] = [
     portraitTag: "PORTRAIT · 800 × 1000",
     portraitNote:
       "Founder portrait - Mohamad, warm natural light. Vertical crop.",
+    image: "/mohamad_profile.jpg",
     bio: [
       "Mohamad is a software engineering student at Concordia University, currently a software development intern at Autodesk and previously a data science intern at Intact. What drives him is not technology for its own sake but the kind of systems that quietly make something difficult feel simple for the people using them.",
       "7eats is exactly that kind of problem. Talented cooks exist in every neighbourhood, already running informal businesses with minimal infrastructure behind them. Mohamad saw the gap and knew what it would take to close it.",
@@ -41,6 +44,7 @@ const FOUNDERS: Founder[] = [
     portraitTag: "PORTRAIT · 800 × 1000",
     portraitNote:
       "Founder portrait - Hendrik, natural light. Vertical crop.",
+    image: "/hendrik_profile.png",
     bio: [
       "Hendrik is a software engineering student at Concordia University and an intern at CIBC. Between school, work, and projects, cooking became a challenge early on. He started looking into meal prep as a way to stay on top of it and realized how hard it was to find the right options.",
       "Moving to Toronto sharpened the problem. Many apartments do not come with a kitchen, so ordering out stops being a choice and becomes a reflex. He watched people around him spend hundreds a month on food, feel bad about it, and do it all over again the following week. That cycle of guilt needed a fix.",
@@ -50,20 +54,20 @@ const FOUNDERS: Founder[] = [
     email: "hendriktebeng@gmail.com",
   },
   {
-    id: "leyla",
-    name: "Leyla Haddad",
-    city: "City placeholder",
-    linkedin: "https://linkedin.com",
+    id: "adnane",
+    name: "Adnane Bejja",
+    city: "Montreal",
+    linkedin: "https://linkedin.com/in/adnane-bejja",
     portraitTag: "PORTRAIT · 800 × 1000",
     portraitNote:
-      "Founder portrait - Leyla, sharp, mid-conversation in a kitchen. Vertical crop.",
+      "Founder portrait - Adnane, natural light. Vertical crop.",
     bio: [
-      "Leyla spent her twenties running operations for a fast-growing meal-kit company before opening a small commissary kitchen in North York that has hosted forty independent food businesses to date.",
-      "She handles cook onboarding, food-safety certification, and the part of the business where things actually have to happen on time. She also tests every dish that goes live on the platform.",
+      "Adnane is a software engineering student at Concordia University and a software developer at Intact Financial Corporation.",
+      "Placeholder — add Adnane's personal story and connection to the 7eats mission here.",
     ],
     quote:
-      "A platform without trust is a phone book. We're not trying to be the biggest. We're trying to be the one cooks recommend to their cousins.",
-    email: "leyla@7eats.ca",
+      "Placeholder — add Adnane's quote here.",
+    email: "adnane@7eats.ca",
   },
 ];
 
@@ -97,12 +101,22 @@ export default function FounderTabs() {
         >
           <div>
             <div className="founder-portrait">
-              <div className="placeholder">
-                <div>
-                  <span className="ph-tag">{founder.portraitTag}</span>
-                  <em className="ph-note">{founder.portraitNote}</em>
+              {founder.image ? (
+                <Image
+                  src={founder.image}
+                  alt={`${founder.name} portrait`}
+                  fill
+                  style={{ objectFit: "cover", objectPosition: "center top" }}
+                  sizes="(max-width: 900px) 100vw, 45vw"
+                />
+              ) : (
+                <div className="placeholder">
+                  <div>
+                    <span className="ph-tag">{founder.portraitTag}</span>
+                    <em className="ph-note">{founder.portraitNote}</em>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
           <div className="founder-body">

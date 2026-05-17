@@ -31,9 +31,8 @@ export default function WaitlistPage() {
                 Canada&apos;s meal prep marketplace
               </span>
               <h1>
-                Your kitchen is already a business.
-                <br />
-                <span className="hero-accent">We built the platform for it.</span>
+                Your kitchen is already a business.{" "}
+                <span className="hero-accent">We&apos;re building&nbsp;the platform for it.</span>
               </h1>
               <p className="hero-sub">
                 7eats is a marketplace for meal prep cooks. List your weekly
@@ -67,17 +66,13 @@ export default function WaitlistPage() {
       <section className="section problem">
         <div className="wrap">
           <div className="problem-intro">
-            <div>
-              <span className="eyebrow on-dark">The problem</span>
-              <h2 className="h-xl" style={{ marginTop: 18 }}>
-                Meal prep cooks are everywhere. The infrastructure never caught up.
-              </h2>
-            </div>
+            <span className="eyebrow on-dark">The problem</span>
+            <h2 className="h-xl">
+              Meal prep cooks are everywhere. Nothing connected them.
+            </h2>
             <p className="lead on-dark">
-              Thousands of cooks across Canada already sell meal preps weekly.
-              7eats exists so people can discover new cuisines, rotate their
-              meals, and eat well without paying fast food prices every day.
-              Cooks get the infrastructure to grow beyond their circle.
+              The cooks are already there. They just needed a platform to reach
+              beyond their circle.
             </p>
           </div>
           <div className="problem-list">
@@ -122,12 +117,10 @@ export default function WaitlistPage() {
       <section className="section features">
         <div className="wrap">
           <div className="features-head">
-            <div>
-              <span className="eyebrow">What you get</span>
-              <h2 className="h-xl" style={{ marginTop: 18 }}>
-                New customers finding you. Every day. Without lifting a finger.
-              </h2>
-            </div>
+            <span className="eyebrow">What you get</span>
+            <h2 className="h-xl">
+              New customers finding you. Every day. Without lifting a finger.
+            </h2>
             <p className="lead">
               The marketplace finds them. You feed them. We handle everything in
               between.
@@ -179,7 +172,7 @@ export default function WaitlistPage() {
         <div className="wrap">
           <div className="offer-grid">
             <div>
-              <span className="offer-tag">First 50 cooks &middot; Toronto</span>
+              <span className="offer-tag">First 30 cooks &middot; Toronto</span>
               <h2>0% platform fee for your first 90 days.</h2>
               <p className="offer-lede">
                 Found us early? You get the founding cook deal. Every order in
