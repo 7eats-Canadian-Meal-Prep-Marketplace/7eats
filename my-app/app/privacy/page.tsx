@@ -1,5 +1,5 @@
-import Header from "@/app/components/Header";
 import Footer from "@/app/components/Footer";
+import Header from "@/app/components/Header";
 
 export const metadata = {
   title: "Privacy Policy - 7eats",
@@ -72,9 +72,9 @@ const SECTIONS = [
         <p>
           If you book a call through our Calendly link, Calendly may collect
           your name, email address, and calendar availability. This data is
-          processed directly by Calendly and subject to their privacy policy.
-          We receive a copy of your name and email for the purpose of the
-          scheduled call only.
+          processed directly by Calendly and subject to their privacy policy. We
+          receive a copy of your name and email for the purpose of the scheduled
+          call only.
         </p>
         <h3>3.3 Cookies and Usage Data</h3>
         <p>
@@ -156,8 +156,8 @@ const SECTIONS = [
             <span className="policy-vendor-location">United States</span>
           </div>
           <p>
-            Neon provides the database where waitlist email addresses are
-            stored securely.
+            Neon provides the database where waitlist email addresses are stored
+            securely.
           </p>
         </div>
         <div className="policy-vendor">
@@ -201,7 +201,8 @@ const SECTIONS = [
           </li>
           <li>
             <strong>Booking data</strong> is retained only for the duration
-            necessary to facilitate your scheduled call and any agreed follow-up.
+            necessary to facilitate your scheduled call and any agreed
+            follow-up.
           </li>
         </ul>
       </>
@@ -230,8 +231,8 @@ const SECTIONS = [
             information be deleted.
           </li>
           <li>
-            <strong>Right to withdraw consent</strong> — withdraw consent at
-            any time without affecting the lawfulness of prior processing.
+            <strong>Right to withdraw consent</strong> — withdraw consent at any
+            time without affecting the lawfulness of prior processing.
           </li>
         </ul>
         <p>
@@ -284,9 +285,9 @@ const SECTIONS = [
         <p>
           We may update this Privacy Policy from time to time. When we do, we
           will update the "Last updated" date at the top of this page. We
-          encourage you to review this policy periodically. Continued use of
-          the Site after changes are posted constitutes acceptance of the
-          revised policy.
+          encourage you to review this policy periodically. Continued use of the
+          Site after changes are posted constitutes acceptance of the revised
+          policy.
         </p>
       </>
     ),

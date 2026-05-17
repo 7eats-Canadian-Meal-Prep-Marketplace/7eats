@@ -42,7 +42,9 @@ export default function TeamPage() {
             <span className="eyebrow on-dark">Why we&apos;re building it</span>
             <p className="why-quote">
               The best food in Toronto is being made at home.{" "}
-              <span className="accent-italic">Most people never get to try it.</span>
+              <span className="accent-italic">
+                Most people never get to try it.
+              </span>
             </p>
             <div className="why-body">
               <p>
@@ -90,37 +92,60 @@ export default function TeamPage() {
             <div className="values-row">
               <div className="n">01</div>
               <h3>Cooks first.</h3>
-              <p>Every product decision passes one test: does this make a cook&apos;s week better? If not, we don&apos;t ship it.</p>
+              <p>
+                Every product decision passes one test: does this make a
+                cook&apos;s week better? If not, we don&apos;t ship it.
+              </p>
             </div>
             <div className="values-row">
               <div className="n">02</div>
               <h3>Take less.</h3>
-              <p>A flat rate, no hidden fees, no surprise cuts. The cook should always know what they earned before we do.</p>
+              <p>
+                A flat rate, no hidden fees, no surprise cuts. The cook should
+                always know what they earned before we do.
+              </p>
             </div>
             <div className="values-row">
               <div className="n">03</div>
               <h3>Your prices, your call.</h3>
-              <p>We never touch your pricing. No algorithmic discounts, no suggested cuts, no race to the bottom. You set the value of your food.</p>
+              <p>
+                We never touch your pricing. No algorithmic discounts, no
+                suggested cuts, no race to the bottom. You set the value of your
+                food.
+              </p>
             </div>
             <div className="values-row">
               <div className="n">04</div>
               <h3>Your customers belong to you.</h3>
-              <p>Every repeat customer you earn on 7eats is yours. We don&apos;t remarket them to other cooks or hide their data from you.</p>
+              <p>
+                Every repeat customer you earn on 7eats is yours. We don&apos;t
+                remarket them to other cooks or hide their data from you.
+              </p>
             </div>
             <div className="values-row">
               <div className="n">05</div>
               <h3>Real support when things go wrong.</h3>
-              <p>No-show customer. Disputed payment. An unfair review. You get a real response, not a ticket number and a 3-day wait.</p>
+              <p>
+                No-show customer. Disputed payment. An unfair review. You get a
+                real response, not a ticket number and a 3-day wait.
+              </p>
             </div>
             <div className="values-row">
               <div className="n">06</div>
               <h3>Visibility is earned, not bought.</h3>
-              <p>We don&apos;t sell ad slots. A cook with 50 orders and great reviews will always outrank one who just paid more. Your reputation does the marketing.</p>
+              <p>
+                We don&apos;t sell ad slots. A cook with 50 orders and great
+                reviews will always outrank one who just paid more. Your
+                reputation does the marketing.
+              </p>
             </div>
             <div className="values-row">
               <div className="n">07</div>
               <h3>We win when you win.</h3>
-              <p>We make money when cooks make money. Our incentives are aligned by design. If cooks aren&apos;t earning, neither are we.</p>
+              <p>
+                We make money when cooks make money. Our incentives are aligned
+                by design. If cooks aren&apos;t earning, neither are we.
+              </p>
             </div>
           </div>
         </div>

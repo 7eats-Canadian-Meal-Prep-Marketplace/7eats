@@ -35,6 +35,27 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
 
+## CI/CD
+
+GitHub Actions runs the workflow in `.github/workflows/ci-cd.yml` for pull requests and pushes to `main`.
+
+The `ci` job installs dependencies with `pnpm install --frozen-lockfile`, then runs `pnpm lint`, `pnpm test:run`, and `pnpm build` from this `my-app` directory.
+
+After CI passes, the `deploy` job uses the Vercel CLI to deploy:
+
+- Pull requests deploy to a Vercel Preview environment.
+- Pushes to `main` deploy to Vercel Production.
+
+Preview deployments only run for pull requests opened from this repository, because GitHub does not expose repository secrets to forked pull requests.
+
+Configure these GitHub repository secrets before expecting deployments to run:
+
+- `VERCEL_TOKEN`
+- `VERCEL_ORG_ID`
+- `VERCEL_PROJECT_ID`
+
+Keep `.env.local` local-only. Do not commit local environment files or copy their values into workflow files; use GitHub secrets and Vercel project environment variables for CI/CD.
+
 ---
 
 ## Waitlist API

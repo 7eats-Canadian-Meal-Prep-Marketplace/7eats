@@ -34,7 +34,7 @@ export default function HowItWorksSection() {
           observer.disconnect();
         }
       },
-      { threshold: 0.25, rootMargin: "-60px 0px" }
+      { threshold: 0.25, rootMargin: "-60px 0px" },
     );
     observer.observe(el);
     return () => observer.disconnect();

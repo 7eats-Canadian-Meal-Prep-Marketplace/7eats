@@ -968,9 +968,15 @@ p {
   grid-template-columns: 1fr;
   gap: 32px;
 }
-.faq-side-top { order: 1; }
-.faq-list     { order: 2; }
-.faq-side-bottom { order: 3; }
+.faq-side-top {
+  order: 1;
+}
+.faq-list {
+  order: 2;
+}
+.faq-side-bottom {
+  order: 3;
+}
 
 @media (min-width: 900px) {
   .faq-grid {
@@ -1642,7 +1648,9 @@ p {
   color: var(--grey-500);
   border-left: 2px solid transparent;
   padding-left: 14px;
-  transition: color 0.15s, border-color 0.15s;
+  transition:
+    color 0.15s,
+    border-color 0.15s;
 }
 .policy-nav a:hover {
   color: var(--ink);

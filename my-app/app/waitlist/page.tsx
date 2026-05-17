@@ -2,13 +2,13 @@ import Image from "next/image";
 import Link from "next/link";
 import BannerFlash from "@/app/components/BannerFlash";
 import CalendlyButton from "@/app/components/CalendlyButton";
-import StatsSection from "@/app/components/StatsSection";
-import FadeInGroup from "@/app/components/FadeInGroup";
-import HowItWorksSection from "@/app/components/HowItWorksSection";
 import CtaSection from "@/app/components/CtaSection";
+import FadeInGroup from "@/app/components/FadeInGroup";
 import FaqAccordion from "@/app/components/FaqAccordion";
 import Footer from "@/app/components/Footer";
 import Header from "@/app/components/Header";
+import HowItWorksSection from "@/app/components/HowItWorksSection";
+import StatsSection from "@/app/components/StatsSection";
 
 export const metadata = {
   title: "7eats - The Canadian Meal Prep Marketplace",
@@ -32,12 +32,15 @@ export default function WaitlistPage() {
               </span>
               <h1>
                 Your kitchen is already a business.{" "}
-                <span className="hero-accent">We&apos;re building&nbsp;the platform for it.</span>
+                <span className="hero-accent">
+                  We&apos;re building&nbsp;the platform for it.
+                </span>
               </h1>
               <p className="hero-sub">
                 7eats is a marketplace for meal prep cooks. List your weekly
                 menu, set your prices, and get discovered by customers actively
-                looking for what you cook. Orders and payments are handled for you.
+                looking for what you cook. Orders and payments are handled for
+                you.
               </p>
               <div className="hero-ctas">
                 <CalendlyButton className="btn btn-secondary">
@@ -97,7 +100,10 @@ export default function WaitlistPage() {
               <h3>No trust layer between cooks and buyers.</h3>
               <p>
                 Buying food from a stranger feels risky. It shouldn&apos;t.{" "}
-                <strong>Verified profiles, deposits, allergen fields, and confirmed-order reviews</strong>{" "}
+                <strong>
+                  Verified profiles, deposits, allergen fields, and
+                  confirmed-order reviews
+                </strong>{" "}
                 fix that.
               </p>
             </div>
@@ -106,7 +112,9 @@ export default function WaitlistPage() {
               <h3>The tools exist. They just don&apos;t work together.</h3>
               <p>
                 Facebook for orders. E-transfer for payment.{" "}
-                <strong>One platform that ties it all together changes everything.</strong>
+                <strong>
+                  One platform that ties it all together changes everything.
+                </strong>
               </p>
             </div>
           </div>
@@ -130,31 +138,69 @@ export default function WaitlistPage() {
             {[
               <article key="1" className="feature">
                 <div className="feature-visual">
-                  <Image src="/cook-with-phone.jpg" alt="Cook reviewing their order dashboard" fill style={{ objectFit: "cover", objectPosition: "center" }} sizes="(max-width: 700px) 100vw, (max-width: 1024px) 50vw, 25vw" />
+                  <Image
+                    src="/cook-with-phone.jpg"
+                    alt="Cook reviewing their order dashboard"
+                    fill
+                    style={{ objectFit: "cover", objectPosition: "center" }}
+                    sizes="(max-width: 700px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                  />
                 </div>
                 <h3>Dashboard and management tools.</h3>
-                <p>Your orders, schedule, and revenue in one place. Know exactly what to cook, when, and for who - before you touch a pan.</p>
+                <p>
+                  Your orders, schedule, and revenue in one place. Know exactly
+                  what to cook, when, and for who - before you touch a pan.
+                </p>
               </article>,
               <article key="2" className="feature">
                 <div className="feature-visual">
-                  <Image src="/money-handle.jpg" alt="Secure deposit and payment handling" fill style={{ objectFit: "cover", objectPosition: "center" }} sizes="(max-width: 700px) 100vw, (max-width: 1024px) 50vw, 25vw" />
+                  <Image
+                    src="/money-handle.jpg"
+                    alt="Secure deposit and payment handling"
+                    fill
+                    style={{ objectFit: "cover", objectPosition: "center" }}
+                    sizes="(max-width: 700px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                  />
                 </div>
                 <h3>Deposit and payment security.</h3>
-                <p>Customers pay upfront. You cook knowing every order is confirmed. No-shows, e-transfer chasing, and cash awkwardness are gone.</p>
+                <p>
+                  Customers pay upfront. You cook knowing every order is
+                  confirmed. No-shows, e-transfer chasing, and cash awkwardness
+                  are gone.
+                </p>
               </article>,
               <article key="3" className="feature">
                 <div className="feature-visual">
-                  <Image src="/meal-preps.jpg" alt="Customisable meal prep listings with dietary info" fill style={{ objectFit: "cover", objectPosition: "center" }} sizes="(max-width: 700px) 100vw, (max-width: 1024px) 50vw, 25vw" />
+                  <Image
+                    src="/meal-preps.jpg"
+                    alt="Customisable meal prep listings with dietary info"
+                    fill
+                    style={{ objectFit: "cover", objectPosition: "center" }}
+                    sizes="(max-width: 700px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                  />
                 </div>
                 <h3>Customisable listings.</h3>
-                <p>Add calories, macros, allergens, and dietary tags to every dish. Buyers searching for halal, vegan, or high-protein find you directly.</p>
+                <p>
+                  Add calories, macros, allergens, and dietary tags to every
+                  dish. Buyers searching for halal, vegan, or high-protein find
+                  you directly.
+                </p>
               </article>,
               <article key="4" className="feature">
                 <div className="feature-visual">
-                  <Image src="/cook-talking-customer.png" alt="Cook talking with a customer" fill style={{ objectFit: "cover", objectPosition: "center" }} sizes="(max-width: 700px) 100vw, (max-width: 1024px) 50vw, 25vw" />
+                  <Image
+                    src="/cook-talking-customer.png"
+                    alt="Cook talking with a customer"
+                    fill
+                    style={{ objectFit: "cover", objectPosition: "center" }}
+                    sizes="(max-width: 700px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                  />
                 </div>
                 <h3>Dynamic pricing and flash deals.</h3>
-                <p>Raise prices when demand is high. Run a last-minute deal to clear extra portions. Your pricing, your call - always.</p>
+                <p>
+                  Raise prices when demand is high. Run a last-minute deal to
+                  clear extra portions. Your pricing, your call - always.
+                </p>
               </article>,
             ]}
           </FadeInGroup>
@@ -176,15 +222,33 @@ export default function WaitlistPage() {
               <h2>0% platform fee for your first 90 days.</h2>
               <p className="offer-lede">
                 Found us early? You get the founding cook deal. Every order in
-                your first 90 days is yours. Every dollar. While you build
-                your customer base on 7eats.
+                your first 90 days is yours. Every dollar. While you build your
+                customer base on 7eats.
               </p>
               <FadeInGroup className="offer-perks" staggerMs={120}>
                 {[
-                  <div key="1" className="offer-perk"><div className="offer-perk-label">0% platform fee</div><div className="offer-perk-meta">First 90 days</div></div>,
-                  <div key="2" className="offer-perk"><div className="offer-perk-label">Priority listings</div><div className="offer-perk-meta">Top of your neighbourhood</div></div>,
-                  <div key="3" className="offer-perk"><div className="offer-perk-label">Lifetime discount on premium tools</div><div className="offer-perk-meta">Locked in forever</div></div>,
-                  <div key="4" className="offer-perk"><div className="offer-perk-label">Early access</div><div className="offer-perk-meta">First to every new feature</div></div>,
+                  <div key="1" className="offer-perk">
+                    <div className="offer-perk-label">0% platform fee</div>
+                    <div className="offer-perk-meta">First 90 days</div>
+                  </div>,
+                  <div key="2" className="offer-perk">
+                    <div className="offer-perk-label">Priority listings</div>
+                    <div className="offer-perk-meta">
+                      Top of your neighbourhood
+                    </div>
+                  </div>,
+                  <div key="3" className="offer-perk">
+                    <div className="offer-perk-label">
+                      Lifetime discount on premium tools
+                    </div>
+                    <div className="offer-perk-meta">Locked in forever</div>
+                  </div>,
+                  <div key="4" className="offer-perk">
+                    <div className="offer-perk-label">Early access</div>
+                    <div className="offer-perk-meta">
+                      First to every new feature
+                    </div>
+                  </div>,
                 ]}
               </FadeInGroup>
               <div className="offer-cta">

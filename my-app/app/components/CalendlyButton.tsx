@@ -18,7 +18,12 @@ export default function CalendlyButton({
   }
 
   return (
-    <button type="button" className={className} style={style} onClick={handleClick}>
+    <button
+      type="button"
+      className={className}
+      style={style}
+      onClick={handleClick}
+    >
       {children}
     </button>
   );
