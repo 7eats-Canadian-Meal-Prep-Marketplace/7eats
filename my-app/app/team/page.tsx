@@ -21,12 +21,10 @@ export default function TeamPage() {
       <section className="section founders team-page-opener">
         <div className="wrap">
           <div className="founders-head">
-            <div>
-              <span className="eyebrow">Our story</span>
-              <h2 className="h-xl" style={{ marginTop: 18 }}>
-                Built by people who live the problem.
-              </h2>
-            </div>
+            <span className="eyebrow">Our story</span>
+            <h2 className="h-xl">
+              Built by people who live the problem.
+            </h2>
             <p className="lead">
               We are students juggling internships, tight budgets, and the daily
               reality of spending too much on food. We built 7eats because we
@@ -50,26 +48,29 @@ export default function TeamPage() {
             </p>
             <div className="why-body">
               <p>
-                The first time Amara&apos;s landlord asked what she was cooking,
-                he ate three plates and asked when the next one was. That was
-                2008. There still wasn&apos;t a way to take her order.
+                The three of us are students. We juggle internships, tight
+                budgets, and the daily reality of spending too much on food we
+                did not really want. At some point we all ended up looking for
+                meal prep and kept finding the same thing: either overpriced
+                commercial boxes or word-of-mouth cooks with no real way to
+                reach us.
               </p>
               <p>
                 We started 7eats because Toronto is not short of incredible
                 cooks. It is short of <em>infrastructure</em> for them. The
                 platform exists so a Filipino chef in Mississauga, a Ghanaian
                 baker in Scarborough, and a Lebanese caterer in Etobicoke all
-                get the same shot - to turn the kitchen they already run into a
+                get the same shot to turn the kitchen they already run into a
                 business they actually own.
               </p>
               <p>
-                We&apos;re not building another delivery app. We&apos;re
-                building the connective tissue for a kind of food economy that
-                has been hiding in plain sight for thirty years.
+                We are not building another delivery app. We are building the
+                connective tissue for a kind of food economy that has been
+                hiding in plain sight for thirty years.
               </p>
             </div>
             <div className="why-sign">
-              <span className="why-sign-name">- Amara, Dev &amp; Leyla</span>
+              <span className="why-sign-name">Mohamad, Hendrik &amp; Adnane</span>
               <span className="why-sign-meta">
                 Co-founders, 7eats &middot; Toronto
               </span>
@@ -84,19 +85,7 @@ export default function TeamPage() {
           <div className="values-head">
             <span className="eyebrow">Our values</span>
             <h2 className="h-xl" style={{ marginTop: 18 }}>
-              <Image
-                src="/7eats-icon-red.svg"
-                alt="7eats"
-                width={48}
-                height={48}
-                style={{
-                  display: "inline-block",
-                  verticalAlign: "top",
-                  marginRight: 12,
-                  marginTop: -4,
-                }}
-              />{" "}
-              rules we don&apos;t break.
+              <Image src="/7eats-icon-red.svg" alt="7eats" width={48} height={48} className="values-icon" style={{ display: "inline-block", verticalAlign: "top", marginRight: 12, marginTop: -4 }} /> rules we don&apos;t break.
             </h2>
           </div>
           <div className="values-list">

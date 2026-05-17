@@ -4,6 +4,7 @@ import Script from "next/script";
 import { Toaster } from "sonner";
 import BackToTop from "@/app/components/BackToTop";
 import CalendlyBadge from "@/app/components/CalendlyBadge";
+import CookieBanner from "@/app/components/CookieBanner";
 import "./globals.css";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
@@ -64,6 +65,7 @@ export default function RootLayout({
         {children}
         <CalendlyBadge />
         <BackToTop />
+        <CookieBanner />
         <Toaster position="top-center" richColors={false} closeButton />
         <Script
           src="https://assets.calendly.com/assets/external/widget.js"

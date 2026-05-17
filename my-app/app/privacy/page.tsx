@@ -2,7 +2,7 @@ import Footer from "@/app/components/Footer";
 import Header from "@/app/components/Header";
 
 export const metadata = {
-  title: "Privacy Policy — 7eats",
+  title: "Privacy Policy - 7eats",
   description:
     "How 7eats collects, uses, and protects your personal information.",
 };
