@@ -34,3 +34,37 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+---
+
+## Waitlist API
+
+### `POST /api/waitlist`
+
+Registers an email address on the pre-launch waitlist.
+
+**Request**
+
+```http
+POST /api/waitlist
+Content-Type: application/json
+
+{ "email": "user@example.com" }
+```
+
+**Response**
+
+All responses return `{ "success": boolean, "message": string }`.
+
+| Status | `success` | `message` | Cause |
+|--------|-----------|-----------|-------|
+| 200 | `true` | `"You're on the list!"` | Accepted (new or duplicate — indistinguishable by design) |
+| 400 | `false` | `"Invalid request."` | Invalid email, wrong Content-Type, bot User-Agent, or body > 1 KB |
+| 429 | `false` | `"Too many attempts. Try again later."` | Rate limit exceeded (default: 3 requests / IP / 60 min) |
+| 500 | `false` | `"Something went wrong."` | Unexpected server error — details logged server-side only |
+
+**Notes**
+- Submitting the same email twice returns `200` — the endpoint is idempotent.
+- IPs are hashed with SHA-256 before storage. Raw IPs are never persisted.
+- Rate limiting counts all inbound requests per IP, including duplicate submissions and bot probes.
+- Configure `RATE_LIMIT_WINDOW_MINUTES` and `RATE_LIMIT_MAX_ATTEMPTS` in `.env.local` to override defaults.
