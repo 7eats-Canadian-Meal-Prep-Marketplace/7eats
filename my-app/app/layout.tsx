@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import Script from "next/script";
 import CalendlyBadge from "@/app/components/CalendlyBadge";
+import BackToTop from "@/app/components/BackToTop";
 import "./globals.css";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
@@ -15,7 +16,7 @@ export const metadata: Metadata = {
   description:
     "7eats connects meal prep cooks with customers across Canada. List your menu, get discovered, and grow beyond your personal network.",
   icons: {
-    icon: "/7eats-icon-red.svg",
+    icon: "/favicon.svg",
   },
 };
 
@@ -27,6 +28,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={plusJakartaSans.variable}>
       <head>
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         <link
           href="https://assets.calendly.com/assets/external/widget.css"
           rel="stylesheet"
@@ -35,6 +37,7 @@ export default function RootLayout({
       <body>
         {children}
         <CalendlyBadge />
+        <BackToTop />
         <Script
           src="https://assets.calendly.com/assets/external/widget.js"
           strategy="afterInteractive"

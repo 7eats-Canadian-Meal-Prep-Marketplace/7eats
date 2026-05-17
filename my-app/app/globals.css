@@ -862,6 +862,7 @@ p {
   margin-top: 40px;
   display: flex;
   flex-direction: column;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.16);
 }
 .offer-perk {
   display: flex;
@@ -870,9 +871,6 @@ p {
   gap: 16px;
   padding: 18px 0;
   border-top: 1px solid rgba(255, 255, 255, 0.16);
-}
-.offer-perk:last-child {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.16);
 }
 .offer-perk-label {
   font-size: 17px;
@@ -1148,20 +1146,16 @@ p {
 }
 .footer-grid {
   display: grid;
-  gap: 40px;
-  grid-template-columns: 1fr;
+  gap: 32px;
+  grid-template-columns: 1fr 1fr;
 }
-@media (min-width: 480px) {
-  .footer-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-  .footer-brand {
-    grid-column: 1 / -1;
-  }
+.footer-brand {
+  grid-column: 1 / -1;
 }
 @media (min-width: 700px) {
   .footer-grid {
     grid-template-columns: 1.5fr 1fr 1fr 1fr;
+    gap: 40px;
   }
   .footer-brand {
     grid-column: auto;

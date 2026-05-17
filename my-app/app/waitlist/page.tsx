@@ -2,6 +2,9 @@ import Image from "next/image";
 import Link from "next/link";
 import BannerFlash from "@/app/components/BannerFlash";
 import CalendlyButton from "@/app/components/CalendlyButton";
+import StatsSection from "@/app/components/StatsSection";
+import FadeInGroup from "@/app/components/FadeInGroup";
+import HowItWorksSection from "@/app/components/HowItWorksSection";
 import CtaSection from "@/app/components/CtaSection";
 import FaqAccordion from "@/app/components/FaqAccordion";
 import Footer from "@/app/components/Footer";
@@ -130,145 +133,46 @@ export default function WaitlistPage() {
               between.
             </p>
           </div>
-          <div className="features-grid">
-            <article className="feature">
-              <div className="feature-visual">
-                <Image
-                  src="/cook-with-phone.jpg"
-                  alt="Cook reviewing their order dashboard"
-                  fill
-                  style={{ objectFit: "cover", objectPosition: "center" }}
-                  sizes="(max-width: 700px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                />
-              </div>
-              <h3>Dashboard and management tools.</h3>
-              <p>
-                Your orders, schedule, and revenue in one place. Know exactly
-                what to cook, when, and for who - before you touch a pan.
-              </p>
-            </article>
-            <article className="feature">
-              <div className="feature-visual">
-                <Image
-                  src="/money-handle.jpg"
-                  alt="Secure deposit and payment handling"
-                  fill
-                  style={{ objectFit: "cover", objectPosition: "center" }}
-                  sizes="(max-width: 700px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                />
-              </div>
-              <h3>Deposit and payment security.</h3>
-              <p>
-                Customers pay upfront. You cook knowing every order is
-                confirmed. No-shows, e-transfer chasing, and cash awkwardness
-                are gone.
-              </p>
-            </article>
-            <article className="feature">
-              <div className="feature-visual">
-                <Image
-                  src="/meal-preps.jpg"
-                  alt="Customisable meal prep listings with dietary info"
-                  fill
-                  style={{ objectFit: "cover", objectPosition: "center" }}
-                  sizes="(max-width: 700px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                />
-              </div>
-              <h3>Customisable listings.</h3>
-              <p>
-                Add calories, macros, allergens, and dietary tags to every
-                dish. Buyers searching for halal, vegan, or high-protein find
-                you directly.
-              </p>
-            </article>
-            <article className="feature">
-              <div className="feature-visual">
-                <Image
-                  src="/cook-talking-customer.png"
-                  alt="Cook talking with a customer"
-                  fill
-                  style={{ objectFit: "cover", objectPosition: "center" }}
-                  sizes="(max-width: 700px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                />
-              </div>
-              <h3>Dynamic pricing and flash deals.</h3>
-              <p>
-                Raise prices when demand is high. Run a last-minute deal to
-                clear extra portions. Your pricing, your call - always.
-              </p>
-            </article>
-          </div>
+          <FadeInGroup className="features-grid" staggerMs={100}>
+            {[
+              <article key="1" className="feature">
+                <div className="feature-visual">
+                  <Image src="/cook-with-phone.jpg" alt="Cook reviewing their order dashboard" fill style={{ objectFit: "cover", objectPosition: "center" }} sizes="(max-width: 700px) 100vw, (max-width: 1024px) 50vw, 25vw" />
+                </div>
+                <h3>Dashboard and management tools.</h3>
+                <p>Your orders, schedule, and revenue in one place. Know exactly what to cook, when, and for who - before you touch a pan.</p>
+              </article>,
+              <article key="2" className="feature">
+                <div className="feature-visual">
+                  <Image src="/money-handle.jpg" alt="Secure deposit and payment handling" fill style={{ objectFit: "cover", objectPosition: "center" }} sizes="(max-width: 700px) 100vw, (max-width: 1024px) 50vw, 25vw" />
+                </div>
+                <h3>Deposit and payment security.</h3>
+                <p>Customers pay upfront. You cook knowing every order is confirmed. No-shows, e-transfer chasing, and cash awkwardness are gone.</p>
+              </article>,
+              <article key="3" className="feature">
+                <div className="feature-visual">
+                  <Image src="/meal-preps.jpg" alt="Customisable meal prep listings with dietary info" fill style={{ objectFit: "cover", objectPosition: "center" }} sizes="(max-width: 700px) 100vw, (max-width: 1024px) 50vw, 25vw" />
+                </div>
+                <h3>Customisable listings.</h3>
+                <p>Add calories, macros, allergens, and dietary tags to every dish. Buyers searching for halal, vegan, or high-protein find you directly.</p>
+              </article>,
+              <article key="4" className="feature">
+                <div className="feature-visual">
+                  <Image src="/cook-talking-customer.png" alt="Cook talking with a customer" fill style={{ objectFit: "cover", objectPosition: "center" }} sizes="(max-width: 700px) 100vw, (max-width: 1024px) 50vw, 25vw" />
+                </div>
+                <h3>Dynamic pricing and flash deals.</h3>
+                <p>Raise prices when demand is high. Run a last-minute deal to clear extra portions. Your pricing, your call - always.</p>
+              </article>,
+            ]}
+          </FadeInGroup>
         </div>
       </section>
 
       {/* HOW IT WORKS */}
-      <section className="section how" id="how">
-        <div className="wrap">
-          <div className="how-head how-head-centered">
-            <span className="eyebrow">How it works</span>
-            <h2 className="h-xl" style={{ marginTop: 18 }}>
-              From your kitchen to a real business in three steps.
-            </h2>
-          </div>
-          <div className="how-steps">
-            <div className="how-step">
-              <div className="how-step-num">01</div>
-              <h3>Onboard and list your meals.</h3>
-              <p>
-                Set up your cook profile, add your weekly meal prep menu, set
-                portions, prices, and pickup windows. Takes minutes.
-              </p>
-            </div>
-            <div className="how-step">
-              <div className="how-step-num">02</div>
-              <h3>Receive orders and coordinate.</h3>
-              <p>
-                Customers find you, place orders, and pay upfront. Manage
-                pickup windows or delivery slots from your dashboard. No
-                back-and-forth needed.
-              </p>
-            </div>
-            <div className="how-step">
-              <div className="how-step-num">03</div>
-              <h3>Cook, hand off, earn.</h3>
-              <p>
-                Prep what you know is sold. Pickups are staggered in timed
-                windows. Payouts hit your account automatically.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
+      <HowItWorksSection />
 
       {/* STATS */}
-      <section className="section stats">
-        <div className="wrap">
-          <span className="eyebrow on-dark">Why this matters</span>
-          <div className="stats-row">
-            <div className="stat">
-              <div className="stat-num">200<small>+</small></div>
-              <p className="stat-label">
-                Distinct ethnic origins in Toronto alone - creating unmatched
-                demand for authentic, home-style cultural food.
-              </p>
-            </div>
-            <div className="stat">
-              <div className="stat-num">87<small>%</small></div>
-              <p className="stat-label">
-                Of Canadians say rising food prices are making it harder to eat
-                healthy. Affordable home-cooked meals are the answer.
-              </p>
-            </div>
-            <div className="stat">
-              <div className="stat-num">$28</div>
-              <p className="stat-label">
-                What a $16 pizza costs on Uber Eats after fees and tip. Customers
-                are ready for a better option.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
+      <StatsSection />
 
       {/* OFFER */}
       <section className="section offer" id="offer">
@@ -282,28 +186,14 @@ export default function WaitlistPage() {
                 your first 90 days is yours. Every dollar. While you build
                 your customer base on 7eats.
               </p>
-              <div className="offer-perks">
-                <div className="offer-perk">
-                  <div className="offer-perk-label">0% platform fee</div>
-                  <div className="offer-perk-meta">First 90 days</div>
-                </div>
-                <div className="offer-perk">
-                  <div className="offer-perk-label">Priority listings</div>
-                  <div className="offer-perk-meta">Top of your neighbourhood</div>
-                </div>
-                <div className="offer-perk">
-                  <div className="offer-perk-label">Lifetime discount on premium tools</div>
-                  <div className="offer-perk-meta">Locked in forever</div>
-                </div>
-                <div className="offer-perk">
-                  <div className="offer-perk-label">
-                    Early access
-                  </div>
-                  <div className="offer-perk-meta">
-                    First to every new feature
-                  </div>
-                </div>
-              </div>
+              <FadeInGroup className="offer-perks" staggerMs={120}>
+                {[
+                  <div key="1" className="offer-perk"><div className="offer-perk-label">0% platform fee</div><div className="offer-perk-meta">First 90 days</div></div>,
+                  <div key="2" className="offer-perk"><div className="offer-perk-label">Priority listings</div><div className="offer-perk-meta">Top of your neighbourhood</div></div>,
+                  <div key="3" className="offer-perk"><div className="offer-perk-label">Lifetime discount on premium tools</div><div className="offer-perk-meta">Locked in forever</div></div>,
+                  <div key="4" className="offer-perk"><div className="offer-perk-label">Early access</div><div className="offer-perk-meta">First to every new feature</div></div>,
+                ]}
+              </FadeInGroup>
               <div className="offer-cta">
                 <Link href="#cta" className="btn btn-primary">
                   Claim my founding spot

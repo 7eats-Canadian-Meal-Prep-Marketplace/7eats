@@ -38,6 +38,7 @@ export default function Header({ activePage = "home" }: HeaderProps) {
               alt="7eats"
               width={120}
               height={32}
+              style={{ width: "auto" }}
               priority
             />
           </Link>
@@ -88,6 +89,7 @@ export default function Header({ activePage = "home" }: HeaderProps) {
               alt="7eats"
               width={120}
               height={32}
+              style={{ width: "auto" }}
             />
           </Link>
           <button
