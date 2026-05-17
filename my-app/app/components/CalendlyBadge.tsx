@@ -2,8 +2,7 @@
 
 import { useEffect } from "react";
 
-const CALENDLY_URL =
-  "https://calendly.com/maddasi04?primary_color=d64045";
+const CALENDLY_URL = "https://calendly.com/maddasi04?primary_color=d64045";
 
 declare global {
   interface Window {
