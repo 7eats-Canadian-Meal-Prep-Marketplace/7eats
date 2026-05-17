@@ -7,10 +7,8 @@ type FounderId = "amara" | "dev" | "leyla";
 interface Founder {
   id: FounderId;
   name: string;
-  role: string;
-  born: string;
-  background: string;
-  cooks: string;
+  city: string;
+  linkedin: string;
   portraitTag: string;
   portraitNote: string;
   bio: string[];
@@ -21,47 +19,41 @@ interface Founder {
 const FOUNDERS: Founder[] = [
   {
     id: "amara",
-    name: "Amara Osei",
-    role: "CEO & co-founder",
-    born: "Accra → Scarborough",
-    background: "12 years in marketplaces",
-    cooks: "Jollof rice on Sundays",
+    name: "Mohamad Addasi",
+    city: "Montreal",
+    linkedin: "https://www.linkedin.com/in/mohamad-addasi/",
     portraitTag: "PORTRAIT · 800 × 1000",
     portraitNote:
-      "Founder portrait - Amara, warm natural light, in a Toronto kitchen. Vertical crop.",
+      "Founder portrait - Mohamad, warm natural light. Vertical crop.",
     bio: [
-      "Amara grew up watching her mother run an unofficial Ghanaian kitchen out of their Scarborough apartment - sixty plates of jollof every weekend, every customer a friend, no website, no system, just a battered notebook and a WhatsApp group named “Auntie Ama’s.”",
-      "She spent the last decade building marketplaces at scale - early at a delivery unicorn, then a stint at a global fintech - before deciding the one she actually wanted to build was the one her mother needed twenty years ago.",
+      "Mohamad is a software engineering student at Concordia University, currently a software development intern at Autodesk and previously a data science intern at Intact. What drives him is not technology for its own sake but the kind of systems that quietly make something difficult feel simple for the people using them.",
+      "7eats is exactly that kind of problem. Talented cooks exist in every neighbourhood, already running informal businesses with minimal infrastructure behind them. Mohamad saw the gap and knew what it would take to close it.",
     ],
     quote:
-      "“My mum sold out every weekend for two decades and never once felt like she had a business. We’re building 7eats so the next Auntie Ama gets to feel like a founder.”",
-    email: "amara@7eats.ca",
+      "There are incredible cooks hiding in plain sight. Customers want variety and do not know where to look. That gap only exists because nobody built the right connector yet.",
+    email: "maddasi04@gmail.com",
   },
   {
     id: "dev",
-    name: "Dev Saini",
-    role: "CTO & co-founder",
-    born: "Brampton",
-    background: "10 years shipping product",
-    cooks: "Dal makhani at midnight",
+    name: "Hendrik Tebeng",
+    city: "Toronto",
+    linkedin: "https://www.linkedin.com/in/hendrik-tebeng/",
     portraitTag: "PORTRAIT · 800 × 1000",
     portraitNote:
-      "Founder portrait - Dev, casual, mid-laugh, holding a coffee. Vertical crop.",
+      "Founder portrait - Hendrik, natural light. Vertical crop.",
     bio: [
-      "Dev led platform engineering at two Canadian marketplaces before this one, including the team that built the pickup-orchestration system at a national grocer. He thinks in queues, edge cases, and Sunday-evening loads.",
-      "He joined the moment Amara showed him a spreadsheet of forty Brampton aunties manually copying WhatsApp orders into Google Sheets every Friday at 5pm.",
+      "Hendrik is a software engineering student at Concordia University and an intern at CIBC. Between school, work, and projects, cooking became a challenge early on. He started looking into meal prep as a way to stay on top of it and realized how hard it was to find the right options.",
+      "Moving to Toronto sharpened the problem. Many apartments do not come with a kitchen, so ordering out stops being a choice and becomes a reflex. He watched people around him spend hundreds a month on food, feel bad about it, and do it all over again the following week. That cycle of guilt needed a fix.",
     ],
     quote:
-      "“Most marketplace software was built for restaurants. Independent cooks have completely different physics. The tools should match.”",
-    email: "dev@7eats.ca",
+      "Meal prep fits a budget. Fast food feeds a habit and leaves you feeling bad about it. We are building 7eats so people can actually take control of that part of their lives.",
+    email: "hendriktebeng@gmail.com",
   },
   {
     id: "leyla",
     name: "Leyla Haddad",
-    role: "COO & co-founder",
-    born: "Beirut → North York",
-    background: "9 years in food & ops",
-    cooks: "Kibbeh that ruins you for any other",
+    city: "City placeholder",
+    linkedin: "https://linkedin.com",
     portraitTag: "PORTRAIT · 800 × 1000",
     portraitNote:
       "Founder portrait - Leyla, sharp, mid-conversation in a kitchen. Vertical crop.",
@@ -70,7 +62,7 @@ const FOUNDERS: Founder[] = [
       "She handles cook onboarding, food-safety certification, and the part of the business where things actually have to happen on time. She also tests every dish that goes live on the platform.",
     ],
     quote:
-      "“A platform without trust is a phone book. We’re not trying to be the biggest. We’re trying to be the one cooks recommend to their cousins.”",
+      "A platform without trust is a phone book. We're not trying to be the biggest. We're trying to be the one cooks recommend to their cousins.",
     email: "leyla@7eats.ca",
   },
 ];
@@ -91,7 +83,7 @@ export default function FounderTabs() {
             onClick={() => setActiveId(founder.id)}
           >
             <span>{founder.name}</span>
-            <span className="small">{founder.role}</span>
+            <span className="small">Co-founder &middot; {founder.city}</span>
           </button>
         ))}
       </div>
@@ -114,7 +106,7 @@ export default function FounderTabs() {
             </div>
           </div>
           <div className="founder-body">
-            <span className="role">{founder.role}</span>
+            <span className="role">Co-founder &middot; {founder.city}</span>
             <h2>{founder.name}</h2>
             {founder.bio.map((paragraph, i) => (
               // biome-ignore lint/suspicious/noArrayIndexKey: static array
@@ -123,7 +115,7 @@ export default function FounderTabs() {
             <div className="founder-quote">{founder.quote}</div>
             <div className="founder-links">
               <a
-                href="https://linkedin.com"
+                href={founder.linkedin}
                 target="_blank"
                 rel="noopener noreferrer"
               >
