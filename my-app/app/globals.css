@@ -1847,7 +1847,10 @@ p {
   font-weight: 600;
   cursor: pointer;
   border: 1.5px solid transparent;
-  transition: background 0.15s, border-color 0.15s, transform 0.12s;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    transform 0.12s;
   white-space: nowrap;
 }
 .cookie-btn:hover {
