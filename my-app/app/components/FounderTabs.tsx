@@ -20,6 +20,22 @@ interface Founder {
 
 const FOUNDERS: Founder[] = [
   {
+    id: "dev",
+    name: "Hendrik Tebeng",
+    city: "Toronto",
+    linkedin: "https://www.linkedin.com/in/hendrik-tebeng/",
+    portraitTag: "PORTRAIT · 800 × 1000",
+    portraitNote: "Founder portrait - Hendrik, natural light. Vertical crop.",
+    image: "/hendrik_profile.png",
+    bio: [
+      "Hendrik is a software engineering student at Concordia University and an intern at CIBC. Between school, work, and projects, cooking became a challenge early on. He started looking into meal prep as a way to stay on top of it and realized how hard it was to find the right options.",
+      "Moving to Toronto sharpened the problem. Many apartments do not come with a kitchen, so ordering out stops being a choice and becomes a reflex. He watched people around him spend hundreds a month on food, feel bad about it, and do it all over again the following week. That cycle of guilt needed a fix.",
+    ],
+    quote:
+      "Meal prep fits a budget. Fast food feeds a habit and leaves you feeling bad about it. We are building 7eats so people can actually take control of that part of their lives.",
+    email: "hendriktebeng@gmail.com",
+  },
+  {
     id: "amara",
     name: "Mohamad Addasi",
     city: "Montreal",
@@ -35,22 +51,6 @@ const FOUNDERS: Founder[] = [
     quote:
       "There are incredible cooks hiding in plain sight. Customers want variety and do not know where to look. That gap only exists because nobody built the right connector yet.",
     email: "maddasi04@gmail.com",
-  },
-  {
-    id: "dev",
-    name: "Hendrik Tebeng",
-    city: "Toronto",
-    linkedin: "https://www.linkedin.com/in/hendrik-tebeng/",
-    portraitTag: "PORTRAIT · 800 × 1000",
-    portraitNote: "Founder portrait - Hendrik, natural light. Vertical crop.",
-    image: "/hendrik_profile.png",
-    bio: [
-      "Hendrik is a software engineering student at Concordia University and an intern at CIBC. Between school, work, and projects, cooking became a challenge early on. He started looking into meal prep as a way to stay on top of it and realized how hard it was to find the right options.",
-      "Moving to Toronto sharpened the problem. Many apartments do not come with a kitchen, so ordering out stops being a choice and becomes a reflex. He watched people around him spend hundreds a month on food, feel bad about it, and do it all over again the following week. That cycle of guilt needed a fix.",
-    ],
-    quote:
-      "Meal prep fits a budget. Fast food feeds a habit and leaves you feeling bad about it. We are building 7eats so people can actually take control of that part of their lives.",
-    email: "hendriktebeng@gmail.com",
   },
   {
     id: "adnane",
@@ -71,7 +71,7 @@ const FOUNDERS: Founder[] = [
 ];
 
 export default function FounderTabs() {
-  const [activeId, setActiveId] = useState<FounderId>("amara");
+  const [activeId, setActiveId] = useState<FounderId>("dev");
 
   return (
     <>
