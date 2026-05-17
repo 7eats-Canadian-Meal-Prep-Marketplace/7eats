@@ -8,7 +8,9 @@
       "Bash(grep -E \"^app\\\\\\\\\")",
       "Bash(git restore *)",
       "Bash(dir C:\\\\Users\\\\hntnz\\\\Documents\\\\7eats\\\\my-app\\\\public *)",
-      "Bash(dir C:\\\\Users\\\\hntnz\\\\Documents\\\\7eats *)"
+      "Bash(dir C:\\\\Users\\\\hntnz\\\\Documents\\\\7eats *)",
+      "Bash(git checkout *)",
+      "Bash(git add *)"
     ]
   }
 }
