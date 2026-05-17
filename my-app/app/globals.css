@@ -1513,19 +1513,11 @@ p {
   --normal-bg: var(--ink-2);
   --normal-border: var(--grey-900);
   --normal-text: var(--white);
-  --success-bg: var(--ink-2);
-  --success-border: var(--grey-900);
-  --success-text: var(--white);
-  --error-bg: var(--ink-2);
-  --error-border: var(--grey-900);
-  --error-text: var(--white);
-  --info-bg: var(--ink-2);
-  --info-border: var(--grey-900);
-  --info-text: var(--white);
   --border-radius: var(--radius-sm);
   font-family: var(--font);
 }
 
-[data-sonner-toaster] [data-type="success"] [data-icon] svg {
+/* Selector targets Sonner v2 internal DOM structure — verify on Sonner upgrades */
+[data-sonner-toaster] [data-sonner-toast][data-type="success"] [data-icon] svg {
   color: var(--red);
 }
