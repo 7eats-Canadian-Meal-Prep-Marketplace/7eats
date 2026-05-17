@@ -12,22 +12,27 @@ export default function CtaSection({
   isTeamPage: _isTeamPage = false,
 }: CtaSectionProps) {
   const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setLoading(true);
 
     let response: Response;
     try {
       response = await fetch("/api/waitlist", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
     } catch {
       toast.error("Something went wrong. Please try again.");
       return;
+    } finally {
+      setLoading(false);
     }
 
-    if (response.status === 200) {
+    if (response.ok) {
       toast.success("You're on the list!");
       setEmail("");
       return;
@@ -74,7 +79,7 @@ export default function CtaSection({
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
-              <button type="submit" className="btn btn-primary">
+              <button type="submit" className="btn btn-primary" disabled={loading}>
                 Notify me
               </button>
             </div>
