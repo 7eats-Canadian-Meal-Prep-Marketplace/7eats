@@ -3,6 +3,7 @@ name: Vercel Preview Deployment
 env:
   VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
   VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+  DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
 on:
   push:
@@ -46,6 +47,13 @@ jobs:
 
       - name: Pull Vercel environment information
         run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Verify required Vercel environment variables
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::DATABASE_URL is missing from GitHub Actions secrets"
+            exit 1
+          fi
 
       - name: Build project artifacts
         run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
