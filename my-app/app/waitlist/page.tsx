@@ -330,15 +330,17 @@ export default function WaitlistPage() {
       <section className="section faq" id="faq">
         <div className="wrap">
           <div className="faq-grid">
-            <div className="faq-side">
+            <div className="faq-side-top">
               <span className="eyebrow">Questions?</span>
-              <h2 className="h-xl">We&apos;ve got answers.</h2>
+              <h2 className="faq-side h-xl">We&apos;ve got answers.</h2>
+            </div>
+            <FaqAccordion />
+            <div className="faq-side-bottom">
               <p>Still curious? Book 30 minutes with one of the founders.</p>
               <CalendlyButton className="btn btn-secondary">
                 Book a call
               </CalendlyButton>
             </div>
-            <FaqAccordion />
           </div>
         </div>
       </section>
