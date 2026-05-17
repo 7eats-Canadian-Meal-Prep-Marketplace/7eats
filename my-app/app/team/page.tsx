@@ -46,25 +46,26 @@ export default function TeamPage() {
             </p>
             <div className="why-body">
               <p>
-                The three of us are students. We juggle internships, tight
-                budgets, and the daily reality of spending too much on food we
-                did not really want. At some point we all ended up looking for
-                meal prep and kept finding the same thing: either overpriced
-                commercial boxes or word-of-mouth cooks with no real way to
-                reach us.
+                Toronto is one of the most culturally diverse cities on earth.
+                You see it in the neighbourhoods, the markets, the corner
+                stores. But the best food this city makes has never been on a
+                menu. It lives in apartment kitchens and home dining rooms, made
+                by people who cook with a level of care no chain can replicate.
               </p>
               <p>
-                We started 7eats because Toronto is not short of incredible
-                cooks. It is short of <em>infrastructure</em> for them. The
-                platform exists so a Filipino chef in Mississauga, a Ghanaian
-                baker in Scarborough, and a Lebanese caterer in Etobicoke all
-                get the same shot to turn the kitchen they already run into a
-                business they actually own.
+                Those cooks are already out there. Thousands of them, across
+                every borough, building customer bases through DMs, e-transfers,
+                and word of mouth. They are not short of skill or demand. They
+                are short of <em>infrastructure</em>. A real way to grow beyond
+                the network they were born into.
               </p>
               <p>
-                We are not building another delivery app. We are building the
-                connective tissue for a kind of food economy that has been
-                hiding in plain sight for thirty years.
+                On the other side of that gap are the students eating out of
+                convenience, not choice. The professionals spending two hundred
+                dollars a week on food they do not actually want. The people who
+                know something better exists nearby but have no way to find it.
+                7eats connects both sides of a market that has always been
+                there.
               </p>
             </div>
             <div className="why-sign">
