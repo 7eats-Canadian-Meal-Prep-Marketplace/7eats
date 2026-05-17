@@ -1582,6 +1582,41 @@ p {
 }
 
 /* =========================================================
+   404
+   ========================================================= */
+.notfound {
+  min-height: calc(100vh - 160px);
+  display: flex;
+  align-items: center;
+}
+.notfound-inner {
+  padding-top: 80px;
+  padding-bottom: 80px;
+}
+.notfound-code {
+  display: block;
+  font-size: clamp(80px, 14vw, 160px);
+  font-weight: 700;
+  letter-spacing: -0.05em;
+  line-height: 1;
+  color: var(--red);
+  margin-bottom: 24px;
+}
+.notfound-title {
+  font-size: clamp(28px, 4vw, 48px);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  margin-bottom: 16px;
+}
+.notfound-body {
+  font-size: clamp(16px, 1.5vw, 18px);
+  color: var(--grey-700);
+  max-width: 44ch;
+  line-height: 1.6;
+  margin-bottom: 36px;
+}
+
+/* =========================================================
    Privacy / Legal page
    ========================================================= */
 .policy-page {

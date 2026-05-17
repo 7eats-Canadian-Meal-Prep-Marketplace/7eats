@@ -9,10 +9,18 @@ export default function CookieBanner() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    if (!localStorage.getItem(CONSENT_KEY)) setVisible(true);
+    try {
+      if (!localStorage.getItem(CONSENT_KEY)) setVisible(true);
+    } catch {
+      setVisible(true);
+    }
 
     function handleReopen() {
-      localStorage.removeItem(CONSENT_KEY);
+      try {
+        localStorage.removeItem(CONSENT_KEY);
+      } catch {
+        // ignore storage errors; still reopen the banner
+      }
       setVisible(true);
     }
 
@@ -22,14 +30,18 @@ export default function CookieBanner() {
   }, []);
 
   function dismiss(choice: string) {
-    localStorage.setItem(CONSENT_KEY, choice);
+    try {
+      localStorage.setItem(CONSENT_KEY, choice);
+    } catch {
+      // ignore storage errors; still hide the banner
+    }
     setVisible(false);
   }
 
   if (!visible) return null;
 
   return (
-    <div className="cookie-banner" role="dialog" aria-label="Cookie consent">
+    <div className="cookie-banner" role="region" aria-label="Cookie consent">
       <div className="cookie-banner-inner">
         <p className="cookie-banner-text">
           This site uses essential cookies only. We do not use analytics or
