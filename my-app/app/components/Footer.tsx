@@ -29,7 +29,7 @@ export default function Footer() {
               <li>
                 <Link href="/team">Meet the team</Link>
               </li>
-<li>
+              <li>
                 <Link href="#faq">FAQ</Link>
               </li>
             </ul>

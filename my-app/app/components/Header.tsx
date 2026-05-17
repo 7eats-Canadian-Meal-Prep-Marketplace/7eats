@@ -121,9 +121,7 @@ export default function Header({ activePage = "home" }: HeaderProps) {
           <Link href="#cta" className="btn btn-primary" onClick={closeNav}>
             Join the waitlist
           </Link>
-          <CalendlyButton className="btn btn-ghost">
-            Book a call
-          </CalendlyButton>
+          <CalendlyButton className="btn btn-ghost">Book a call</CalendlyButton>
         </div>
       </aside>
     </>

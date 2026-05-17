@@ -42,8 +42,7 @@ const FOUNDERS: Founder[] = [
     city: "Toronto",
     linkedin: "https://www.linkedin.com/in/hendrik-tebeng/",
     portraitTag: "PORTRAIT · 800 × 1000",
-    portraitNote:
-      "Founder portrait - Hendrik, natural light. Vertical crop.",
+    portraitNote: "Founder portrait - Hendrik, natural light. Vertical crop.",
     image: "/hendrik_profile.png",
     bio: [
       "Hendrik is a software engineering student at Concordia University and an intern at CIBC. Between school, work, and projects, cooking became a challenge early on. He started looking into meal prep as a way to stay on top of it and realized how hard it was to find the right options.",
@@ -59,14 +58,12 @@ const FOUNDERS: Founder[] = [
     city: "Montreal",
     linkedin: "https://linkedin.com/in/adnane-bejja",
     portraitTag: "PORTRAIT · 800 × 1000",
-    portraitNote:
-      "Founder portrait - Adnane, natural light. Vertical crop.",
+    portraitNote: "Founder portrait - Adnane, natural light. Vertical crop.",
     bio: [
       "Adnane is a software engineering student at Concordia University and a software developer at Intact Financial Corporation.",
       "Placeholder — add Adnane's personal story and connection to the 7eats mission here.",
     ],
-    quote:
-      "Placeholder — add Adnane's quote here.",
+    quote: "Placeholder — add Adnane's quote here.",
     email: "adnane@7eats.ca",
   },
 ];
