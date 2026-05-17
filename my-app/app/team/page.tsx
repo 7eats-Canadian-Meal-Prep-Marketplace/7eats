@@ -46,25 +46,28 @@ export default function TeamPage() {
             </p>
             <div className="why-body">
               <p>
-                The three of us are students. We juggle internships, tight
-                budgets, and the daily reality of spending too much on food we
-                did not really want. At some point we all ended up looking for
-                meal prep and kept finding the same thing: either overpriced
-                commercial boxes or word-of-mouth cooks with no real way to
-                reach us.
+                Toronto is one of the most culturally diverse cities on earth.
+                It shows in its neighbourhoods, its markets, and its people. But
+                the best food this city produces has never been in a restaurant.
+                It lives in apartment kitchens, basement prep spaces, and home
+                dining rooms run by people who learned to cook before they
+                learned English.
               </p>
               <p>
-                We started 7eats because Toronto is not short of incredible
-                cooks. It is short of <em>infrastructure</em> for them. The
-                platform exists so a Filipino chef in Mississauga, a Ghanaian
-                baker in Scarborough, and a Lebanese caterer in Etobicoke all
-                get the same shot to turn the kitchen they already run into a
-                business they actually own.
+                Those cooks already exist. Thousands of them, across every
+                borough, feeding regulars through DMs and e-transfers and
+                personal networks built entirely on trust. They do not lack
+                skill, customers, or demand. They lack the{" "}
+                <em>infrastructure</em> to grow beyond the circle they were born
+                into.
               </p>
               <p>
-                We are not building another delivery app. We are building the
-                connective tissue for a kind of food economy that has been
-                hiding in plain sight for thirty years.
+                7eats is built for that gap. On the other side of it are the
+                students eating out of convenience, not choice. The
+                professionals spending two hundred dollars a week on food they
+                did not really want. The people who know home-cooked meals exist
+                nearby but have no way to find them. We are connecting both
+                sides of a market that has always been there.
               </p>
             </div>
             <div className="why-sign">
