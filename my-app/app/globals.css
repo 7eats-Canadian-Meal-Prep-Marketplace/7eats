@@ -1505,3 +1505,24 @@ p {
   max-width: 48ch;
   line-height: 1.55;
 }
+
+/* =========================================================
+   Sonner toast overrides — match app design system
+   ========================================================= */
+[data-sonner-toaster] {
+  --normal-bg: var(--ink-2);
+  --normal-border: var(--grey-900);
+  --normal-text: var(--white);
+  --success-bg: var(--ink-2);
+  --success-border: var(--grey-900);
+  --success-text: var(--white);
+  --error-bg: var(--ink-2);
+  --error-border: var(--grey-900);
+  --error-text: var(--white);
+  --border-radius: var(--radius-sm);
+  font-family: var(--font);
+}
+
+[data-sonner-toaster] [data-type="success"] [data-icon] svg {
+  color: var(--red);
+}
