@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import CalendlyButton from "@/app/components/CalendlyButton";
+import CookiePreferencesLink from "@/app/components/CookiePreferencesLink";
 
 export default function Footer() {
   return (
@@ -30,7 +31,7 @@ export default function Footer() {
                 <Link href="/team">Meet the team</Link>
               </li>
 <li>
-                <Link href="#faq">FAQ</Link>
+                <Link href="/waitlist#faq">FAQ</Link>
               </li>
             </ul>
           </div>
@@ -38,10 +39,10 @@ export default function Footer() {
             <h4>For cooks</h4>
             <ul>
               <li>
-                <Link href="#cta">Join the waitlist</Link>
+                <Link href="/waitlist#cta">Join the waitlist</Link>
               </li>
               <li>
-                <Link href="#offer">Founding cook offer</Link>
+                <Link href="/waitlist#offer">Founding cook offer</Link>
               </li>
               <li>
                 <CalendlyButton>Book a call</CalendlyButton>
@@ -52,25 +53,7 @@ export default function Footer() {
             <h4>Contact</h4>
             <ul>
               <li>
-                <a href="mailto:hello@7eats.ca">hello@7eats.ca</a>
-              </li>
-              <li>
-                <a
-                  href="https://instagram.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Instagram
-                </a>
-              </li>
-              <li>
-                <a
-                  href="https://linkedin.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  LinkedIn
-                </a>
+                <a href="mailto:contact@7eats.ca">contact@7eats.ca</a>
               </li>
             </ul>
           </div>
@@ -79,7 +62,7 @@ export default function Footer() {
           <span>&copy; 2026 7eats Inc. &middot; Toronto, ON</span>
           <div className="footer-legal">
             <a href="/privacy">Privacy policy</a>
-            <a href="/cookies">Cookie consent</a>
+            <CookiePreferencesLink />
           </div>
         </div>
       </div>

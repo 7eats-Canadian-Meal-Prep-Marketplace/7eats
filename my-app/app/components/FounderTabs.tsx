@@ -56,18 +56,19 @@ const FOUNDERS: Founder[] = [
   {
     id: "adnane",
     name: "Adnane Bejja",
-    city: "Montreal",
-    linkedin: "https://linkedin.com/in/adnane-bejja",
+    city: "Laval",
+    linkedin: "https://www.linkedin.com/in/adnane-bejja-112398327/",
     portraitTag: "PORTRAIT · 800 × 1000",
     portraitNote:
       "Founder portrait - Adnane, natural light. Vertical crop.",
+    image: "/adnane_profile.jpg",
     bio: [
-      "Adnane is a software engineering student at Concordia University and a software developer at Intact Financial Corporation.",
-      "Placeholder — add Adnane's personal story and connection to the 7eats mission here.",
+      "Adnane is a software engineering student at Concordia University and a software developer at Intact Financial Corporation. He grew up in Laval, where the best food in his neighbourhood was almost never in a restaurant. It was made at home, shared within a circle, and invisible to everyone outside it.",
+      "That gap felt obvious once you noticed it. Talented cooks were already earning through word of mouth, but growing beyond their circle meant hitting a ceiling. Adnane builds the infrastructure behind the platform. The parts that have to be invisible until the day a cook gets their first order and everything just works.",
     ],
     quote:
-      "Placeholder — add Adnane's quote here.",
-    email: "adnane@7eats.ca",
+      "Every city has people who cook better than most restaurants. They just never had the infrastructure to prove it. That is what we are building.",
+    email: "adnanebejja14@gmail.com",
   },
 ];
 
