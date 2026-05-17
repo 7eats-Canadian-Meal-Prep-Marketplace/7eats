@@ -47,27 +47,25 @@ export default function TeamPage() {
             <div className="why-body">
               <p>
                 Toronto is one of the most culturally diverse cities on earth.
-                It shows in its neighbourhoods, its markets, and its people. But
-                the best food this city produces has never been in a restaurant.
-                It lives in apartment kitchens, basement prep spaces, and home
-                dining rooms run by people who learned to cook before they
-                learned English.
+                You see it in the neighbourhoods, the markets, the corner
+                stores. But the best food this city makes has never been on a
+                menu. It lives in apartment kitchens and home dining rooms, made
+                by people who cook with a level of care no chain can replicate.
               </p>
               <p>
-                Those cooks already exist. Thousands of them, across every
-                borough, feeding regulars through DMs and e-transfers and
-                personal networks built entirely on trust. They do not lack
-                skill, customers, or demand. They lack the{" "}
-                <em>infrastructure</em> to grow beyond the circle they were born
-                into.
+                Those cooks are already out there. Thousands of them, across
+                every borough, building customer bases through DMs, e-transfers,
+                and word of mouth. They are not short of skill or demand. They
+                are short of <em>infrastructure</em>. A real way to grow beyond
+                the network they were born into.
               </p>
               <p>
-                7eats is built for that gap. On the other side of it are the
-                students eating out of convenience, not choice. The
-                professionals spending two hundred dollars a week on food they
-                did not really want. The people who know home-cooked meals exist
-                nearby but have no way to find them. We are connecting both
-                sides of a market that has always been there.
+                On the other side of that gap are the students eating out of
+                convenience, not choice. The professionals spending two hundred
+                dollars a week on food they do not actually want. The people who
+                know something better exists nearby but have no way to find it.
+                7eats connects both sides of a market that has always been
+                there.
               </p>
             </div>
             <div className="why-sign">
