@@ -17,8 +17,8 @@ export default function Footer() {
               style={{ height: 36, width: "auto" }}
             />
             <p>
-              The home for Toronto&apos;s independent cooks. Built in Toronto,
-              for Toronto.
+              The marketplace for Toronto&apos;s meal prep businesses. Built in
+              Toronto, for Toronto.
             </p>
           </div>
           <div className="footer-col">

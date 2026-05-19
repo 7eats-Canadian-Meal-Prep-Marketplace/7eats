@@ -17,14 +17,14 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://7eats.ca"),
   title: "7eats - The Canadian Meal Prep Marketplace",
   description:
-    "7eats connects meal prep cooks with customers across Canada. List your menu, get discovered, and grow beyond your personal network.",
+    "7eats is the marketplace for Toronto's meal prep businesses. Get discovered by new customers, manage orders, and get paid without the admin overhead.",
   icons: {
     icon: "/favicon.svg",
   },
   openGraph: {
     title: "7eats - The Canadian Meal Prep Marketplace",
     description:
-      "7eats connects meal prep cooks with customers across Canada. List your menu, get discovered, and grow beyond your personal network.",
+      "7eats is the marketplace for Toronto's meal prep businesses. Get discovered by new customers, manage orders, and get paid without the admin overhead.",
     url: "https://7eats.ca",
     siteName: "7eats",
     images: [
@@ -42,7 +42,7 @@ export const metadata: Metadata = {
     card: "summary",
     title: "7eats - The Canadian Meal Prep Marketplace",
     description:
-      "7eats connects meal prep cooks with customers across Canada. List your menu, get discovered, and grow beyond your personal network.",
+      "7eats is the marketplace for Toronto's meal prep businesses. Get discovered by new customers, manage orders, and get paid without the admin overhead.",
     images: ["/7eats-icon-full.jpg"],
   },
 };

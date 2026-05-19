@@ -13,7 +13,7 @@ const FAQ_ITEMS: FaqItem[] = [
     id: "what-kind",
     question: "What kind of cook is 7eats for?",
     answer:
-      "For our first year we're onboarding independent cooks who already hold a valid food handler certification and cook out of a permitted space. If you have your cert and a kitchen, you're our person.",
+      "For our first year we're onboarding meal prep businesses that already hold a valid food handler certification and operate out of a permitted space. If you have your cert and a kitchen, you're our person.",
   },
   {
     id: "how-much",
