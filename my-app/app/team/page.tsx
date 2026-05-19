@@ -46,26 +46,25 @@ export default function TeamPage() {
             </p>
             <div className="why-body">
               <p>
-                Toronto is one of the most culturally diverse cities on earth.
-                You see it in the neighbourhoods, the markets, the corner
-                stores. But the best food this city makes has never been on a
-                menu. It lives in apartment kitchens and home dining rooms, made
-                by people who cook with a level of care no chain can replicate.
+                Toronto has students eating out of convenience, not choice.
+                Professionals spending two hundred dollars a week on food they
+                do not actually want. People who know something better exists
+                nearby but have no way to find it. The demand for real, fresh
+                meal prep is there. The discovery is not.
               </p>
               <p>
-                Those cooks are already out there. Thousands of them, across
-                every borough, building customer bases through DMs, e-transfers,
+                The supply is already there too. Thousands of cooks across every
+                borough, building customer bases through DMs, bank transfers,
                 and word of mouth. They are not short of skill or demand. They
-                are short of <em>infrastructure</em>. A real way to grow beyond
-                the network they were born into.
+                are short of <em>infrastructure</em> and a real way to grow
+                beyond the network they were born into.
               </p>
               <p>
-                On the other side of that gap are the students eating out of
-                convenience, not choice. The professionals spending two hundred
-                dollars a week on food they do not actually want. The people who
-                know something better exists nearby but have no way to find it.
-                7eats connects both sides of a market that has always been
-                there.
+                Toronto is one of the most culturally diverse cities on earth.
+                The best food this city makes has never been on a menu. It lives
+                in apartment kitchens and home dining rooms, made by people who
+                cook with a level of care no chain can replicate. 7eats is how
+                both sides finally find each other.
               </p>
             </div>
             <div className="why-sign">
