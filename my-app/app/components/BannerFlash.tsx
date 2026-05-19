@@ -12,8 +12,8 @@ export default function BannerFlash() {
     <div className="flash" data-flash>
       <div className="flash-inner">
         <span className="flash-text">
-          First <strong>30 cooks</strong> in Toronto keep <strong>100%</strong>{" "}
-          of earnings for 90 days &middot;{" "}
+          First <strong>30 businesses</strong> in Toronto keep{" "}
+          <strong>100%</strong> of earnings for 90 days &middot;{" "}
           <span className="flash-offer">
             <Link className="flash-link" href="#offer">
               See the offer

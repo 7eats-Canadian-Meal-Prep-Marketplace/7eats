@@ -6,7 +6,7 @@ const STEPS = [
   {
     num: "01",
     title: "Onboard and list your meals.",
-    body: "Set up your cook profile, add your weekly meal prep menu, set portions, prices, and pickup windows. Takes minutes.",
+    body: "Set up your business profile, add your meal prep menu, set portions, prices, and pickup windows. Takes minutes.",
   },
   {
     num: "02",
@@ -46,7 +46,7 @@ export default function HowItWorksSection() {
         <div className="how-head how-head-centered">
           <span className="eyebrow">How it works</span>
           <h2 className="h-xl" style={{ marginTop: 18 }}>
-            From your kitchen to a real business in three steps.
+            From listing to payout in three steps.
           </h2>
         </div>
         <div className="how-steps">
