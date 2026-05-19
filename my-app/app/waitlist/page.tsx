@@ -13,7 +13,7 @@ import StatsSection from "@/app/components/StatsSection";
 export const metadata = {
   title: "7eats - The Canadian Meal Prep Marketplace",
   description:
-    "7eats is the home for Toronto's independent cooks. List your menu, set your prices, keep the majority of what you make. No restaurant. No middlemen.",
+    "7eats is the marketplace for Toronto's meal prep businesses. List your menu, reach new customers, and get paid without the admin overhead.",
 };
 
 export default function WaitlistPage() {
@@ -31,16 +31,15 @@ export default function WaitlistPage() {
                 Canada&apos;s meal prep marketplace
               </span>
               <h1>
-                Your kitchen is already a business.{" "}
+                Your meal prep business is ready to scale.{" "}
                 <span className="hero-accent">
                   We&apos;re building&nbsp;the platform for it.
                 </span>
               </h1>
               <p className="hero-sub">
-                7eats is a marketplace for meal prep cooks. List your weekly
-                menu, set your prices, and get discovered by customers actively
-                looking for what you cook. Orders and payments are handled for
-                you.
+                7eats is a marketplace for meal prep businesses. List your menu,
+                set your prices, and get discovered by customers actively
+                looking for what you sell. Orders and payments handled for you.
               </p>
               <div className="hero-ctas">
                 <CalendlyButton className="btn btn-secondary">
@@ -54,7 +53,7 @@ export default function WaitlistPage() {
             <div className="hero-visual">
               <Image
                 src="/woman-cooking.jpg"
-                alt="A Toronto independent cook in her kitchen"
+                alt="A Toronto meal prep business owner in her kitchen"
                 fill
                 style={{ objectFit: "cover", objectPosition: "center" }}
                 priority
@@ -71,7 +70,7 @@ export default function WaitlistPage() {
           <div className="problem-intro">
             <span className="eyebrow on-dark">The problem</span>
             <h2 className="h-xl">
-              Meal prep cooks are everywhere. Nothing connected them.
+              Meal prep cooks are everywhere. Nothing connects them.
             </h2>
             <p className="lead on-dark">
               The cooks are already there. They just needed a platform to reach
@@ -97,14 +96,15 @@ export default function WaitlistPage() {
             </div>
             <div className="problem-item">
               <div className="problem-num">03</div>
-              <h3>No trust layer between cooks and buyers.</h3>
+              <h3>No trust layer between operators and buyers.</h3>
               <p>
-                Buying food from a stranger feels risky. It shouldn&apos;t.{" "}
+                Customers want verified businesses, allergen info, and secure
+                payments before committing.{" "}
                 <strong>
                   Verified profiles, deposits, allergen fields, and
                   confirmed-order reviews
                 </strong>{" "}
-                fix that.
+                give them that.
               </p>
             </div>
             <div className="problem-item">
@@ -149,7 +149,7 @@ export default function WaitlistPage() {
                 <h3>Dashboard and management tools.</h3>
                 <p>
                   Your orders, schedule, and revenue in one place. Know exactly
-                  what to cook, when, and for who - before you touch a pan.
+                  what to cook, when, and for who before you touch a pan.
                 </p>
               </article>,
               <article key="2" className="feature">
@@ -199,7 +199,7 @@ export default function WaitlistPage() {
                 <h3>Dynamic pricing and flash deals.</h3>
                 <p>
                   Raise prices when demand is high. Run a last-minute deal to
-                  clear extra portions. Your pricing, your call - always.
+                  clear extra portions. Your pricing, your call, always.
                 </p>
               </article>,
             ]}
@@ -222,7 +222,7 @@ export default function WaitlistPage() {
               <h2>0% platform fee for your first 90 days.</h2>
               <p className="offer-lede">
                 Found us early? You get the founding cook deal. Every order in
-                your first 90 days is yours. Every dollar. While you build your
+                your first 90 days is yours. Every dollar. While you scale your
                 customer base on 7eats.
               </p>
               <FadeInGroup className="offer-perks" staggerMs={120}>

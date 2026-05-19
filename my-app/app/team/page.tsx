@@ -8,7 +8,7 @@ import Header from "@/app/components/Header";
 export const metadata = {
   title: "Meet the team - 7eats",
   description:
-    "Three people, fifteen years of marketplaces and kitchens between us, and one shared belief: Toronto's independent cooks deserve infrastructure.",
+    "Three people, fifteen years of marketplaces and kitchens between us, and one shared belief: Toronto's meal prep businesses deserve real infrastructure.",
 };
 
 export default function TeamPage() {
