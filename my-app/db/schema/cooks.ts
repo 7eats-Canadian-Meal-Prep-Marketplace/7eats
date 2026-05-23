@@ -11,6 +11,8 @@ import {
 import { certificationStatus } from "./enums";
 import { users } from "./users";
 
+const isAdmin = sql`auth.jwt() -> 'app_metadata' ->> 'role' = 'admin'`;
+
 export const cookProfiles = pgTable(
   "cook_profiles",
   {
@@ -25,10 +27,15 @@ export const cookProfiles = pgTable(
     postalCode: varchar("postal_code", { length: 10 }),
     onboardingDone: boolean("onboarding_done").notNull().default(false),
     reviewedAt: timestamp("reviewed_at"),
-    reviewedBy: uuid("reviewed_by").references(() => users.id),
+    reviewedBy: uuid("reviewed_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
     reviewNotes: text("review_notes"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at")
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
   },
   () => [
     pgPolicy("cook_profiles_select_active", {
@@ -46,7 +53,7 @@ export const cookProfiles = pgTable(
     }),
     pgPolicy("cook_profiles_update_admin", {
       for: "update",
-      using: sql`EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')`,
+      using: isAdmin,
     }),
   ],
 ).enableRLS();
@@ -67,10 +74,15 @@ export const cookCertifications = pgTable(
     fileUrl: text("file_url").notNull(),
     status: certificationStatus("status").notNull().default("pending_review"),
     reviewedAt: timestamp("reviewed_at"),
-    reviewedBy: uuid("reviewed_by").references(() => users.id),
+    reviewedBy: uuid("reviewed_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
     reviewNotes: text("review_notes"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at")
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
   },
   () => [
     pgPolicy("certs_select_own", {
@@ -83,7 +95,7 @@ export const cookCertifications = pgTable(
     }),
     pgPolicy("certs_select_admin", {
       for: "select",
-      using: sql`EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')`,
+      using: isAdmin,
     }),
     pgPolicy("certs_insert_own", {
       for: "insert",
@@ -91,7 +103,7 @@ export const cookCertifications = pgTable(
     }),
     pgPolicy("certs_update_admin", {
       for: "update",
-      using: sql`EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')`,
+      using: isAdmin,
     }),
     pgPolicy("certs_delete_own_pending", {
       for: "delete",

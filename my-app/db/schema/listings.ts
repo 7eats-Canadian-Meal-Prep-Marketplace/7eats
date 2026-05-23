@@ -15,6 +15,8 @@ import { cookProfiles } from "./cooks";
 import { listingStatus } from "./enums";
 import { users } from "./users";
 
+const isAdmin = sql`auth.jwt() -> 'app_metadata' ->> 'role' = 'admin'`;
+
 export const tags = pgTable(
   "tags",
   {
@@ -31,15 +33,15 @@ export const tags = pgTable(
     }),
     pgPolicy("tags_insert_admin", {
       for: "insert",
-      withCheck: sql`EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')`,
+      withCheck: isAdmin,
     }),
     pgPolicy("tags_update_admin", {
       for: "update",
-      using: sql`EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')`,
+      using: isAdmin,
     }),
     pgPolicy("tags_delete_admin", {
       for: "delete",
-      using: sql`EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')`,
+      using: isAdmin,
     }),
   ],
 ).enableRLS();
@@ -60,10 +62,15 @@ export const listings = pgTable(
     minOrderQty: integer("min_order_qty").notNull().default(1),
     maxOrderQty: integer("max_order_qty"),
     reviewedAt: timestamp("reviewed_at"),
-    reviewedBy: uuid("reviewed_by").references(() => users.id),
+    reviewedBy: uuid("reviewed_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
     reviewNotes: text("review_notes"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at")
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
   },
   () => [
     pgPolicy("listings_select_active", {
@@ -76,7 +83,7 @@ export const listings = pgTable(
     }),
     pgPolicy("listings_select_admin", {
       for: "select",
-      using: sql`EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')`,
+      using: isAdmin,
     }),
     pgPolicy("listings_insert_own", {
       for: "insert",
@@ -89,7 +96,7 @@ export const listings = pgTable(
     }),
     pgPolicy("listings_update_admin", {
       for: "update",
-      using: sql`EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')`,
+      using: isAdmin,
     }),
     pgPolicy("listings_delete_own_draft", {
       for: "delete",
@@ -184,7 +191,10 @@ export const listingNutrition = pgTable(
     fatG: numeric("fat_g", { precision: 6, scale: 2 }),
     fiberG: numeric("fiber_g", { precision: 6, scale: 2 }),
     sodiumMg: numeric("sodium_mg", { precision: 8, scale: 2 }),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at")
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
   },
   () => [
     pgPolicy("nutrition_select_active_listing", {

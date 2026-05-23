@@ -10,6 +10,8 @@ import {
 } from "drizzle-orm/pg-core";
 import { accountStatus, userRole } from "./enums";
 
+const isAdmin = sql`auth.jwt() -> 'app_metadata' ->> 'role' = 'admin'`;
+
 export const users = pgTable(
   "users",
   {
@@ -24,7 +26,10 @@ export const users = pgTable(
     email: varchar("email", { length: 255 }).unique(),
     avatarUrl: text("avatar_url"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at")
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
   },
   () => [
     pgPolicy("users_select_own", {
@@ -33,7 +38,7 @@ export const users = pgTable(
     }),
     pgPolicy("users_select_admin", {
       for: "select",
-      using: sql`EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')`,
+      using: isAdmin,
     }),
     pgPolicy("users_update_own", {
       for: "update",
@@ -46,7 +51,7 @@ export const users = pgTable(
     }),
     pgPolicy("users_delete_admin", {
       for: "delete",
-      using: sql`EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')`,
+      using: isAdmin,
     }),
   ],
 ).enableRLS();
