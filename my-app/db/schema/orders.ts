@@ -10,8 +10,8 @@ import {
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
-import { orderStatus } from "./enums";
 import { cookProfiles } from "./cooks";
+import { orderStatus } from "./enums";
 import { listings } from "./listings";
 import { users } from "./users";
 

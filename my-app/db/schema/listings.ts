@@ -11,8 +11,8 @@ import {
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
-import { listingStatus } from "./enums";
 import { cookProfiles } from "./cooks";
+import { listingStatus } from "./enums";
 import { users } from "./users";
 
 export const tags = pgTable(
