@@ -47,4 +47,14 @@ describe("reviewed database schema safeguards", () => {
       expect(schemaFile(fileName)).toContain(".$onUpdate(() => new Date())");
     }
   });
+
+  it("keeps waitlist tables protected by Drizzle-managed RLS policies", () => {
+    const waitlistSchema = schemaFile("waitlist.ts");
+
+    expect(waitlistSchema).toContain("pgPolicy");
+    expect(waitlistSchema).toContain("waitlist_service_only");
+    expect(waitlistSchema).toContain("rate_limit_log_service_only");
+    expect(waitlistSchema).toContain("auth.role() = 'service_role'");
+    expect(waitlistSchema.match(/\.enableRLS\(\)/g)).toHaveLength(2);
+  });
 });

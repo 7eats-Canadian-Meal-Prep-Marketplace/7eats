@@ -119,11 +119,14 @@ Reads are public when the parent listing is active, and owner-scoped otherwise.
 
 - Unique `email`.
 - Stores `ip_hash` for abuse tracking without keeping raw IPs.
+- RLS: service role only. The public API route performs validation and writes
+  through the server-side database connection.
 
 `rate_limit_log` stores hashed-IP attempts.
 
 - Used by `lib/rate-limit.ts` to enforce `RATE_LIMIT_WINDOW_MINUTES` and
   `RATE_LIMIT_MAX_ATTEMPTS`.
+- RLS: service role only.
 
 ## RLS Conventions
 
