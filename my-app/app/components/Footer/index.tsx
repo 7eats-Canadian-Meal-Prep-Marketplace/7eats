@@ -25,13 +25,13 @@ export default function Footer() {
             <h4>Site</h4>
             <ul>
               <li>
-                <Link href="/waitlist">Home</Link>
+                <Link href="/public/waitlist">Home</Link>
               </li>
               <li>
-                <Link href="/team">Meet the team</Link>
+                <Link href="/public/team">Meet the team</Link>
               </li>
               <li>
-                <Link href="/waitlist#faq">FAQ</Link>
+                <Link href="/public/waitlist#faq">FAQ</Link>
               </li>
             </ul>
           </div>
@@ -39,10 +39,10 @@ export default function Footer() {
             <h4>For cooks</h4>
             <ul>
               <li>
-                <Link href="/waitlist#cta">Join the waitlist</Link>
+                <Link href="/public/waitlist#cta">Join the waitlist</Link>
               </li>
               <li>
-                <Link href="/waitlist#offer">Founding cook offer</Link>
+                <Link href="/public/waitlist#offer">Founding cook offer</Link>
               </li>
               <li>
                 <CalendlyButton>Book a call</CalendlyButton>

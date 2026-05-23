@@ -2,15 +2,15 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import CalendlyButton from "./CalendlyButton";
+import CalendlyButton from "../CalendlyButton";
 
-interface HeaderProps {
-  activePage?: "home" | "team";
-}
-
-export default function Header({ activePage = "home" }: HeaderProps) {
+export default function Header() {
   const [navOpen, setNavOpen] = useState(false);
+  const pathname = usePathname();
+  const isHome = pathname === "/public/waitlist" || pathname === "/";
+  const isTeam = pathname === "/public/team";
 
   useEffect(() => {
     if (navOpen) {
@@ -31,7 +31,7 @@ export default function Header({ activePage = "home" }: HeaderProps) {
     <>
       <header className="header">
         <div className="wrap header-inner">
-          <Link href="/waitlist" className="brand">
+          <Link href="/public/waitlist" className="brand">
             <Image
               className="brand-logo"
               src="/7eats-logo.svg"
@@ -43,16 +43,10 @@ export default function Header({ activePage = "home" }: HeaderProps) {
             />
           </Link>
           <nav className="nav-desktop">
-            <Link
-              href="/waitlist"
-              className={activePage === "home" ? "is-active" : ""}
-            >
+            <Link href="/public/waitlist" className={isHome ? "is-active" : ""}>
               Home
             </Link>
-            <Link
-              href="/team"
-              className={activePage === "team" ? "is-active" : ""}
-            >
+            <Link href="/public/team" className={isTeam ? "is-active" : ""}>
               Meet the team
             </Link>
           </nav>
@@ -82,7 +76,7 @@ export default function Header({ activePage = "home" }: HeaderProps) {
 
       <aside className={`nav-mobile${navOpen ? " is-open" : ""}`}>
         <div className="nav-mobile-top">
-          <Link href="/waitlist" className="brand" onClick={closeNav}>
+          <Link href="/public/waitlist" className="brand" onClick={closeNav}>
             <Image
               className="brand-logo"
               src="/7eats-logo.svg"
@@ -110,10 +104,10 @@ export default function Header({ activePage = "home" }: HeaderProps) {
           </button>
         </div>
         <div className="nav-mobile-links">
-          <Link href="/waitlist" onClick={closeNav}>
+          <Link href="/public/waitlist" onClick={closeNav}>
             Home
           </Link>
-          <Link href="/team" onClick={closeNav}>
+          <Link href="/public/team" onClick={closeNav}>
             Meet the team
           </Link>
         </div>

@@ -1,9 +1,6 @@
 import Image from "next/image";
-import BannerFlash from "@/app/components/BannerFlash";
 import CtaSection from "@/app/components/CtaSection";
-import Footer from "@/app/components/Footer";
 import FounderTabs from "@/app/components/FounderTabs";
-import Header from "@/app/components/Header";
 
 export const metadata = {
   title: "Meet the team - 7eats",
@@ -14,9 +11,6 @@ export const metadata = {
 export default function TeamPage() {
   return (
     <>
-      <BannerFlash />
-      <Header activePage="team" />
-
       {/* FOUNDERS */}
       <section className="section founders team-page-opener">
         <div className="wrap">
@@ -165,7 +159,6 @@ export default function TeamPage() {
       </section>
 
       <CtaSection isTeamPage />
-      <Footer />
     </>
   );
 }

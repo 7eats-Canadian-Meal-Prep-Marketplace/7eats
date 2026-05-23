@@ -1,12 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
-import BannerFlash from "@/app/components/BannerFlash";
 import CalendlyButton from "@/app/components/CalendlyButton";
 import CtaSection from "@/app/components/CtaSection";
 import FadeInGroup from "@/app/components/FadeInGroup";
 import FaqAccordion from "@/app/components/FaqAccordion";
-import Footer from "@/app/components/Footer";
-import Header from "@/app/components/Header";
 import HowItWorksSection from "@/app/components/HowItWorksSection";
 import StatsSection from "@/app/components/StatsSection";
 
@@ -19,9 +16,6 @@ export const metadata = {
 export default function WaitlistPage() {
   return (
     <>
-      <BannerFlash />
-      <Header activePage="home" />
-
       {/* HERO */}
       <section className="hero">
         <div className="wrap">
@@ -293,7 +287,6 @@ export default function WaitlistPage() {
       </section>
 
       <CtaSection />
-      <Footer />
     </>
   );
 }
