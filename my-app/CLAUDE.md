@@ -59,8 +59,8 @@ database before calling the task complete. `drizzle.config.ts` requires
   schema barrel from `db/schema/index.ts`.
 - Core schemas live in `db/schema/users.ts`, `cooks.ts`, `listings.ts`,
   `orders.ts`, `enums.ts`, and `waitlist.ts`.
-- Admin RLS policies use the Supabase-compatible JWT app metadata claim:
-  `auth.jwt() -> 'app_metadata' ->> 'role' = 'admin'`.
+- Admin RLS policies use the Neon compatibility helper:
+  `auth.role() = 'admin'`.
 - Service-only policies use `auth.role() = 'service_role'`.
 - Mutable tables should keep `updatedAt` as `defaultNow().$onUpdate(() => new Date())`.
 - Prefer explicit `onDelete` behavior on foreign keys so Drizzle push output is

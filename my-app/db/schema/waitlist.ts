@@ -16,6 +16,7 @@ export const waitlist = pgTable(
   () => [
     pgPolicy("waitlist_service_only", {
       for: "all",
+      to: "public",
       using: isServiceRole,
       withCheck: isServiceRole,
     }),
@@ -34,6 +35,7 @@ export const rateLimitLog = pgTable(
   () => [
     pgPolicy("rate_limit_log_service_only", {
       for: "all",
+      to: "public",
       using: isServiceRole,
       withCheck: isServiceRole,
     }),

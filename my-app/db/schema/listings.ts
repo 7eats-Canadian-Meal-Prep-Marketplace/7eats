@@ -15,7 +15,7 @@ import { cookProfiles } from "./cooks";
 import { listingStatus } from "./enums";
 import { users } from "./users";
 
-const isAdmin = sql`auth.jwt() -> 'app_metadata' ->> 'role' = 'admin'`;
+const isAdmin = sql`auth.role() = 'admin'`;
 
 export const tags = pgTable(
   "tags",
@@ -29,18 +29,22 @@ export const tags = pgTable(
   () => [
     pgPolicy("tags_select_all", {
       for: "select",
+      to: "public",
       using: sql`TRUE`,
     }),
     pgPolicy("tags_insert_admin", {
       for: "insert",
+      to: "public",
       withCheck: isAdmin,
     }),
     pgPolicy("tags_update_admin", {
       for: "update",
+      to: "public",
       using: isAdmin,
     }),
     pgPolicy("tags_delete_admin", {
       for: "delete",
+      to: "public",
       using: isAdmin,
     }),
   ],
@@ -75,31 +79,44 @@ export const listings = pgTable(
   () => [
     pgPolicy("listings_select_active", {
       for: "select",
+      to: "public",
       using: sql`status = 'active'`,
     }),
     pgPolicy("listings_select_own", {
       for: "select",
+      to: "public",
       using: sql`cook_id IN (SELECT id FROM cook_profiles WHERE user_id = auth.uid())`,
     }),
     pgPolicy("listings_select_admin", {
       for: "select",
+      to: "public",
       using: isAdmin,
     }),
     pgPolicy("listings_insert_own", {
       for: "insert",
-      withCheck: sql`cook_id IN (SELECT id FROM cook_profiles WHERE user_id = auth.uid())`,
+      to: "public",
+      withCheck: sql`
+        cook_id IN (SELECT id FROM cook_profiles WHERE user_id = auth.uid())
+        AND status = 'draft'
+        AND reviewed_at IS NULL
+        AND reviewed_by IS NULL
+        AND review_notes IS NULL
+      `,
     }),
     pgPolicy("listings_update_own", {
       for: "update",
+      to: "public",
       using: sql`cook_id IN (SELECT id FROM cook_profiles WHERE user_id = auth.uid())`,
       withCheck: sql`cook_id IN (SELECT id FROM cook_profiles WHERE user_id = auth.uid())`,
     }),
     pgPolicy("listings_update_admin", {
       for: "update",
+      to: "public",
       using: isAdmin,
     }),
     pgPolicy("listings_delete_own_draft", {
       for: "delete",
+      to: "public",
       using: sql`cook_id IN (SELECT id FROM cook_profiles WHERE user_id = auth.uid()) AND status = 'draft'`,
     }),
   ],
@@ -120,22 +137,27 @@ export const listingPhotos = pgTable(
   () => [
     pgPolicy("photos_select_active_listing", {
       for: "select",
+      to: "public",
       using: sql`listing_id IN (SELECT id FROM listings WHERE status = 'active')`,
     }),
     pgPolicy("photos_select_own", {
       for: "select",
+      to: "public",
       using: sql`listing_id IN (SELECT l.id FROM listings l JOIN cook_profiles cp ON l.cook_id = cp.id WHERE cp.user_id = auth.uid())`,
     }),
     pgPolicy("photos_insert_own", {
       for: "insert",
+      to: "public",
       withCheck: sql`listing_id IN (SELECT l.id FROM listings l JOIN cook_profiles cp ON l.cook_id = cp.id WHERE cp.user_id = auth.uid())`,
     }),
     pgPolicy("photos_update_own", {
       for: "update",
+      to: "public",
       using: sql`listing_id IN (SELECT l.id FROM listings l JOIN cook_profiles cp ON l.cook_id = cp.id WHERE cp.user_id = auth.uid())`,
     }),
     pgPolicy("photos_delete_own", {
       for: "delete",
+      to: "public",
       using: sql`listing_id IN (SELECT l.id FROM listings l JOIN cook_profiles cp ON l.cook_id = cp.id WHERE cp.user_id = auth.uid())`,
     }),
   ],
@@ -156,22 +178,27 @@ export const listingIngredients = pgTable(
   () => [
     pgPolicy("ingredients_select_active_listing", {
       for: "select",
+      to: "public",
       using: sql`listing_id IN (SELECT id FROM listings WHERE status = 'active')`,
     }),
     pgPolicy("ingredients_select_own", {
       for: "select",
+      to: "public",
       using: sql`listing_id IN (SELECT l.id FROM listings l JOIN cook_profiles cp ON l.cook_id = cp.id WHERE cp.user_id = auth.uid())`,
     }),
     pgPolicy("ingredients_insert_own", {
       for: "insert",
+      to: "public",
       withCheck: sql`listing_id IN (SELECT l.id FROM listings l JOIN cook_profiles cp ON l.cook_id = cp.id WHERE cp.user_id = auth.uid())`,
     }),
     pgPolicy("ingredients_update_own", {
       for: "update",
+      to: "public",
       using: sql`listing_id IN (SELECT l.id FROM listings l JOIN cook_profiles cp ON l.cook_id = cp.id WHERE cp.user_id = auth.uid())`,
     }),
     pgPolicy("ingredients_delete_own", {
       for: "delete",
+      to: "public",
       using: sql`listing_id IN (SELECT l.id FROM listings l JOIN cook_profiles cp ON l.cook_id = cp.id WHERE cp.user_id = auth.uid())`,
     }),
   ],
@@ -199,18 +226,22 @@ export const listingNutrition = pgTable(
   () => [
     pgPolicy("nutrition_select_active_listing", {
       for: "select",
+      to: "public",
       using: sql`listing_id IN (SELECT id FROM listings WHERE status = 'active')`,
     }),
     pgPolicy("nutrition_select_own", {
       for: "select",
+      to: "public",
       using: sql`listing_id IN (SELECT l.id FROM listings l JOIN cook_profiles cp ON l.cook_id = cp.id WHERE cp.user_id = auth.uid())`,
     }),
     pgPolicy("nutrition_insert_own", {
       for: "insert",
+      to: "public",
       withCheck: sql`listing_id IN (SELECT l.id FROM listings l JOIN cook_profiles cp ON l.cook_id = cp.id WHERE cp.user_id = auth.uid())`,
     }),
     pgPolicy("nutrition_update_own", {
       for: "update",
+      to: "public",
       using: sql`listing_id IN (SELECT l.id FROM listings l JOIN cook_profiles cp ON l.cook_id = cp.id WHERE cp.user_id = auth.uid())`,
     }),
   ],
@@ -230,14 +261,17 @@ export const listingTags = pgTable(
     primaryKey({ columns: [t.listingId, t.tagId] }),
     pgPolicy("listing_tags_select_all", {
       for: "select",
-      using: sql`TRUE`,
+      to: "public",
+      using: sql`listing_id IN (SELECT id FROM listings WHERE status = 'active')`,
     }),
     pgPolicy("listing_tags_insert_own", {
       for: "insert",
+      to: "public",
       withCheck: sql`listing_id IN (SELECT l.id FROM listings l JOIN cook_profiles cp ON l.cook_id = cp.id WHERE cp.user_id = auth.uid())`,
     }),
     pgPolicy("listing_tags_delete_own", {
       for: "delete",
+      to: "public",
       using: sql`listing_id IN (SELECT l.id FROM listings l JOIN cook_profiles cp ON l.cook_id = cp.id WHERE cp.user_id = auth.uid())`,
     }),
   ],

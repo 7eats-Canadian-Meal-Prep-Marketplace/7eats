@@ -67,6 +67,8 @@ drizzle-kit push` with `DATABASE_URL` loaded from `.env.local`.
 - Status enum: `pending_review`, `approved`, `rejected`.
 - RLS: cooks can read/insert their own certs and delete pending certs;
   approved certs are readable; admins can read/update.
+- Cook inserts are forced to `pending_review` with review metadata unset, so
+  cooks cannot self-approve certifications.
 
 ### Listings
 
@@ -77,6 +79,8 @@ drizzle-kit push` with `DATABASE_URL` loaded from `.env.local`.
 - Pricing uses `numeric(10, 2)` and defaults to `CAD`.
 - RLS: active listings are public; cooks can read/insert/update their own
   listings; admins can read/update; cooks can delete only their own drafts.
+- Cook inserts are forced to `draft` with review metadata unset, so publication
+  remains an admin/moderation action.
 
 Listing detail tables:
 
@@ -88,6 +92,7 @@ Listing detail tables:
 
 Listing detail tables generally cascade when their parent listing is deleted.
 Reads are public when the parent listing is active, and owner-scoped otherwise.
+`listing_tags` public reads are also limited to active parent listings.
 
 ### Orders And Reviews
 
@@ -99,6 +104,8 @@ Reads are public when the parent listing is active, and owner-scoped otherwise.
 - Status enum: `pending`, `confirmed`, `ready`, `fulfilled`, `cancelled`.
 - `cancelled_by` references `users.id` and is set null if that user is deleted.
 - RLS: clients, assigned cooks, and admins can read relevant orders.
+- Client inserts are restricted to active listings, must match the listing's
+  cook and base price, and must set `total_price = unit_price * quantity`.
 - Client updates are limited to old `pending` rows and new `pending` or
   `cancelled` rows.
 - Cook updates are limited to their own orders, from operational states into
@@ -112,6 +119,7 @@ Reads are public when the parent listing is active, and owner-scoped otherwise.
 - RLS: visible reviews are public; participants can read their own; clients can
   insert for fulfilled orders; clients can update their own reviews; admins can
   read/update.
+- Review inserts must match the fulfilled order's client, cook, and listing.
 
 ## Waitlist Tables
 
@@ -132,11 +140,16 @@ Reads are public when the parent listing is active, and owner-scoped otherwise.
 
 - Tables with policies call `.enableRLS()`.
 - Admin checks use:
-  `auth.jwt() -> 'app_metadata' ->> 'role' = 'admin'`.
+  `auth.role() = 'admin'`.
 - Service-role checks use:
   `auth.role() = 'service_role'`.
 - Owner checks compare `auth.uid()` with `users.id` or traverse through
   `cook_profiles.user_id`.
+- This is Neon, not Supabase. The compatibility helpers in
+  `db/sql/neon-auth-helpers.sql` create `auth.uid()` and `auth.role()` from
+  session settings (`request.jwt.claim.sub` and `request.jwt.claim.role`) so the
+  policies can be installed on Neon. Run/apply that SQL before installing RLS
+  predicates on a fresh database.
 
 ## Relationship Summary
 

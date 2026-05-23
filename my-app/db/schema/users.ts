@@ -10,7 +10,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { accountStatus, userRole } from "./enums";
 
-const isAdmin = sql`auth.jwt() -> 'app_metadata' ->> 'role' = 'admin'`;
+const isAdmin = sql`auth.role() = 'admin'`;
 
 export const users = pgTable(
   "users",
@@ -34,23 +34,28 @@ export const users = pgTable(
   () => [
     pgPolicy("users_select_own", {
       for: "select",
+      to: "public",
       using: sql`id = auth.uid()`,
     }),
     pgPolicy("users_select_admin", {
       for: "select",
+      to: "public",
       using: isAdmin,
     }),
     pgPolicy("users_update_own", {
       for: "update",
+      to: "public",
       using: sql`id = auth.uid()`,
       withCheck: sql`id = auth.uid()`,
     }),
     pgPolicy("users_insert_service", {
       for: "insert",
+      to: "public",
       withCheck: sql`auth.role() = 'service_role'`,
     }),
     pgPolicy("users_delete_admin", {
       for: "delete",
+      to: "public",
       using: isAdmin,
     }),
   ],
@@ -72,6 +77,7 @@ export const phoneOtps = pgTable(
   () => [
     pgPolicy("otps_service_only", {
       for: "all",
+      to: "public",
       using: sql`auth.role() = 'service_role'`,
       withCheck: sql`auth.role() = 'service_role'`,
     }),

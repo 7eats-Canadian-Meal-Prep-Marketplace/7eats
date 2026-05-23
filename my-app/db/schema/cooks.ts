@@ -11,7 +11,7 @@ import {
 import { certificationStatus } from "./enums";
 import { users } from "./users";
 
-const isAdmin = sql`auth.jwt() -> 'app_metadata' ->> 'role' = 'admin'`;
+const isAdmin = sql`auth.role() = 'admin'`;
 
 export const cookProfiles = pgTable(
   "cook_profiles",
@@ -40,19 +40,23 @@ export const cookProfiles = pgTable(
   () => [
     pgPolicy("cook_profiles_select_active", {
       for: "select",
+      to: "public",
       using: sql`EXISTS (SELECT 1 FROM users u WHERE u.id = cook_profiles.user_id AND u.status = 'active')`,
     }),
     pgPolicy("cook_profiles_update_own", {
       for: "update",
+      to: "public",
       using: sql`user_id = auth.uid()`,
       withCheck: sql`user_id = auth.uid()`,
     }),
     pgPolicy("cook_profiles_insert_service", {
       for: "insert",
+      to: "public",
       withCheck: sql`auth.role() = 'service_role'`,
     }),
     pgPolicy("cook_profiles_update_admin", {
       for: "update",
+      to: "public",
       using: isAdmin,
     }),
   ],
@@ -87,26 +91,38 @@ export const cookCertifications = pgTable(
   () => [
     pgPolicy("certs_select_own", {
       for: "select",
+      to: "public",
       using: sql`cook_id IN (SELECT id FROM cook_profiles WHERE user_id = auth.uid())`,
     }),
     pgPolicy("certs_select_approved", {
       for: "select",
+      to: "public",
       using: sql`status = 'approved'`,
     }),
     pgPolicy("certs_select_admin", {
       for: "select",
+      to: "public",
       using: isAdmin,
     }),
     pgPolicy("certs_insert_own", {
       for: "insert",
-      withCheck: sql`cook_id IN (SELECT id FROM cook_profiles WHERE user_id = auth.uid())`,
+      to: "public",
+      withCheck: sql`
+        cook_id IN (SELECT id FROM cook_profiles WHERE user_id = auth.uid())
+        AND status = 'pending_review'
+        AND reviewed_at IS NULL
+        AND reviewed_by IS NULL
+        AND review_notes IS NULL
+      `,
     }),
     pgPolicy("certs_update_admin", {
       for: "update",
+      to: "public",
       using: isAdmin,
     }),
     pgPolicy("certs_delete_own_pending", {
       for: "delete",
+      to: "public",
       using: sql`cook_id IN (SELECT id FROM cook_profiles WHERE user_id = auth.uid()) AND status = 'pending_review'`,
     }),
   ],
