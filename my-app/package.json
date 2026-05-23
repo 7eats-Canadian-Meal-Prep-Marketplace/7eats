@@ -15,7 +15,7 @@
     "prepare": "cd .. && husky"
   },
   "lint-staged": {
-    "*.{ts,tsx,js,jsx,json,css}": "biome format --write"
+    "*.{ts,tsx,js,jsx,json,css}": "biome check --write"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
