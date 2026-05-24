@@ -2,7 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@aws-sdk/client-s3", () => ({
   S3Client: vi.fn(),
+  // biome-ignore lint/suspicious/noExplicitAny: mock constructor needs to be callable with new
   PutObjectCommand: vi.fn((args: unknown) => ({ input: args })),
+  // biome-ignore lint/suspicious/noExplicitAny: mock constructor needs to be callable with new
   GetObjectCommand: vi.fn((args: unknown) => ({ input: args })),
 }));
 
