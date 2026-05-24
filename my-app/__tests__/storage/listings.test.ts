@@ -2,16 +2,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@aws-sdk/client-s3", () => ({
   S3Client: vi.fn(),
-  // eslint-disable-next-line
   PutObjectCommand: vi.fn(
-    // @ts-expect-error - Function declaration needed for constructor usage
+    // @ts-expect-error: constructor mock requires function declaration, not arrow function
     function mockPutObjectCommand(args: unknown) {
       this.input = args;
     },
   ),
-  // eslint-disable-next-line
   DeleteObjectCommand: vi.fn(
-    // @ts-expect-error - Function declaration needed for constructor usage
+    // @ts-expect-error: constructor mock requires function declaration, not arrow function
     function mockDeleteObjectCommand(args: unknown) {
       this.input = args;
     },
@@ -63,6 +61,8 @@ describe("listings", () => {
         "homecook-listings-public",
       );
       expect(url).toMatch(/^https:\/\/listings\.example\.com\//);
+      const key = url.replace("https://listings.example.com/", "");
+      expect(key).toMatch(/^listings\/listing-456\//);
     });
   });
 

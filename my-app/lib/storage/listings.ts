@@ -21,7 +21,8 @@ export async function uploadListingPhoto(
 }
 
 export function getListingPhotoUrl(key: string): string {
-  const base = BUCKET_CONFIG[BUCKETS.LISTINGS].cdnBaseUrl as string;
+  const base = BUCKET_CONFIG[BUCKETS.LISTINGS].cdnBaseUrl;
+  if (!base) throw new Error("R2_PUBLIC_BUCKET_URL_LISTINGS is not configured");
   return `${base}/${key}`;
 }
 
