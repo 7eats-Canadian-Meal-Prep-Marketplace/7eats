@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import Script from "next/script";
 import { Toaster } from "sonner";
-import BackToTop from "@/app/components/BackToTop";
 import CalendlyBadge from "@/app/components/CalendlyBadge";
 import CookieBanner from "@/app/components/CookieBanner";
 import "./globals.css";
@@ -64,7 +63,6 @@ export default function RootLayout({
       <body>
         {children}
         <CalendlyBadge />
-        <BackToTop />
         <CookieBanner />
         <Toaster position="top-center" richColors={false} closeButton />
         <Script

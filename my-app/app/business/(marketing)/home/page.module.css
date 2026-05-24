@@ -65,13 +65,23 @@
   z-index: 3;
   width: 100%;
   padding: 0 var(--pad-x) clamp(56px, 10vh, 88px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
 }
 
 .heroTop {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 16px;
   margin-bottom: 24px;
+  justify-content: center;
+}
+
+.heroTopDivider {
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 12px;
 }
 
 .heroLocation {
@@ -104,11 +114,10 @@
   margin: 24px 0;
 }
 
-/* Bottom row: note left, button right */
 .heroBottom {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 24px;
   flex-wrap: wrap;
 }

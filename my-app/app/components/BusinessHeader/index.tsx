@@ -16,6 +16,11 @@ export default function BusinessHeader() {
             priority
           />
         </Link>
+        <nav className={styles.nav}>
+          <Link href="/business-auth/login" className="btn btn-ghost btn-sm">
+            Log in
+          </Link>
+        </nav>
       </div>
     </header>
   );

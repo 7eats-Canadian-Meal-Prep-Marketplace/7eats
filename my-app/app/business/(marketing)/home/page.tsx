@@ -63,9 +63,8 @@ export default function BusinessHomePage() {
         <div className={`wrap ${styles.heroContent}`}>
           <div className={styles.heroTop}>
             <span className={`eyebrow on-dark`}>
-              Cooks &amp; meal prep operators
+              Cooks &amp; meal prep operators · Toronto, ON
             </span>
-            <span className={styles.heroLocation}>Toronto, ON</span>
           </div>
 
           <h1 className={styles.heroHeadline}>
@@ -77,9 +76,6 @@ export default function BusinessHomePage() {
           </p>
           <div className={styles.heroDivider} />
           <div className={styles.heroBottom}>
-            <span className={styles.heroNote}>
-              Free to apply &middot; No commitment
-            </span>
             <Link href="/business/application" className="btn btn-primary">
               Join the platform
             </Link>

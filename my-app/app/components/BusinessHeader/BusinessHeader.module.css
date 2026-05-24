@@ -3,5 +3,11 @@
 }
 
 .inner {
-  justify-content: center;
+  justify-content: space-between;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }

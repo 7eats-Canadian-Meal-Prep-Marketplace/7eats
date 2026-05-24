@@ -1,0 +1,33 @@
+/* ── Page layout ─────────────────────────────────────────────── */
+.page {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  min-height: 100vh;
+}
+
+@media (max-width: 960px) {
+  .page {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Right panel ─────────────────────────────────────────────── */
+.right {
+  background: var(--white);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 64px 48px 80px;
+}
+
+@media (max-width: 640px) {
+  .right {
+    padding: 40px 24px 64px;
+  }
+}
+
+.rightInner {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+}

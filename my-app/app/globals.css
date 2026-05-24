@@ -193,14 +193,11 @@ p {
     color 0.15s,
     border-color 0.15s,
     box-shadow 0.15s,
-    transform 0.15s;
+    opacity 0.15s;
   white-space: nowrap;
 }
-.btn:hover {
-  transform: translateY(-2px);
-}
 .btn:active {
-  transform: translateY(1px);
+  opacity: 0.8;
 }
 .btn-primary {
   background: var(--red);
