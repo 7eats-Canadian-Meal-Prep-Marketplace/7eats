@@ -8,9 +8,9 @@ export const BUCKETS = {
 export type BucketName = (typeof BUCKETS)[keyof typeof BUCKETS];
 
 export type TempDestBucket =
-  | "homecook-certs-private"
-  | "homecook-listings-public"
-  | "homecook-avatars-public";
+  | typeof BUCKETS.CERTS
+  | typeof BUCKETS.LISTINGS
+  | typeof BUCKETS.AVATARS;
 
 type BucketConfig = {
   access: "public" | "private";

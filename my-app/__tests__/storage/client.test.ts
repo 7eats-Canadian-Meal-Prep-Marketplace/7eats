@@ -14,10 +14,6 @@ describe("r2Client", () => {
     vi.unstubAllEnvs();
   });
 
-  afterEach(() => {
-    vi.unstubAllEnvs();
-  });
-
   it("exports an S3Client when all env vars are present", async () => {
     for (const [key, val] of Object.entries(ALL_ENV_VARS)) {
       vi.stubEnv(key, val);
