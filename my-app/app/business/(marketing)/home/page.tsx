@@ -8,7 +8,7 @@ import Link from "next/link";
 import styles from "./page.module.css";
 
 export const metadata = {
-  title: "Cook with 7eats — Join Toronto's meal prep marketplace",
+  title: "Cook with 7eats - Join Toronto's meal prep marketplace",
   description:
     "List your menu, take confirmed orders, and get paid without the admin overhead. 7eats is built for Toronto's home cooks and meal prep operators.",
 };
@@ -18,7 +18,7 @@ const FEATURES = [
     num: "01",
     icon: <CalendarCheck size={20} strokeWidth={1.75} />,
     title: "New customers, already searching",
-    desc: "7eats puts your menu in front of Toronto customers actively looking for meal prep. Halal, vegan, high-protein — they find you by searching for exactly what you cook.",
+    desc: "7eats puts your menu in front of Toronto customers actively looking for meal prep. Halal, vegan, high-protein - they find you by searching for exactly what you cook.",
   },
   {
     num: "02",
@@ -30,13 +30,13 @@ const FEATURES = [
     num: "03",
     icon: <ListFilter size={20} strokeWidth={1.75} />,
     title: "Orders and pickups, coordinated",
-    desc: "Your weekly schedule, incoming orders, and customer pickups in one place. Know exactly what to prep and for who — days before service.",
+    desc: "Your weekly schedule, incoming orders, and customer pickups in one place. Know exactly what to prep and for who, days before service.",
   },
   {
     num: "04",
     icon: <TrendingUp size={20} strokeWidth={1.75} />,
     title: "Your pricing. Your call.",
-    desc: "Run a flash deal to move extra portions, or raise prices when demand spikes. You control your rates — we never touch them.",
+    desc: "Run a flash deal to move extra portions, or raise prices when demand spikes. You control your rates, we never touch them.",
   },
 ];
 

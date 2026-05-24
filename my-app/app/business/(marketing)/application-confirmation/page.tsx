@@ -11,7 +11,7 @@
 import styles from "./page.module.css";
 
 export const metadata = {
-  title: "Application submitted — 7eats",
+  title: "Application submitted - 7eats",
   description:
     "Your kitchen application has been received. Our team will be in touch within 48 hours.",
   robots: { index: false, follow: true },

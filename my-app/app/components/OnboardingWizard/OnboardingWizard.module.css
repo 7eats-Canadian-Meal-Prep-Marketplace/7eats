@@ -462,6 +462,85 @@
   margin-bottom: 18px;
 }
 
+/* ── Pre-filled card ─────────────────────────────────────────── */
+.prefilledCard {
+  background: var(--grey-100);
+  border-radius: var(--radius-sm);
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.prefilledLabel {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--grey-500);
+}
+
+.prefilledRows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.prefilledRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+}
+
+.prefilledKey {
+  font-size: 13px;
+  color: var(--grey-500);
+  flex-shrink: 0;
+}
+
+.prefilledVal {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  text-align: right;
+}
+
+.prefilledNote {
+  font-size: 12px;
+  color: var(--grey-400);
+  margin: 0;
+}
+
+/* ── Terms list ──────────────────────────────────────────────── */
+.termsList {
+  border: 1.5px solid var(--grey-200);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.termsItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 13px 16px;
+}
+
+.termsItem + .termsItem {
+  border-top: 1px solid var(--grey-200);
+}
+
+.termsItemLabel {
+  font-size: 14px;
+  color: var(--grey-600);
+}
+
+.termsItemValue {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
 /* ── Info card ───────────────────────────────────────────────── */
 .infoCard {
   background: var(--grey-100);
@@ -500,6 +579,18 @@
   font-weight: 500;
   margin-top: 8px;
   margin-bottom: -8px;
+}
+
+/* ── Form head top row ───────────────────────────────────────── */
+.formHeadTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.formHeadTop .formStep {
+  margin-bottom: 0;
 }
 
 /* ── Actions ─────────────────────────────────────────────────── */

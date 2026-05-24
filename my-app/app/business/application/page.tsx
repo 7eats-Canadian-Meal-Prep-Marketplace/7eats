@@ -5,19 +5,37 @@ import Link from "next/link";
 import { useState } from "react";
 import styles from "./page.module.css";
 
-const CUISINE_TYPES = [
-  "West African",
-  "Caribbean",
-  "South Asian",
-  "East Asian",
-  "Southeast Asian",
-  "Middle Eastern",
-  "Mediterranean",
-  "Latin American",
-  "East African",
-  "Soul Food / Southern",
-  "Canadian / North American",
+const PROVINCES = [
+  "Alberta",
+  "British Columbia",
+  "Manitoba",
+  "New Brunswick",
+  "Newfoundland and Labrador",
+  "Northwest Territories",
+  "Nova Scotia",
+  "Nunavut",
+  "Ontario",
+  "Prince Edward Island",
+  "Quebec",
+  "Saskatchewan",
+  "Yukon",
+];
+
+const KITCHEN_TYPES = [
+  "Licensed home kitchen",
+  "Commercial kitchen (rented)",
+  "Ghost kitchen",
+  "Restaurant / café",
+  "Community kitchen",
   "Other",
+];
+
+const YEARS_OPERATING = [
+  "Less than 1 year",
+  "1-2 years",
+  "3-5 years",
+  "6-10 years",
+  "10+ years",
 ];
 
 const ROLES = [
@@ -29,25 +47,14 @@ const ROLES = [
   "Other",
 ];
 
-const NICHES = [
-  "General meal prep",
-  "High-protein / Gym",
-  "Weight loss / Low-calorie",
-  "Halal",
-  "Vegan / Plant-based",
-  "Vegetarian",
-  "Gluten-free",
-  "Keto / Low-carb",
-  "Breakfast / Brunch",
-  "Family meals",
-  "Kosher",
-];
-
 type FormState = {
   kitchenName: string;
-  address: string;
-  cuisine: string;
-  niche: string;
+  kitchenType: string;
+  yearsOperating: string;
+  streetAddress: string;
+  city: string;
+  province: string;
+  postalCode: string;
   website: string;
   businessPhone: string;
   businessEmail: string;
@@ -61,9 +68,12 @@ export default function ApplicationPage() {
   const [step, setStep] = useState(1);
   const [form, setForm] = useState<FormState>({
     kitchenName: "",
-    address: "",
-    cuisine: "",
-    niche: "",
+    kitchenType: "",
+    yearsOperating: "",
+    streetAddress: "",
+    city: "",
+    province: "",
+    postalCode: "",
     website: "",
     businessPhone: "",
     businessEmail: "",
@@ -164,65 +174,120 @@ export default function ApplicationPage() {
                   />
                 </div>
 
+                <div className={styles.fieldRow}>
+                  <div className={styles.field}>
+                    <label htmlFor="kitchenType" className={styles.label}>
+                      Kitchen type
+                    </label>
+                    <div className={styles.selectWrap}>
+                      <select
+                        id="kitchenType"
+                        className={styles.select}
+                        value={form.kitchenType}
+                        onChange={(e) => set("kitchenType", e.target.value)}
+                        required
+                      >
+                        <option value="">Select a type</option>
+                        {KITCHEN_TYPES.map((t) => (
+                          <option key={t} value={t}>
+                            {t}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className={styles.field}>
+                    <label htmlFor="yearsOperating" className={styles.label}>
+                      Years operating
+                    </label>
+                    <div className={styles.selectWrap}>
+                      <select
+                        id="yearsOperating"
+                        className={styles.select}
+                        value={form.yearsOperating}
+                        onChange={(e) => set("yearsOperating", e.target.value)}
+                        required
+                      >
+                        <option value="">Select a range</option>
+                        {YEARS_OPERATING.map((y) => (
+                          <option key={y} value={y}>
+                            {y}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
                 <div className={styles.field}>
-                  <label htmlFor="address" className={styles.label}>
-                    Address
+                  <label htmlFor="streetAddress" className={styles.label}>
+                    Street address
                   </label>
                   <input
-                    id="address"
+                    id="streetAddress"
                     className={styles.input}
                     type="text"
-                    value={form.address}
-                    onChange={(e) => set("address", e.target.value)}
-                    placeholder="Start typing your address…"
-                    autoComplete="street-address"
+                    value={form.streetAddress}
+                    onChange={(e) => set("streetAddress", e.target.value)}
+                    placeholder="123 Main St, Unit 4"
+                    autoComplete="address-line1"
                     required
                   />
                 </div>
 
                 <div className={styles.fieldRow}>
                   <div className={styles.field}>
-                    <label htmlFor="cuisine" className={styles.label}>
-                      Cuisine
+                    <label htmlFor="city" className={styles.label}>
+                      City
                     </label>
-                    <div className={styles.selectWrap}>
-                      <select
-                        id="cuisine"
-                        className={styles.select}
-                        value={form.cuisine}
-                        onChange={(e) => set("cuisine", e.target.value)}
-                        required
-                      >
-                        <option value="">Select a cuisine</option>
-                        {CUISINE_TYPES.map((c) => (
-                          <option key={c} value={c}>
-                            {c}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                    <input
+                      id="city"
+                      className={styles.input}
+                      type="text"
+                      value={form.city}
+                      onChange={(e) => set("city", e.target.value)}
+                      placeholder="Toronto"
+                      autoComplete="address-level2"
+                      required
+                    />
                   </div>
                   <div className={styles.field}>
-                    <label htmlFor="niche" className={styles.label}>
-                      Niche
+                    <label htmlFor="province" className={styles.label}>
+                      Province
                     </label>
                     <div className={styles.selectWrap}>
                       <select
-                        id="niche"
+                        id="province"
                         className={styles.select}
-                        value={form.niche}
-                        onChange={(e) => set("niche", e.target.value)}
+                        value={form.province}
+                        onChange={(e) => set("province", e.target.value)}
                         required
                       >
-                        <option value="">Select a niche</option>
-                        {NICHES.map((n) => (
-                          <option key={n} value={n}>
-                            {n}
+                        <option value="">Select a province</option>
+                        {PROVINCES.map((p) => (
+                          <option key={p} value={p}>
+                            {p}
                           </option>
                         ))}
                       </select>
                     </div>
                   </div>
+                </div>
+
+                <div className={styles.field}>
+                  <label htmlFor="postalCode" className={styles.label}>
+                    Postal code
+                  </label>
+                  <input
+                    id="postalCode"
+                    className={styles.input}
+                    type="text"
+                    value={form.postalCode}
+                    onChange={(e) => set("postalCode", e.target.value)}
+                    placeholder="M5V 2T6"
+                    autoComplete="postal-code"
+                    required
+                  />
                 </div>
 
                 <div className={styles.field}>

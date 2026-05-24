@@ -18,6 +18,20 @@ const CUISINES = [
   "Latin American",
   "East African",
   "Soul Food / Southern",
+  "Other",
+];
+
+const NICHES = [
+  "General meal prep",
+  "High-protein / Gym",
+  "Weight loss",
+  "Bulking / Mass gain",
+  "Family meals",
+  "Breakfast / Brunch",
+  "Office lunches",
+  "Student-friendly",
+  "Post-workout recovery",
+  "Senior nutrition",
 ];
 
 const DIETARY_TAGS = [
@@ -34,10 +48,18 @@ const DIETARY_TAGS = [
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-const KITCHEN_TYPES = [
-  { value: "home", label: "Home kitchen" },
-  { value: "licensed_home", label: "Licensed home kitchen" },
-  { value: "commercial", label: "Commercial kitchen" },
+const LEAD_TIME_OPTIONS = [
+  { value: "same_day", label: "Same day" },
+  { value: "1_day", label: "1 day before" },
+  { value: "2_days", label: "2 days before" },
+  { value: "3_days", label: "3 days before" },
+  { value: "4_days", label: "4 days before" },
+  { value: "5_days", label: "5 days before" },
+];
+
+const DELIVERY_OPTIONS = [
+  { value: "none", label: "No delivery" },
+  { value: "self", label: "I deliver myself" },
 ];
 
 // ── State shape ────────────────────────────────────────────────
@@ -45,42 +67,52 @@ const KITCHEN_TYPES = [
 type FormState = {
   // Step 1
   displayName: string;
+  photoFileName: string;
   bio: string;
   cuisines: string[];
+  niches: string[];
   dietaryTags: string[];
+  socialLink: string;
   // Step 2
   pickupAddress: string;
   pickupFrom: string;
   pickupTo: string;
-  prepDays: string[];
+  pickupDays: string[];
+  leadTime: string;
   maxCapacity: string;
-  kitchenType: string;
+  delivery: string;
+  acceptsSpecialRequests: boolean;
   // Step 3
-  certFileName: string;
+  certIdNumber: string;
   certExpiry: string;
-  safetyDeclaration: boolean;
+  certFullName: string;
+  certPhotoFileName: string;
   // Step 4
   stripeConnected: boolean;
-  commissionAck: boolean;
   tosAccepted: boolean;
 };
 
 const initialForm: FormState = {
-  displayName: "",
+  displayName: "Mama Olu's Kitchen",
+  photoFileName: "",
   bio: "",
   cuisines: [],
+  niches: [],
   dietaryTags: [],
-  pickupAddress: "",
+  socialLink: "",
+  pickupAddress: "241 Spadina Ave, Toronto, ON M5V 2T6",
   pickupFrom: "",
   pickupTo: "",
-  prepDays: [],
+  pickupDays: [],
+  leadTime: "",
   maxCapacity: "",
-  kitchenType: "",
-  certFileName: "",
+  delivery: "none",
+  acceptsSpecialRequests: false,
+  certIdNumber: "",
   certExpiry: "",
-  safetyDeclaration: false,
+  certFullName: "",
+  certPhotoFileName: "",
   stripeConnected: false,
-  commissionAck: false,
   tosAccepted: false,
 };
 
@@ -128,32 +160,28 @@ export default function OnboardingWizard() {
         setStepError("Pickup address is required.");
         return false;
       }
-      if (!form.kitchenType) {
-        setStepError("Select a kitchen type.");
+      if (!form.leadTime) {
+        setStepError("Select an order lead time.");
         return false;
       }
     }
     if (step === 3) {
-      if (!form.certFileName) {
-        setStepError("Please upload your food handler certificate.");
+      if (!form.certIdNumber.trim()) {
+        setStepError("Certificate ID number is required.");
+        return false;
+      }
+      if (!form.certFullName.trim()) {
+        setStepError("Full name on certificate is required.");
         return false;
       }
       if (!form.certExpiry) {
         setStepError("Certificate expiry date is required.");
         return false;
       }
-      if (!form.safetyDeclaration) {
-        setStepError("You must confirm the food safety declaration.");
-        return false;
-      }
     }
     if (step === 4) {
       if (!form.stripeConnected) {
         setStepError("Connect your Stripe account to continue.");
-        return false;
-      }
-      if (!form.commissionAck) {
-        setStepError("Acknowledge the commission rate to continue.");
         return false;
       }
       if (!form.tosAccepted) {
@@ -178,9 +206,12 @@ export default function OnboardingWizard() {
     }
   };
 
-  const saveForLater = () => {
-    // TODO: Server action — persist current step state to DB
-    router.push("/business-auth/setup/saved");
+  const goBack = () => {
+    if (step === 1) {
+      router.push("/business-auth/setup/verify-phone");
+    } else {
+      router.push(`/business-auth/setup/onboarding?step=${step - 1}`);
+    }
   };
 
   return (
@@ -196,9 +227,20 @@ export default function OnboardingWizard() {
           {step === 1 && <Step1 form={form} set={set} />}
           {step === 2 && <Step2 form={form} set={set} />}
           {step === 3 && (
-            <Step3 form={form} set={set} certInputRef={certInputRef} />
+            <Step3
+              form={form}
+              set={set}
+              certInputRef={certInputRef}
+              onCompleteLater={() => router.push("/business/dashboard")}
+            />
           )}
-          {step === 4 && <Step4 form={form} set={set} />}
+          {step === 4 && (
+            <Step4
+              form={form}
+              set={set}
+              onCompleteLater={() => router.push("/business/dashboard")}
+            />
+          )}
 
           {stepError && <p className={styles.stepError}>{stepError}</p>}
 
@@ -210,13 +252,13 @@ export default function OnboardingWizard() {
             >
               {step === 4 ? "Complete setup" : "Save and continue"}
             </button>
-            {step < 4 && (
+            {step > 1 && (
               <button
                 type="button"
                 className={styles.laterBtn}
-                onClick={saveForLater}
+                onClick={goBack}
               >
-                Save for later
+                ← Back
               </button>
             )}
           </div>
@@ -235,6 +277,7 @@ function Step1({
   form: FormState;
   set: <K extends keyof FormState>(k: K, v: FormState[K]) => void;
 }) {
+  const photoInputRef = useRef<HTMLInputElement>(null);
   const bioLen = form.bio.length;
   const bioOk = bioLen >= 100 && bioLen <= 500;
 
@@ -249,6 +292,25 @@ function Step1({
       </div>
 
       <div className={styles.fields}>
+        {/* Display name */}
+        <div className={styles.field}>
+          <label htmlFor="displayName" className={styles.label}>
+            Display name
+          </label>
+          <input
+            id="displayName"
+            type="text"
+            className={styles.input}
+            value={form.displayName}
+            onChange={(e) => set("displayName", e.target.value)}
+            placeholder="e.g. Mama Olu's Kitchen"
+          />
+          <p className={styles.hint}>
+            What customers see. Edit if you want a different name than what you
+            applied with.
+          </p>
+        </div>
+
         {/* Profile photo */}
         <div className={styles.field}>
           <span className={styles.label}>Profile photo</span>
@@ -268,33 +330,30 @@ function Step1({
               </svg>
             </div>
             <div className={styles.photoActions}>
-              <button type="button" className="btn btn-ghost btn-sm">
-                Upload photo
+              <input
+                ref={photoInputRef}
+                type="file"
+                accept=".jpg,.jpeg,.png"
+                style={{ display: "none" }}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) set("photoFileName", file.name);
+                }}
+              />
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => photoInputRef.current?.click()}
+              >
+                {form.photoFileName ? "Change photo" : "Upload photo"}
               </button>
-              {/* TODO: Wire file input → content moderation → R2/Supabase upload */}
               <p className={styles.photoNote}>
-                JPEG or PNG · min 400×400 · required
+                {form.photoFileName
+                  ? form.photoFileName
+                  : "JPEG or PNG · min 400x400 · required"}
               </p>
             </div>
           </div>
-        </div>
-
-        {/* Display name */}
-        <div className={styles.field}>
-          <label htmlFor="displayName" className={styles.label}>
-            Display name
-          </label>
-          <input
-            id="displayName"
-            type="text"
-            className={styles.input}
-            value={form.displayName}
-            onChange={(e) => set("displayName", e.target.value)}
-            placeholder="e.g. Mama Olu's Kitchen"
-          />
-          <p className={styles.hint}>
-            What customers see. Can be your name or your kitchen name.
-          </p>
         </div>
 
         {/* Bio */}
@@ -312,7 +371,7 @@ function Step1({
             className={styles.textarea}
             value={form.bio}
             onChange={(e) => set("bio", e.target.value)}
-            placeholder="Tell customers about your cooking — what you make, what makes it yours, where you learned. Minimum 100 characters."
+            placeholder="Tell customers about your cooking. What you make, what makes it yours, where you learned. Minimum 100 characters."
             rows={5}
             maxLength={500}
           />
@@ -330,6 +389,25 @@ function Step1({
                 className={`${styles.pill} ${form.cuisines.includes(c) ? styles.pillActive : ""}`}
               >
                 {c}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Niches */}
+        <div className={styles.field}>
+          <span className={styles.label}>
+            Niche <span className={styles.labelNote}>(optional)</span>
+          </span>
+          <div className={styles.pillGroup}>
+            {NICHES.map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => set("niches", toggleList(form.niches ?? [], n))}
+                className={`${styles.pill} ${(form.niches ?? []).includes(n) ? styles.pillActive : ""}`}
+              >
+                {n}
               </button>
             ))}
           </div>
@@ -355,6 +433,22 @@ function Step1({
             ))}
           </div>
         </div>
+
+        {/* Social link */}
+        <div className={styles.field}>
+          <label htmlFor="socialLink" className={styles.label}>
+            Instagram or social link{" "}
+            <span className={styles.labelNote}>(optional)</span>
+          </label>
+          <input
+            id="socialLink"
+            type="url"
+            className={styles.input}
+            value={form.socialLink}
+            onChange={(e) => set("socialLink", e.target.value)}
+            placeholder="instagram.com/yourkitchen"
+          />
+        </div>
       </div>
     </div>
   );
@@ -379,7 +473,7 @@ function Step2({
       </div>
 
       <div className={styles.fields}>
-        {/* Pickup address */}
+        {/* Primary pickup address */}
         <div className={styles.field}>
           <label htmlFor="pickupAddress" className={styles.label}>
             Pickup address
@@ -390,14 +484,31 @@ function Step2({
             className={styles.input}
             value={form.pickupAddress}
             onChange={(e) => set("pickupAddress", e.target.value)}
-            placeholder="Street address in Toronto"
+            placeholder="Street address"
             autoComplete="street-address"
           />
           <p className={styles.hint}>
-            Only revealed to customers after their order is confirmed. Never
-            shown publicly.
+            Only revealed to customers after their order is confirmed.
           </p>
-          {/* TODO: Add Google Maps address autocomplete / postal code validation */}
+        </div>
+
+        {/* Pickup days */}
+        <div className={styles.field}>
+          <span className={styles.label}>Pickup days</span>
+          <div className={styles.pillGroup}>
+            {DAYS.map((d) => (
+              <button
+                key={d}
+                type="button"
+                onClick={() =>
+                  set("pickupDays", toggleList(form.pickupDays, d))
+                }
+                className={`${styles.pill} ${form.pickupDays.includes(d) ? styles.pillActive : ""}`}
+              >
+                {d}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Pickup window */}
@@ -430,23 +541,37 @@ function Step2({
               />
             </div>
           </div>
+          <p className={styles.hint}>
+            Applied to all pickup days. Same hours every week.
+          </p>
         </div>
 
-        {/* Prep days */}
+        {/* Lead time */}
         <div className={styles.field}>
-          <span className={styles.label}>Prep days</span>
-          <div className={styles.pillGroup}>
-            {DAYS.map((d) => (
-              <button
-                key={d}
-                type="button"
-                onClick={() => set("prepDays", toggleList(form.prepDays, d))}
-                className={`${styles.pill} ${form.prepDays.includes(d) ? styles.pillActive : ""}`}
+          <span className={styles.label}>Order lead time</span>
+          <div className={styles.radioGroup}>
+            {LEAD_TIME_OPTIONS.map(({ value, label }) => (
+              <label
+                key={value}
+                className={`${styles.radioCard} ${form.leadTime === value ? styles.radioCardActive : ""}`}
               >
-                {d}
-              </button>
+                <input
+                  type="radio"
+                  name="leadTime"
+                  value={value}
+                  checked={form.leadTime === value}
+                  onChange={() => set("leadTime", value)}
+                  className={styles.radioInput}
+                />
+                <span className={styles.radioLabel}>{label}</span>
+              </label>
             ))}
           </div>
+          <p className={styles.hint}>
+            Customers ordering after this cutoff are booked for the next
+            available pickup day. Cancellations before it receive a full refund,
+            no refund after.
+          </p>
         </div>
 
         {/* Max capacity */}
@@ -458,39 +583,55 @@ function Step2({
             id="maxCapacity"
             type="number"
             min={5}
-            max={200}
+            max={500}
             className={styles.input}
             value={form.maxCapacity}
             onChange={(e) => set("maxCapacity", e.target.value)}
-            placeholder="e.g. 20"
+            placeholder="e.g. 250"
           />
-          <p className={styles.hint}>Between 5 and 200 orders per week.</p>
+          <p className={styles.hint}>
+            We&apos;ll stop accepting new orders once this is reached.
+          </p>
         </div>
 
-        {/* Kitchen type */}
+        {/* Delivery */}
         <div className={styles.field}>
-          <span className={styles.label}>Kitchen type</span>
+          <span className={styles.label}>Delivery</span>
           <div className={styles.radioGroup}>
-            {KITCHEN_TYPES.map(({ value, label }) => (
+            {DELIVERY_OPTIONS.map(({ value, label }) => (
               <label
                 key={value}
-                className={`${styles.radioCard} ${form.kitchenType === value ? styles.radioCardActive : ""}`}
+                className={`${styles.radioCard} ${form.delivery === value ? styles.radioCardActive : ""}`}
               >
                 <input
                   type="radio"
-                  name="kitchenType"
+                  name="delivery"
                   value={value}
-                  checked={form.kitchenType === value}
-                  onChange={() => set("kitchenType", value)}
+                  checked={form.delivery === value}
+                  onChange={() => set("delivery", value)}
                   className={styles.radioInput}
                 />
                 <span className={styles.radioLabel}>{label}</span>
               </label>
             ))}
           </div>
-          <p className={styles.hint}>
-            Affects which compliance documents are required in the next step.
-          </p>
+        </div>
+
+        {/* Special requests */}
+        <div className={styles.field}>
+          <span className={styles.label}>Special requests</span>
+          <label className={styles.checkRow}>
+            <input
+              type="checkbox"
+              className={styles.checkbox}
+              checked={form.acceptsSpecialRequests}
+              onChange={(e) => set("acceptsSpecialRequests", e.target.checked)}
+            />
+            <span className={styles.checkLabel}>
+              I accept ingredient swaps and special requests from customers.
+              They can add a note when ordering.
+            </span>
+          </label>
         </div>
       </div>
     </div>
@@ -501,57 +642,108 @@ function Step3({
   form,
   set,
   certInputRef,
+  onCompleteLater,
 }: {
   form: FormState;
   set: <K extends keyof FormState>(k: K, v: FormState[K]) => void;
   certInputRef: React.RefObject<HTMLInputElement | null>;
+  onCompleteLater: () => void;
 }) {
-  const handleCertChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      set("certFileName", file.name);
-      // TODO: Validate file type (PDF/JPEG) and size (max 10MB) before upload
-      // TODO: Upload to R2/Supabase, save URL + expiry to DB after content moderation
-    }
+    if (file) set("certPhotoFileName", file.name);
   };
-
-  const certLabel =
-    form.kitchenType === "commercial"
-      ? "Commercial kitchen license"
-      : "Food handler certificate";
 
   return (
     <div className={styles.stepContent}>
       <div className={styles.formHead}>
-        <p className={styles.formStep}>Step 5 of 6</p>
+        <div className={styles.formHeadTop}>
+          <p className={styles.formStep}>Step 5 of 6</p>
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            onClick={onCompleteLater}
+          >
+            Complete later
+          </button>
+        </div>
         <h2 className={styles.formTitle}>Compliance</h2>
         <p className={styles.formSub}>
-          Required before your menu goes live. Documents are reviewed by our
-          team and never shared publicly.
+          Your food handler certificate details. Reviewed by our team before
+          your menu goes live.
         </p>
       </div>
 
       <div className={styles.fields}>
-        {/* Certificate upload */}
+        {/* Certificate ID */}
         <div className={styles.field}>
-          <span className={styles.label}>{certLabel}</span>
+          <label htmlFor="certIdNumber" className={styles.label}>
+            Certificate ID number
+          </label>
+          <input
+            id="certIdNumber"
+            type="text"
+            className={styles.input}
+            value={form.certIdNumber}
+            onChange={(e) => set("certIdNumber", e.target.value)}
+            placeholder="Found on your physical certificate"
+          />
+        </div>
+
+        {/* Full name on certificate */}
+        <div className={styles.field}>
+          <label htmlFor="certFullName" className={styles.label}>
+            Full name as it appears on the certificate
+          </label>
+          <input
+            id="certFullName"
+            type="text"
+            className={styles.input}
+            value={form.certFullName}
+            onChange={(e) => set("certFullName", e.target.value)}
+            placeholder="e.g. Oluwaseun Adeyemi"
+          />
+        </div>
+
+        {/* Expiry date */}
+        <div className={styles.field}>
+          <label htmlFor="certExpiry" className={styles.label}>
+            Expiry date
+          </label>
+          <input
+            id="certExpiry"
+            type="date"
+            className={styles.input}
+            value={form.certExpiry}
+            onChange={(e) => set("certExpiry", e.target.value)}
+            min={new Date().toISOString().split("T")[0]}
+          />
+          <p className={styles.hint}>We will remind you before it expires.</p>
+        </div>
+
+        {/* Optional photo */}
+        <div className={styles.field}>
+          <span className={styles.label}>
+            Photo of certificate{" "}
+            <span className={styles.labelNote}>(optional)</span>
+          </span>
           <button
             type="button"
-            className={`${styles.uploadZone} ${form.certFileName ? styles.uploadZoneHasFile : ""}`}
+            className={`${styles.uploadZone} ${form.certPhotoFileName ? styles.uploadZoneHasFile : ""}`}
             onClick={() => certInputRef.current?.click()}
           >
             <input
               ref={certInputRef}
               type="file"
-              accept=".pdf,.jpg,.jpeg"
+              accept=".pdf,.jpg,.jpeg,.png"
               className={styles.uploadInput}
-              onChange={handleCertChange}
+              onChange={handlePhotoChange}
               tabIndex={-1}
             />
-            {form.certFileName ? (
+            {form.certPhotoFileName ? (
               <>
                 <span className={styles.uploadIcon}>✓</span>
-                <p className={styles.uploadLabel}>{form.certFileName}</p>
+                <p className={styles.uploadLabel}>{form.certPhotoFileName}</p>
                 <p className={styles.uploadSub}>Click to replace</p>
               </>
             ) : (
@@ -574,46 +766,10 @@ function Step3({
                   </svg>
                 </span>
                 <p className={styles.uploadLabel}>Click to upload</p>
-                <p className={styles.uploadSub}>PDF or JPEG · max 10 MB</p>
+                <p className={styles.uploadSub}>JPEG, PNG or PDF · max 10 MB</p>
               </>
             )}
           </button>
-        </div>
-
-        {/* Expiry date */}
-        <div className={styles.field}>
-          <label htmlFor="certExpiry" className={styles.label}>
-            Certificate expiry date
-          </label>
-          <input
-            id="certExpiry"
-            type="date"
-            className={styles.input}
-            value={form.certExpiry}
-            onChange={(e) => set("certExpiry", e.target.value)}
-            min={new Date().toISOString().split("T")[0]}
-          />
-          <p className={styles.hint}>
-            Must be a future date. We'll remind you before it expires.
-          </p>
-        </div>
-
-        {/* Safety declaration */}
-        <div className={styles.field}>
-          <span className={styles.label}>Food safety declaration</span>
-          <label className={styles.checkRow}>
-            <input
-              type="checkbox"
-              className={styles.checkbox}
-              checked={form.safetyDeclaration}
-              onChange={(e) => set("safetyDeclaration", e.target.checked)}
-            />
-            <span className={styles.checkLabel}>
-              I prepare food in a clean kitchen, follow safe food handling
-              practices, and will accurately disclose all allergens in my
-              listings.
-            </span>
-          </label>
         </div>
       </div>
     </div>
@@ -623,18 +779,29 @@ function Step3({
 function Step4({
   form,
   set,
+  onCompleteLater,
 }: {
   form: FormState;
   set: <K extends keyof FormState>(k: K, v: FormState[K]) => void;
+  onCompleteLater: () => void;
 }) {
   return (
     <div className={styles.stepContent}>
       <div className={styles.formHead}>
-        <p className={styles.formStep}>Step 6 of 6</p>
-        <h2 className={styles.formTitle}>Legal & payments</h2>
+        <div className={styles.formHeadTop}>
+          <p className={styles.formStep}>Step 6 of 6</p>
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            onClick={onCompleteLater}
+          >
+            Complete later
+          </button>
+        </div>
+        <h2 className={styles.formTitle}>Get paid</h2>
         <p className={styles.formSub}>
-          The last step before you're live. Connect your bank account and
-          confirm the terms.
+          Connect your bank account and you are ready to receive your first
+          order.
         </p>
       </div>
 
@@ -695,30 +862,27 @@ function Step4({
           </div>
         </div>
 
-        {/* Commission */}
+        {/* Platform terms */}
         <div className={styles.field}>
-          <span className={styles.label}>Commission rate</span>
-          <div className={styles.infoCard}>
-            <p className={styles.infoCardBody}>
-              7eats charges a{" "}
-              <strong className={styles.infoCardHighlight}>
-                7.5% platform fee
-              </strong>{" "}
-              on each order. On a $40 order, that's $3 — you keep $37.
-            </p>
+          <span className={styles.label}>Platform terms</span>
+          <div className={styles.termsList}>
+            <div className={styles.termsItem}>
+              <span className={styles.termsItemLabel}>Platform fee</span>
+              <span className={styles.termsItemValue}>7.5% per order</span>
+            </div>
+            <div className={styles.termsItem}>
+              <span className={styles.termsItemLabel}>Refunds</span>
+              <span className={styles.termsItemValue}>
+                Full refund before order cutoff
+              </span>
+            </div>
+            <div className={styles.termsItem}>
+              <span className={styles.termsItemLabel}>Payouts</span>
+              <span className={styles.termsItemValue}>
+                Direct deposit via Stripe
+              </span>
+            </div>
           </div>
-          <label className={styles.checkRow}>
-            <input
-              type="checkbox"
-              className={styles.checkbox}
-              checked={form.commissionAck}
-              onChange={(e) => set("commissionAck", e.target.checked)}
-            />
-            <span className={styles.checkLabel}>
-              I understand and agree to the 7.5% platform commission on all
-              orders processed through 7eats.
-            </span>
-          </label>
         </div>
 
         {/* Terms of service */}
