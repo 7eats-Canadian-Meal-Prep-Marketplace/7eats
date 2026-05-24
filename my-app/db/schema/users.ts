@@ -20,7 +20,7 @@ export const users = pgTable(
     status: accountStatus("status").notNull().default("active"),
     phone: varchar("phone", { length: 20 }).notNull().unique(),
     phoneVerified: boolean("phone_verified").notNull().default(false),
-    passwordHash: text("password_hash").notNull(),
+    passwordHash: text("password_hash"),
     firstName: varchar("first_name", { length: 100 }).notNull(),
     lastName: varchar("last_name", { length: 100 }).notNull(),
     email: varchar("email", { length: 255 }).unique(),

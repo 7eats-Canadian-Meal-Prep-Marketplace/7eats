@@ -25,3 +25,25 @@ export const certificationStatus = pgEnum("certification_status", [
   "approved",
   "rejected",
 ]);
+export const applicationStatus = pgEnum("application_status", [
+  "pending_review",
+  "approved",
+  "rejected",
+]);
+export const kitchenType = pgEnum("kitchen_type", [
+  "licensed_home",
+  "commercial_rented",
+  "ghost_kitchen",
+  "restaurant_cafe",
+  "community_kitchen",
+  "other",
+]);
+export const leadTimeEnum = pgEnum("lead_time_enum", [
+  "same_day",
+  "1_day",
+  "2_days",
+  "3_days",
+  "4_days",
+  "5_days",
+]);
+export const deliveryEnum = pgEnum("delivery_enum", ["none", "self"]);
