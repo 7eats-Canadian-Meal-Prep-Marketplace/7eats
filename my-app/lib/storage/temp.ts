@@ -21,6 +21,9 @@ export async function uploadToTemp(
   );
 }
 
+// Not atomic: if the delete fails after a successful copy, the object exists in
+// both buckets. On retry, the copy is idempotent. Callers should call deleteTemp
+// explicitly if they detect the delete step failed.
 export async function moveFromTemp(
   key: string,
   destBucket: TempDestBucket,

@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const ALL_ENV_VARS: Record<string, string> = {
   R2_ACCOUNT_ID: "test-account-id",
