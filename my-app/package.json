@@ -18,6 +18,8 @@
     "*.{ts,tsx,js,jsx,json,css}": "biome check --write"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1053.0",
+    "@aws-sdk/s3-request-presigner": "^3.1053.0",
     "@neondatabase/serverless": "^1.1.0",
     "drizzle-orm": "^0.45.2",
     "lucide-react": "^1.16.0",
