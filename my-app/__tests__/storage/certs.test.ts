@@ -2,23 +2,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@aws-sdk/client-s3", () => ({
   S3Client: vi.fn(),
-  // Note: These must be constructors (functions with this or return object)
-  // not arrow functions, because the code calls new PutObjectCommand(...)
-  // The () => ({}) syntax cannot be used with new operator
-  // eslint-disable-next-line
-  PutObjectCommand: vi.fn(
-    // @ts-expect-error - Function declaration needed for constructor usage
-    function mockPutObjectCommand(args: unknown) {
-      this.input = args;
-    },
-  ),
-  // eslint-disable-next-line
-  GetObjectCommand: vi.fn(
-    // @ts-expect-error - Function declaration needed for constructor usage
-    function mockGetObjectCommand(args: unknown) {
-      this.input = args;
-    },
-  ),
+  PutObjectCommand: vi.fn(function mockPutObjectCommand(
+    this: { input: unknown },
+    args: unknown,
+  ) {
+    this.input = args;
+  }),
+  GetObjectCommand: vi.fn(function mockGetObjectCommand(
+    this: { input: unknown },
+    args: unknown,
+  ) {
+    this.input = args;
+  }),
 }));
 
 vi.mock("@aws-sdk/s3-request-presigner", () => ({

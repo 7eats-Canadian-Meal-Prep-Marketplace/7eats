@@ -2,24 +2,24 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@aws-sdk/client-s3", () => ({
   S3Client: vi.fn(),
-  PutObjectCommand: vi.fn(
-    // @ts-expect-error: constructor mock requires function declaration, not arrow function
-    function mockPutObjectCommand(args: unknown) {
-      this.input = args;
-    },
-  ),
-  CopyObjectCommand: vi.fn(
-    // @ts-expect-error: constructor mock requires function declaration, not arrow function
-    function mockCopyObjectCommand(args: unknown) {
-      this.input = args;
-    },
-  ),
-  DeleteObjectCommand: vi.fn(
-    // @ts-expect-error: constructor mock requires function declaration, not arrow function
-    function mockDeleteObjectCommand(args: unknown) {
-      this.input = args;
-    },
-  ),
+  PutObjectCommand: vi.fn(function mockPutObjectCommand(
+    this: { input: unknown },
+    args: unknown,
+  ) {
+    this.input = args;
+  }),
+  CopyObjectCommand: vi.fn(function mockCopyObjectCommand(
+    this: { input: unknown },
+    args: unknown,
+  ) {
+    this.input = args;
+  }),
+  DeleteObjectCommand: vi.fn(function mockDeleteObjectCommand(
+    this: { input: unknown },
+    args: unknown,
+  ) {
+    this.input = args;
+  }),
 }));
 
 vi.mock("@/lib/storage/client", () => ({
