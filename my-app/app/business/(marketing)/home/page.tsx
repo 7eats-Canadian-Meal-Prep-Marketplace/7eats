@@ -95,7 +95,7 @@ export default function BusinessHomePage() {
               What you get
             </span>
             <h2 className={styles.featuresHeadline}>
-              Reach more customers. Run a tighter operation.
+              Attract more customers. Run a tighter operation.
             </h2>
           </div>
 
@@ -123,7 +123,7 @@ export default function BusinessHomePage() {
                 You built the business. We built the platform.
               </h2>
               <p className={styles.ctaSub}>
-                Apply in two minutes. We&apos;ll call you within 48 hours.
+                Apply in two minutes. Expect to hear from us within 48 hours.
               </p>
             </div>
             <div className={styles.ctaAction}>

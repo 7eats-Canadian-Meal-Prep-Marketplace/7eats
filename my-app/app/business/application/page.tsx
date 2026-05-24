@@ -10,24 +10,44 @@ const CUISINE_TYPES = [
   "Caribbean",
   "South Asian",
   "East Asian",
+  "Southeast Asian",
   "Middle Eastern",
   "Mediterranean",
   "Latin American",
-  "Ethiopian",
-  "Halal / Zabihah",
-  "Vegan",
-  "Gluten-Free",
-  "High-Protein / Fitness",
-  "Keto",
-  "Soul Food",
-  "Canadian",
+  "East African",
+  "Soul Food / Southern",
+  "Canadian / North American",
   "Other",
+];
+
+const ROLES = [
+  "Owner",
+  "Co-owner",
+  "Head Chef / Cook",
+  "Manager",
+  "Operations Lead",
+  "Other",
+];
+
+const NICHES = [
+  "General meal prep",
+  "High-protein / Gym",
+  "Weight loss / Low-calorie",
+  "Halal",
+  "Vegan / Plant-based",
+  "Vegetarian",
+  "Gluten-free",
+  "Keto / Low-carb",
+  "Breakfast / Brunch",
+  "Family meals",
+  "Kosher",
 ];
 
 type FormState = {
   kitchenName: string;
   address: string;
   cuisine: string;
+  niche: string;
   website: string;
   businessPhone: string;
   businessEmail: string;
@@ -43,6 +63,7 @@ export default function ApplicationPage() {
     kitchenName: "",
     address: "",
     cuisine: "",
+    niche: "",
     website: "",
     businessPhone: "",
     businessEmail: "",
@@ -83,13 +104,13 @@ export default function ApplicationPage() {
             <span className={styles.leftEyebrow}>Join the platform</span>
             <h1 className={styles.leftHeadline}>Tell us about your kitchen.</h1>
             <p className={styles.leftSub}>
-              We review every application personally and call you back within 48
-              hours.
+              We review every application personally and get back to you within
+              48 hours.
             </p>
             <ul className={styles.trustList}>
               <li>Free to apply. No fees.</li>
               <li>You set your own prices.</li>
-              <li>A real person calls you back.</li>
+              <li>A real person follows up.</li>
             </ul>
           </div>
         </div>
@@ -120,8 +141,8 @@ export default function ApplicationPage() {
             </h2>
             <p className={styles.formSub}>
               {step === 1
-                ? "Tell us how you operate so we can make the most of our call."
-                : "Who should we call? This stays internal — customers only see your kitchen name."}
+                ? "Tell us how you operate so we can hit the ground running."
+                : "Who do we connect with? This stays internal. Customers only see your kitchen name."}
             </p>
           </div>
 
@@ -159,32 +180,55 @@ export default function ApplicationPage() {
                   />
                 </div>
 
-                <div className={styles.field}>
-                  <label htmlFor="cuisine" className={styles.label}>
-                    Primary cuisine type
-                  </label>
-                  <div className={styles.selectWrap}>
-                    <select
-                      id="cuisine"
-                      className={styles.select}
-                      value={form.cuisine}
-                      onChange={(e) => set("cuisine", e.target.value)}
-                      required
-                    >
-                      <option value="">Select a cuisine</option>
-                      {CUISINE_TYPES.map((c) => (
-                        <option key={c} value={c}>
-                          {c}
-                        </option>
-                      ))}
-                    </select>
+                <div className={styles.fieldRow}>
+                  <div className={styles.field}>
+                    <label htmlFor="cuisine" className={styles.label}>
+                      Cuisine
+                    </label>
+                    <div className={styles.selectWrap}>
+                      <select
+                        id="cuisine"
+                        className={styles.select}
+                        value={form.cuisine}
+                        onChange={(e) => set("cuisine", e.target.value)}
+                        required
+                      >
+                        <option value="">Select a cuisine</option>
+                        {CUISINE_TYPES.map((c) => (
+                          <option key={c} value={c}>
+                            {c}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className={styles.field}>
+                    <label htmlFor="niche" className={styles.label}>
+                      Niche
+                    </label>
+                    <div className={styles.selectWrap}>
+                      <select
+                        id="niche"
+                        className={styles.select}
+                        value={form.niche}
+                        onChange={(e) => set("niche", e.target.value)}
+                        required
+                      >
+                        <option value="">Select a niche</option>
+                        {NICHES.map((n) => (
+                          <option key={n} value={n}>
+                            {n}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
                 </div>
 
                 <div className={styles.field}>
                   <label htmlFor="website" className={styles.label}>
                     Website
-                    <span className={styles.labelNote}> — optional</span>
+                    <span className={styles.labelNote}> (optional)</span>
                   </label>
                   <input
                     id="website"
@@ -257,16 +301,23 @@ export default function ApplicationPage() {
                   <div className={styles.field}>
                     <label htmlFor="role" className={styles.label}>
                       Role
-                      <span className={styles.labelNote}> — optional</span>
                     </label>
-                    <input
-                      id="role"
-                      className={styles.input}
-                      type="text"
-                      value={form.role}
-                      onChange={(e) => set("role", e.target.value)}
-                      placeholder="Owner, Head Cook…"
-                    />
+                    <div className={styles.selectWrap}>
+                      <select
+                        id="role"
+                        className={styles.select}
+                        value={form.role}
+                        onChange={(e) => set("role", e.target.value)}
+                        required
+                      >
+                        <option value="">Select a role</option>
+                        {ROLES.map((r) => (
+                          <option key={r} value={r}>
+                            {r}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
                 </div>
 
@@ -300,21 +351,19 @@ export default function ApplicationPage() {
                   />
                 </div>
 
-                <div className={styles.formActions}>
-                  <button
-                    type="button"
-                    className={styles.backBtn}
-                    onClick={() => setStep(1)}
-                  >
-                    ← Back
-                  </button>
-                  <button
-                    type="submit"
-                    className={`btn btn-primary ${styles.ctaBtn}`}
-                  >
-                    Submit application
-                  </button>
-                </div>
+                <button
+                  type="submit"
+                  className={`btn btn-primary ${styles.ctaBtn}`}
+                >
+                  Submit application
+                </button>
+                <button
+                  type="button"
+                  className={styles.backBtn}
+                  onClick={() => setStep(1)}
+                >
+                  ← Back
+                </button>
               </div>
             )}
           </form>
