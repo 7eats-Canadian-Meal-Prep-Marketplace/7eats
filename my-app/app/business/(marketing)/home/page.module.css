@@ -1,0 +1,269 @@
+/* ── Hero — full-bleed video ────────────────────────────────── */
+.hero {
+  position: relative;
+  height: 88vh;
+  min-height: 520px;
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+}
+
+.heroBg {
+  position: absolute;
+  inset: 0;
+}
+
+.heroVideo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  z-index: 1;
+}
+
+.heroFallback {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--ink-2);
+  background-image: repeating-linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.03) 0 1px,
+    transparent 1px 14px
+  );
+  color: rgba(255, 255, 255, 0.35);
+  font-family: var(--font);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-align: center;
+  padding: 24px;
+  gap: 8px;
+}
+
+/* Uniform overlay — video shows everywhere, text readable on dark band */
+.heroOverlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(8, 8, 8, 0.82) 0%,
+    rgba(8, 8, 8, 0.48) 45%,
+    rgba(8, 8, 8, 0.18) 100%
+  );
+  z-index: 2;
+}
+
+/* ── Hero content ───────────────────────────────────────────── */
+.heroContent {
+  position: relative;
+  z-index: 3;
+  width: 100%;
+  padding: 0 var(--pad-x) clamp(56px, 10vh, 88px);
+}
+
+.heroTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.heroLocation {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.heroHeadline {
+  font-size: clamp(36px, 5.5vw, 78px);
+  font-weight: 700;
+  line-height: 0.97;
+  letter-spacing: -0.04em;
+  color: var(--white);
+}
+
+.heroSub {
+  margin-top: 28px;
+  font-size: clamp(13px, 1vw, 15px);
+  color: rgba(255, 255, 255, 0.78);
+  line-height: 1.65;
+}
+
+/* Rule separating body from action row */
+.heroDivider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.18);
+  margin: 24px 0;
+}
+
+/* Bottom row: note left, button right */
+.heroBottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.heroNote {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.55);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+/* ── Features ──────────────────────────────────────────────── */
+.features {
+  border-top: 1px solid var(--grey-200);
+}
+
+.featuresHead {
+  margin-bottom: 56px;
+  max-width: 560px;
+}
+
+@media (min-width: 900px) {
+  .featuresHead {
+    margin-bottom: 72px;
+  }
+}
+
+.featuresEyebrow {
+  margin-bottom: 20px;
+}
+
+.featuresHeadline {
+  font-size: clamp(26px, 3.2vw, 42px);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.08;
+}
+
+.featuresGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  border-top: 1px solid var(--grey-200);
+}
+
+@media (min-width: 640px) {
+  .featuresGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.featureCard {
+  padding: 36px 0;
+  border-bottom: 1px solid var(--grey-200);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+@media (min-width: 640px) {
+  .featureCard {
+    padding: 40px 40px 40px 0;
+  }
+
+  .featureCard:nth-child(even) {
+    padding-left: 40px;
+    padding-right: 0;
+    border-left: 1px solid var(--grey-200);
+  }
+}
+
+@media (min-width: 900px) {
+  .featureCard {
+    padding: 48px 56px 48px 0;
+  }
+
+  .featureCard:nth-child(even) {
+    padding-left: 56px;
+  }
+}
+
+.featureTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.featureNum {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--grey-400);
+}
+
+.featureIcon {
+  color: var(--ink);
+  opacity: 0.5;
+}
+
+.featureTitle {
+  font-size: clamp(18px, 1.8vw, 22px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: var(--ink);
+}
+
+.featureDesc {
+  font-size: 15px;
+  color: var(--grey-700);
+  line-height: 1.65;
+  max-width: 38ch;
+}
+
+/* ── CTA strip ─────────────────────────────────────────────── */
+.cta {
+  background: var(--ink);
+}
+
+.ctaInner {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+@media (min-width: 700px) {
+  .ctaInner {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 48px;
+  }
+}
+
+.ctaText {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ctaHeadline {
+  font-size: clamp(22px, 2.4vw, 30px);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+  color: var(--white);
+}
+
+.ctaSub {
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.5);
+  line-height: 1.5;
+  max-width: 44ch;
+}
+
+.ctaAction {
+  flex-shrink: 0;
+}
