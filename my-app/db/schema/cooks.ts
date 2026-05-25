@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   boolean,
+  integer,
   pgPolicy,
   pgTable,
   text,
@@ -8,7 +9,8 @@ import {
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
-import { certificationStatus } from "./enums";
+import { cookApplications } from "./applications";
+import { certificationStatus, deliveryEnum, leadTimeEnum } from "./enums";
 import { users } from "./users";
 
 const isAdmin = sql`auth.role() = 'admin'`;
@@ -21,11 +23,28 @@ export const cookProfiles = pgTable(
       .notNull()
       .unique()
       .references(() => users.id, { onDelete: "cascade" }),
+    applicationId: uuid("application_id")
+      .notNull()
+      .unique()
+      .references(() => cookApplications.id),
+    displayName: text("display_name").notNull(),
     bio: text("bio"),
-    city: varchar("city", { length: 100 }),
-    province: varchar("province", { length: 50 }),
-    postalCode: varchar("postal_code", { length: 10 }),
-    onboardingDone: boolean("onboarding_done").notNull().default(false),
+    photoUrl: text("photo_url"),
+    socialLink: text("social_link"),
+    currentSetupStep: integer("current_setup_step").notNull().default(1),
+    setupComplete: boolean("setup_complete").notNull().default(false),
+    pickupAddress: text("pickup_address"),
+    pickupDays: text("pickup_days").array(),
+    pickupFrom: text("pickup_from"),
+    pickupTo: text("pickup_to"),
+    leadTime: leadTimeEnum("lead_time"),
+    maxCapacity: integer("max_capacity"),
+    delivery: deliveryEnum("delivery"),
+    acceptsSpecialRequests: boolean("accepts_special_requests")
+      .notNull()
+      .default(false),
+    stripeAccountId: text("stripe_account_id"),
+    tosAcceptedAt: timestamp("tos_accepted_at", { withTimezone: true }),
     reviewedAt: timestamp("reviewed_at"),
     reviewedBy: uuid("reviewed_by").references(() => users.id, {
       onDelete: "set null",
@@ -70,12 +89,13 @@ export const cookCertifications = pgTable(
       .notNull()
       .references(() => cookProfiles.id, { onDelete: "cascade" }),
     name: varchar("name", { length: 255 }).notNull(),
+    holderName: text("holder_name").notNull(),
     issuer: varchar("issuer", { length: 255 }),
     certificateNumber: varchar("certificate_number", { length: 100 }),
     province: varchar("province", { length: 50 }),
     issuedAt: timestamp("issued_at"),
     expiresAt: timestamp("expires_at"),
-    fileUrl: text("file_url").notNull(),
+    fileUrl: text("file_url"),
     status: certificationStatus("status").notNull().default("pending_review"),
     reviewedAt: timestamp("reviewed_at"),
     reviewedBy: uuid("reviewed_by").references(() => users.id, {

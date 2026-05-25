@@ -13,42 +13,10 @@ import {
 } from "drizzle-orm/pg-core";
 import { cookProfiles } from "./cooks";
 import { listingStatus } from "./enums";
+import { tags } from "./tags";
 import { users } from "./users";
 
 const isAdmin = sql`auth.role() = 'admin'`;
-
-export const tags = pgTable(
-  "tags",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    slug: varchar("slug", { length: 50 }).notNull().unique(),
-    label: varchar("label", { length: 100 }).notNull(),
-    category: varchar("category", { length: 50 }),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
-  },
-  () => [
-    pgPolicy("tags_select_all", {
-      for: "select",
-      to: "public",
-      using: sql`TRUE`,
-    }),
-    pgPolicy("tags_insert_admin", {
-      for: "insert",
-      to: "public",
-      withCheck: isAdmin,
-    }),
-    pgPolicy("tags_update_admin", {
-      for: "update",
-      to: "public",
-      using: isAdmin,
-    }),
-    pgPolicy("tags_delete_admin", {
-      for: "delete",
-      to: "public",
-      using: isAdmin,
-    }),
-  ],
-).enableRLS();
 
 export const listings = pgTable(
   "listings",
