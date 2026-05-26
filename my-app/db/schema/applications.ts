@@ -8,7 +8,7 @@ import {
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
-import { applicationStatus } from "./enums";
+import { applicationStatus, kitchenType } from "./enums";
 
 const isAdmin = sql`auth.role() = 'admin'`;
 const isService = sql`auth.role() = 'service_role'`;
@@ -18,7 +18,7 @@ export const cookApplications = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     kitchenName: text("kitchen_name").notNull(),
-    kitchenType: text("kitchen_type").notNull(),
+    kitchenType: kitchenType("kitchen_type").notNull(),
     yearsOperating: text("years_operating").notNull(),
     streetAddress: text("street_address").notNull(),
     city: text("city").notNull(),
@@ -27,7 +27,8 @@ export const cookApplications = pgTable(
     website: text("website"),
     businessPhone: text("business_phone").notNull(),
     businessEmail: text("business_email").notNull(),
-    contactName: text("contact_name").notNull(),
+    contactFirstName: text("contact_first_name").notNull(),
+    contactLastName: text("contact_last_name").notNull(),
     contactRole: text("contact_role").notNull(),
     contactPhone: text("contact_phone").notNull(),
     contactEmail: text("contact_email").notNull(),

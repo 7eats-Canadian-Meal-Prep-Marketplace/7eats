@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   pgPolicy,
   pgTable,
   text,
@@ -18,7 +19,7 @@ export const users = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     role: userRole("role").notNull().default("client"),
     status: accountStatus("status").notNull().default("active"),
-    phone: varchar("phone", { length: 20 }).notNull().unique(),
+    phone: varchar("phone", { length: 20 }).unique(),
     phoneVerified: boolean("phone_verified").notNull().default(false),
     passwordHash: text("password_hash"),
     firstName: varchar("first_name", { length: 100 }).notNull(),
@@ -32,6 +33,10 @@ export const users = pgTable(
       .$onUpdate(() => new Date()),
   },
   () => [
+    check(
+      "password_hash_or_pending",
+      sql`password_hash IS NOT NULL OR status = 'pending'`,
+    ),
     pgPolicy("users_select_own", {
       for: "select",
       to: "public",

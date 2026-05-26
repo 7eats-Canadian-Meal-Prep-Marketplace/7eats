@@ -22,12 +22,12 @@ const PROVINCES = [
 ];
 
 const KITCHEN_TYPES = [
-  "Licensed home kitchen",
-  "Commercial kitchen (rented)",
-  "Ghost kitchen",
-  "Restaurant / café",
-  "Community kitchen",
-  "Other",
+  { value: "licensed_home", label: "Licensed home kitchen" },
+  { value: "commercial_rented", label: "Commercial kitchen (rented)" },
+  { value: "ghost_kitchen", label: "Ghost kitchen" },
+  { value: "restaurant_cafe", label: "Restaurant / café" },
+  { value: "community_kitchen", label: "Community kitchen" },
+  { value: "other", label: "Other" },
 ];
 
 const YEARS_OPERATING = [
@@ -58,7 +58,8 @@ type FormState = {
   website: string;
   businessPhone: string;
   businessEmail: string;
-  contactName: string;
+  contactFirstName: string;
+  contactLastName: string;
   role: string;
   phone: string;
   email: string;
@@ -77,7 +78,8 @@ export default function ApplicationPage() {
     website: "",
     businessPhone: "",
     businessEmail: "",
-    contactName: "",
+    contactFirstName: "",
+    contactLastName: "",
     role: "",
     phone: "",
     email: "",
@@ -188,9 +190,9 @@ export default function ApplicationPage() {
                         required
                       >
                         <option value="">Select a type</option>
-                        {KITCHEN_TYPES.map((t) => (
-                          <option key={t} value={t}>
-                            {t}
+                        {KITCHEN_TYPES.map(({ value, label }) => (
+                          <option key={value} value={value}>
+                            {label}
                           </option>
                         ))}
                       </select>
@@ -350,19 +352,36 @@ export default function ApplicationPage() {
               <div key="step2" className={styles.fields}>
                 <div className={styles.fieldRow}>
                   <div className={styles.field}>
-                    <label htmlFor="contactName" className={styles.label}>
-                      Full name
+                    <label htmlFor="contactFirstName" className={styles.label}>
+                      First name
                     </label>
                     <input
-                      id="contactName"
+                      id="contactFirstName"
                       className={styles.input}
                       type="text"
-                      value={form.contactName}
-                      onChange={(e) => set("contactName", e.target.value)}
-                      placeholder="Your name"
+                      value={form.contactFirstName}
+                      onChange={(e) => set("contactFirstName", e.target.value)}
+                      placeholder="Jane"
                       required
                     />
                   </div>
+                  <div className={styles.field}>
+                    <label htmlFor="contactLastName" className={styles.label}>
+                      Last name
+                    </label>
+                    <input
+                      id="contactLastName"
+                      className={styles.input}
+                      type="text"
+                      value={form.contactLastName}
+                      onChange={(e) => set("contactLastName", e.target.value)}
+                      placeholder="Smith"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className={styles.fieldRow}>
                   <div className={styles.field}>
                     <label htmlFor="role" className={styles.label}>
                       Role
