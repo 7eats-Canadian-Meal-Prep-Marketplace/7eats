@@ -21,6 +21,16 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
   },
+  user: {
+    additionalFields: {
+      role: { type: "string", defaultValue: "cook", required: false },
+      status: { type: "string", defaultValue: "active", required: false },
+      firstName: { type: "string", required: false },
+      lastName: { type: "string", required: false },
+      phone: { type: "string", required: false },
+      phoneVerified: { type: "boolean", defaultValue: false, required: false },
+    },
+  },
   secret:
     process.env.BETTER_AUTH_SECRET ??
     (() => {

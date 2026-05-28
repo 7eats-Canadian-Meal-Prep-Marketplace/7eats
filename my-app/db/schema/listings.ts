@@ -11,10 +11,10 @@ import {
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
+import { authUser } from "./auth";
 import { cookProfiles } from "./cooks";
 import { listingStatus } from "./enums";
 import { tags } from "./tags";
-import { users } from "./users";
 
 const isAdmin = sql`auth.role() = 'admin'`;
 
@@ -34,7 +34,7 @@ export const listings = pgTable(
     minOrderQty: integer("min_order_qty").notNull().default(1),
     maxOrderQty: integer("max_order_qty"),
     reviewedAt: timestamp("reviewed_at"),
-    reviewedBy: uuid("reviewed_by").references(() => users.id, {
+    reviewedBy: text("reviewed_by").references(() => authUser.id, {
       onDelete: "set null",
     }),
     reviewNotes: text("review_notes"),

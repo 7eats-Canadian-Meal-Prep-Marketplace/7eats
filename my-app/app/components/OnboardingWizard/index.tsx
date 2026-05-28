@@ -2,13 +2,6 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
-import {
-  mockConnectStripe,
-  saveStep1,
-  saveStep2,
-  saveStep3,
-  saveStep4,
-} from "@/app/business-auth/setup/onboarding/actions";
 import SetupSidebar from "@/app/components/SetupSidebar";
 import styles from "./OnboardingWizard.module.css";
 
@@ -250,25 +243,44 @@ export default function OnboardingWizard({
         fd.set("niches", form.niches.join(","));
         fd.set("dietary", form.dietaryTags.join(","));
         if (photoFileRef.current) fd.set("photo", photoFileRef.current);
-        const result = await saveStep1(fd);
-        if (result?.error) setStepError(result.error);
+        const res = await fetch("/api/setup/onboarding/1", {
+          method: "POST",
+          body: fd,
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          setStepError(data.error ?? "Something went wrong.");
+          return;
+        }
+        markDone();
+        router.push("/business-auth/setup/onboarding?step=2");
       });
       return;
     }
 
     if (step === 2) {
       startTransition(async () => {
-        const result = await saveStep2({
-          pickupAddress: form.pickupAddress,
-          pickupDays: form.pickupDays,
-          pickupFrom: form.pickupFrom,
-          pickupTo: form.pickupTo,
-          leadTime: form.leadTime,
-          maxCapacity: form.maxCapacity,
-          delivery: form.delivery,
-          acceptsSpecialRequests: form.acceptsSpecialRequests,
+        const res = await fetch("/api/setup/onboarding/2", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            pickupAddress: form.pickupAddress,
+            pickupDays: form.pickupDays,
+            pickupFrom: form.pickupFrom,
+            pickupTo: form.pickupTo,
+            leadTime: form.leadTime,
+            maxCapacity: form.maxCapacity,
+            delivery: form.delivery,
+            acceptsSpecialRequests: form.acceptsSpecialRequests,
+          }),
         });
-        if (result?.error) setStepError(result.error);
+        const data = await res.json();
+        if (!res.ok) {
+          setStepError(data.error ?? "Something went wrong.");
+          return;
+        }
+        markDone();
+        router.push("/business-auth/setup/onboarding?step=3");
       });
       return;
     }
@@ -280,16 +292,34 @@ export default function OnboardingWizard({
         fd.set("certFullName", form.certFullName);
         fd.set("certExpiry", form.certExpiry);
         if (certFileRef.current) fd.set("certPhoto", certFileRef.current);
-        const result = await saveStep3(fd);
-        if (result?.error) setStepError(result.error);
+        const res = await fetch("/api/setup/onboarding/3", {
+          method: "POST",
+          body: fd,
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          setStepError(data.error ?? "Something went wrong.");
+          return;
+        }
+        markDone();
+        router.push("/business-auth/setup/onboarding?step=4");
       });
       return;
     }
 
     if (step === 4) {
       startTransition(async () => {
-        const result = await saveStep4(form.tosAccepted);
-        if (result?.error) setStepError(result.error);
+        const res = await fetch("/api/setup/onboarding/4", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tosAccepted: form.tosAccepted }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          setStepError(data.error ?? "Something went wrong.");
+          return;
+        }
+        router.push("/business/dashboard");
       });
       return;
     }
@@ -297,9 +327,10 @@ export default function OnboardingWizard({
 
   const handleConnectStripe = () => {
     startTransition(async () => {
-      const result = await mockConnectStripe();
-      if (result?.error) {
-        setStepError(result.error);
+      const res = await fetch("/api/setup/stripe-connect", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        setStepError(data.error ?? "Something went wrong.");
       } else {
         set("stripeConnected", true);
       }

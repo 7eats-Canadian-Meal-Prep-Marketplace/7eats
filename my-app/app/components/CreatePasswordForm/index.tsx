@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { createAccount } from "@/app/business-auth/setup/create-password/actions";
 import styles from "./CreatePasswordForm.module.css";
 
 export default function CreatePasswordForm({ token }: { token: string }) {
@@ -24,10 +23,18 @@ export default function CreatePasswordForm({ token }: { token: string }) {
 
     setError("");
     startTransition(async () => {
-      const result = await createAccount(token, password);
-      if (result?.error) {
-        setError(result.error);
+      const res = await fetch("/api/setup/create-account", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "Something went wrong.");
+        return;
       }
+      // Hard navigation so the new session cookie is sent with the next request
+      window.location.href = data.redirect;
     });
   };
 

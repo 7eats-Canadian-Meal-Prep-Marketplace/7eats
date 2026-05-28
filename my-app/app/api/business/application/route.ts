@@ -1,7 +1,4 @@
-"use server";
-
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
+import { NextResponse } from "next/server";
 import { Resend } from "resend";
 import { z } from "zod";
 import { db } from "@/db";
@@ -42,36 +39,21 @@ const schema = z.object({
     .transform((v) => v.toLowerCase()),
 });
 
-export type ApplicationInput = {
-  kitchenName: string;
-  kitchenType: string;
-  yearsOperating: string;
-  streetAddress: string;
-  city: string;
-  province: string;
-  postalCode: string;
-  website: string;
-  businessPhone: string;
-  businessEmail: string;
-  contactFirstName: string;
-  contactLastName: string;
-  role: string;
-  phone: string;
-  email: string;
-};
+export async function POST(req: Request) {
+  const body = await req.json();
 
-export async function submitApplication(
-  data: ApplicationInput,
-): Promise<{ error: string } | undefined> {
   const parsed = schema.safeParse({
-    ...data,
-    contactRole: data.role,
-    contactPhone: data.phone,
-    contactEmail: data.email,
+    ...body,
+    contactRole: body.role,
+    contactPhone: body.phone,
+    contactEmail: body.email,
   });
 
   if (!parsed.success) {
-    return { error: "Please check all fields and try again." };
+    return NextResponse.json(
+      { error: "Please check all fields and try again." },
+      { status: 400 },
+    );
   }
 
   const v = parsed.data;
@@ -96,29 +78,62 @@ export async function submitApplication(
     });
   } catch (err) {
     if ((err as { code?: string }).code === "23505") {
-      return {
-        error:
-          "An application with this email already exists. Contact us if you need help.",
-      };
+      return NextResponse.json(
+        {
+          error:
+            "An application with this email already exists. Contact us if you need help.",
+        },
+        { status: 409 },
+      );
     }
-    console.error("[submitApplication]", err);
-    return { error: "Something went wrong. Please try again." };
+    console.error("[application]", err);
+    return NextResponse.json(
+      { error: "Something went wrong. Please try again." },
+      { status: 500 },
+    );
   }
 
   notifyTeam(v.contactEmail, v.kitchenName).catch((e) =>
-    console.error("[submitApplication] resend failed:", e),
+    console.error("[application] team notify failed:", e),
+  );
+  confirmCook(v.contactEmail, v.contactFirstName, v.kitchenName).catch((e) =>
+    console.error("[application] cook confirm failed:", e),
   );
 
-  const jar = await cookies();
-  jar.set("application_submitted", generateSignedValue(), {
+  const res = NextResponse.json({
+    redirect: "/business/application-confirmation",
+  });
+  res.cookies.set("application_submitted", generateSignedValue(), {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     maxAge: 10 * 60,
     path: "/",
   });
+  return res;
+}
 
-  redirect("/business/application-confirmation");
+async function confirmCook(to: string, firstName: string, kitchenName: string) {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return;
+
+  const resend = new Resend(apiKey);
+  await resend.emails.send({
+    from: process.env.RESEND_FROM_EMAIL ?? "noreply@7eats.ca",
+    to,
+    subject: `We received your application, ${firstName}`,
+    text: [
+      `Hi ${firstName},`,
+      "",
+      `Thank you for applying to 7eats with ${kitchenName}. We're excited to learn more about what you're cooking.`,
+      "",
+      "We review every application personally. A member of our team will reach out within 2 business days by phone — not an automated call, a real conversation.",
+      "",
+      "In the meantime, feel free to reply to this email if you have any questions.",
+      "",
+      "— The 7eats team, Toronto",
+    ].join("\n"),
+  });
 }
 
 async function notifyTeam(contactEmail: string, kitchenName: string) {

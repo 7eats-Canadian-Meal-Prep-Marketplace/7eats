@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { and, eq, isNull } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
-import { db } from "@/db";
+import { db, dbPool } from "@/db";
 import { cookApplications, setupTokens } from "@/db/schema";
 import { hashToken, sendSetupEmail, verifyInternalKey } from "../_lib";
 
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
   const expiresAt = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
 
   // Expire all existing unconsumed tokens then insert the fresh one
-  await db.transaction(async (tx) => {
+  await dbPool.transaction(async (tx) => {
     await tx
       .update(setupTokens)
       .set({ expiresAt: new Date() })

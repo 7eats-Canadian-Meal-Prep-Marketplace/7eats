@@ -1,4 +1,11 @@
-import { boolean, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  pgTable,
+  text,
+  timestamp,
+  varchar,
+} from "drizzle-orm/pg-core";
+import { accountStatus, userRole } from "./enums";
 
 export const authUser = pgTable("user", {
   id: text("id").primaryKey(),
@@ -8,6 +15,13 @@ export const authUser = pgTable("user", {
   image: text("image"),
   createdAt: timestamp("created_at").notNull(),
   updatedAt: timestamp("updated_at").notNull(),
+  // App-specific fields
+  role: userRole("role").notNull().default("cook"),
+  status: accountStatus("status").notNull().default("active"),
+  firstName: varchar("first_name", { length: 100 }),
+  lastName: varchar("last_name", { length: 100 }),
+  phone: varchar("phone", { length: 20 }),
+  phoneVerified: boolean("phone_verified").notNull().default(false),
 });
 
 export const authSession = pgTable("session", {

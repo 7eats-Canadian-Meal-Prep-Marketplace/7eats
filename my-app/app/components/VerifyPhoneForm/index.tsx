@@ -1,10 +1,7 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import {
-  sendOtp,
-  verifyOtp,
-} from "@/app/business-auth/setup/verify-phone/actions";
 import styles from "./VerifyPhoneForm.module.css";
 
 type Stage = "phone" | "code";
@@ -18,6 +15,7 @@ export default function VerifyPhoneForm({
 }: {
   defaultPhone?: string;
 }) {
+  const router = useRouter();
   const [stage, setStage] = useState<Stage>("phone");
   const [phone, setPhone] = useState(defaultPhone);
   const [otp, setOtp] = useState("");
@@ -32,12 +30,17 @@ export default function VerifyPhoneForm({
     }
     setError("");
     startTransition(async () => {
-      const result = await sendOtp(phone);
-      if (result?.error) {
-        setError(result.error);
-      } else {
-        setStage("code");
+      const res = await fetch("/api/setup/send-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "Something went wrong.");
+        return;
       }
+      setStage("code");
     });
   };
 
@@ -49,10 +52,17 @@ export default function VerifyPhoneForm({
     }
     setError("");
     startTransition(async () => {
-      const result = await verifyOtp(otp);
-      if (result?.error) {
-        setError(result.error);
+      const res = await fetch("/api/setup/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: otp }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "Something went wrong.");
+        return;
       }
+      router.push(data.redirect);
     });
   };
 
@@ -60,10 +70,13 @@ export default function VerifyPhoneForm({
     setOtp("");
     setError("");
     startTransition(async () => {
-      const result = await sendOtp(phone);
-      if (result?.error) {
-        setError(result.error);
-      }
+      const res = await fetch("/api/setup/send-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone }),
+      });
+      const data = await res.json();
+      if (!res.ok) setError(data.error ?? "Something went wrong.");
     });
   };
 

@@ -19,10 +19,13 @@ export async function sendSetupEmail(
   rawToken: string,
 ): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) throw new Error("RESEND_API_KEY not set");
-
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://7eats.ca";
   const link = `${baseUrl}/business-auth/setup/create-password?token=${rawToken}`;
+
+  // Always log so the link is available in the terminal during testing
+  console.log(`[issue-link] magic link for ${to}:\n${link}`);
+
+  if (!apiKey) return;
 
   const resend = new Resend(apiKey);
   const { error } = await resend.emails.send({

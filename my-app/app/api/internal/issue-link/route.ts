@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
-import { db } from "@/db";
+import { db, dbPool } from "@/db";
 import { cookApplications, setupTokens } from "@/db/schema";
 import { hashToken, sendSetupEmail, verifyInternalKey } from "../_lib";
 
@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
   const tokenHash = hashToken(rawToken);
   const expiresAt = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
 
-  await db.transaction(async (tx) => {
+  await dbPool.transaction(async (tx) => {
     await tx
       .insert(setupTokens)
       .values({ applicationId, tokenHash, expiresAt });
@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     console.error("[issue-link] Resend failed:", err);
     // Compensate: delete the orphaned token and revert status so team can retry
-    await db.transaction(async (tx) => {
+    await dbPool.transaction(async (tx) => {
       await tx.delete(setupTokens).where(eq(setupTokens.tokenHash, tokenHash));
       await tx
         .update(cookApplications)

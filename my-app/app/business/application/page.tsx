@@ -3,7 +3,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { submitApplication } from "./actions";
 import styles from "./page.module.css";
 
 const PROVINCES = [
@@ -120,8 +119,17 @@ export default function ApplicationPage() {
     e.preventDefault();
     setError(null);
     startTransition(async () => {
-      const result = await submitApplication(form);
-      if (result?.error) setError(result.error);
+      const res = await fetch("/api/business/application", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "Something went wrong.");
+        return;
+      }
+      window.location.href = data.redirect;
     });
   };
 

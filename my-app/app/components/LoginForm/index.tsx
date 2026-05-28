@@ -2,11 +2,12 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { login } from "@/app/business-auth/login/actions";
 import styles from "./LoginForm.module.css";
 
 export default function LoginForm() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -16,8 +17,17 @@ export default function LoginForm() {
     e.preventDefault();
     setError("");
     startTransition(async () => {
-      const result = await login({ email, password });
-      if (result?.error) setError(result.error);
+      const res = await fetch("/api/auth/sign-in", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "Something went wrong.");
+        return;
+      }
+      router.push(data.redirect);
     });
   };
 
@@ -69,7 +79,6 @@ export default function LoginForm() {
               onChange={(e) => setPassword(e.target.value)}
               required
             />
-            {/* TODO M9+: wire forgot-password page */}
             <div className={styles.forgotRow}>
               <span className={styles.forgotPlaceholder}>Forgot password?</span>
             </div>

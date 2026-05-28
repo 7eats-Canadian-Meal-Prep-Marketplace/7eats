@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { cookProfiles, users } from "@/db/schema";
+import { authUser, cookProfiles } from "@/db/schema";
 import { auth } from "@/lib/auth";
 
 export async function middleware(req: NextRequest) {
@@ -52,13 +52,13 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // dashboard: require completed setup
+  // dashboard: require steps 1 & 2 complete (step >= 3); steps 3 & 4 can be deferred
   if (pathname.startsWith("/business/dashboard")) {
     const state = await getCookState(userId);
     if (!state) {
       return NextResponse.redirect(new URL("/business-auth/login", req.url));
     }
-    if (!state.setupComplete) {
+    if (state.currentSetupStep < 3) {
       return NextResponse.redirect(
         new URL(
           `/business-auth/setup/onboarding?step=${state.currentSetupStep}`,
@@ -105,13 +105,13 @@ async function getSession(req: NextRequest) {
 async function getCookState(userId: string) {
   const [row] = await db
     .select({
-      phoneVerified: users.phoneVerified,
+      phoneVerified: authUser.phoneVerified,
       currentSetupStep: cookProfiles.currentSetupStep,
       setupComplete: cookProfiles.setupComplete,
     })
     .from(cookProfiles)
-    .innerJoin(users, eq(users.id, cookProfiles.userId))
-    .where(eq(users.id, userId))
+    .innerJoin(authUser, eq(authUser.id, cookProfiles.userId))
+    .where(eq(authUser.id, userId))
     .limit(1);
   return row ?? null;
 }
