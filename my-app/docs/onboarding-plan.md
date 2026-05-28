@@ -7,19 +7,39 @@ End-to-end backend wiring for the cook onboarding flow, from application submiss
 ## Packages to install before starting
 
 ```bash
-pnpm add bcryptjs jose resend twilio stripe
-pnpm add -D @types/bcryptjs
+pnpm add better-auth resend twilio stripe
 ```
 
 | Package | Purpose |
 |---|---|
-| `bcryptjs` | Password hashing (cost factor 12) |
-| `jose` | JWT creation and verification for session cookies |
+| `better-auth` | Neon Auth — password hashing, session management, JWT + refresh tokens |
 | `resend` | Magic link emails |
-| `twilio` | Phone OTP via Twilio Verify |
-| `stripe` | Stripe Connect Express |
+| `twilio` | Phone OTP via Twilio Verify — **mocked during development** |
+| `stripe` | Stripe Connect Express — **mocked during development** |
 
 All other needs (Drizzle, Zod v4, S3/R2, rate limiting) are already in place.
+
+**One DB client is sufficient.** `DATABASE_URL` connects as the Neon project owner, which is the table owner. Table owners bypass RLS by default in Postgres — `FORCE ROW SECURITY` would be required to change that, and none of your tables set it. So every server action using `db` from `db/index.ts` already bypasses RLS. No second client needed. RLS only enforces against non-owner connections — relevant later if you expose the DB directly via Neon's Data API with cook JWTs from the browser.
+
+---
+
+## Auth Provider — Neon Auth (Better Auth)
+
+Neon Auth is used for session management on the supply side. It issues short-lived JWTs (15-min access tokens) with automatic refresh via `authClient.token()`. The auth state (users, sessions, JWKS) lives in a dedicated `neon_auth` schema inside the same Neon database, so it branches with the rest of the data.
+
+**Integration steps:**
+
+1. Initialize the Better Auth instance in `lib/auth.ts` with the Neon/Postgres database adapter pointing at `DATABASE_URL`.
+2. Mount the catch-all API handler at `app/api/auth/[...all]/route.ts` — Better Auth handles login, logout, session refresh, and JWKS endpoints automatically.
+3. In Milestone 3, call `auth.api.signUpWithEmailAndPassword({ body: { email, password, name }, asResponse: true })`. This creates the `neon_auth.user` record, hashes the password internally, and establishes the session cookie in a single call. **Capture the returned user ID** and use it as the PK when inserting into `public.users` — never use `defaultRandom()` for that row. This is what makes `id = auth.uid()` true in RLS, because the JWT `sub` will equal the Better Auth user ID.
+4. Replace manual JWT verification in Milestone 4 middleware with `auth.api.getSession({ headers: req.headers })`.
+5. The `auth.uid()` and `auth.role()` SQL functions in `db/sql/neon-auth-helpers.sql` stay as-is — they read the JWT sub/role claims that Better Auth issues, so RLS policies require no changes.
+6. **Schema change required before starting:** Drop the `password_hash` column and its check constraint (`password_hash_or_pending`) from `public.users`. Better Auth owns credentials in `neon_auth.user` — storing a separate hash in our table is redundant and misleading. Run `pnpm db:generate` + `pnpm db:migrate` after updating the schema.
+
+**Mocking external libraries during development:**
+
+- **Twilio (OTP):** Stub the send and verify server actions to always succeed. Hardcode a fixed OTP code (e.g. `123456`) that passes verification. Remove the stub before any real testing.
+- **Stripe Connect:** Stub the account creation and `charges_enabled` check. Return a fake `acct_test_mock` ID and always return `charges_enabled: true`. Remove the stub before any real testing.
 
 ---
 
@@ -34,7 +54,7 @@ All other needs (Drizzle, Zod v4, S3/R2, rate limiting) are already in place.
 **Implementation:**
 1. Write a Zod schema matching all `FormState` fields. Canadian postal code regex (`/^[A-Z]\d[A-Z]\d[A-Z]\d$/i`), phone stripped to digits before storing, email lowercased.
 2. Server action receives the form data, validates with Zod, inserts into `cook_applications` with `status: 'pending_review'`.
-3. On success, set a short-lived `application_submitted` HTTP-only cookie (signed with `jose`, 10 min TTL) and redirect to `/business/application-confirmation`.
+3. On success, set a short-lived `application_submitted` HTTP-only cookie — value is `crypto.randomBytes(16).toString('hex')`, signed with `crypto.createHmac('sha256', process.env.COOKIE_SECRET)`. 10-min TTL. No external JWT library needed. Redirect to `/business/application-confirmation`.
 4. Send an internal notification email to the ops team via Resend.
 
 **Edge cases:**
@@ -56,10 +76,11 @@ All other needs (Drizzle, Zod v4, S3/R2, rate limiting) are already in place.
 **Implementation:**
 1. Endpoint requires a header `x-internal-key` matching `process.env.INTERNAL_API_KEY`. Return 401 if missing or wrong.
 2. Accept `{ applicationId }` in the body. Look up the application — must exist and be `pending_review`.
-3. Generate token: `crypto.randomBytes(32).toString('hex')` (64-char hex string). Hash it with SHA-256 before storing (same pattern as `lib/hash.ts`). Store raw token is never written to DB.
-4. Insert into `setup_tokens`: `{ applicationId, tokenHash, expiresAt: now + 7 days }`.
-5. Update `cook_applications` status to `approved`.
-6. Send email via Resend to `contact_email` with the magic link: `https://7eats.com/business-auth/setup/create-password?token=<raw_token>`.
+3. Generate token: `crypto.randomBytes(32).toString('hex')` (64-char hex string). Hash it with SHA-256 before storing (same pattern as `lib/hash.ts`). Raw token is never written to DB.
+4. Open a `dbService` transaction:
+   - Insert into `setup_tokens`: `{ applicationId, tokenHash, expiresAt: now + 3 days }`. **Note:** Postgres does not auto-delete expired rows — the token stays in the table indefinitely. It "expires" logically because the query filters `expires_at > now()`. If you want physical cleanup, add a scheduled job or a periodic `DELETE FROM setup_tokens WHERE expires_at < now()`. For now, the query filter is sufficient.
+   - Update `cook_applications` status to `approved`.
+5. Send email via Resend to `contact_email` with the magic link: `https://7eats.com/business-auth/setup/create-password?token=<raw_token>`. If Resend fails, return 502 — the transaction is already committed, so mark the application back to `pending_review` in a follow-up query and let the team retry.
 
 **Edge cases:**
 - **Application already approved:** Return 409 with `"Application is already approved."` Do not issue a second token.
@@ -73,9 +94,9 @@ All other needs (Drizzle, Zod v4, S3/R2, rate limiting) are already in place.
 
 **Route:** `/business-auth/setup/create-password` (page + server action)
 
-**What it does:** Validates the token, shows the password form, and on submission creates the `users` row, the `cook_profiles` row, hashes the password, starts a session, and consumes the token — all in a single DB transaction.
+**What it does:** Validates the token, shows the password form, and on submission creates the `users` row and `cook_profiles` row (password hashing handled by Better Auth), starts a session, and consumes the token — all in a single DB transaction using `dbService`.
 
-**Libraries:** Drizzle (transaction), `bcryptjs`, `jose`, Node `crypto`
+**Libraries:** Better Auth (`auth.api.signUpWithEmailAndPassword`), Drizzle (transaction), Node `crypto`
 
 **Implementation:**
 1. **Page load (server component):** Read `?token=` from URL. If missing, redirect to `/business-auth/setup/expired`. Hash the token with SHA-256, query `setup_tokens` where `token_hash = hash AND consumed_at IS NULL AND expires_at > now()`. If no row found, redirect to `/business-auth/setup/expired`.
@@ -83,13 +104,13 @@ All other needs (Drizzle, Zod v4, S3/R2, rate limiting) are already in place.
 3. **Password form (client component):** Two fields — password and confirm password. Inline validation: minimum 8 characters, must match. No page reload on mismatch.
 4. **Server action on submit:**
    - Re-validate the token (same DB check as step 1 — tokens can expire between page load and submit).
-   - Hash password with `bcryptjs` at cost factor 12.
-   - Open a Drizzle transaction:
-     - `INSERT INTO users` — `role: 'cook'`, `status: 'active'`, `firstName` and `lastName` from `contact_first_name` / `contact_last_name` on the application, `email` from `contact_email`, `passwordHash`.
-     - `INSERT INTO cook_profiles` — `userId`, `applicationId`, `displayName` pre-populated from `kitchen_name`.
+   - Call `auth.api.signUpWithEmailAndPassword({ body: { email, password, name: fullName }, asResponse: true })`. Better Auth hashes the password internally and creates the `neon_auth.user` record. Capture the returned `user.id` (the Better Auth UUID) and the `Set-Cookie` headers from the response.
+   - Open a Drizzle transaction using that Better Auth user ID:
+     - `INSERT INTO users` — **`id = betterAuthUserId`** (not random), `role: 'cook'`, `status: 'active'`, `firstName`, `lastName`, `email` from the application row.
+     - `INSERT INTO cook_profiles` — `userId = betterAuthUserId`, `applicationId`, `displayName` pre-populated from `kitchen_name`.
      - `UPDATE setup_tokens SET consumed_at = now()` where `id = token.id`.
-   - If the transaction fails, return a generic error. The token remains unconsumed and the cook can retry.
-5. **Session:** Create a JWT with `jose` containing `{ sub: userId, role: 'cook' }`, signed with `process.env.SESSION_SECRET`. Set as an HTTP-only, Secure, SameSite=Strict cookie named `session`, 30-day expiry. Redirect to `/business-auth/setup/verify-phone`.
+   - If the Drizzle transaction fails, the token remains unconsumed and the cook can retry. The orphaned `neon_auth.user` record is harmless — Better Auth's `signUpWithEmailAndPassword` will return a conflict on retry, at which point fall through to sign-in only and re-run the transaction.
+5. **Session:** Better Auth's `signUpWithEmailAndPassword` with `asResponse: true` returns the session cookie headers. Forward them to the Next.js response. Redirect to `/business-auth/setup/verify-phone`.
 
 **Edge cases:**
 - **Token not in URL:** Redirect to `/business-auth/setup/expired` immediately on page load.
@@ -107,14 +128,15 @@ All other needs (Drizzle, Zod v4, S3/R2, rate limiting) are already in place.
 
 **What it does:** Runs before every request. Validates the session cookie and enforces route-level access rules.
 
-**Libraries:** `jose`, Next.js `NextResponse`
+**Libraries:** Neon Auth (`auth.api.getSession`), Next.js `NextResponse`
 
 **Route rules:**
 
 | Route pattern | Rule |
 |---|---|
 | `/business/application` | Always public |
-| `/business/application-confirmation` | Requires `application_submitted` cookie |
+| `/business/application-confirmation` | Requires `application_submitted` cookie with valid HMAC signature. Redirect to `/business/application` if missing or tampered. Clear the cookie after the page loads. |
+| `/business-auth/login` | Always public. Redirect to `/business/dashboard` if session already valid. |
 | `/business-auth/setup/create-password` | Public — token is the auth |
 | `/business-auth/setup/expired` | Always public |
 | `/business-auth/setup/verify-phone` | Requires valid session. If `phone_verified = true`, redirect to `/business-auth/setup/onboarding?step=1` |
@@ -122,7 +144,7 @@ All other needs (Drizzle, Zod v4, S3/R2, rate limiting) are already in place.
 | `/business/*` | Requires valid session. No session → redirect to `/business-auth/login` |
 
 **Implementation:**
-1. Parse and verify the `session` JWT cookie with `jose`. If invalid or missing, treat as unauthenticated.
+1. Call `auth.api.getSession({ headers: req.headers })` via Neon Auth. If it returns null or throws, treat as unauthenticated.
 2. For routes that need DB state (`currentSetupStep`, `phone_verified`, `setup_complete`), fetch from `cook_profiles` joined to `users` using the `sub` from the JWT. Cache nothing — always read fresh.
 3. Keep the middleware lean: only read what's needed for the specific route being requested.
 
@@ -148,7 +170,7 @@ All other needs (Drizzle, Zod v4, S3/R2, rate limiting) are already in place.
    - Strip and normalize the phone number to E.164 format (`+1XXXXXXXXXX` for Canadian numbers).
    - Check rate limit using existing `logAndCheckRateLimit` — keyed on `userId` not IP to prevent bypass via VPN.
    - Call `twilio.verify.v2.services(SID).verifications.create({ to: phone, channel: 'sms' })`.
-   - Store the normalized number in session or a short-lived cookie so stage 2 knows which number to verify.
+   - Store the normalized number in a short-lived signed cookie (`pending_phone`) using the same HMAC pattern as the `application_submitted` cookie. 10-min TTL. Stage 2 reads the number from this cookie — never from the form, so the user can't swap the number between stages.
 3. **Verify OTP server action:**
    - Call `twilio.verify.v2.services(SID).verificationChecks.create({ to: phone, code: otp })`.
    - On `status: 'approved'`: `UPDATE users SET phone = <number>, phone_verified = true` where `id = session.sub`. Redirect to `/business-auth/setup/onboarding?step=1`. Update `cook_profiles.current_setup_step = 1` (already default, but explicit).
@@ -175,13 +197,13 @@ All other needs (Drizzle, Zod v4, S3/R2, rate limiting) are already in place.
 **Step 1 server action (Cook Profile):**
 1. Validate: `displayName` required, `bio` 100–500 chars, at least one cuisine selected.
 2. Handle photo upload: receive `File` from form data, validate MIME type (`image/jpeg`, `image/png`) and size (max 5 MB). Upload to `BUCKETS.AVATARS` via existing `lib/storage` client. Store the returned public URL.
-3. Resolve tag IDs: look up `tags` rows where `label IN (selectedCuisines)` and `category = 'cuisine'`. Same for niches and dietary. If any label doesn't resolve (data mismatch), log and skip — do not fail the save.
+3. Resolve tag IDs: look up `tags` rows where `slug IN (selectedSlugs)` and `category = 'cuisine'`. Same for niches and dietary. Use `slug` not `label` — slugs are unique and stable, labels can drift in casing. If any slug doesn't resolve, log and skip — do not fail the save.
 4. In a transaction: `UPDATE cook_profiles SET display_name, bio, photo_url, social_link, current_setup_step = 2`. Delete existing `cook_profile_tags` for this profile, re-insert selected ones.
 
 **Step 2 server action (Operations):**
 1. Validate: `pickupAddress` required, `leadTime` required and must be a valid `leadTimeEnum` value.
 2. Parse `maxCapacity` as integer, clamp to 5–500 range server-side regardless of client input.
-3. `UPDATE cook_profiles SET pickup_address, pickup_days, pickup_from, pickup_to, lead_time, max_capacity, delivery, accepts_special_requests, current_setup_step = 3`.
+3. `UPDATE cook_profiles SET pickup_address, pickup_days, pickup_from, pickup_to, lead_time, max_capacity, delivery, accepts_special_requests, current_setup_step = 3`. Note: `pickup_days` is a Postgres `text[]` array — send and receive it as a string array, not a comma-separated string.
 
 **Edge cases (both steps):**
 - **Session valid but `currentSetupStep` is ahead of the step being saved:** Middleware already prevents access. If somehow reached, server action re-reads step from DB and rejects if mismatched.
@@ -202,13 +224,13 @@ All other needs (Drizzle, Zod v4, S3/R2, rate limiting) are already in place.
 **Step 3 server action (Compliance):**
 1. Validate: `certIdNumber` required, `certFullName` required, `certExpiry` required and must be a future date (compare server-side — never trust the client's `min` attribute).
 2. If photo uploaded: validate MIME (`image/jpeg`, `image/png`, `application/pdf`), max 10 MB. Upload to `BUCKETS.CERTS` (private). Store the key, not a public URL — access is via signed URLs.
-3. `INSERT INTO cook_certifications` — `cookId`, `name: 'Food Handler Certificate'`, `holderName`, `certificateNumber`, `expiresAt`, `fileUrl`, `status: 'pending_review'`.
+3. `INSERT INTO cook_certifications` — `cookId`, `name: 'Food Handler Certificate'`, `holderName`, `certificateNumber`, `expiresAt`, `fileUrl`, `status: 'pending_review'`. If the cook re-submits step 3, a second row is created — both will appear in the admin review queue, which is acceptable. Do not block re-submission.
 4. `UPDATE cook_profiles SET current_setup_step = 4`.
 5. **"Complete later":** If cook clicks Complete later, redirect to `/business/dashboard` without saving. `currentSetupStep` stays at 3. Dashboard shows an outstanding steps prompt.
 
 **Step 4 server action (Get Paid):**
-1. **Stripe Connect initiation:** When cook clicks "Connect with Stripe →", call a separate server action (not the step save). It calls `stripe.accounts.create({ type: 'express' })`, stores nothing yet, returns the onboarding URL from `stripe.accountLinks.create(...)`. Client redirects to Stripe.
-2. **Stripe return:** Stripe redirects back to `/business-auth/setup/onboarding?step=4&stripe=return`. On page load, call `stripe.accounts.retrieve(accountId)` to confirm `charges_enabled = true`. If confirmed, save `stripe_account_id` to `cook_profiles` and mark the Stripe box as connected.
+1. **Stripe Connect initiation:** When cook clicks "Connect with Stripe →", call a separate server action. It calls `stripe.accounts.create({ type: 'express' })` to get a Stripe account ID, then immediately saves it to `cook_profiles.stripe_account_id` (even before onboarding is complete — this is the pending account ID). Then calls `stripe.accountLinks.create(...)` and returns the onboarding URL. Client redirects to Stripe.
+2. **Stripe return:** Stripe redirects back to `/business-auth/setup/onboarding?step=4&stripe=return`. On page load, read `stripe_account_id` from `cook_profiles` (already saved in step 1), call `stripe.accounts.retrieve(stripeAccountId)` to confirm `charges_enabled = true`. If confirmed, mark the Stripe box as connected in the UI.
 3. **Step 4 save (final submit):** Validate `stripeConnected` (check `stripe_account_id IS NOT NULL` in DB — never trust client state) and `tosAccepted`. In a transaction: `UPDATE cook_profiles SET tos_accepted_at = now(), setup_complete = true, current_setup_step = 4`. Redirect to `/business/dashboard`.
 
 **Edge cases:**
@@ -221,6 +243,36 @@ All other needs (Drizzle, Zod v4, S3/R2, rate limiting) are already in place.
 
 ---
 
+## Milestone 8 — Cook Login
+
+**Route:** `/business-auth/login` (page + server action)
+
+**What it does:** After the session expires (7-day inactivity), cooks re-authenticate here. Not part of the onboarding wizard — this is the returning-user entry point.
+
+**Libraries:** Better Auth (`auth.api.signInWithPassword`)
+
+**Implementation:**
+1. Simple two-field form: email + password. No magic link — they have an account from Milestone 3.
+2. Server action calls `auth.api.signInWithPassword({ body: { email, password }, asResponse: true })`. Forward the session cookie headers. Redirect to `/business/dashboard`.
+3. On failure (wrong credentials): return `"Incorrect email or password."` — no distinction between wrong email vs wrong password (prevents enumeration).
+4. Rate-limit login attempts by IP using existing `lib/rate-limit.ts`. Pass `{ windowMinutes: 15, maxAttempts: 5 }` inline — do not rely on the global env vars (`RATE_LIMIT_WINDOW_MINUTES` / `RATE_LIMIT_MAX_ATTEMPTS`) which are tuned for a different flow. Check `lib/rate-limit.ts` supports per-call config; if not, add an optional params argument before implementing M8.
+
+**Edge cases:**
+- **Cook hits login while already authenticated:** Middleware detects valid session and redirects to `/business/dashboard` before the page loads.
+- **Cook whose setup is incomplete:** After sign-in, middleware reads `currentSetupStep` and `setup_complete`, redirects to the correct onboarding step instead of dashboard.
+
+---
+
+## Milestone 9 — Docs & README
+
+**What it does:** Update the project README with the supply-side auth flow, and write a separate setup reference doc covering every external service, env variable, and one-time configuration step needed to run this feature end-to-end.
+
+**Implementation:**
+1. Update `README.md` — add a "Supply-side auth" section describing the overall flow (application → magic link → account creation → phone verify → onboarding wizard → dashboard). Keep it high-level, no implementation details.
+2. Create `docs/services-and-env.md` — full reference doc covering every external service, all env variables, and any one-time setup steps. See `docs/services-and-env.md` for the living version of this document.
+
+---
+
 ## Security summary
 
 | Threat | Mitigation |
@@ -228,7 +280,8 @@ All other needs (Drizzle, Zod v4, S3/R2, rate limiting) are already in place.
 | Token guessing | 32 random bytes = 256 bits of entropy. Stored as SHA-256 hash. |
 | Token replay | One-time use. `consumed_at` set in the same transaction as account creation. |
 | Token enumeration | Expired and consumed tokens return the same `/setup/expired` response — no distinction. |
-| Session hijacking | HTTP-only, Secure, SameSite=Strict cookie. 30-day expiry. |
+| Session hijacking | HTTP-only, Secure, SameSite=Strict cookie managed by Better Auth. 7-day sliding expiry. |
+| Password credential theft | Better Auth owns credential storage in `neon_auth.user`. No password hash in `public.users`. |
 | OTP brute force | 3 attempts then 10-min lockout via existing `rate-limit.ts` |
 | Step skipping | Middleware reads `currentSetupStep` from DB on every request — client URL tampering has no effect. |
 | Stripe account bypass | Final submit re-validates `charges_enabled` via Stripe API, not client state. |

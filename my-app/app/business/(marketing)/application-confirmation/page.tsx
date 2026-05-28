@@ -1,13 +1,6 @@
-// TODO (next session): Gate this page with a server action + short-lived HttpOnly cookie.
-// Implementation (option 2):
-//   1. Replace handleSubmit in application/page.tsx with a real server action that inserts
-//      the form data into the DB, then sets:
-//        Set-Cookie: application_submitted=1; HttpOnly; Path=/; Max-Age=300; SameSite=Strict
-//      and calls redirect("/business/application-confirmation").
-//   2. In this file, import { cookies } from "next/headers" and { redirect } from "next/navigation".
-//      Read the cookie, clear it immediately (Max-Age=0), and redirect to
-//      /business/application if absent.
-
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { verifySignedValue } from "@/lib/cookie";
 import styles from "./page.module.css";
 
 export const metadata = {
@@ -35,7 +28,13 @@ const STEPS = [
   },
 ];
 
-export default function ApplicationConfirmationPage() {
+export default async function ApplicationConfirmationPage() {
+  const jar = await cookies();
+  const signed = jar.get("application_submitted")?.value;
+  if (!signed || !verifySignedValue(signed)) {
+    redirect("/business/application");
+  }
+
   return (
     <main>
       <section className={styles.section}>

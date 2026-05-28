@@ -2,7 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useTransition } from "react";
+import { submitApplication } from "./actions";
 import styles from "./page.module.css";
 
 const PROVINCES = [
@@ -67,6 +68,8 @@ type FormState = {
 
 export default function ApplicationPage() {
   const [step, setStep] = useState(1);
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
   const [form, setForm] = useState<FormState>({
     kitchenName: "",
     kitchenType: "",
@@ -90,8 +93,11 @@ export default function ApplicationPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: wire server action
-    window.location.href = "/business/application-confirmation";
+    setError(null);
+    startTransition(async () => {
+      const result = await submitApplication(form);
+      if (result?.error) setError(result.error);
+    });
   };
 
   return (
@@ -435,11 +441,13 @@ export default function ApplicationPage() {
                   />
                 </div>
 
+                {error && <p className={styles.errorMsg}>{error}</p>}
                 <button
                   type="submit"
                   className={`btn btn-primary ${styles.ctaBtn}`}
+                  disabled={isPending}
                 >
-                  Submit application
+                  {isPending ? "Submitting…" : "Submit application"}
                 </button>
                 <button
                   type="button"
