@@ -288,3 +288,71 @@ Neon Auth is used for session management on the supply side. It issues short-liv
 | Cert expiry spoofing | Server re-validates expiry is a future date regardless of client input. |
 | Duplicate applications | Unique index on `contact_email` in `cook_applications`. Caught at DB level. |
 | Internal API exposure | `x-internal-key` header required. Never referenced in client code. |
+
+---
+
+## Implementation handoff — `business-auth` branch
+
+> **Note:** The test steps below cover the happy path only. Before merging to `main` this feature needs broader testing: edge cases, error handling under failure conditions (Twilio down, Resend down, DB transaction failures), concurrent requests, and a full run in a production-equivalent environment.
+
+### What was built
+
+All milestones (M1–M8) are implemented. The architecture uses Next.js API route handlers (`app/api/`) for all mutations — no server actions. Better Auth manages sessions; `Set-Cookie` headers are forwarded directly from the Better Auth internal response to the HTTP response, bypassing Next.js cookie abstractions.
+
+Key routes:
+- `POST /api/business/application` — application submission
+- `POST /api/internal/issue-link` — approve application, issue setup token, send email
+- `POST /api/internal/reissue-link` — expire old tokens, issue a fresh one
+- `POST /api/setup/create-account` — validate token, create Better Auth user + cook profile, start session
+- `POST /api/setup/send-otp` — send Twilio Verify OTP, set signed `pending_phone` cookie
+- `POST /api/setup/verify-otp` — check OTP, mark `phoneVerified = true`
+- `POST /api/setup/onboarding/[1-4]` — save each wizard step
+- `POST /api/setup/stripe-connect` — mock Stripe connect (sets a placeholder account ID)
+- `POST /api/auth/sign-in` — login with email/password
+- `POST /api/auth/sign-out` — invalidate session
+
+### Happy-path test walkthrough
+
+1. **Submit application** — navigate to `/business/application`, fill both steps, submit. Should redirect to `/business/application-confirmation`.
+
+2. **Issue setup link** — run from terminal (CMD):
+   ```
+   curl -s -X POST http://localhost:3000/api/internal/issue-link -H "Content-Type: application/json" -H "x-internal-key: <INTERNAL_API_KEY>" -d "{\"applicationId\":\"<uuid from DB>\"}"
+   ```
+   Check the `pnpm dev` terminal for the magic link URL (printed regardless of Resend configuration).
+
+3. **Create password** — open the magic link. Set a password. Should redirect directly to `/business-auth/setup/verify-phone` with an active session (no login prompt).
+
+4. **Verify phone** — enter a phone number, receive OTP, enter it. Should redirect to `/business-auth/setup/onboarding?step=1`.
+
+5. **Onboarding steps 1–4** — complete each step in order. Step 3 (compliance) accepts optional file upload. Step 4 requires clicking "Connect Stripe" (mock) before accepting TOS.
+
+6. **Dashboard** — completing step 4 redirects to `/business/dashboard`. Middleware should allow access.
+
+7. **Sign out and back in** — sign out, navigate to `/business-auth/login`, sign in. Should land on `/business/dashboard` (setup is complete).
+
+### Minor issues (did not block the flow)
+
+**`create-account`: orphaned Better Auth user on DB transaction failure**
+If `signUpEmail` succeeds but the subsequent Drizzle transaction (update authUser + insert cookProfile + consume token) fails, a Better Auth user exists with no cook profile. The token stays unconsumed so the cook can retry — but on retry, `signUpEmail` will return a conflict (email exists). There is no compensating delete of the Better Auth user. In practice the transaction is very unlikely to fail, but a proper fix would call `auth.api.deleteUser` as a best-effort rollback before returning 500.
+
+**`create-account`: generic error on duplicate email at `signUpEmail`**
+If someone with the same email already has a Better Auth account (e.g. from a previous partially-failed attempt), `signUpEmail` returns a non-OK response and the handler surfaces a generic 500. The message should detect the conflict and suggest logging in instead.
+
+**`reissue-link`: old tokens not restored on email failure**
+`reissue-link` expires all previous unconsumed tokens before inserting the new one. If the Resend call then fails, the handler deletes the new token but the old ones remain expired — the cook has no valid link. The fix is to restore the old token expiry dates in the compensation path, or to expire them only after a successful send.
+
+**`pending_phone` cookie missing `secure` flag in production**
+`send-otp` sets the `pending_phone` cookie without `secure: process.env.NODE_ENV === "production"`. Better Auth's own session cookie is set with `Secure`. This is inconsistent and should be aligned.
+
+### Security concerns for review
+
+- **`INTERNAL_API_KEY` with empty or missing value** — if `INTERNAL_API_KEY` is not set in an environment, the env var defaults to `""`. An attacker sending an empty `x-internal-key` header would pass the timing-safe comparison. Ensure this variable is mandatory and non-empty in all deployed environments. Consider adding a startup assertion.
+
+- **No CSRF protection on mutation routes** — all `POST /api/*` routes accept cross-origin requests as long as the session cookie is present. The session cookie is `SameSite=Lax`, which blocks cross-site `POST` requests in modern browsers for top-level navigations, but AJAX/fetch from a malicious origin on a same-site page could still trigger them. A stricter posture would validate `Origin` or use `SameSite=Strict`. Hand this decision to the security reviewer.
+
+- **Rate limiting on `create-account` is absent** — the create-account endpoint has no rate limiting. An attacker who obtains a valid token URL (e.g. from intercepted email) could hammer it. Token entropy (256 bits) makes guessing infeasible, but adding per-IP rate limiting here would be a cheap extra layer.
+
+- **Sign-in rate limit keyed on IP** — `POST /api/auth/sign-in` rate-limits by `x-forwarded-for`. This header can be spoofed unless the infrastructure guarantees it (Vercel sets it correctly in production, but should be verified).
+
+- **Stripe Connect is mocked** — `POST /api/setup/stripe-connect` sets a placeholder `mock_acct_*` ID. Step 4 accepts any non-null `stripeAccountId` without calling the real Stripe API to confirm `charges_enabled`. This must be replaced with real Stripe Connect before any cook can receive payments.

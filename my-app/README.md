@@ -106,6 +106,10 @@ POST /api/internal/issue-link   (x-internal-key header required)
   Marks the application approved, generates a one-time setup token,
   and emails the cook a link to /business-auth/setup/create-password?token=.
 
+POST /api/internal/reissue-link   (x-internal-key header required)
+  Expires all existing unconsumed tokens for an approved application
+  and sends the cook a fresh 3-day link. Use when the cook loses the email.
+
 /business-auth/setup/create-password?token=
   Token validated server-side (existence, expiry, not yet consumed).
   Cook sets a password. Account created via Better Auth; session started.
@@ -120,15 +124,52 @@ POST /api/internal/issue-link   (x-internal-key header required)
   Step 1: cook profile (display name, photo, bio, cuisine types).
   Step 2: operations (pickup address, days, hours, lead time, capacity).
   Step 3: compliance (food handler certificate details and optional photo).
-  Step 4: payment (Stripe Connect) + Terms of Service acceptance.
+  Step 4: payment (Stripe Connect mock) + Terms of Service acceptance.
   Completing step 4 sets setup_complete = true.
 
 /business/dashboard
-  Cook's operator portal. Accessible after login.
-  Mid-onboarding cooks land here via "Complete later" — setup prompt shown,
-  draft listings allowed, publishing blocked until setup_complete.
+  Cook's operator portal. Accessible after completing steps 1 & 2.
+  Steps 3 & 4 can be completed later from the dashboard.
 ```
 
 Returning cooks sign in at `/business-auth/login`. Sessions are managed by Better Auth (7-day sliding expiry, HTTP-only cookie). Forgot-password flow is not yet implemented.
 
-For full flow detail see `docs/ONBOARDING.md`. For external services and env variables see `docs/services-and-env.md`.
+### Internal API usage
+
+Issue a setup link after approving an application:
+
+```bash
+curl -X POST http://localhost:3000/api/internal/issue-link \
+  -H "Content-Type: application/json" \
+  -H "x-internal-key: <INTERNAL_API_KEY>" \
+  -d '{"applicationId":"<uuid>"}'
+```
+
+Re-issue if the cook lost the email:
+
+```bash
+curl -X POST http://localhost:3000/api/internal/reissue-link \
+  -H "Content-Type: application/json" \
+  -H "x-internal-key: <INTERNAL_API_KEY>" \
+  -d '{"applicationId":"<uuid>"}'
+```
+
+When `RESEND_API_KEY` is not set (local dev), the magic link is printed to the `pnpm dev` terminal instead of being emailed.
+
+### Required environment variables
+
+| Variable | Purpose |
+|---|---|
+| `DATABASE_URL` | Neon Postgres connection string |
+| `BETTER_AUTH_SECRET` | Secret used by Better Auth to sign sessions |
+| `NEXT_PUBLIC_APP_URL` | Base URL for magic links (e.g. `https://7eats.ca`) |
+| `COOKIE_SECRET` | HMAC key for signing `application_submitted` and `pending_phone` cookies |
+| `INTERNAL_API_KEY` | Shared secret for `/api/internal/*` endpoints — never expose to clients |
+| `RESEND_API_KEY` | Resend API key for transactional email (optional in dev — link logged to terminal) |
+| `RESEND_FROM_EMAIL` | From address for outbound email |
+| `RESEND_TEAM_EMAIL` | Internal address that receives new application notifications |
+| `TWILIO_ACCOUNT_SID` | Twilio account SID for OTP |
+| `TWILIO_AUTH_TOKEN` | Twilio auth token |
+| `TWILIO_VERIFY_SERVICE_SID` | Twilio Verify service SID |
+
+For full flow detail see `docs/ONBOARDING.md`.
