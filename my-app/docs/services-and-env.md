@@ -35,8 +35,9 @@ DATABASE_URL=postgresql://...   # existing — covers everything server-side
 **Env variables:**
 ```
 BETTER_AUTH_SECRET=             # random 32-byte hex — signs sessions
-BETTER_AUTH_URL=                # your app's base URL, e.g. https://7eats.ca
 ```
+
+> `baseURL` is read from `NEXT_PUBLIC_APP_URL` — no separate Better Auth URL variable needed.
 
 ---
 
@@ -155,7 +156,6 @@ NEXT_PUBLIC_APP_URL=    # base URL for building magic links and Stripe return UR
 |---|---|---|---|
 | `DATABASE_URL` | Yes | Neon | Existing — table owner, bypasses RLS server-side |
 | `BETTER_AUTH_SECRET` | Yes | Better Auth | 32-byte random hex |
-| `BETTER_AUTH_URL` | Yes | Better Auth | App base URL |
 | `RESEND_API_KEY` | Yes | Resend | |
 | `RESEND_FROM_EMAIL` | Yes | Resend | Verified domain address |
 | `RESEND_TEAM_EMAIL` | Yes | Resend | Internal notification recipient |
