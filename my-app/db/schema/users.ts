@@ -64,26 +64,3 @@ export const users = pgTable(
     }),
   ],
 ).enableRLS();
-
-export const phoneOtps = pgTable(
-  "phone_otps",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    userId: uuid("user_id").references(() => users.id, {
-      onDelete: "cascade",
-    }),
-    phone: varchar("phone", { length: 20 }).notNull(),
-    code: varchar("code", { length: 6 }).notNull(),
-    expiresAt: timestamp("expires_at").notNull(),
-    usedAt: timestamp("used_at"),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
-  },
-  () => [
-    pgPolicy("otps_service_only", {
-      for: "all",
-      to: "public",
-      using: sql`auth.role() = 'service_role'`,
-      withCheck: sql`auth.role() = 'service_role'`,
-    }),
-  ],
-).enableRLS();

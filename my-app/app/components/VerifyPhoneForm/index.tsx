@@ -1,7 +1,10 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useTransition } from "react";
+import {
+  sendOtp,
+  verifyOtp,
+} from "@/app/business-auth/setup/verify-phone/actions";
 import styles from "./VerifyPhoneForm.module.css";
 
 type Stage = "phone" | "code";
@@ -10,13 +13,16 @@ function isValidPhone(val: string): boolean {
   return /^\+?[\d\s\-().]{7,}$/.test(val.trim());
 }
 
-export default function VerifyPhoneForm() {
-  const router = useRouter();
+export default function VerifyPhoneForm({
+  defaultPhone = "",
+}: {
+  defaultPhone?: string;
+}) {
   const [stage, setStage] = useState<Stage>("phone");
-  const [phone, setPhone] = useState("");
+  const [phone, setPhone] = useState(defaultPhone);
   const [otp, setOtp] = useState("");
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
   const sendCode = (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,12 +31,14 @@ export default function VerifyPhoneForm() {
       return;
     }
     setError("");
-    setLoading(true);
-    // TODO: Call server action — generate OTP, store hash + expiry in phoneOtps table, send SMS via Twilio
-    setTimeout(() => {
-      setLoading(false);
-      setStage("code");
-    }, 800);
+    startTransition(async () => {
+      const result = await sendOtp(phone);
+      if (result?.error) {
+        setError(result.error);
+      } else {
+        setStage("code");
+      }
+    });
   };
 
   const verifyCode = (e: React.FormEvent) => {
@@ -40,9 +48,23 @@ export default function VerifyPhoneForm() {
       return;
     }
     setError("");
-    setLoading(true);
-    // TODO: Call server action — compare OTP hash, mark user.phoneVerified = true, delete used OTP row
-    router.push("/business-auth/setup/onboarding?step=1");
+    startTransition(async () => {
+      const result = await verifyOtp(otp);
+      if (result?.error) {
+        setError(result.error);
+      }
+    });
+  };
+
+  const resend = () => {
+    setOtp("");
+    setError("");
+    startTransition(async () => {
+      const result = await sendOtp(phone);
+      if (result?.error) {
+        setError(result.error);
+      }
+    });
   };
 
   if (stage === "code") {
@@ -82,26 +104,24 @@ export default function VerifyPhoneForm() {
           <button
             type="submit"
             className={`btn btn-primary ${styles.ctaBtn}`}
-            disabled={loading}
+            disabled={isPending}
           >
-            {loading ? "Verifying…" : "Verify"}
+            {isPending ? "Verifying…" : "Verify"}
           </button>
 
           <div className={styles.secondaryActions}>
             <button
               type="button"
               className={styles.linkBtn}
-              onClick={() => {
-                setOtp("");
-                setError("");
-                // TODO: Call server action to resend OTP (rate-limited)
-              }}
+              disabled={isPending}
+              onClick={resend}
             >
               Resend code
             </button>
             <button
               type="button"
               className={styles.linkBtn}
+              disabled={isPending}
               onClick={() => {
                 setOtp("");
                 setError("");
@@ -151,9 +171,9 @@ export default function VerifyPhoneForm() {
         <button
           type="submit"
           className={`btn btn-primary ${styles.ctaBtn}`}
-          disabled={loading}
+          disabled={isPending}
         >
-          {loading ? "Sending…" : "Send code"}
+          {isPending ? "Sending…" : "Send code"}
         </button>
       </div>
     </form>
