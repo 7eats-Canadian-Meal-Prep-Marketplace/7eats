@@ -52,6 +52,23 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
+  // dashboard: require completed setup
+  if (pathname.startsWith("/business/dashboard")) {
+    const state = await getCookState(userId);
+    if (!state) {
+      return NextResponse.redirect(new URL("/business-auth/login", req.url));
+    }
+    if (!state.setupComplete) {
+      return NextResponse.redirect(
+        new URL(
+          `/business-auth/setup/onboarding?step=${state.currentSetupStep}`,
+          req.url,
+        ),
+      );
+    }
+    return NextResponse.next();
+  }
+
   // onboarding: enforce phone verification and correct step
   if (pathname === "/business-auth/setup/onboarding") {
     const state = await getCookState(userId);
