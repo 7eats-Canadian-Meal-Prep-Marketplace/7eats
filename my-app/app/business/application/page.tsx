@@ -66,9 +66,22 @@ type FormState = {
   email: string;
 };
 
+const STEP1_REQUIRED: { key: keyof FormState; label: string }[] = [
+  { key: "kitchenName", label: "Kitchen name" },
+  { key: "kitchenType", label: "Kitchen type" },
+  { key: "yearsOperating", label: "Years operating" },
+  { key: "streetAddress", label: "Street address" },
+  { key: "city", label: "City" },
+  { key: "province", label: "Province" },
+  { key: "postalCode", label: "Postal code" },
+  { key: "businessPhone", label: "Business phone" },
+  { key: "businessEmail", label: "Business email" },
+];
+
 export default function ApplicationPage() {
   const [step, setStep] = useState(1);
   const [error, setError] = useState<string | null>(null);
+  const [step1Attempted, setStep1Attempted] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [form, setForm] = useState<FormState>({
     kitchenName: "",
@@ -90,6 +103,18 @@ export default function ApplicationPage() {
 
   const set = (key: keyof FormState, value: string) =>
     setForm((f) => ({ ...f, [key]: value }));
+
+  const step1Missing = STEP1_REQUIRED.filter((f) => !form[f.key].trim());
+  const step1Complete = step1Missing.length === 0;
+
+  const handleNext = () => {
+    if (!step1Complete) {
+      setStep1Attempted(true);
+      return;
+    }
+    setStep1Attempted(false);
+    setStep(2);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -344,10 +369,16 @@ export default function ApplicationPage() {
                   </div>
                 </div>
 
+                {step1Attempted && step1Missing.length > 0 && (
+                  <p className={styles.errorMsg}>
+                    Please fill in: {step1Missing[0].label}
+                  </p>
+                )}
                 <button
                   type="button"
-                  className={`btn btn-primary ${styles.ctaBtn}`}
-                  onClick={() => setStep(2)}
+                  className={`btn btn-primary ${styles.ctaBtn} ${!step1Complete ? styles.ctaBtnDisabled : ""}`}
+                  onClick={handleNext}
+                  aria-disabled={!step1Complete}
                 >
                   Next
                 </button>

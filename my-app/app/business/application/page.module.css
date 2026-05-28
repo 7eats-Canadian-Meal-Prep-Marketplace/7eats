@@ -325,3 +325,9 @@
   color: var(--error, #c0392b);
   margin-bottom: 0.5rem;
 }
+
+.ctaBtnDisabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(0.3);
+}
