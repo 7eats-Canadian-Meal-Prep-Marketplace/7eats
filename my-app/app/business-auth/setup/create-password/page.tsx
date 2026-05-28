@@ -1,10 +1,11 @@
+import { createHash } from "node:crypto";
+import { and, eq, gt, isNull } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import CreatePasswordForm from "@/app/components/CreatePasswordForm";
 import SetupSidebar from "@/app/components/SetupSidebar";
+import { db } from "@/db";
+import { setupTokens } from "@/db/schema";
 import styles from "./page.module.css";
-
-// TODO: Replace with real DB lookup — validate token exists, not expired, not used
-const MOCK_VALID_TOKEN = "dev";
 
 export default async function CreatePasswordPage({
   searchParams,
@@ -13,7 +14,25 @@ export default async function CreatePasswordPage({
 }) {
   const { token } = await searchParams;
 
-  if (!token || token !== MOCK_VALID_TOKEN) {
+  if (!token) {
+    redirect("/business-auth/setup/expired");
+  }
+
+  const tokenHash = createHash("sha256").update(token).digest("hex");
+
+  const [tokenRow] = await db
+    .select()
+    .from(setupTokens)
+    .where(
+      and(
+        eq(setupTokens.tokenHash, tokenHash),
+        isNull(setupTokens.consumedAt),
+        gt(setupTokens.expiresAt, new Date()),
+      ),
+    )
+    .limit(1);
+
+  if (!tokenRow) {
     redirect("/business-auth/setup/expired");
   }
 
@@ -22,7 +41,7 @@ export default async function CreatePasswordPage({
       <SetupSidebar activeStep={1} />
       <main className={styles.right}>
         <div className={styles.rightInner}>
-          <CreatePasswordForm />
+          <CreatePasswordForm token={token} />
         </div>
       </main>
     </div>

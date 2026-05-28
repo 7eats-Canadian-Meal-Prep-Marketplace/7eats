@@ -62,7 +62,7 @@ export type ApplicationInput = {
 
 export async function submitApplication(
   data: ApplicationInput,
-): Promise<{ error: string } | void> {
+): Promise<{ error: string } | undefined> {
   const parsed = schema.safeParse({
     ...data,
     contactRole: data.role,

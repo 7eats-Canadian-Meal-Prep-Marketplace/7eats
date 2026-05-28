@@ -1,15 +1,14 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useTransition } from "react";
+import { createAccount } from "@/app/business-auth/setup/create-password/actions";
 import styles from "./CreatePasswordForm.module.css";
 
-export default function CreatePasswordForm() {
-  const router = useRouter();
+export default function CreatePasswordForm({ token }: { token: string }) {
+  const [isPending, startTransition] = useTransition();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,10 +23,12 @@ export default function CreatePasswordForm() {
     }
 
     setError("");
-    setLoading(true);
-
-    // TODO: Call server action — hash password, upsert user record, create Neon Auth session
-    router.push("/business-auth/setup/verify-phone");
+    startTransition(async () => {
+      const result = await createAccount(token, password);
+      if (result?.error) {
+        setError(result.error);
+      }
+    });
   };
 
   return (
@@ -81,9 +82,9 @@ export default function CreatePasswordForm() {
         <button
           type="submit"
           className={`btn btn-primary ${styles.ctaBtn}`}
-          disabled={loading}
+          disabled={isPending}
         >
-          {loading ? "Continuing…" : "Continue to setup"}
+          {isPending ? "Continuing…" : "Continue to setup"}
         </button>
       </div>
     </form>

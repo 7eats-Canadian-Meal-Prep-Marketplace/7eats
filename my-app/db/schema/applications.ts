@@ -6,7 +6,6 @@ import {
   timestamp,
   uniqueIndex,
   uuid,
-  varchar,
 } from "drizzle-orm/pg-core";
 import { applicationStatus, kitchenType } from "./enums";
 

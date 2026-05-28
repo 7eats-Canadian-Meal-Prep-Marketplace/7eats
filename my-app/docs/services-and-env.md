@@ -130,6 +130,18 @@ COOKIE_SECRET=          # signs short-lived cookies (application_submitted, pend
 
 INTERNAL_API_KEY=       # protects /api/internal/issue-link and /api/internal/reissue-link
                         # generate: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+                        #
+                        # Usage from Postman (or curl):
+                        #   POST https://your-domain.com/api/internal/issue-link
+                        #   Header: x-internal-key: <your key>
+                        #   Body:   { "applicationId": "<uuid from cook_applications>" }
+                        #
+                        #   POST https://your-domain.com/api/internal/reissue-link
+                        #   Header: x-internal-key: <your key>
+                        #   Body:   { "applicationId": "<uuid from cook_applications>" }
+                        #
+                        # The applicationId comes from querying cook_applications in the Neon console
+                        # or dashboard. Never expose this key in client code or commit it to git.
 
 NEXT_PUBLIC_APP_URL=    # base URL for building magic links and Stripe return URLs
                         # e.g. https://7eats.ca in production, http://localhost:3000 locally
