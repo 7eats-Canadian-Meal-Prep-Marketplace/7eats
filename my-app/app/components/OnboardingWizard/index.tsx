@@ -1,49 +1,53 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useRef, useState } from "react";
+import { useRef, useState, useTransition } from "react";
+import {
+  saveStep1,
+  saveStep2,
+} from "@/app/business-auth/setup/onboarding/actions";
 import SetupSidebar from "@/app/components/SetupSidebar";
 import styles from "./OnboardingWizard.module.css";
 
 // ── Constants ─────────────────────────────────────────────────
 
 const CUISINES = [
-  "West African",
-  "Caribbean",
-  "South Asian",
-  "East Asian",
-  "Southeast Asian",
-  "Middle Eastern",
-  "Mediterranean",
-  "Latin American",
-  "East African",
-  "Soul Food / Southern",
-  "Other",
+  { label: "West African", slug: "west-african" },
+  { label: "Caribbean", slug: "caribbean" },
+  { label: "South Asian", slug: "south-asian" },
+  { label: "East Asian", slug: "east-asian" },
+  { label: "Southeast Asian", slug: "southeast-asian" },
+  { label: "Middle Eastern", slug: "middle-eastern" },
+  { label: "Mediterranean", slug: "mediterranean" },
+  { label: "Latin American", slug: "latin-american" },
+  { label: "East African", slug: "east-african" },
+  { label: "Soul Food / Southern", slug: "soul-food-southern" },
+  { label: "Other", slug: "other" },
 ];
 
 const NICHES = [
-  "General meal prep",
-  "High-protein / Gym",
-  "Weight loss",
-  "Bulking / Mass gain",
-  "Family meals",
-  "Breakfast / Brunch",
-  "Office lunches",
-  "Student-friendly",
-  "Post-workout recovery",
-  "Senior nutrition",
+  { label: "General meal prep", slug: "general-meal-prep" },
+  { label: "High-protein / Gym", slug: "high-protein-gym" },
+  { label: "Weight loss", slug: "weight-loss" },
+  { label: "Bulking / Mass gain", slug: "bulking-mass-gain" },
+  { label: "Family meals", slug: "family-meals" },
+  { label: "Breakfast / Brunch", slug: "breakfast-brunch" },
+  { label: "Office lunches", slug: "office-lunches" },
+  { label: "Student-friendly", slug: "student-friendly" },
+  { label: "Post-workout recovery", slug: "post-workout-recovery" },
+  { label: "Senior nutrition", slug: "senior-nutrition" },
 ];
 
 const DIETARY_TAGS = [
-  "Halal",
-  "Vegan",
-  "Vegetarian",
-  "Gluten-free",
-  "Kosher",
-  "Nut-free",
-  "Dairy-free",
-  "Low-carb / Keto",
-  "High-protein",
+  { label: "Halal", slug: "halal" },
+  { label: "Vegan", slug: "vegan" },
+  { label: "Vegetarian", slug: "vegetarian" },
+  { label: "Gluten-free", slug: "gluten-free" },
+  { label: "Kosher", slug: "kosher" },
+  { label: "Nut-free", slug: "nut-free" },
+  { label: "Dairy-free", slug: "dairy-free" },
+  { label: "Low-carb / Keto", slug: "low-carb-keto" },
+  { label: "High-protein", slug: "high-protein" },
 ];
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -62,16 +66,17 @@ const DELIVERY_OPTIONS = [
   { value: "self", label: "I deliver myself" },
 ];
 
-// ── State shape ────────────────────────────────────────────────
+// ── Types ──────────────────────────────────────────────────────
 
 type FormState = {
   // Step 1
   displayName: string;
   photoFileName: string;
+  existingPhotoUrl: string | null;
   bio: string;
-  cuisines: string[];
-  niches: string[];
-  dietaryTags: string[];
+  cuisines: string[]; // slugs
+  niches: string[]; // slugs
+  dietaryTags: string[]; // slugs
   socialLink: string;
   // Step 2
   pickupAddress: string;
@@ -92,28 +97,20 @@ type FormState = {
   tosAccepted: boolean;
 };
 
-const initialForm: FormState = {
-  displayName: "Mama Olu's Kitchen",
-  photoFileName: "",
-  bio: "",
-  cuisines: [],
-  niches: [],
-  dietaryTags: [],
-  socialLink: "",
-  pickupAddress: "241 Spadina Ave, Toronto, ON M5V 2T6",
-  pickupFrom: "",
-  pickupTo: "",
-  pickupDays: [],
-  leadTime: "",
-  maxCapacity: "",
-  delivery: "none",
-  acceptsSpecialRequests: false,
-  certIdNumber: "",
-  certExpiry: "",
-  certFullName: "",
-  certPhotoFileName: "",
-  stripeConnected: false,
-  tosAccepted: false,
+type InitialData = {
+  displayName: string;
+  bio: string;
+  photoUrl: string | null;
+  socialLink: string;
+  pickupAddress: string;
+  pickupDays: string[];
+  pickupFrom: string;
+  pickupTo: string;
+  leadTime: string;
+  maxCapacity: string;
+  delivery: string;
+  acceptsSpecialRequests: boolean;
+  selectedTagSlugs: string[];
 };
 
 // ── Helpers ────────────────────────────────────────────────────
@@ -124,15 +121,57 @@ function toggleList(list: string[], val: string): string[] {
 
 // ── Component ──────────────────────────────────────────────────
 
-export default function OnboardingWizard() {
+export default function OnboardingWizard({
+  initialData,
+}: {
+  initialData?: InitialData;
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const rawStep = Number(searchParams.get("step") ?? "1");
   const step = rawStep >= 1 && rawStep <= 4 ? rawStep : 1;
 
-  const [form, setForm] = useState<FormState>(initialForm);
+  const allCuisineSlugs = CUISINES.map((c) => c.slug);
+  const allNicheSlugs = NICHES.map((n) => n.slug);
+  const allDietarySlugs = DIETARY_TAGS.map((d) => d.slug);
+
+  const [form, setForm] = useState<FormState>({
+    displayName: initialData?.displayName ?? "",
+    photoFileName: "",
+    existingPhotoUrl: initialData?.photoUrl ?? null,
+    bio: initialData?.bio ?? "",
+    cuisines:
+      initialData?.selectedTagSlugs.filter((s) =>
+        allCuisineSlugs.includes(s),
+      ) ?? [],
+    niches:
+      initialData?.selectedTagSlugs.filter((s) => allNicheSlugs.includes(s)) ??
+      [],
+    dietaryTags:
+      initialData?.selectedTagSlugs.filter((s) =>
+        allDietarySlugs.includes(s),
+      ) ?? [],
+    socialLink: initialData?.socialLink ?? "",
+    pickupAddress: initialData?.pickupAddress ?? "",
+    pickupFrom: initialData?.pickupFrom ?? "",
+    pickupTo: initialData?.pickupTo ?? "",
+    pickupDays: initialData?.pickupDays ?? [],
+    leadTime: initialData?.leadTime ?? "",
+    maxCapacity: initialData?.maxCapacity ?? "",
+    delivery: initialData?.delivery ?? "none",
+    acceptsSpecialRequests: initialData?.acceptsSpecialRequests ?? false,
+    certIdNumber: "",
+    certExpiry: "",
+    certFullName: "",
+    certPhotoFileName: "",
+    stripeConnected: false,
+    tosAccepted: false,
+  });
+
   const [completed, setCompleted] = useState<number[]>([]);
   const [stepError, setStepError] = useState("");
+  const [isPending, startTransition] = useTransition();
+  const photoFileRef = useRef<File | null>(null);
   const certInputRef = useRef<HTMLInputElement>(null);
 
   const set = <K extends keyof FormState>(key: K, val: FormState[K]) =>
@@ -195,11 +234,43 @@ export default function OnboardingWizard() {
   const advance = () => {
     setStepError("");
     if (!validate()) return;
-    markDone();
 
+    if (step === 1) {
+      startTransition(async () => {
+        const fd = new FormData();
+        fd.set("displayName", form.displayName);
+        fd.set("bio", form.bio);
+        fd.set("socialLink", form.socialLink);
+        fd.set("cuisines", form.cuisines.join(","));
+        fd.set("niches", form.niches.join(","));
+        fd.set("dietary", form.dietaryTags.join(","));
+        if (photoFileRef.current) fd.set("photo", photoFileRef.current);
+        const result = await saveStep1(fd);
+        if (result?.error) setStepError(result.error);
+      });
+      return;
+    }
+
+    if (step === 2) {
+      startTransition(async () => {
+        const result = await saveStep2({
+          pickupAddress: form.pickupAddress,
+          pickupDays: form.pickupDays,
+          pickupFrom: form.pickupFrom,
+          pickupTo: form.pickupTo,
+          leadTime: form.leadTime,
+          maxCapacity: form.maxCapacity,
+          delivery: form.delivery,
+          acceptsSpecialRequests: form.acceptsSpecialRequests,
+        });
+        if (result?.error) setStepError(result.error);
+      });
+      return;
+    }
+
+    // Steps 3 & 4 wired in M7
+    markDone();
     if (step === 4) {
-      // TODO: Server action — set setup_complete = true, then redirect to verify-phone
-      // Skipping phone verification for now; redirecting directly to dashboard
       router.push("/business/dashboard");
     } else {
       router.push(`/business-auth/setup/onboarding?step=${step + 1}`);
@@ -221,10 +292,11 @@ export default function OnboardingWizard() {
         completedSteps={[1, 2, ...completed.map((s) => s + 2)]}
       />
 
-      {/* ── Right panel ── */}
       <main className={styles.right}>
         <div className={styles.rightInner}>
-          {step === 1 && <Step1 form={form} set={set} />}
+          {step === 1 && (
+            <Step1 form={form} set={set} photoFileRef={photoFileRef} />
+          )}
           {step === 2 && <Step2 form={form} set={set} />}
           {step === 3 && (
             <Step3
@@ -249,14 +321,20 @@ export default function OnboardingWizard() {
               type="button"
               className={`btn btn-primary ${styles.ctaBtn}`}
               onClick={advance}
+              disabled={isPending}
             >
-              {step === 4 ? "Complete setup" : "Save and continue"}
+              {isPending
+                ? "Saving…"
+                : step === 4
+                  ? "Complete setup"
+                  : "Save and continue"}
             </button>
             {step > 1 && (
               <button
                 type="button"
                 className={styles.laterBtn}
                 onClick={goBack}
+                disabled={isPending}
               >
                 ← Back
               </button>
@@ -273,13 +351,16 @@ export default function OnboardingWizard() {
 function Step1({
   form,
   set,
+  photoFileRef,
 }: {
   form: FormState;
   set: <K extends keyof FormState>(k: K, v: FormState[K]) => void;
+  photoFileRef: React.MutableRefObject<File | null>;
 }) {
   const photoInputRef = useRef<HTMLInputElement>(null);
   const bioLen = form.bio.length;
   const bioOk = bioLen >= 100 && bioLen <= 500;
+  const hasPhoto = form.photoFileName || form.existingPhotoUrl;
 
   return (
     <div className={styles.stepContent}>
@@ -292,7 +373,6 @@ function Step1({
       </div>
 
       <div className={styles.fields}>
-        {/* Display name */}
         <div className={styles.field}>
           <label htmlFor="displayName" className={styles.label}>
             Display name
@@ -311,7 +391,6 @@ function Step1({
           </p>
         </div>
 
-        {/* Profile photo */}
         <div className={styles.field}>
           <span className={styles.label}>Profile photo</span>
           <div className={styles.photoWrap}>
@@ -336,8 +415,9 @@ function Step1({
                 accept=".jpg,.jpeg,.png"
                 style={{ display: "none" }}
                 onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) set("photoFileName", file.name);
+                  const file = e.target.files?.[0] ?? null;
+                  photoFileRef.current = file;
+                  set("photoFileName", file?.name ?? "");
                 }}
               />
               <button
@@ -345,18 +425,19 @@ function Step1({
                 className="btn btn-ghost btn-sm"
                 onClick={() => photoInputRef.current?.click()}
               >
-                {form.photoFileName ? "Change photo" : "Upload photo"}
+                {hasPhoto ? "Change photo" : "Upload photo"}
               </button>
               <p className={styles.photoNote}>
                 {form.photoFileName
                   ? form.photoFileName
-                  : "JPEG or PNG · min 400x400 · required"}
+                  : form.existingPhotoUrl
+                    ? "Current photo uploaded"
+                    : "JPEG or PNG · min 400x400 · required"}
               </p>
             </div>
           </div>
         </div>
 
-        {/* Bio */}
         <div className={styles.field}>
           <label htmlFor="bio" className={styles.label}>
             Bio{" "}
@@ -377,24 +458,24 @@ function Step1({
           />
         </div>
 
-        {/* Cuisine types */}
         <div className={styles.field}>
           <span className={styles.label}>Cuisine types</span>
           <div className={styles.pillGroup}>
             {CUISINES.map((c) => (
               <button
-                key={c}
+                key={c.slug}
                 type="button"
-                onClick={() => set("cuisines", toggleList(form.cuisines, c))}
-                className={`${styles.pill} ${form.cuisines.includes(c) ? styles.pillActive : ""}`}
+                onClick={() =>
+                  set("cuisines", toggleList(form.cuisines, c.slug))
+                }
+                className={`${styles.pill} ${form.cuisines.includes(c.slug) ? styles.pillActive : ""}`}
               >
-                {c}
+                {c.label}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Niches */}
         <div className={styles.field}>
           <span className={styles.label}>
             Niche <span className={styles.labelNote}>(optional)</span>
@@ -402,18 +483,17 @@ function Step1({
           <div className={styles.pillGroup}>
             {NICHES.map((n) => (
               <button
-                key={n}
+                key={n.slug}
                 type="button"
-                onClick={() => set("niches", toggleList(form.niches ?? [], n))}
-                className={`${styles.pill} ${(form.niches ?? []).includes(n) ? styles.pillActive : ""}`}
+                onClick={() => set("niches", toggleList(form.niches, n.slug))}
+                className={`${styles.pill} ${form.niches.includes(n.slug) ? styles.pillActive : ""}`}
               >
-                {n}
+                {n.label}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Dietary tags */}
         <div className={styles.field}>
           <span className={styles.label}>
             Dietary tags <span className={styles.labelNote}>(optional)</span>
@@ -421,20 +501,19 @@ function Step1({
           <div className={styles.pillGroup}>
             {DIETARY_TAGS.map((t) => (
               <button
-                key={t}
+                key={t.slug}
                 type="button"
                 onClick={() =>
-                  set("dietaryTags", toggleList(form.dietaryTags, t))
+                  set("dietaryTags", toggleList(form.dietaryTags, t.slug))
                 }
-                className={`${styles.pill} ${form.dietaryTags.includes(t) ? styles.pillActive : ""}`}
+                className={`${styles.pill} ${form.dietaryTags.includes(t.slug) ? styles.pillActive : ""}`}
               >
-                {t}
+                {t.label}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Social link */}
         <div className={styles.field}>
           <label htmlFor="socialLink" className={styles.label}>
             Instagram or social link{" "}
@@ -473,7 +552,6 @@ function Step2({
       </div>
 
       <div className={styles.fields}>
-        {/* Primary pickup address */}
         <div className={styles.field}>
           <label htmlFor="pickupAddress" className={styles.label}>
             Pickup address
@@ -492,7 +570,6 @@ function Step2({
           </p>
         </div>
 
-        {/* Pickup days */}
         <div className={styles.field}>
           <span className={styles.label}>Pickup days</span>
           <div className={styles.pillGroup}>
@@ -511,7 +588,6 @@ function Step2({
           </div>
         </div>
 
-        {/* Pickup window */}
         <div className={styles.field}>
           <span className={styles.label}>Pickup window</span>
           <div className={styles.timeRow}>
@@ -546,7 +622,6 @@ function Step2({
           </p>
         </div>
 
-        {/* Lead time */}
         <div className={styles.field}>
           <span className={styles.label}>Order lead time</span>
           <div className={styles.radioGroup}>
@@ -574,7 +649,6 @@ function Step2({
           </p>
         </div>
 
-        {/* Max capacity */}
         <div className={styles.field}>
           <label htmlFor="maxCapacity" className={styles.label}>
             Max weekly order capacity
@@ -594,7 +668,6 @@ function Step2({
           </p>
         </div>
 
-        {/* Delivery */}
         <div className={styles.field}>
           <span className={styles.label}>Delivery</span>
           <div className={styles.radioGroup}>
@@ -617,7 +690,6 @@ function Step2({
           </div>
         </div>
 
-        {/* Special requests */}
         <div className={styles.field}>
           <span className={styles.label}>Special requests</span>
           <label className={styles.checkRow}>
@@ -649,11 +721,6 @@ function Step3({
   certInputRef: React.RefObject<HTMLInputElement | null>;
   onCompleteLater: () => void;
 }) {
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) set("certPhotoFileName", file.name);
-  };
-
   return (
     <div className={styles.stepContent}>
       <div className={styles.formHead}>
@@ -675,7 +742,6 @@ function Step3({
       </div>
 
       <div className={styles.fields}>
-        {/* Certificate ID */}
         <div className={styles.field}>
           <label htmlFor="certIdNumber" className={styles.label}>
             Certificate ID number
@@ -690,7 +756,6 @@ function Step3({
           />
         </div>
 
-        {/* Full name on certificate */}
         <div className={styles.field}>
           <label htmlFor="certFullName" className={styles.label}>
             Full name as it appears on the certificate
@@ -705,7 +770,6 @@ function Step3({
           />
         </div>
 
-        {/* Expiry date */}
         <div className={styles.field}>
           <label htmlFor="certExpiry" className={styles.label}>
             Expiry date
@@ -721,7 +785,6 @@ function Step3({
           <p className={styles.hint}>We will remind you before it expires.</p>
         </div>
 
-        {/* Optional photo */}
         <div className={styles.field}>
           <span className={styles.label}>
             Photo of certificate{" "}
@@ -737,7 +800,10 @@ function Step3({
               type="file"
               accept=".pdf,.jpg,.jpeg,.png"
               className={styles.uploadInput}
-              onChange={handlePhotoChange}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) set("certPhotoFileName", file.name);
+              }}
               tabIndex={-1}
             />
             {form.certPhotoFileName ? (
@@ -806,7 +872,6 @@ function Step4({
       </div>
 
       <div className={styles.fields}>
-        {/* Stripe Connect */}
         <div className={styles.field}>
           <span className={styles.label}>Payments</span>
           <div
@@ -850,9 +915,7 @@ function Step4({
                 type="button"
                 className="btn btn-secondary btn-sm"
                 onClick={() => {
-                  // TODO: Call server action to create Stripe Connect Express account,
-                  // get onboarding URL, redirect to Stripe. On return check account status.
-                  // Mocking as connected for now.
+                  // TODO M7: server action to create Stripe Connect Express account
                   set("stripeConnected", true);
                 }}
               >
@@ -862,7 +925,6 @@ function Step4({
           </div>
         </div>
 
-        {/* Platform terms */}
         <div className={styles.field}>
           <span className={styles.label}>Platform terms</span>
           <div className={styles.termsList}>
@@ -885,7 +947,6 @@ function Step4({
           </div>
         </div>
 
-        {/* Terms of service */}
         <div className={styles.field}>
           <span className={styles.label}>Terms of service</span>
           <label className={styles.checkRow}>
