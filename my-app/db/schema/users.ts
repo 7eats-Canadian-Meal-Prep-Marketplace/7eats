@@ -5,6 +5,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
@@ -18,7 +19,7 @@ export const users = pgTable(
     id: uuid("id").primaryKey(),
     role: userRole("role").notNull().default("client"),
     status: accountStatus("status").notNull().default("active"),
-    phone: varchar("phone", { length: 20 }).unique(),
+    phone: varchar("phone", { length: 20 }),
     phoneVerified: boolean("phone_verified").notNull().default(false),
     firstName: varchar("first_name", { length: 100 }).notNull(),
     lastName: varchar("last_name", { length: 100 }).notNull(),
@@ -30,7 +31,11 @@ export const users = pgTable(
       .defaultNow()
       .$onUpdate(() => new Date()),
   },
-  () => [
+  (table) => [
+    // Unique phones among cooks only — the same number can appear on a client account
+    uniqueIndex("users_cook_phone_unique")
+      .on(table.phone)
+      .where(sql`role = 'cook'`),
     pgPolicy("users_select_own", {
       for: "select",
       to: "public",
