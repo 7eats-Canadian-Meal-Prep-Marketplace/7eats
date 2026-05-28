@@ -82,7 +82,8 @@ export async function middleware(req: NextRequest) {
     }
     const step = req.nextUrl.searchParams.get("step");
     const current = state.currentSetupStep;
-    if (step !== String(current)) {
+    const stepNum = Number(step);
+    if (isNaN(stepNum) || stepNum < 1 || stepNum > current) {
       return NextResponse.redirect(
         new URL(`/business-auth/setup/onboarding?step=${current}`, req.url),
       );
