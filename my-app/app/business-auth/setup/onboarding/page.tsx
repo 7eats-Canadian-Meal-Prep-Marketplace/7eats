@@ -26,6 +26,7 @@ export default async function OnboardingPage() {
       maxCapacity: cookProfiles.maxCapacity,
       delivery: cookProfiles.delivery,
       acceptsSpecialRequests: cookProfiles.acceptsSpecialRequests,
+      stripeAccountId: cookProfiles.stripeAccountId,
     })
     .from(cookProfiles)
     .where(eq(cookProfiles.userId, session.user.id))
@@ -59,6 +60,7 @@ export default async function OnboardingPage() {
                 delivery: profile.delivery ?? "none",
                 acceptsSpecialRequests: profile.acceptsSpecialRequests,
                 selectedTagSlugs: tagSlugs,
+                stripeConnected: !!profile.stripeAccountId,
               }
             : undefined
         }

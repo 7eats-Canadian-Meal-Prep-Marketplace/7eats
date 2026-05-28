@@ -3,8 +3,11 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import {
+  mockConnectStripe,
   saveStep1,
   saveStep2,
+  saveStep3,
+  saveStep4,
 } from "@/app/business-auth/setup/onboarding/actions";
 import SetupSidebar from "@/app/components/SetupSidebar";
 import styles from "./OnboardingWizard.module.css";
@@ -111,6 +114,7 @@ type InitialData = {
   delivery: string;
   acceptsSpecialRequests: boolean;
   selectedTagSlugs: string[];
+  stripeConnected?: boolean;
 };
 
 // ── Helpers ────────────────────────────────────────────────────
@@ -164,7 +168,7 @@ export default function OnboardingWizard({
     certExpiry: "",
     certFullName: "",
     certPhotoFileName: "",
-    stripeConnected: false,
+    stripeConnected: initialData?.stripeConnected ?? false,
     tosAccepted: false,
   });
 
@@ -172,6 +176,7 @@ export default function OnboardingWizard({
   const [stepError, setStepError] = useState("");
   const [isPending, startTransition] = useTransition();
   const photoFileRef = useRef<File | null>(null);
+  const certFileRef = useRef<File | null>(null);
   const certInputRef = useRef<HTMLInputElement>(null);
 
   const set = <K extends keyof FormState>(key: K, val: FormState[K]) =>
@@ -268,13 +273,37 @@ export default function OnboardingWizard({
       return;
     }
 
-    // Steps 3 & 4 wired in M7
-    markDone();
-    if (step === 4) {
-      router.push("/business/dashboard");
-    } else {
-      router.push(`/business-auth/setup/onboarding?step=${step + 1}`);
+    if (step === 3) {
+      startTransition(async () => {
+        const fd = new FormData();
+        fd.set("certIdNumber", form.certIdNumber);
+        fd.set("certFullName", form.certFullName);
+        fd.set("certExpiry", form.certExpiry);
+        if (certFileRef.current) fd.set("certPhoto", certFileRef.current);
+        const result = await saveStep3(fd);
+        if (result?.error) setStepError(result.error);
+      });
+      return;
     }
+
+    if (step === 4) {
+      startTransition(async () => {
+        const result = await saveStep4(form.tosAccepted);
+        if (result?.error) setStepError(result.error);
+      });
+      return;
+    }
+  };
+
+  const handleConnectStripe = () => {
+    startTransition(async () => {
+      const result = await mockConnectStripe();
+      if (result?.error) {
+        setStepError(result.error);
+      } else {
+        set("stripeConnected", true);
+      }
+    });
   };
 
   const goBack = () => {
@@ -303,6 +332,7 @@ export default function OnboardingWizard({
               form={form}
               set={set}
               certInputRef={certInputRef}
+              certFileRef={certFileRef}
               onCompleteLater={() => router.push("/business/dashboard")}
             />
           )}
@@ -311,6 +341,8 @@ export default function OnboardingWizard({
               form={form}
               set={set}
               onCompleteLater={() => router.push("/business/dashboard")}
+              onConnectStripe={handleConnectStripe}
+              isPending={isPending}
             />
           )}
 
@@ -714,11 +746,13 @@ function Step3({
   form,
   set,
   certInputRef,
+  certFileRef,
   onCompleteLater,
 }: {
   form: FormState;
   set: <K extends keyof FormState>(k: K, v: FormState[K]) => void;
   certInputRef: React.RefObject<HTMLInputElement | null>;
+  certFileRef: React.MutableRefObject<File | null>;
   onCompleteLater: () => void;
 }) {
   return (
@@ -802,7 +836,10 @@ function Step3({
               className={styles.uploadInput}
               onChange={(e) => {
                 const file = e.target.files?.[0];
-                if (file) set("certPhotoFileName", file.name);
+                if (file) {
+                  certFileRef.current = file;
+                  set("certPhotoFileName", file.name);
+                }
               }}
               tabIndex={-1}
             />
@@ -846,10 +883,14 @@ function Step4({
   form,
   set,
   onCompleteLater,
+  onConnectStripe,
+  isPending,
 }: {
   form: FormState;
   set: <K extends keyof FormState>(k: K, v: FormState[K]) => void;
   onCompleteLater: () => void;
+  onConnectStripe: () => void;
+  isPending: boolean;
 }) {
   return (
     <div className={styles.stepContent}>
@@ -914,10 +955,8 @@ function Step4({
               <button
                 type="button"
                 className="btn btn-secondary btn-sm"
-                onClick={() => {
-                  // TODO M7: server action to create Stripe Connect Express account
-                  set("stripeConnected", true);
-                }}
+                onClick={onConnectStripe}
+                disabled={isPending}
               >
                 Connect with Stripe →
               </button>
