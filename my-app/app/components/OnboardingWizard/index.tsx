@@ -666,7 +666,7 @@ function Step2({
                 onChange={(e) => set("pickupFrom", e.target.value)}
               />
             </div>
-            <span className={styles.timeSep}>—</span>
+            <span className={styles.timeSep}>-</span>
             <div className={styles.timeField}>
               <label htmlFor="pickupTo" className={styles.timeLabel}>
                 To

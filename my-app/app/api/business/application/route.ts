@@ -127,11 +127,11 @@ async function confirmCook(to: string, firstName: string, kitchenName: string) {
       "",
       `Thank you for applying to 7eats with ${kitchenName}. We're excited to learn more about what you're cooking.`,
       "",
-      "We review every application personally. A member of our team will reach out within 2 business days by phone — not an automated call, a real conversation.",
+      "We review every application personally. A member of our team will reach out within 2 business days by phone. Not an automated call, a real conversation.",
       "",
       "In the meantime, feel free to reply to this email if you have any questions.",
       "",
-      "— The 7eats team, Toronto",
+      "The 7eats team, Toronto",
     ].join("\n"),
   });
 }
