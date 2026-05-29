@@ -18,7 +18,7 @@ export default async function AccountPage() {
   // The page can't render without a valid session — middleware also guards this
   // route, but the page guards itself too so it never leaks data on a stale call.
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user) redirect("/login");
+  if (!session?.user) redirect("/app-auth/login");
 
   const [profile] = await db
     .select({

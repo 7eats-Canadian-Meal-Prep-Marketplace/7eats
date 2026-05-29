@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { hashIp } from "@/lib/hash";
 import { logAndCheckRateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: Request) {
@@ -15,7 +16,7 @@ export async function POST(req: Request) {
     req.headers.get("x-real-ip") ??
     "unknown";
 
-  const allowed = await logAndCheckRateLimit(`forgot-password:${ip}`, {
+  const allowed = await logAndCheckRateLimit(`forgot-password:${hashIp(ip)}`, {
     windowMinutes: 15,
     maxAttempts: 5,
   });

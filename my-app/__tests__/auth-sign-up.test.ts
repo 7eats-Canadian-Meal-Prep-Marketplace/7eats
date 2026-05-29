@@ -86,7 +86,10 @@ describe("POST /api/auth/sign-up", () => {
 
     // Confirmation email is requested with the post-verify callback.
     expect(vi.mocked(auth.api.sendVerificationEmail)).toHaveBeenCalledWith({
-      body: { email: "ada@example.com", callbackURL: "/login?verified=1" },
+      body: {
+        email: "ada@example.com",
+        callbackURL: "/app-auth/login?verified=1",
+      },
     });
 
     // No session cookie is issued — the client must confirm their email first.

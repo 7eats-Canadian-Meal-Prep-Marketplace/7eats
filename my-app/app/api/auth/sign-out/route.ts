@@ -7,7 +7,7 @@ import { auth } from "@/lib/auth";
 export async function POST(req: Request) {
   // Decide where to send the user BEFORE the session is invalidated, so the
   // sign-out lands them back on the right login page for their audience.
-  let redirect = "/login";
+  let redirect = "/app-auth/login";
   try {
     const session = await auth.api.getSession({ headers: req.headers });
     if (session?.user?.id) {

@@ -19,7 +19,7 @@ export default async function LoginPage({
         {verified ? (
           <p className={styles.notice}>Email confirmed — please sign in.</p>
         ) : null}
-        <LoginForm logoHref="/" signupHref="/signup" />
+        <LoginForm logoHref="/" signupHref="/app-auth/signup" />
       </div>
     </main>
   );
