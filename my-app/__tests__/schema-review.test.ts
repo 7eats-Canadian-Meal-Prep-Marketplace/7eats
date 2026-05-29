@@ -10,12 +10,14 @@ function schemaFile(name: string) {
 
 describe("reviewed database schema safeguards", () => {
   it("avoids self-referential admin RLS checks on users", () => {
-    const usersSchema = schemaFile("users.ts");
+    // user fields migrated to Better Auth (db/schema/auth.ts); admin RLS
+    // safeguard is enforced on the tables that still carry role-gated policies.
+    const cooksSchema = schemaFile("cooks.ts");
 
-    expect(usersSchema).not.toContain(
+    expect(cooksSchema).not.toContain(
       "EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')",
     );
-    expect(usersSchema).toContain("auth.role() = 'admin'");
+    expect(cooksSchema).toContain("auth.role() = 'admin'");
   });
 
   it("limits direct order updates to intended order states", () => {
@@ -38,12 +40,8 @@ describe("reviewed database schema safeguards", () => {
   });
 
   it("declares runtime update timestamps for mutable tables", () => {
-    for (const fileName of [
-      "users.ts",
-      "cooks.ts",
-      "listings.ts",
-      "orders.ts",
-    ]) {
+    // users.ts is a stub — user fields live in Better Auth's authUser table.
+    for (const fileName of ["cooks.ts", "listings.ts", "orders.ts"]) {
       expect(schemaFile(fileName)).toContain(".$onUpdate(() => new Date())");
     }
   });

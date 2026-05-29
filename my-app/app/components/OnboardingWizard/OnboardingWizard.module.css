@@ -1,0 +1,625 @@
+/* ── Page layout ─────────────────────────────────────────────── */
+.page {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  min-height: 100vh;
+}
+
+@media (max-width: 960px) {
+  .page {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Right panel ─────────────────────────────────────────────── */
+.right {
+  background: var(--white);
+  padding: 64px 48px 96px;
+  overflow-y: auto;
+}
+
+@media (max-width: 640px) {
+  .right {
+    padding: 40px 24px 80px;
+  }
+}
+
+.rightInner {
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+/* ── Step content ────────────────────────────────────────────── */
+.stepContent {
+  animation: fadeUp 0.22s ease both;
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Form header ─────────────────────────────────────────────── */
+.formHead {
+  margin-bottom: 40px;
+}
+
+.formStep {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--grey-500);
+  margin-bottom: 8px;
+}
+
+.formTitle {
+  font-size: clamp(26px, 3vw, 38px);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  color: var(--ink);
+  margin-bottom: 10px;
+}
+
+.formSub {
+  font-size: 14px;
+  color: var(--grey-700);
+  line-height: 1.6;
+  max-width: 50ch;
+}
+
+/* ── Fields ──────────────────────────────────────────────────── */
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ── Labels ──────────────────────────────────────────────────── */
+.label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--grey-700);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.labelNote {
+  font-weight: 400;
+  font-size: 11px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--grey-500);
+}
+
+/* ── Inputs ──────────────────────────────────────────────────── */
+.input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1.5px solid var(--grey-300);
+  border-radius: 0;
+  padding: 10px 0;
+  font-family: var(--font);
+  font-size: 15px;
+  color: var(--ink);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.input::placeholder {
+  color: var(--grey-300);
+}
+
+.input:focus {
+  border-color: var(--ink);
+}
+
+.textarea {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1.5px solid var(--grey-300);
+  border-radius: 0;
+  padding: 10px 0;
+  font-family: var(--font);
+  font-size: 15px;
+  color: var(--ink);
+  outline: none;
+  resize: vertical;
+  min-height: 120px;
+  transition: border-color 0.15s;
+  line-height: 1.6;
+}
+
+.textarea::placeholder {
+  color: var(--grey-300);
+}
+
+.textarea:focus {
+  border-color: var(--ink);
+}
+
+.hint {
+  font-size: 12.5px;
+  color: var(--grey-500);
+  line-height: 1.5;
+  margin-top: -2px;
+}
+
+/* ── Char count ──────────────────────────────────────────────── */
+.charCount {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--grey-400);
+  margin-left: auto;
+}
+
+.charCountOk {
+  color: #27ae60;
+}
+
+.charCountOver {
+  color: var(--red);
+}
+
+/* ── Profile photo ───────────────────────────────────────────── */
+.photoWrap {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.photoPlaceholder {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--grey-200);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--grey-500);
+}
+
+.photoActions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.photoNote {
+  font-size: 12px;
+  color: var(--grey-500);
+  margin: 0;
+}
+
+/* ── Pills ───────────────────────────────────────────────────── */
+.pillGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 14px;
+  border-radius: var(--radius-pill);
+  font-size: 13px;
+  font-weight: 500;
+  border: 1.5px solid var(--grey-300);
+  color: var(--grey-700);
+  background: transparent;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    color 0.15s,
+    background 0.15s;
+  font-family: var(--font);
+}
+
+.pill:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.pillActive {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--white);
+}
+
+/* ── Time row ────────────────────────────────────────────────── */
+.timeRow {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+}
+
+.timeField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.timeLabel {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--grey-500);
+}
+
+.timeSep {
+  padding-bottom: 12px;
+  color: var(--grey-500);
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+/* ── Radio cards ─────────────────────────────────────────────── */
+.radioGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.radioCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1.5px solid var(--grey-200);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+  background: var(--white);
+}
+
+.radioCard:hover {
+  border-color: var(--grey-700);
+}
+
+.radioCardActive {
+  border-color: var(--ink);
+  background: var(--grey-100);
+}
+
+.radioInput {
+  accent-color: var(--ink);
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+}
+
+.radioLabel {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+/* ── File upload ─────────────────────────────────────────────── */
+.uploadZone {
+  width: 100%;
+  border: 2px dashed var(--grey-300);
+  border-radius: var(--radius-sm);
+  padding: 36px 24px;
+  text-align: center;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+  background: var(--white);
+  position: relative;
+  font-family: var(--font);
+}
+
+.uploadZone:hover {
+  border-color: var(--grey-700);
+}
+
+.uploadZoneHasFile {
+  border-color: #27ae60;
+  border-style: solid;
+  background: rgba(39, 174, 96, 0.03);
+}
+
+.uploadInput {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+.uploadIcon {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
+  color: var(--grey-500);
+  font-size: 20px;
+}
+
+.uploadZoneHasFile .uploadIcon {
+  color: #27ae60;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.uploadLabel {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+
+.uploadSub {
+  font-size: 12px;
+  color: var(--grey-500);
+  margin: 0;
+}
+
+/* ── Checkboxes ──────────────────────────────────────────────── */
+.checkRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.checkbox {
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  accent-color: var(--ink);
+  cursor: pointer;
+}
+
+.checkLabel {
+  font-size: 14px;
+  color: var(--grey-700);
+  line-height: 1.6;
+}
+
+/* ── Stripe box ──────────────────────────────────────────────── */
+.stripeBox {
+  border: 1.5px solid var(--grey-200);
+  border-radius: var(--radius-sm);
+  padding: 24px;
+  background: var(--white);
+  transition:
+    border-color 0.2s,
+    background 0.2s;
+}
+
+.stripeConnected {
+  border-color: #635bff;
+  background: rgba(99, 91, 255, 0.03);
+}
+
+.stripeBoxHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.stripeBoxTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.stripeIcon {
+  color: var(--grey-700);
+  flex-shrink: 0;
+}
+
+.stripeBadge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #635bff;
+  background: rgba(99, 91, 255, 0.12);
+  padding: 3px 10px;
+  border-radius: 999px;
+  margin-left: auto;
+}
+
+.stripeBoxSub {
+  font-size: 13.5px;
+  color: var(--grey-700);
+  line-height: 1.55;
+  margin-bottom: 18px;
+}
+
+/* ── Pre-filled card ─────────────────────────────────────────── */
+.prefilledCard {
+  background: var(--grey-100);
+  border-radius: var(--radius-sm);
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.prefilledLabel {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--grey-500);
+}
+
+.prefilledRows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.prefilledRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+}
+
+.prefilledKey {
+  font-size: 13px;
+  color: var(--grey-500);
+  flex-shrink: 0;
+}
+
+.prefilledVal {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  text-align: right;
+}
+
+.prefilledNote {
+  font-size: 12px;
+  color: var(--grey-400);
+  margin: 0;
+}
+
+/* ── Terms list ──────────────────────────────────────────────── */
+.termsList {
+  border: 1.5px solid var(--grey-200);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.termsItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 13px 16px;
+}
+
+.termsItem + .termsItem {
+  border-top: 1px solid var(--grey-200);
+}
+
+.termsItemLabel {
+  font-size: 14px;
+  color: var(--grey-600);
+}
+
+.termsItemValue {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* ── Info card ───────────────────────────────────────────────── */
+.infoCard {
+  background: var(--grey-100);
+  border-radius: var(--radius-sm);
+  padding: 16px 20px;
+}
+
+.infoCardBody {
+  font-size: 14px;
+  color: var(--grey-700);
+  line-height: 1.6;
+}
+
+.infoCardHighlight {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+/* ── Inline link ─────────────────────────────────────────────── */
+.inlineLink {
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+}
+
+.inlineLink:hover {
+  color: var(--red);
+}
+
+/* ── Error ───────────────────────────────────────────────────── */
+.stepError {
+  font-size: 13px;
+  color: var(--red);
+  font-weight: 500;
+  margin-top: 8px;
+  margin-bottom: -8px;
+}
+
+/* ── Form head top row ───────────────────────────────────────── */
+.formHeadTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.formHeadTop .formStep {
+  margin-bottom: 0;
+}
+
+/* ── Actions ─────────────────────────────────────────────────── */
+.actions {
+  margin-top: 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.ctaBtn {
+  width: 100%;
+}
+
+.laterBtn {
+  display: block;
+  width: fit-content;
+  margin: 0 auto;
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--grey-500);
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.laterBtn:hover {
+  color: var(--ink);
+}

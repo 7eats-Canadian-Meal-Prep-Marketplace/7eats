@@ -1,0 +1,161 @@
+.page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--white);
+}
+
+/* ── Header ──────────────────────────────────────────────────── */
+.header {
+  padding: 28px 40px;
+  border-bottom: 1px solid var(--grey-200);
+  flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+  .header {
+    padding: 24px;
+  }
+}
+
+.logoLink {
+  display: block;
+  width: fit-content;
+}
+
+/* ── Main ────────────────────────────────────────────────────── */
+.main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 24px;
+}
+
+.inner {
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+}
+
+/* ── Icon ────────────────────────────────────────────────────── */
+.iconWrap {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-sm);
+  background: var(--grey-100);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--grey-500);
+  margin-bottom: 28px;
+}
+
+/* ── Text ────────────────────────────────────────────────────── */
+.title {
+  font-size: clamp(28px, 4vw, 40px);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  color: var(--ink);
+  margin-bottom: 16px;
+}
+
+.body {
+  font-size: 15px;
+  color: var(--grey-700);
+  line-height: 1.65;
+  max-width: 46ch;
+  margin-bottom: 32px;
+}
+
+.body strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* ── Return card ─────────────────────────────────────────────── */
+.card {
+  width: 100%;
+  border: 1.5px solid var(--grey-200);
+  border-radius: var(--radius-sm);
+  padding: 24px;
+  margin-bottom: 32px;
+}
+
+.cardLabel {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--grey-500);
+  margin-bottom: 10px;
+}
+
+.cardBody {
+  font-size: 14px;
+  color: var(--grey-700);
+  line-height: 1.6;
+  margin-bottom: 12px;
+}
+
+.cardEmail {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--grey-500);
+  font-style: italic;
+  margin: 0;
+}
+
+/* ── Tips ────────────────────────────────────────────────────── */
+.tips {
+  width: 100%;
+  margin-bottom: 36px;
+}
+
+.tipsLabel {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--grey-500);
+  margin-bottom: 14px;
+}
+
+.tipsList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0;
+  list-style: none;
+}
+
+.tipsList li {
+  font-size: 14px;
+  color: var(--grey-700);
+  padding-left: 18px;
+  position: relative;
+  line-height: 1.5;
+}
+
+.tipsList li::before {
+  content: "—";
+  position: absolute;
+  left: 0;
+  color: var(--grey-300);
+}
+
+/* ── Back link ───────────────────────────────────────────────── */
+.backLink {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--grey-500);
+  transition: color 0.15s;
+}
+
+.backLink:hover {
+  color: var(--ink);
+}

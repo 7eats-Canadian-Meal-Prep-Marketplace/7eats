@@ -1,0 +1,333 @@
+/* ── Page layout ─────────────────────────────────────────────── */
+.page {
+  display: grid;
+  grid-template-columns: 400px 1fr;
+  min-height: 100vh;
+}
+
+@media (max-width: 960px) {
+  .page {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Left panel ──────────────────────────────────────────────── */
+.left {
+  background: var(--ink);
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow: hidden;
+}
+
+@media (max-width: 960px) {
+  .left {
+    position: static;
+    height: auto;
+  }
+}
+
+.leftInner {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 44px 40px 56px;
+}
+
+.leftTop {
+  flex-shrink: 0;
+  margin-bottom: auto;
+}
+
+.logo {
+  display: block;
+  width: fit-content;
+}
+
+.leftBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.leftEyebrow {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+  margin-bottom: 18px;
+}
+
+.leftHeadline {
+  font-size: clamp(26px, 2.8vw, 40px);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  color: var(--white);
+  margin-bottom: 16px;
+}
+
+.leftSub {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.68);
+  line-height: 1.65;
+  margin-bottom: 28px;
+}
+
+.trustList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.trustList li {
+  font-size: 13.5px;
+  color: rgba(255, 255, 255, 0.72);
+  padding-left: 18px;
+  position: relative;
+  line-height: 1.4;
+}
+
+.trustList li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: rgba(255, 255, 255, 0.55);
+  font-weight: 700;
+  font-size: 12px;
+  top: 1px;
+}
+
+/* ── Right panel ─────────────────────────────────────────────── */
+.right {
+  background: #f7f6f5;
+  display: flex;
+  justify-content: center;
+  padding: 64px 48px 80px;
+}
+
+@media (max-width: 640px) {
+  .right {
+    padding: 40px 24px 64px;
+  }
+}
+
+.rightInner {
+  width: 100%;
+  max-width: 540px;
+}
+
+/* ── Step dots ───────────────────────────────────────────────── */
+.dots {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 44px;
+}
+
+.dot {
+  width: 28px;
+  height: 5px;
+  border-radius: 99px;
+  background: var(--grey-200);
+  border: none;
+  padding: 0;
+  cursor: default;
+  transition:
+    background 0.25s,
+    width 0.25s;
+}
+
+.dotActive {
+  background: var(--ink);
+  width: 44px;
+}
+
+/* ── Form header ─────────────────────────────────────────────── */
+.formHead {
+  margin-bottom: 40px;
+}
+
+.formStep {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--grey-500);
+  margin-bottom: 8px;
+}
+
+.formTitle {
+  font-size: clamp(28px, 3.2vw, 42px);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  color: var(--ink);
+  margin-bottom: 10px;
+}
+
+.formSub {
+  font-size: 14px;
+  color: var(--grey-700);
+  line-height: 1.6;
+  max-width: 48ch;
+}
+
+/* ── Fields ──────────────────────────────────────────────────── */
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  animation: fadeUp 0.22s ease both;
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fieldRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+@media (max-width: 560px) {
+  .fieldRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ── Labels ──────────────────────────────────────────────────── */
+.label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--grey-700);
+}
+
+.labelNote {
+  font-weight: 400;
+  font-size: 11px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--grey-500);
+}
+
+/* ── Inputs — editorial underline style ──────────────────────── */
+.input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1.5px solid var(--grey-300);
+  border-radius: 0;
+  padding: 10px 0;
+  font-family: var(--font);
+  font-size: 15px;
+  color: var(--ink);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.input::placeholder {
+  color: var(--grey-300);
+}
+
+.input:focus {
+  border-color: var(--ink);
+}
+
+/* ── Select ──────────────────────────────────────────────────── */
+.selectWrap {
+  position: relative;
+}
+
+.selectWrap::after {
+  content: "";
+  position: absolute;
+  right: 2px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 12px;
+  height: 7px;
+  background-color: var(--grey-500);
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  pointer-events: none;
+}
+
+.select {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1.5px solid var(--grey-300);
+  border-radius: 0;
+  padding: 10px 20px 10px 0;
+  font-family: var(--font);
+  font-size: 15px;
+  color: var(--ink);
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.select:focus {
+  border-color: var(--ink);
+}
+
+/* Muted placeholder option */
+.select option[value=""] {
+  color: var(--grey-500);
+}
+
+/* ── Actions ─────────────────────────────────────────────────── */
+.ctaBtn {
+  width: 100%;
+}
+
+.backBtn {
+  display: block;
+  width: fit-content;
+  margin: 0 auto;
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--grey-500);
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.backBtn:hover {
+  color: var(--ink);
+}
+
+.errorMsg {
+  font-size: 0.875rem;
+  color: var(--error, #c0392b);
+  margin-bottom: 0.5rem;
+}
+
+.ctaBtnDisabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(0.3);
+}

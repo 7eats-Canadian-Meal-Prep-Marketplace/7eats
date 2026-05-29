@@ -10,8 +10,8 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 import { cookApplications } from "./applications";
+import { authUser } from "./auth";
 import { certificationStatus, deliveryEnum, leadTimeEnum } from "./enums";
-import { users } from "./users";
 
 const isAdmin = sql`auth.role() = 'admin'`;
 
@@ -19,10 +19,10 @@ export const cookProfiles = pgTable(
   "cook_profiles",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    userId: uuid("user_id")
+    userId: text("user_id")
       .notNull()
       .unique()
-      .references(() => users.id, { onDelete: "cascade" }),
+      .references(() => authUser.id, { onDelete: "cascade" }),
     applicationId: uuid("application_id")
       .notNull()
       .unique()
@@ -46,7 +46,7 @@ export const cookProfiles = pgTable(
     stripeAccountId: text("stripe_account_id"),
     tosAcceptedAt: timestamp("tos_accepted_at", { withTimezone: true }),
     reviewedAt: timestamp("reviewed_at"),
-    reviewedBy: uuid("reviewed_by").references(() => users.id, {
+    reviewedBy: text("reviewed_by").references(() => authUser.id, {
       onDelete: "set null",
     }),
     reviewNotes: text("review_notes"),
@@ -60,7 +60,7 @@ export const cookProfiles = pgTable(
     pgPolicy("cook_profiles_select_active", {
       for: "select",
       to: "public",
-      using: sql`EXISTS (SELECT 1 FROM users u WHERE u.id = cook_profiles.user_id AND u.status = 'active')`,
+      using: sql`EXISTS (SELECT 1 FROM "user" u WHERE u.id = cook_profiles.user_id AND u.status = 'active')`,
     }),
     pgPolicy("cook_profiles_update_own", {
       for: "update",
@@ -98,7 +98,7 @@ export const cookCertifications = pgTable(
     fileUrl: text("file_url"),
     status: certificationStatus("status").notNull().default("pending_review"),
     reviewedAt: timestamp("reviewed_at"),
-    reviewedBy: uuid("reviewed_by").references(() => users.id, {
+    reviewedBy: text("reviewed_by").references(() => authUser.id, {
       onDelete: "set null",
     }),
     reviewNotes: text("review_notes"),

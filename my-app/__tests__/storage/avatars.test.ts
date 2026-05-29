@@ -16,8 +16,10 @@ vi.mock("@aws-sdk/client-s3", () => ({
   }),
 }));
 
+const { mockSend } = vi.hoisted(() => ({ mockSend: vi.fn() }));
+
 vi.mock("@/lib/storage/client", () => ({
-  r2Client: { send: vi.fn() },
+  getR2Client: () => ({ send: mockSend }),
 }));
 
 vi.mock("@/lib/storage/buckets", () => ({
@@ -37,7 +39,6 @@ import {
   getAvatarUrl,
   uploadAvatar,
 } from "@/lib/storage/avatars";
-import { r2Client } from "@/lib/storage/client";
 
 describe("avatars", () => {
   beforeEach(() => {
@@ -46,7 +47,7 @@ describe("avatars", () => {
 
   describe("uploadAvatar", () => {
     it("sends a PutObjectCommand to the avatars bucket and returns a CDN URL", async () => {
-      vi.mocked(r2Client.send).mockResolvedValue({} as never);
+      vi.mocked(mockSend).mockResolvedValue({} as never);
 
       const url = await uploadAvatar(
         "user-789",
@@ -55,8 +56,8 @@ describe("avatars", () => {
         "image/png",
       );
 
-      expect(r2Client.send).toHaveBeenCalledOnce();
-      const [command] = vi.mocked(r2Client.send).mock.calls[0];
+      expect(mockSend).toHaveBeenCalledOnce();
+      const [command] = vi.mocked(mockSend).mock.calls[0];
       expect((command as { input: { Bucket: string } }).input.Bucket).toBe(
         "homecook-avatars-public",
       );
@@ -70,7 +71,7 @@ describe("avatars", () => {
     it("constructs the CDN URL without making an API call", () => {
       const url = getAvatarUrl("avatars/user-789/avatar.png");
 
-      expect(r2Client.send).not.toHaveBeenCalled();
+      expect(mockSend).not.toHaveBeenCalled();
       expect(url).toBe(
         "https://avatars.example.com/avatars/user-789/avatar.png",
       );
@@ -79,12 +80,12 @@ describe("avatars", () => {
 
   describe("deleteAvatar", () => {
     it("sends a DeleteObjectCommand to the avatars bucket", async () => {
-      vi.mocked(r2Client.send).mockResolvedValue({} as never);
+      vi.mocked(mockSend).mockResolvedValue({} as never);
 
       await deleteAvatar("avatars/user-789/avatar.png");
 
-      expect(r2Client.send).toHaveBeenCalledOnce();
-      const [command] = vi.mocked(r2Client.send).mock.calls[0];
+      expect(mockSend).toHaveBeenCalledOnce();
+      const [command] = vi.mocked(mockSend).mock.calls[0];
       expect(
         (command as { input: { Bucket: string; Key: string } }).input.Bucket,
       ).toBe("homecook-avatars-public");

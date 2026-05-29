@@ -18,7 +18,7 @@ export default function NotFound() {
             Looks like this dish got taken off. The link might be broken, or the
             page moved. Head back and find something good.
           </p>
-          <Link href="/waitlist" className="btn btn-primary">
+          <Link href="/public/waitlist" className="btn btn-primary">
             Back to home
           </Link>
         </div>

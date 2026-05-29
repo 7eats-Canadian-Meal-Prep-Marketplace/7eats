@@ -11,10 +11,10 @@ import {
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
+import { authUser } from "./auth";
 import { cookProfiles } from "./cooks";
 import { orderStatus } from "./enums";
 import { listings } from "./listings";
-import { users } from "./users";
 
 const isAdmin = sql`auth.role() = 'admin'`;
 const currentCookOwnsOrder = sql`cook_id IN (SELECT id FROM cook_profiles WHERE user_id = auth.uid())`;
@@ -23,9 +23,9 @@ export const orders = pgTable(
   "orders",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    clientId: uuid("client_id")
+    clientId: text("client_id")
       .notNull()
-      .references(() => users.id, { onDelete: "restrict" }),
+      .references(() => authUser.id, { onDelete: "restrict" }),
     listingId: uuid("listing_id")
       .notNull()
       .references(() => listings.id, { onDelete: "restrict" }),
@@ -40,7 +40,7 @@ export const orders = pgTable(
     pickupAt: timestamp("pickup_at").notNull(),
     fulfilledAt: timestamp("fulfilled_at"),
     cancelledAt: timestamp("cancelled_at"),
-    cancelledBy: uuid("cancelled_by").references(() => users.id, {
+    cancelledBy: text("cancelled_by").references(() => authUser.id, {
       onDelete: "set null",
     }),
     lateCancelFee: numeric("late_cancel_fee", { precision: 10, scale: 2 }),
@@ -112,9 +112,9 @@ export const reviews = pgTable(
       .notNull()
       .unique()
       .references(() => orders.id, { onDelete: "cascade" }),
-    clientId: uuid("client_id")
+    clientId: text("client_id")
       .notNull()
-      .references(() => users.id, { onDelete: "restrict" }),
+      .references(() => authUser.id, { onDelete: "restrict" }),
     cookId: uuid("cook_id")
       .notNull()
       .references(() => cookProfiles.id, { onDelete: "restrict" }),

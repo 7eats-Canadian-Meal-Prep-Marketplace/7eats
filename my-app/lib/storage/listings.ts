@@ -1,6 +1,6 @@
 import { DeleteObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import { BUCKET_CONFIG, BUCKETS } from "@/lib/storage/buckets";
-import { r2Client } from "@/lib/storage/client";
+import { getR2Client } from "@/lib/storage/client";
 
 export async function uploadListingPhoto(
   listingId: string,
@@ -9,7 +9,7 @@ export async function uploadListingPhoto(
   contentType: string,
 ): Promise<string> {
   const key = `listings/${listingId}/${Date.now()}-${fileName}`;
-  await r2Client.send(
+  await getR2Client().send(
     new PutObjectCommand({
       Bucket: BUCKETS.LISTINGS,
       Key: key,
@@ -27,7 +27,7 @@ export function getListingPhotoUrl(key: string): string {
 }
 
 export async function deleteListingPhoto(key: string): Promise<void> {
-  await r2Client.send(
+  await getR2Client().send(
     new DeleteObjectCommand({ Bucket: BUCKETS.LISTINGS, Key: key }),
   );
 }
