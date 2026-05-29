@@ -49,11 +49,30 @@
   line-height: 1.2;
 }
 
+.sub {
+  margin-top: 8px;
+  font-size: 14px;
+  color: var(--grey-700);
+}
+
 /* ── Form ──────────────────────────────────────────────────── */
 .form {
   display: flex;
   flex-direction: column;
   gap: 24px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 480px) {
+  .row {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
 }
 
 .field {
@@ -68,6 +87,12 @@
   letter-spacing: 0.11em;
   text-transform: uppercase;
   color: var(--grey-700);
+}
+
+.optional {
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--grey-500);
 }
 
 .input {
@@ -92,25 +117,13 @@
   border-color: var(--ink);
 }
 
-/* ── Forgot password ───────────────────────────────────────── */
-.forgotRow {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 2px;
-}
-
-.forgotLink {
+/* ── Errors ────────────────────────────────────────────────── */
+.fieldError {
   font-size: 12px;
-  color: var(--grey-500);
-  text-decoration: none;
-  transition: color 0.15s;
+  color: var(--red);
+  margin: 0;
 }
 
-.forgotLink:hover {
-  color: var(--ink);
-}
-
-/* ── Error ─────────────────────────────────────────────────── */
 .error {
   font-size: 12.5px;
   color: var(--red);
@@ -123,7 +136,7 @@
   margin-top: 4px;
 }
 
-/* ── Alt action (e.g. "create an account") ─────────────────── */
+/* ── Alt action ────────────────────────────────────────────── */
 .altAction {
   font-size: 13.5px;
   color: var(--grey-700);
