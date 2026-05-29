@@ -71,7 +71,7 @@ describe("POST /api/auth/sign-in", () => {
     const body = await res.json();
 
     expect(res.status).toBe(200);
-    expect(body).toEqual({ redirect: "/account" });
+    expect(body).toEqual({ redirect: "/app-auth/account" });
     expect(res.headers.getSetCookie()).toContain("sess=1; Path=/");
   });
 
