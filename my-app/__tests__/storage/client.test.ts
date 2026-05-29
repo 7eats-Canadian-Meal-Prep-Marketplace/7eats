@@ -14,12 +14,12 @@ describe("r2Client", () => {
     vi.unstubAllEnvs();
   });
 
-  it("exports an S3Client when all env vars are present", async () => {
+  it("returns an S3Client when all env vars are present", async () => {
     for (const [key, val] of Object.entries(ALL_ENV_VARS)) {
       vi.stubEnv(key, val);
     }
-    const { r2Client } = await import("@/lib/storage/client");
-    expect(r2Client).toBeDefined();
+    const { getR2Client } = await import("@/lib/storage/client");
+    expect(getR2Client()).toBeDefined();
   });
 
   it.each(Object.keys(ALL_ENV_VARS))(
@@ -28,7 +28,8 @@ describe("r2Client", () => {
       for (const [key, val] of Object.entries(ALL_ENV_VARS)) {
         if (key !== missingVar) vi.stubEnv(key, val);
       }
-      await expect(import("@/lib/storage/client")).rejects.toThrow(missingVar);
+      const { getR2Client } = await import("@/lib/storage/client");
+      expect(() => getR2Client()).toThrow(missingVar);
     },
   );
 });

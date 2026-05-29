@@ -16,8 +16,10 @@ vi.mock("@aws-sdk/client-s3", () => ({
   }),
 }));
 
+const { mockSend } = vi.hoisted(() => ({ mockSend: vi.fn() }));
+
 vi.mock("@/lib/storage/client", () => ({
-  r2Client: { send: vi.fn() },
+  getR2Client: () => ({ send: mockSend }),
 }));
 
 vi.mock("@/lib/storage/buckets", () => ({
@@ -32,7 +34,6 @@ vi.mock("@/lib/storage/buckets", () => ({
   },
 }));
 
-import { r2Client } from "@/lib/storage/client";
 import {
   deleteListingPhoto,
   getListingPhotoUrl,
@@ -46,7 +47,7 @@ describe("listings", () => {
 
   describe("uploadListingPhoto", () => {
     it("sends a PutObjectCommand to the listings bucket and returns a CDN URL", async () => {
-      vi.mocked(r2Client.send).mockResolvedValue({} as never);
+      vi.mocked(mockSend).mockResolvedValue({} as never);
 
       const url = await uploadListingPhoto(
         "listing-456",
@@ -55,8 +56,8 @@ describe("listings", () => {
         "image/jpeg",
       );
 
-      expect(r2Client.send).toHaveBeenCalledOnce();
-      const [command] = vi.mocked(r2Client.send).mock.calls[0];
+      expect(mockSend).toHaveBeenCalledOnce();
+      const [command] = vi.mocked(mockSend).mock.calls[0];
       expect((command as { input: { Bucket: string } }).input.Bucket).toBe(
         "homecook-listings-public",
       );
@@ -70,7 +71,7 @@ describe("listings", () => {
     it("constructs the CDN URL without making an API call", () => {
       const url = getListingPhotoUrl("listings/listing-456/photo.jpg");
 
-      expect(r2Client.send).not.toHaveBeenCalled();
+      expect(mockSend).not.toHaveBeenCalled();
       expect(url).toBe(
         "https://listings.example.com/listings/listing-456/photo.jpg",
       );
@@ -79,12 +80,12 @@ describe("listings", () => {
 
   describe("deleteListingPhoto", () => {
     it("sends a DeleteObjectCommand to the listings bucket", async () => {
-      vi.mocked(r2Client.send).mockResolvedValue({} as never);
+      vi.mocked(mockSend).mockResolvedValue({} as never);
 
       await deleteListingPhoto("listings/listing-456/photo.jpg");
 
-      expect(r2Client.send).toHaveBeenCalledOnce();
-      const [command] = vi.mocked(r2Client.send).mock.calls[0];
+      expect(mockSend).toHaveBeenCalledOnce();
+      const [command] = vi.mocked(mockSend).mock.calls[0];
       expect(
         (command as { input: { Bucket: string; Key: string } }).input.Bucket,
       ).toBe("homecook-listings-public");
