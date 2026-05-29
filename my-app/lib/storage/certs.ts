@@ -1,7 +1,7 @@
 import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { BUCKETS } from "@/lib/storage/buckets";
-import { r2Client } from "@/lib/storage/client";
+import { getR2Client } from "@/lib/storage/client";
 
 export async function uploadCert(
   cookId: string,
@@ -10,7 +10,7 @@ export async function uploadCert(
   contentType: string,
 ): Promise<string> {
   const key = `certs/${cookId}/${Date.now()}-${fileName}`;
-  await r2Client.send(
+  await getR2Client().send(
     new PutObjectCommand({
       Bucket: BUCKETS.CERTS,
       Key: key,
@@ -27,7 +27,7 @@ export async function getSignedCertUrl(
 ): Promise<string> {
   const clampedExpiry = Math.min(expiresIn, 3600);
   return getSignedUrl(
-    r2Client,
+    getR2Client(),
     new GetObjectCommand({ Bucket: BUCKETS.CERTS, Key: key }),
     { expiresIn: clampedExpiry },
   );

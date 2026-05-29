@@ -22,8 +22,10 @@ vi.mock("@aws-sdk/client-s3", () => ({
   }),
 }));
 
+const { mockSend } = vi.hoisted(() => ({ mockSend: vi.fn() }));
+
 vi.mock("@/lib/storage/client", () => ({
-  r2Client: { send: vi.fn() },
+  getR2Client: () => ({ send: mockSend }),
 }));
 
 vi.mock("@/lib/storage/buckets", () => ({
@@ -32,7 +34,6 @@ vi.mock("@/lib/storage/buckets", () => ({
   },
 }));
 
-import { r2Client } from "@/lib/storage/client";
 import { deleteTemp, moveFromTemp, uploadToTemp } from "@/lib/storage/temp";
 
 describe("temp", () => {
@@ -42,7 +43,7 @@ describe("temp", () => {
 
   describe("uploadToTemp", () => {
     it("sends a PutObjectCommand to the temp bucket", async () => {
-      vi.mocked(r2Client.send).mockResolvedValue({} as never);
+      vi.mocked(mockSend).mockResolvedValue({} as never);
 
       await uploadToTemp(
         "pending/cook-123/cert.pdf",
@@ -50,8 +51,8 @@ describe("temp", () => {
         "application/pdf",
       );
 
-      expect(r2Client.send).toHaveBeenCalledOnce();
-      const [command] = vi.mocked(r2Client.send).mock.calls[0];
+      expect(mockSend).toHaveBeenCalledOnce();
+      const [command] = vi.mocked(mockSend).mock.calls[0];
       expect(
         (command as { input: { Bucket: string; Key: string } }).input.Bucket,
       ).toBe("homecook-uploads-temp");
@@ -63,7 +64,7 @@ describe("temp", () => {
 
   describe("moveFromTemp", () => {
     it("copies to the destination then deletes from temp — in that order", async () => {
-      vi.mocked(r2Client.send).mockResolvedValue({} as never);
+      vi.mocked(mockSend).mockResolvedValue({} as never);
 
       await moveFromTemp(
         "pending/cook-123/cert.pdf",
@@ -71,9 +72,9 @@ describe("temp", () => {
         "certs/cook-123/cert.pdf",
       );
 
-      expect(r2Client.send).toHaveBeenCalledTimes(2);
+      expect(mockSend).toHaveBeenCalledTimes(2);
 
-      const [copyCall, deleteCall] = vi.mocked(r2Client.send).mock.calls;
+      const [copyCall, deleteCall] = vi.mocked(mockSend).mock.calls;
 
       expect(
         (
@@ -98,12 +99,12 @@ describe("temp", () => {
 
   describe("deleteTemp", () => {
     it("sends a DeleteObjectCommand to the temp bucket", async () => {
-      vi.mocked(r2Client.send).mockResolvedValue({} as never);
+      vi.mocked(mockSend).mockResolvedValue({} as never);
 
       await deleteTemp("pending/cook-123/cert.pdf");
 
-      expect(r2Client.send).toHaveBeenCalledOnce();
-      const [command] = vi.mocked(r2Client.send).mock.calls[0];
+      expect(mockSend).toHaveBeenCalledOnce();
+      const [command] = vi.mocked(mockSend).mock.calls[0];
       expect(
         (command as { input: { Bucket: string; Key: string } }).input,
       ).toEqual({

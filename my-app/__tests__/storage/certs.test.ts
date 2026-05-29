@@ -20,13 +20,16 @@ vi.mock("@aws-sdk/s3-request-presigner", () => ({
   getSignedUrl: vi.fn(),
 }));
 
+const { mockClient } = vi.hoisted(() => ({
+  mockClient: { send: vi.fn() },
+}));
+
 vi.mock("@/lib/storage/client", () => ({
-  r2Client: { send: vi.fn() },
+  getR2Client: () => mockClient,
 }));
 
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { getSignedCertUrl, uploadCert } from "@/lib/storage/certs";
-import { r2Client } from "@/lib/storage/client";
 
 describe("certs", () => {
   beforeEach(() => {
@@ -35,7 +38,7 @@ describe("certs", () => {
 
   describe("uploadCert", () => {
     it("sends a PutObjectCommand to the certs bucket and returns a key", async () => {
-      vi.mocked(r2Client.send).mockResolvedValue({} as never);
+      vi.mocked(mockClient.send).mockResolvedValue({} as never);
 
       const key = await uploadCert(
         "cook-123",
@@ -44,8 +47,8 @@ describe("certs", () => {
         "application/pdf",
       );
 
-      expect(r2Client.send).toHaveBeenCalledOnce();
-      const [command] = vi.mocked(r2Client.send).mock.calls[0];
+      expect(mockClient.send).toHaveBeenCalledOnce();
+      const [command] = vi.mocked(mockClient.send).mock.calls[0];
       expect((command as { input: { Bucket: string } }).input.Bucket).toBe(
         "homecook-certs-private",
       );
@@ -61,7 +64,7 @@ describe("certs", () => {
       const url = await getSignedCertUrl("certs/cook-123/cert.pdf");
 
       expect(getSignedUrl).toHaveBeenCalledWith(
-        r2Client,
+        mockClient,
         expect.objectContaining({
           input: {
             Bucket: "homecook-certs-private",
@@ -78,7 +81,7 @@ describe("certs", () => {
 
       await getSignedCertUrl("certs/cook-123/cert.pdf", 9999);
 
-      expect(getSignedUrl).toHaveBeenCalledWith(r2Client, expect.anything(), {
+      expect(getSignedUrl).toHaveBeenCalledWith(mockClient, expect.anything(), {
         expiresIn: 3600,
       });
     });
@@ -88,7 +91,7 @@ describe("certs", () => {
 
       await getSignedCertUrl("certs/cook-123/cert.pdf", 1800);
 
-      expect(getSignedUrl).toHaveBeenCalledWith(r2Client, expect.anything(), {
+      expect(getSignedUrl).toHaveBeenCalledWith(mockClient, expect.anything(), {
         expiresIn: 1800,
       });
     });
