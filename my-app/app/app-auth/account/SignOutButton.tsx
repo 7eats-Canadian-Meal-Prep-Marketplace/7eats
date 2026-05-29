@@ -12,7 +12,7 @@ export default function SignOutButton() {
     startTransition(async () => {
       const res = await fetch("/api/auth/sign-out", { method: "POST" });
       const data = await res.json();
-      router.push(data.redirect ?? "/login");
+      router.push(data.redirect ?? "/app-auth/login");
     });
   };
 

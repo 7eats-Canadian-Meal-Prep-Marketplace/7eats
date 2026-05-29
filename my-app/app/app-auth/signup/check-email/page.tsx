@@ -31,7 +31,7 @@ export default async function CheckEmailPage({
         {email ? <ResendButton email={email} /> : null}
 
         <p className={styles.altAction}>
-          <Link href="/login">Back to sign in</Link>
+          <Link href="/app-auth/login">Back to sign in</Link>
         </p>
       </div>
     </main>
