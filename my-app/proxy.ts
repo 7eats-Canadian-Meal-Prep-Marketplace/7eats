@@ -4,7 +4,7 @@ import { db } from "@/db";
 import { authUser, cookProfiles } from "@/db/schema";
 import { auth } from "@/lib/auth";
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // Public marketing pages — no checks
@@ -118,7 +118,7 @@ async function getCookState(userId: string) {
 
 export const config = {
   matcher: [
-    // All /business/* routes (exceptions handled inside middleware)
+    // All /business/* routes (exceptions handled inside proxy)
     "/business/:path*",
     // Setup routes that need session enforcement
     "/business-auth/login",
