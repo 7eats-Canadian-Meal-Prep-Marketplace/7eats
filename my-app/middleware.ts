@@ -7,6 +7,28 @@ import { auth } from "@/lib/auth";
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  // ── Client (consumer) auth routes ─────────────────────────────────────
+  // Account requires a session; bounce to the client login if absent.
+  if (pathname === "/account") {
+    const session = await getSession(req);
+    if (!session) {
+      return NextResponse.redirect(new URL("/login", req.url));
+    }
+    return NextResponse.next();
+  }
+
+  // Client login / signup are public, but a signed-in user shouldn't see them —
+  // send them to the home for their role.
+  if (pathname === "/login" || pathname === "/signup") {
+    const session = await getSession(req);
+    if (session) {
+      return NextResponse.redirect(
+        new URL(await homeForUser(session.user.id), req.url),
+      );
+    }
+    return NextResponse.next();
+  }
+
   // Public marketing pages — no checks
   if (
     pathname === "/business/application" ||
@@ -102,6 +124,17 @@ async function getSession(req: NextRequest) {
   }
 }
 
+async function homeForUser(userId: string): Promise<string> {
+  const [row] = await db
+    .select({ role: authUser.role })
+    .from(authUser)
+    .where(eq(authUser.id, userId))
+    .limit(1);
+  return row?.role === "cook" || row?.role === "admin"
+    ? "/business/dashboard"
+    : "/account";
+}
+
 async function getCookState(userId: string) {
   const [row] = await db
     .select({
@@ -124,5 +157,9 @@ export const config = {
     "/business-auth/login",
     "/business-auth/setup/verify-phone",
     "/business-auth/setup/onboarding",
+    // Client (consumer) auth routes
+    "/account",
+    "/login",
+    "/signup",
   ],
 };

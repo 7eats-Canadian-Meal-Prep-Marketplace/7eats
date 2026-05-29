@@ -6,7 +6,16 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import styles from "./LoginForm.module.css";
 
-export default function LoginForm() {
+// Shared by both audiences. The sign-in endpoint decides the redirect by role,
+// so the only per-audience differences are the logo destination and whether a
+// "create an account" link is shown (cooks are invite-only; clients self-serve).
+export default function LoginForm({
+  logoHref = "/business/home",
+  signupHref,
+}: {
+  logoHref?: string;
+  signupHref?: string;
+} = {}) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -33,7 +42,7 @@ export default function LoginForm() {
 
   return (
     <div className={styles.wrap}>
-      <Link href="/business/home" className={styles.logoLink}>
+      <Link href={logoHref} className={styles.logoLink}>
         <Image
           src="/7eats-logo.svg"
           alt="7eats"
@@ -95,6 +104,12 @@ export default function LoginForm() {
           </button>
         </form>
       </div>
+
+      {signupHref && (
+        <p className={styles.altAction}>
+          New to 7eats? <Link href={signupHref}>Create an account</Link>
+        </p>
+      )}
     </div>
   );
 }
