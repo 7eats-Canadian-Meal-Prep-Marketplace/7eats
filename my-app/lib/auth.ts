@@ -1,5 +1,6 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { Resend } from "resend";
 import { db } from "@/db";
 import {
   authAccount,
@@ -24,6 +25,27 @@ export const auth = betterAuth({
     // Sign-up never starts a session. Cooks sign in explicitly via
     // create-account; clients must confirm their email first (see below).
     autoSignIn: false,
+    sendResetPassword: async ({ user, url }) => {
+      const resend = new Resend(process.env.RESEND_API_KEY);
+      const { error } = await resend.emails.send({
+        from: process.env.RESEND_FROM_EMAIL ?? "noreply@7eats.ca",
+        to: user.email,
+        subject: "Reset your 7eats password",
+        text: [
+          "Hi,",
+          "",
+          "We received a request to reset your 7eats password.",
+          "Use the link below to set a new one. It expires in 1 hour.",
+          "",
+          url,
+          "",
+          "If you didn't request this, you can safely ignore this email.",
+          "",
+          "The 7eats team",
+        ].join("\n"),
+      });
+      if (error) throw new Error(error.message);
+    },
   },
   emailVerification: {
     expiresIn: 60 * 60 * 24, // 24 hours

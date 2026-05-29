@@ -30,7 +30,9 @@ export default async function DashboardPage() {
         ...(currentStep <= 3
           ? [{ label: "Compliance certificate", step: 3 }]
           : []),
-        { label: "Payment setup & terms", step: 4 },
+        ...(currentStep >= 4
+          ? [{ label: "Payment setup & terms", step: 4 }]
+          : []),
       ];
 
   return (

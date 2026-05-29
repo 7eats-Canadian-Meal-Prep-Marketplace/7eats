@@ -1,15 +1,15 @@
 import type { Metadata } from "next";
-import LoginForm from "@/app/components/LoginForm";
+import ForgotPasswordForm from "@/app/components/ForgotPasswordForm";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
-  title: "Sign in | 7eats",
+  title: "Forgot password | 7eats",
 };
 
-export default function LoginPage() {
+export default function ForgotPasswordPage() {
   return (
     <main className={styles.page}>
-      <LoginForm />
+      <ForgotPasswordForm />
     </main>
   );
 }
