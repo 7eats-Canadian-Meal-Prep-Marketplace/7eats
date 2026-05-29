@@ -14,7 +14,10 @@ export default function ResendButton({ email }: { email: string }) {
       const res = await fetch("/api/auth/send-verification-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, callbackURL: "/login?verified=1" }),
+        body: JSON.stringify({
+          email,
+          callbackURL: "/app-auth/login?verified=1",
+        }),
       });
       if (res.ok) {
         setSent(true);

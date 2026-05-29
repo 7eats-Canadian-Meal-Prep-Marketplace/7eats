@@ -47,3 +47,14 @@ export const leadTimeEnum = pgEnum("lead_time_enum", [
   "5_days",
 ]);
 export const deliveryEnum = pgEnum("delivery_enum", ["none", "self"]);
+export const dishStatus = pgEnum("dish_status", [
+  "draft",
+  "active",
+  "archived",
+]);
+export const listingType = pgEnum("listing_type", ["one_time", "subscription"]);
+export const promotionType = pgEnum("promotion_type", [
+  "percentage_off",
+  "fixed_off",
+  "buy_x_get_y",
+]);

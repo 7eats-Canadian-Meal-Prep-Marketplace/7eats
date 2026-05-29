@@ -103,7 +103,7 @@ export async function POST(req: Request) {
   // exists and the user can request a new link from the check-email page.
   try {
     await auth.api.sendVerificationEmail({
-      body: { email, callbackURL: "/login?verified=1" },
+      body: { email, callbackURL: "/app-auth/login?verified=1" },
     });
   } catch (err) {
     console.error("[sign-up] verification email failed:", err);
@@ -111,6 +111,6 @@ export async function POST(req: Request) {
 
   // No session is issued — the client confirms their email, then signs in.
   return NextResponse.json({
-    redirect: `/signup/check-email?email=${encodeURIComponent(email)}`,
+    redirect: `/app-auth/signup/check-email?email=${encodeURIComponent(email)}`,
   });
 }

@@ -9,17 +9,17 @@ export async function proxy(req: NextRequest) {
 
   // ── Client (consumer) auth routes ─────────────────────────────────────
   // Account requires a session; bounce to the client login if absent.
-  if (pathname === "/account") {
+  if (pathname === "/app-auth/account") {
     const session = await getSession(req);
     if (!session) {
-      return NextResponse.redirect(new URL("/login", req.url));
+      return NextResponse.redirect(new URL("/app-auth/login", req.url));
     }
     return NextResponse.next();
   }
 
   // Client login / signup are public, but a signed-in user shouldn't see them —
   // send them to the home for their role.
-  if (pathname === "/login" || pathname === "/signup") {
+  if (pathname === "/app-auth/login" || pathname === "/app-auth/signup") {
     const session = await getSession(req);
     if (session) {
       return NextResponse.redirect(
@@ -74,8 +74,8 @@ export async function proxy(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // dashboard: require steps 1 & 2 complete (step >= 3); steps 3 & 4 can be deferred
-  if (pathname.startsWith("/business/dashboard")) {
+  // All /business/* dashboard routes require steps 1 & 2 complete (step >= 3)
+  if (pathname.startsWith("/business/")) {
     const state = await getCookState(userId);
     if (!state) {
       return NextResponse.redirect(new URL("/business-auth/login", req.url));
@@ -105,7 +105,7 @@ export async function proxy(req: NextRequest) {
     const step = req.nextUrl.searchParams.get("step");
     const current = state.currentSetupStep;
     const stepNum = Number(step);
-    if (isNaN(stepNum) || stepNum < 1 || stepNum > current) {
+    if (Number.isNaN(stepNum) || stepNum < 1 || stepNum > current) {
       return NextResponse.redirect(
         new URL(`/business-auth/setup/onboarding?step=${current}`, req.url),
       );
@@ -132,7 +132,7 @@ async function homeForUser(userId: string): Promise<string> {
     .limit(1);
   return row?.role === "cook" || row?.role === "admin"
     ? "/business/dashboard"
-    : "/account";
+    : "/app-auth/account";
 }
 
 async function getCookState(userId: string) {
@@ -158,8 +158,8 @@ export const config = {
     "/business-auth/setup/verify-phone",
     "/business-auth/setup/onboarding",
     // Client (consumer) auth routes
-    "/account",
-    "/login",
-    "/signup",
+    "/app-auth/account",
+    "/app-auth/login",
+    "/app-auth/signup",
   ],
 };

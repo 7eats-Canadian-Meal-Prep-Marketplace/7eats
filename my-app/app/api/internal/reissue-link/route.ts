@@ -1,11 +1,11 @@
 import { randomBytes } from "node:crypto";
 import { and, eq, isNull } from "drizzle-orm";
-import { type NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { db, dbPool } from "@/db";
 import { cookApplications, setupTokens } from "@/db/schema";
 import { hashToken, sendSetupEmail, verifyInternalKey } from "../_lib";
 
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
   if (!verifyInternalKey(req.headers.get("x-internal-key") ?? "")) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

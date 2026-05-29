@@ -3,7 +3,7 @@ import { sendMail } from "@/lib/email";
 
 export function verifyInternalKey(provided: string): boolean {
   const expected = process.env.INTERNAL_API_KEY ?? "";
-  // Hash both sides to normalize length before timing-safe comparison
+  if (!expected) return false;
   const a = createHash("sha256").update(provided).digest();
   const b = createHash("sha256").update(expected).digest();
   return timingSafeEqual(a, b);

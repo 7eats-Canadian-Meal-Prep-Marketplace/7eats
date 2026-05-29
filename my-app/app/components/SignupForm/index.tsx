@@ -219,7 +219,7 @@ export default function SignupForm() {
       </div>
 
       <p className={styles.altAction}>
-        Already have an account? <Link href="/login">Sign in</Link>
+        Already have an account? <Link href="/app-auth/login">Sign in</Link>
       </p>
     </div>
   );

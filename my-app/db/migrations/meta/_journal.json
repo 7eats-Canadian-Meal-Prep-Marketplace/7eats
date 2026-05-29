@@ -8,6 +8,13 @@
       "when": 1779939969049,
       "tag": "0000_aspiring_polaris",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1780076260646,
+      "tag": "0001_legal_lord_hawal",
+      "breakpoints": true
     }
   ]
 }
