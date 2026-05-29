@@ -87,11 +87,13 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    const { basePrice, ...rest } = parsed.data;
     const [inserted] = await db
       .insert(listings)
       .values({
         cookId,
-        ...parsed.data,
+        ...rest,
+        basePrice: String(basePrice),
         status: "active",
       })
       .returning();

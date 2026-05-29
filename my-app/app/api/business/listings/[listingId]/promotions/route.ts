@@ -109,26 +109,26 @@ export async function POST(req: NextRequest, { params }: Params) {
       .limit(1);
     if (!listing) return notFound("Listing");
 
-    const insertData: Record<string, unknown> = {
-      listingId,
-      type: parsed.data.type,
-      minimumQty: parsed.data.minimumQty,
-      isActive: parsed.data.isActive,
-    };
-
-    if ("value" in parsed.data) insertData.value = String(parsed.data.value);
-    if ("buyQty" in parsed.data) insertData.buyQty = parsed.data.buyQty;
-    if ("getQty" in parsed.data) insertData.getQty = parsed.data.getQty;
-    if (parsed.data.maxUses !== undefined)
-      insertData.maxUses = parsed.data.maxUses;
-    if (parsed.data.validFrom)
-      insertData.validFrom = new Date(parsed.data.validFrom);
-    if (parsed.data.validUntil)
-      insertData.validUntil = new Date(parsed.data.validUntil);
-
     const [inserted] = await db
       .insert(listingPromotions)
-      .values(insertData)
+      .values({
+        listingId,
+        type: parsed.data.type,
+        minimumQty: parsed.data.minimumQty,
+        isActive: parsed.data.isActive,
+        ...("value" in parsed.data ? { value: String(parsed.data.value) } : {}),
+        ...("buyQty" in parsed.data ? { buyQty: parsed.data.buyQty } : {}),
+        ...("getQty" in parsed.data ? { getQty: parsed.data.getQty } : {}),
+        ...(parsed.data.maxUses !== undefined
+          ? { maxUses: parsed.data.maxUses }
+          : {}),
+        ...(parsed.data.validFrom
+          ? { validFrom: new Date(parsed.data.validFrom) }
+          : {}),
+        ...(parsed.data.validUntil
+          ? { validUntil: new Date(parsed.data.validUntil) }
+          : {}),
+      } as typeof listingPromotions.$inferInsert)
       .returning();
 
     return NextResponse.json(

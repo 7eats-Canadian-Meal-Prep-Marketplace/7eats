@@ -89,7 +89,11 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     );
   }
 
-  const fields = parsed.data;
+  const { basePrice, ...rest } = parsed.data;
+  const fields = {
+    ...rest,
+    ...(basePrice !== undefined ? { basePrice: String(basePrice) } : {}),
+  };
   if (Object.keys(fields).length === 0) {
     return NextResponse.json(
       { error: "No fields to update." },
@@ -108,7 +112,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 
     const [updated] = await db
       .update(listings)
-      .set({ ...fields })
+      .set(fields)
       .where(and(eq(listings.id, listingId), eq(listings.cookId, cookId)))
       .returning();
 
