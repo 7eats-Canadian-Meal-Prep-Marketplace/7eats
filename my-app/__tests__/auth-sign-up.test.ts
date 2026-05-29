@@ -2,7 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/hash", () => ({ hashIp: vi.fn(() => "hashed-ip") }));
 vi.mock("@/lib/rate-limit", () => ({ logAndCheckRateLimit: vi.fn() }));
-vi.mock("@/lib/auth", () => ({ auth: { api: { signUpEmail: vi.fn() } } }));
+vi.mock("@/lib/auth", () => ({
+  auth: { api: { signUpEmail: vi.fn(), sendVerificationEmail: vi.fn() } },
+}));
 vi.mock("@/db", () => ({ db: { update: vi.fn() } }));
 vi.mock("@/db/schema", () => ({ authUser: { id: "id", role: "role" } }));
 
@@ -55,18 +57,21 @@ describe("POST /api/auth/sign-up", () => {
     setSpy = vi.fn(() => ({ where: whereSpy }));
     vi.mocked(db.update).mockReturnValue({ set: setSpy } as never);
     vi.mocked(auth.api.signUpEmail).mockResolvedValue(
-      authResponse(true, 200, { user: { id: "user_123" } }, [
-        "better-auth.session_token=abc; Path=/; HttpOnly",
-      ]),
+      authResponse(true, 200, { user: { id: "user_123" } }),
+    );
+    vi.mocked(auth.api.sendVerificationEmail).mockResolvedValue(
+      undefined as never,
     );
   });
 
-  it("creates the account, forces role=client, and redirects to /account", async () => {
+  it("creates a client, sends a verification email, and starts no session", async () => {
     const res = await POST(makeRequest(validBody));
     const body = await res.json();
 
     expect(res.status).toBe(200);
-    expect(body).toEqual({ redirect: "/account" });
+    // Client is sent to the check-email page (not logged in), with the email.
+    expect(body.redirect).toContain("/signup/check-email");
+    expect(body.redirect).toContain(encodeURIComponent("ada@example.com"));
 
     // Better Auth defaults new users to `cook`; the route must override it.
     expect(setSpy).toHaveBeenCalledTimes(1);
@@ -79,10 +84,13 @@ describe("POST /api/auth/sign-up", () => {
       }),
     );
 
-    // The session cookie from Better Auth is forwarded to the browser.
-    expect(res.headers.getSetCookie()).toContain(
-      "better-auth.session_token=abc; Path=/; HttpOnly",
-    );
+    // Confirmation email is requested with the post-verify callback.
+    expect(vi.mocked(auth.api.sendVerificationEmail)).toHaveBeenCalledWith({
+      body: { email: "ada@example.com", callbackURL: "/login?verified=1" },
+    });
+
+    // No session cookie is issued — the client must confirm their email first.
+    expect(res.headers.getSetCookie()).toEqual([]);
   });
 
   it("normalizes the email to lowercase before creating the account", async () => {
@@ -118,6 +126,7 @@ describe("POST /api/auth/sign-up", () => {
     const res = await POST(makeRequest(validBody));
     expect(res.status).toBe(409);
     expect(setSpy).not.toHaveBeenCalled();
+    expect(vi.mocked(auth.api.sendVerificationEmail)).not.toHaveBeenCalled();
   });
 
   it("returns 400 for an invalid email and skips signup", async () => {

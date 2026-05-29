@@ -59,8 +59,8 @@ export async function POST(req: Request) {
     );
   }
 
-  // Better Auth owns credentials + session creation. autoSignIn (on by default)
-  // means a successful signUpEmail also returns the session Set-Cookie headers.
+  // Create the credential + user row. autoSignIn is disabled globally, so this
+  // does NOT start a session — the client must confirm their email first.
   const signUpRes = await auth.api.signUpEmail({
     body: { email, password, name: `${firstName} ${lastName}` },
     headers: req.headers,
@@ -93,20 +93,24 @@ export async function POST(req: Request) {
   }
 
   // Promote the fresh row from the default `cook` to `client` and attach the
-  // profile fields. Session data is read from the DB on each getSession, so
-  // this is reflected immediately without re-issuing the cookie.
+  // profile fields.
   await db
     .update(authUser)
     .set({ role: "client", status: "active", firstName, lastName, phone })
     .where(eq(authUser.id, userId));
 
-  // Forward Better Auth's session cookie to the browser, then send the client
-  // to their account.
-  const res = NextResponse.json({ redirect: "/account" });
-  for (const cookie of (
-    signUpRes.headers as Headers & { getSetCookie?(): string[] }
-  ).getSetCookie?.() ?? []) {
-    res.headers.append("Set-Cookie", cookie);
+  // Send the confirmation email. Best-effort: if it fails the account still
+  // exists and the user can request a new link from the check-email page.
+  try {
+    await auth.api.sendVerificationEmail({
+      body: { email, callbackURL: "/login?verified=1" },
+    });
+  } catch (err) {
+    console.error("[sign-up] verification email failed:", err);
   }
-  return res;
+
+  // No session is issued — the client confirms their email, then signs in.
+  return NextResponse.json({
+    redirect: `/signup/check-email?email=${encodeURIComponent(email)}`,
+  });
 }

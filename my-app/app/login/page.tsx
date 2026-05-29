@@ -6,10 +6,21 @@ export const metadata: Metadata = {
   title: "Sign in — 7eats",
 };
 
-export default function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ verified?: string }>;
+}) {
+  const { verified } = await searchParams;
+
   return (
     <main className={styles.page}>
-      <LoginForm logoHref="/" signupHref="/signup" />
+      <div className={styles.stack}>
+        {verified ? (
+          <p className={styles.notice}>Email confirmed — please sign in.</p>
+        ) : null}
+        <LoginForm logoHref="/" signupHref="/signup" />
+      </div>
     </main>
   );
 }

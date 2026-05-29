@@ -1,0 +1,80 @@
+.page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  padding: 40px 24px;
+}
+
+.card {
+  width: 100%;
+  max-width: 460px;
+  background: #ffffff;
+  border: 1px solid var(--grey-200);
+  border-radius: 4px;
+  padding: 40px 40px 44px;
+  box-shadow: 0 2px 12px rgba(15, 15, 15, 0.06);
+}
+
+@media (max-width: 480px) {
+  .card {
+    padding: 32px 24px 36px;
+  }
+}
+
+.eyebrow {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--grey-500);
+  margin: 0 0 12px;
+}
+
+.title {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--ink);
+  line-height: 1.2;
+}
+
+.body {
+  margin: 16px 0 0;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--grey-700);
+}
+
+.body strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.hint {
+  margin: 12px 0 24px;
+  font-size: 13px;
+  color: var(--grey-500);
+}
+
+.resend {
+  width: 100%;
+}
+
+.altAction {
+  margin: 20px 0 0;
+  font-size: 13.5px;
+  text-align: center;
+}
+
+.altAction a {
+  color: var(--red);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.altAction a:hover {
+  text-decoration: underline;
+}
