@@ -233,6 +233,8 @@ export const reviews = pgTable(
       .references(() => listings.id, { onDelete: "restrict" }),
     rating: integer("rating").notNull(),
     comment: text("comment"),
+    cookResponse: text("cook_response"),
+    cookResponseAt: timestamp("cook_response_at"),
     isVisible: boolean("is_visible").notNull().default(true),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at")

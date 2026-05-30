@@ -76,6 +76,15 @@ export const cookProfiles = pgTable(
       .notNull()
       .defaultNow()
       .$onUpdate(() => new Date()),
+    emailNotificationsNewOrder: boolean("email_notifications_new_order")
+      .notNull()
+      .default(true),
+    emailNotificationsNewReview: boolean("email_notifications_new_review")
+      .notNull()
+      .default(true),
+    smsNotificationsNewOrder: boolean("sms_notifications_new_order")
+      .notNull()
+      .default(false),
   },
   (t) => [
     check(

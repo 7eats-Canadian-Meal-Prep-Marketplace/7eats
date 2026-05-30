@@ -22,6 +22,13 @@
       "when": 1780105391091,
       "tag": "0002_auth_table_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1780106315347,
+      "tag": "0003_misty_wilson_fisk",
+      "breakpoints": true
     }
   ]
 }
