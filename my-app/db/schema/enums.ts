@@ -58,3 +58,22 @@ export const promotionType = pgEnum("promotion_type", [
   "fixed_off",
   "buy_x_get_y",
 ]);
+export const paymentStatus = pgEnum("payment_status", [
+  "pending",
+  "authorized",
+  "held",
+  "released",
+  "refunded",
+  "disputed",
+]);
+export const payoutStatus = pgEnum("payout_status", [
+  "pending",
+  "in_transit",
+  "paid",
+  "failed",
+  "cancelled",
+]);
+export const lateCancelFeeTypeEnum = pgEnum("late_cancel_fee_type", [
+  "flat",
+  "percentage",
+]);

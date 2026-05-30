@@ -12,7 +12,7 @@ import { dishes, listingDishes, listings } from "@/db/schema";
 type Params = { params: Promise<{ listingId: string }> };
 
 const addDishSchema = z.object({
-  dishId: z.string().uuid(),
+  dishId: z.uuid(),
   quantity: z.number().int().min(1).optional().default(1),
   sortOrder: z.number().int().optional().default(0),
 });

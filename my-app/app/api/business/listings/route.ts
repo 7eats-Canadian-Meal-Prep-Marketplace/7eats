@@ -22,7 +22,7 @@ const createListingSchema = z
     description: z.string().optional(),
     basePrice: z.number().positive(),
     currency: z.string().length(3).optional().default("CAD"),
-    coverPhotoUrl: z.string().url().optional(),
+    coverPhotoUrl: z.url().optional(),
     minOrderQty: z.number().int().min(1).optional().default(1),
     maxOrderQty: z.number().int().optional(),
   })

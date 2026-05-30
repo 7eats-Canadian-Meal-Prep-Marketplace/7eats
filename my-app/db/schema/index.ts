@@ -5,5 +5,6 @@ export * from "./dishes";
 export * from "./enums";
 export * from "./listings";
 export * from "./orders";
+export * from "./payments";
 export * from "./tags";
 export * from "./waitlist";

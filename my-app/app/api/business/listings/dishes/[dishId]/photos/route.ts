@@ -13,7 +13,7 @@ type Params = { params: Promise<{ dishId: string }> };
 
 const postSchema = z
   .object({
-    url: z.string().url(),
+    url: z.url(),
     isPrimary: z.boolean().optional().default(false),
     sortOrder: z.number().int().optional().default(0),
   })

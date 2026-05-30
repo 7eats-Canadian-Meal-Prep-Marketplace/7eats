@@ -1,7 +1,9 @@
 import { sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   integer,
+  numeric,
   pgPolicy,
   pgTable,
   text,
@@ -11,7 +13,12 @@ import {
 } from "drizzle-orm/pg-core";
 import { cookApplications } from "./applications";
 import { authUser } from "./auth";
-import { certificationStatus, deliveryEnum, leadTimeEnum } from "./enums";
+import {
+  certificationStatus,
+  deliveryEnum,
+  lateCancelFeeTypeEnum,
+  leadTimeEnum,
+} from "./enums";
 
 const isAdmin = sql`auth.role() = 'admin'`;
 
@@ -44,6 +51,20 @@ export const cookProfiles = pgTable(
       .notNull()
       .default(false),
     stripeAccountId: text("stripe_account_id"),
+    platformFeePct: numeric("platform_fee_pct", { precision: 5, scale: 2 })
+      .notNull()
+      .default("7.5"),
+    lateCancelFeeEnabled: boolean("late_cancel_fee_enabled")
+      .notNull()
+      .default(false),
+    lateCancelFeeType: lateCancelFeeTypeEnum("late_cancel_fee_type"),
+    lateCancelFeeValue: numeric("late_cancel_fee_value", {
+      precision: 10,
+      scale: 2,
+    }),
+    lateCancelWindowHours: integer("late_cancel_window_hours")
+      .notNull()
+      .default(24),
     tosAcceptedAt: timestamp("tos_accepted_at", { withTimezone: true }),
     reviewedAt: timestamp("reviewed_at"),
     reviewedBy: text("reviewed_by").references(() => authUser.id, {
@@ -55,8 +76,29 @@ export const cookProfiles = pgTable(
       .notNull()
       .defaultNow()
       .$onUpdate(() => new Date()),
+    emailNotificationsNewOrder: boolean("email_notifications_new_order")
+      .notNull()
+      .default(true),
+    emailNotificationsNewReview: boolean("email_notifications_new_review")
+      .notNull()
+      .default(true),
+    smsNotificationsNewOrder: boolean("sms_notifications_new_order")
+      .notNull()
+      .default(false),
   },
-  () => [
+  (t) => [
+    check(
+      "cook_profiles_fee_pct_valid",
+      sql`${t.platformFeePct} > 0 AND ${t.platformFeePct} <= 100`,
+    ),
+    check(
+      "cook_profiles_late_cancel_fee_positive",
+      sql`${t.lateCancelFeeValue} IS NULL OR ${t.lateCancelFeeValue} > 0`,
+    ),
+    check(
+      "cook_profiles_late_cancel_window_positive",
+      sql`${t.lateCancelWindowHours} >= 1`,
+    ),
     pgPolicy("cook_profiles_select_active", {
       for: "select",
       to: "public",
