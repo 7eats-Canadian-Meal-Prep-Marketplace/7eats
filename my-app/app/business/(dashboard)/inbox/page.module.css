@@ -1,0 +1,304 @@
+/* ─── Page layout ────────────────────────────────────────────────────────────── */
+.page {
+  display: flex;
+  margin: -28px -32px;
+  min-height: calc(100vh - 64px);
+}
+
+/* ─── List panel ─────────────────────────────────────────────────────────────── */
+.listPanel {
+  width: 360px;
+  flex: none;
+  border-right: 1px solid var(--grey-200);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.listHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 16px 14px;
+  border-bottom: 1px solid var(--grey-200);
+  position: sticky;
+  top: 0;
+  background: var(--white);
+  z-index: 2;
+  flex: none;
+}
+
+.listTitle {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.listHeadCount {
+  font-size: 12px;
+  color: var(--red);
+  font-weight: 600;
+}
+
+/* ─── List row ───────────────────────────────────────────────────────────────── */
+.listRow {
+  display: flex;
+  gap: 4px;
+  width: 100%;
+  text-align: left;
+  padding: 13px 14px 13px 6px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--grey-200);
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  transition: background 0.1s;
+}
+
+.listRow:hover {
+  background: var(--grey-100);
+}
+
+.listRowFocused {
+  background: rgba(214, 64, 69, 0.04);
+}
+
+.listDotCol {
+  width: 16px;
+  flex: none;
+  display: flex;
+  justify-content: center;
+  padding-top: 6px;
+}
+
+.unreadDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #2563eb;
+  flex: none;
+}
+
+.listRowMain {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.listRowTop {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.listSender {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.listSenderUnread {
+  font-weight: 700;
+}
+
+.listTime {
+  font-size: 11px;
+  color: var(--grey-500);
+  flex: none;
+}
+
+.listSubject {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--grey-700);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.listPreview {
+  font-size: 12px;
+  color: var(--grey-500);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ─── Detail panel ───────────────────────────────────────────────────────────── */
+.detailPanel {
+  flex: 1;
+  overflow-y: auto;
+  min-width: 0;
+}
+
+.emptyDetail {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: var(--grey-500);
+}
+
+.detail {
+  padding: 28px 32px;
+  position: relative;
+  max-width: 620px;
+}
+
+.detailClose {
+  position: absolute;
+  top: 22px;
+  right: 22px;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--grey-500);
+  transition:
+    background 0.12s,
+    color 0.12s;
+}
+
+.detailClose:hover {
+  background: var(--grey-100);
+  color: var(--ink);
+}
+
+.detailHeader {
+  margin-bottom: 22px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--grey-200);
+}
+
+.detailSubject {
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.02em;
+  margin: 10px 0 10px;
+}
+
+.detailMeta {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.detailSender {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.detailTime {
+  font-size: 12.5px;
+  color: var(--grey-500);
+}
+
+.detailBody {
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--grey-900);
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+/* ─── Type tag ───────────────────────────────────────────────────────────────── */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.tagOrder {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.tagSupport {
+  background: #ede9fe;
+  color: #5b21b6;
+}
+
+.tagSystem {
+  background: var(--grey-100);
+  color: var(--grey-700);
+}
+
+/* ─── Mobile ─────────────────────────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  .page {
+    margin: -20px -16px;
+  }
+
+  .listPanel {
+    width: 100%;
+    border-right: none;
+  }
+
+  .detailPanel {
+    display: none;
+  }
+}
+
+/* ─── Mobile slide-over ──────────────────────────────────────────────────────── */
+.slideOverlay {
+  position: fixed;
+  inset: 64px 0 0 0;
+  background: rgba(15, 15, 15, 0.35);
+  z-index: 39;
+  border: none;
+  padding: 0;
+  cursor: default;
+}
+
+.slideOver {
+  position: fixed;
+  top: 64px;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: var(--white);
+  z-index: 40;
+  overflow-y: auto;
+  animation: slideIn 0.22s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(40px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@media (min-width: 768px) {
+  .slideOverlay,
+  .slideOver {
+    display: none;
+  }
+}
