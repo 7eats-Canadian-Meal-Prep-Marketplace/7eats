@@ -1,0 +1,265 @@
+/* ─── Page ─────────────────────────────────────────────────────────────────── */
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+/* ─── Queue ─────────────────────────────────────────────────────────────────── */
+.queue {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* ─── Section header ─────────────────────────────────────────────────────────── */
+.sectionHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--grey-200);
+  margin-bottom: 2px;
+}
+
+.sectionLabel {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--grey-500);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  background: var(--red);
+  color: var(--white);
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: var(--radius-pill);
+  line-height: 1;
+}
+
+/* ─── Order row ──────────────────────────────────────────────────────────────── */
+.row {
+  display: flex;
+  align-items: center;
+  background: var(--white);
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-sm);
+  transition: border-color 0.12s;
+  overflow: hidden;
+}
+
+.row:hover {
+  border-color: var(--grey-300);
+}
+
+.rowPending {
+  border-left: 3px solid var(--red);
+}
+
+.rowLink {
+  flex: 1;
+  min-width: 0;
+  padding: 13px 16px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.rowPending > .rowLink {
+  padding-left: 14px;
+}
+
+.rowCustomer {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rowListing {
+  font-size: 12px;
+  color: var(--grey-500);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rowMeta {
+  font-size: 11.5px;
+  color: var(--grey-500);
+  margin-top: 5px;
+}
+
+.rowRight {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: none;
+  padding-right: 16px;
+}
+
+.rowTotal {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+  font-feature-settings: "tnum";
+}
+
+.actionBtn {
+  padding: 6px 14px;
+  background: var(--red);
+  color: var(--white);
+  font-size: 12.5px;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  transition: opacity 0.12s;
+}
+
+.actionBtn:hover {
+  opacity: 0.88;
+}
+
+.readyTag {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--grey-500);
+}
+
+/* ─── View all link ──────────────────────────────────────────────────────────── */
+.viewAll {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--grey-500);
+  transition: color 0.12s;
+  align-self: flex-start;
+}
+
+.viewAll:hover {
+  color: var(--ink);
+}
+
+/* ─── Stats strip ────────────────────────────────────────────────────────────── */
+.statsStrip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.statCard {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 18px;
+  background: var(--white);
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-sm);
+}
+
+.statTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.statLabel {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--grey-500);
+}
+
+.statValue {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.03em;
+  font-feature-settings: "tnum";
+  line-height: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.statSub {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--grey-500);
+  letter-spacing: 0;
+}
+
+/* ─── Period toggle ──────────────────────────────────────────────────────────── */
+.toggle {
+  display: flex;
+  background: var(--grey-100);
+  border: 1px solid var(--grey-200);
+  border-radius: 6px;
+  padding: 2px;
+  gap: 1px;
+}
+
+.toggleBtn {
+  padding: 2px 7px;
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--grey-500);
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+
+.toggleBtnActive {
+  background: var(--white);
+  color: var(--ink);
+  font-weight: 600;
+  box-shadow:
+    0 1px 3px rgba(15, 15, 15, 0.1),
+    0 0 0 0.5px rgba(15, 15, 15, 0.06);
+}
+
+/* ─── Empty state ────────────────────────────────────────────────────────────── */
+.empty {
+  padding: 48px 24px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--grey-500);
+  border: 1px dashed var(--grey-200);
+  border-radius: var(--radius-sm);
+}
+
+/* ─── Mobile ─────────────────────────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  .statsStrip {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .rowMeta {
+    display: none;
+  }
+}
+
+@media (max-width: 440px) {
+  .actionBtn {
+    display: none;
+  }
+}

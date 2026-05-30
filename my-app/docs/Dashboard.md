@@ -236,3 +236,176 @@ The following CRUD actions need to be supported. Exact route shape and request/r
 | Update promotion | Any field except `uses_count` |
 | Toggle active | Convenience update for `is_active` flag |
 | Delete promotion | Hard delete; safe because orders snapshot the discount at placement |
+
+---
+
+## Frontend Design Plan
+
+Requirements gathered per page. Milestones are frontend-only (no backend work). Each milestone produces a shippable, visually complete page or feature. Order follows logical dependency — detail pages come after list pages, creation flows after detail pages.
+
+---
+
+### M1 — Dashboard Home (`/business/dashboard`)
+
+**Layout**
+Two-zone stacked layout. Stats row across the top, order queue below it filling the remaining space.
+
+**Stats row**
+Four cards in a horizontal row (2×2 grid on mobile):
+- Earnings this week / this month (toggle between the two)
+- Pending orders (count of orders needing action)
+- Active listings (count)
+- Rating (average star + total review count)
+
+**Order queue**
+Unconfirmed/pending orders pinned to the top of the queue, visually separated from confirmed/ready orders below. Each row shows: listing title, customer name, pickup time, quantity, total price, and a primary action button (e.g. "Confirm"). Clicking a row navigates to `/business/orders` with that order focused.
+
+No activity feed. No review section. The home page is purely operational.
+
+---
+
+### M2 — Orders (`/business/orders`, `/business/orders/[id]`)
+
+**Desktop layout — two-column**
+Left column (~380px, fixed): scrollable order list. Right column: detail panel for the focused order. Clicking an order in the list loads its detail on the right without navigation. Default state on first load: first unconfirmed order is focused (if any), otherwise first order in the list.
+
+**Mobile layout**
+Single-column order list. Tapping an order opens a slide-over from the right covering the full viewport. Close button returns to the list.
+
+**Order list**
+Unconfirmed/pending orders pinned to the top as a distinct group (e.g. "Needs action" section header). Below that: confirmed, ready, fulfilled, cancelled — all in one scrollable feed, newest first. Each row shows:
+- Customer name + listing title
+- Pickup time (relative: "Today 3pm", "Tomorrow 11am")
+- Quantity + total price
+- Status badge
+- Primary inline action button for the next status step (Confirm → Mark Ready → [verify code on detail])
+
+**Order detail panel / slide-over**
+Full order information: listing title, customer name, pickup time, quantity, unit price, total, any notes. Dish breakdown (from order snapshot). Status action buttons (advance or cancel). Pickup code verification UI (6-digit input, attempt counter, lock state). Cancellation confirmation.
+
+---
+
+### M3 — Listing Detail (`/business/listings/[id]`)
+
+**Layout**
+Single-column page with four tabbed sections: Overview | Dishes | Deals | Orders.
+
+**Overview tab**
+Editable listing fields: title, description, base price, currency, cover photo (upload or collage preview), min/max order qty, status toggle (active / archived). Save button. Basic stats above the form: total orders, total revenue, average order value.
+
+**Dishes tab**
+Drag-to-reorder list of dishes in the listing. Each dish row shows name, cuisine, quantity in this listing, and a remove button. Remove is blocked (with explanation) when non-cancelled orders exist. "Add dish" button opens a picker of the cook's active dishes.
+
+**Deals tab**
+All promotions attached to this listing. Each deal row uses the same compact design as the Deals tab on the main listings page (bold discount + inline details). Active/inactive toggle per deal. "New Deal" button opens a creation form inline or as a slide-over. No delete if `uses_count > 0` — only deactivation allowed.
+
+**Orders tab**
+Paginated list of all orders for this listing (same row design as the Orders page), scoped to this listing only.
+
+---
+
+### M4 — Dish Detail (`/business/listings/dishes/[id]`)
+
+**Layout**
+Single-column page with three tabbed sections: Details | Nutrition & Ingredients | Stats.
+
+**Details tab**
+Editable fields: name, cuisine, description, photo (upload, up to 4 photos, set primary), categories (multi-select chips), dietary flags (toggle row), status toggle (active / archived). Save button.
+
+**Nutrition & Ingredients tab**
+Ingredients list (name, quantity, allergen flag). Add / edit / remove ingredients inline. Nutrition panel below: calories, protein, carbs, fat — all optional. Single save for the whole tab.
+
+**Stats tab**
+Shown only if the dish has order history. Displays: total times ordered, which listings it appears in (with links), order volume trend (simple bar or number — no chart library required if data is sparse).
+
+---
+
+### M5 — New Listing (`/business/listings/new`)
+
+**Flow — full dedicated page, two steps**
+
+Step 1 — Core info: title, description, base price, currency, min/max order qty, cover photo (optional). Continue button.
+
+Step 2 — Dish composition: pick from active dishes, set quantity per dish, drag to reorder. Each dish shows name and cuisine. "No dishes yet" prompts to create one first. Finish → creates listing with `active` status, redirects to the listing detail page.
+
+Back navigation between steps preserves entered values.
+
+---
+
+### M6 — New Dish (`/business/listings/dishes/new`)
+
+**Flow — full dedicated page, two steps**
+
+Step 1 — Core info: name, cuisine (free text), description, categories (multi-select), dietary flags (toggle row), status (active by default). Continue button.
+
+Step 2 — Media & extras: photo upload (up to 4, drag to reorder, set primary). Optional: ingredients and nutrition info. These can be skipped and filled in later from the dish detail page. Finish → creates dish, redirects to dish detail.
+
+---
+
+### M7 — Earnings (`/business/earnings`)
+
+**Layout**
+Single page, top-to-bottom sections.
+
+**Period summary**
+Week / Month toggle at the top. Shows: gross revenue, platform fee (displayed as a line item, not hidden), net payout, order count for the period. Period navigation arrows to go back/forward.
+
+**Breakdown by listing**
+Table or card list showing each listing's contribution in the selected period: listing title, order count, gross, net. Sorted by gross descending.
+
+**Pending release**
+A highlighted strip showing total money from confirmed/ready orders not yet paid out. Makes the "money in flight" concept visible.
+
+**Payout history**
+Paginated list of past Stripe payouts: date, amount, status (pending, in transit, paid, failed). Clicking a payout row shows its details.
+
+---
+
+### M8 — Calendar (`/business/calendar`)
+
+**Layout**
+Two views toggled at the top: **Calendar** and **Schedule**.
+
+**Calendar view**
+Monthly calendar grid. Days with pickup availability highlighted. Days with confirmed orders show a count badge. Clicking a day opens a side panel (desktop) or slide-over (mobile) showing: availability for that day (on/off, hours) and the list of orders due that day with their status and pickup time.
+
+**Schedule view**
+A list-style view of upcoming pickups and deliveries grouped by date. Each entry shows order details, customer name, pickup or delivery type, and status. Useful for planning without needing the calendar grid.
+
+**Availability settings**
+Accessible from a persistent "Manage Availability" button on both views. Opens a settings panel: pickup days (day-of-week toggles), pickup window (from/to time), lead time (same day / 1–5 days), max daily capacity, delivery mode (none / self). These map directly to `cook_profiles` fields.
+
+---
+
+### M9 — Inbox (`/business/inbox`)
+
+**Layout — desktop**
+Two-column: left is the conversation list, right is the open thread. Same pattern as Orders two-panel.
+
+**Layout — mobile**
+Conversation list → tap → full-screen thread with back button.
+
+**Conversation list**
+Each row: customer name, last message preview, timestamp, unread indicator. Conversations are only created when a customer has an active (non-cancelled) order with this cook.
+
+**Thread view**
+Chat-style message bubbles. Sticky header shows customer name + a link to their current order ("View order →"). Message input at the bottom. No attachments — text only.
+
+---
+
+### M10 — Settings (`/business/settings`)
+
+**Layout**
+Tabbed page. Tab nav on the left side (desktop) or horizontal scrollable tabs (mobile). Four tabs:
+
+**Profile tab**
+Display name, bio (textarea, 500 char limit), profile photo upload, social link. All fields from onboarding, editable here.
+
+**Availability & Delivery tab**
+Pickup address, pickup days, pickup window, lead time, max capacity, delivery mode (none / self), late cancel fee (toggle, type, value, window hours). Covers everything availability-related set during onboarding.
+
+**Notifications tab**
+Email toggles: new order, new review. SMS toggle: new order. Simple toggle rows with labels.
+
+**Payouts tab**
+Stripe Connect status card: shows whether charges and payouts are enabled, any outstanding requirements. Button to open Stripe Express Dashboard. Button to restart onboarding if requirements are pending.
