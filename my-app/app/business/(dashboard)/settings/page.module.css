@@ -1,7 +1,7 @@
 .page {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 20px;
   max-width: 720px;
 }
 
@@ -25,4 +25,333 @@
   font-weight: 700;
   letter-spacing: -0.025em;
   color: var(--ink);
+  margin: 0;
+}
+
+/* ─── Tab row ───────────────────────────────────────────────────────────────── */
+.tabRow {
+  display: flex;
+  border-bottom: 1px solid var(--grey-200);
+}
+
+.tab {
+  position: relative;
+  bottom: -1px;
+  padding: 0 4px 11px;
+  margin-right: 24px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--grey-500);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: color 0.12s;
+  white-space: nowrap;
+}
+
+.tab:hover {
+  color: var(--ink);
+}
+
+.tabActive {
+  color: var(--ink);
+  font-weight: 600;
+  border-bottom-color: var(--red);
+}
+
+/* ─── Content animation ────────────────────────────────────────────────────── */
+.content {
+  animation: fadeUp 0.14s ease both;
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ─── Shared form styles ───────────────────────────────────────────────────── */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-width: 560px;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.formLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--grey-700);
+  letter-spacing: 0.01em;
+}
+
+.formInput {
+  padding: 9px 12px;
+  font-size: 13.5px;
+  color: var(--ink);
+  background: var(--white);
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.12s;
+  width: 100%;
+}
+
+.formInput:focus {
+  border-color: var(--grey-500);
+}
+
+.formRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.formRow3 {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 14px;
+}
+
+.formActions {
+  display: flex;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+/* ─── Buttons ──────────────────────────────────────────────────────────────── */
+.saveBtn {
+  padding: 9px 20px;
+  background: var(--red);
+  color: var(--white);
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: opacity 0.12s;
+}
+
+.saveBtn:hover {
+  opacity: 0.88;
+}
+
+/* ─── Segmented control ────────────────────────────────────────────────────── */
+.segControl {
+  display: flex;
+  background: var(--grey-100);
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-sm);
+  padding: 3px;
+  gap: 2px;
+  align-self: flex-start;
+}
+
+.segBtn {
+  padding: 5px 14px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--grey-700);
+  background: transparent;
+  border: none;
+  border-radius: calc(var(--radius-sm) - 2px);
+  cursor: pointer;
+  transition: all 0.12s;
+  white-space: nowrap;
+}
+
+.segBtn:hover {
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.65);
+}
+
+.segBtnActive {
+  background: var(--white);
+  color: var(--ink);
+  font-weight: 600;
+  box-shadow:
+    0 1px 3px rgba(15, 15, 15, 0.1),
+    0 0 0 0.5px rgba(15, 15, 15, 0.06);
+}
+
+/* ─── Price input ──────────────────────────────────────────────────────────── */
+.priceWrap {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  transition: border-color 0.12s;
+  background: var(--white);
+  max-width: 200px;
+}
+
+.priceWrap:focus-within {
+  border-color: var(--grey-500);
+}
+
+.pricePre {
+  padding: 0 10px;
+  font-size: 13.5px;
+  color: var(--grey-500);
+  background: var(--grey-100);
+  border-right: 1px solid var(--grey-200);
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+}
+
+.priceInput {
+  flex: 1;
+}
+
+.priceWrap .formInput {
+  border: none;
+  border-radius: 0;
+}
+
+/* ─── Notifications ────────────────────────────────────────────────────────── */
+.notifList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 560px;
+}
+
+.notifRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 14px 16px;
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-sm);
+}
+
+.notifInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.notifLabel {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.notifDesc {
+  font-size: 12.5px;
+  color: var(--grey-500);
+  line-height: 1.4;
+}
+
+/* ─── Toggle switch ────────────────────────────────────────────────────────── */
+.toggleSwitch {
+  width: 36px;
+  height: 20px;
+  border-radius: var(--radius-pill);
+  background: var(--grey-300);
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.2s;
+  flex: none;
+}
+
+.toggleSwitchOn {
+  background: var(--red);
+}
+
+.toggleKnob {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--white);
+  top: 3px;
+  left: 3px;
+  transition: transform 0.18s;
+}
+
+.toggleSwitchOn .toggleKnob {
+  transform: translateX(16px);
+}
+
+/* ─── Bank card ────────────────────────────────────────────────────────────── */
+.bankCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-sm);
+}
+
+.bankInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.bankNumber {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: 0.04em;
+  font-feature-settings: "tnum";
+}
+
+.bankInstitution {
+  font-size: 12.5px;
+  color: var(--grey-500);
+}
+
+.bankBtn {
+  padding: 7px 14px;
+  background: none;
+  color: var(--grey-700);
+  font-size: 12.5px;
+  font-weight: 500;
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  flex: none;
+  transition:
+    border-color 0.12s,
+    color 0.12s;
+}
+
+.bankBtn:hover {
+  border-color: var(--grey-300);
+  color: var(--ink);
+}
+
+/* ─── Mobile ───────────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .formRow,
+  .formRow3 {
+    grid-template-columns: 1fr;
+  }
+
+  .bankCard {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
