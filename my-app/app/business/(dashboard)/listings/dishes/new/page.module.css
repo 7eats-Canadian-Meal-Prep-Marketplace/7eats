@@ -1,0 +1,506 @@
+/* ─── Page ─────────────────────────────────────────────────────────────────── */
+.page {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─── Header ───────────────────────────────────────────────────────────────── */
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--grey-500);
+  text-decoration: none;
+  align-self: flex-start;
+  transition: color 0.12s;
+}
+
+.back:hover {
+  color: var(--ink);
+}
+
+.title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+/* ─── Progress indicator ───────────────────────────────────────────────────── */
+.steps {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 28px;
+}
+
+.stepWrap {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 14px 7px 8px;
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-pill);
+  transition:
+    border-color 0.12s,
+    background 0.12s;
+}
+
+.stepActive {
+  border-color: var(--ink);
+}
+
+.stepDone {
+  border-color: var(--grey-200);
+}
+
+.stepNum {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 700;
+  background: var(--grey-100);
+  color: var(--grey-500);
+  flex: none;
+  transition:
+    background 0.12s,
+    color 0.12s;
+}
+
+.stepActive .stepNum {
+  background: var(--ink);
+  color: var(--white);
+}
+
+.stepDone .stepNum {
+  background: var(--red);
+  color: var(--white);
+}
+
+.stepLabel {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--grey-500);
+  white-space: nowrap;
+}
+
+.stepActive .stepLabel {
+  color: var(--ink);
+}
+
+.stepDone .stepLabel {
+  color: var(--ink);
+}
+
+.stepBar {
+  width: 28px;
+  height: 1px;
+  background: var(--grey-200);
+}
+
+/* ─── Content animation ────────────────────────────────────────────────────── */
+.content {
+  animation: fadeUp 0.14s ease both;
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ─── Shared form styles ───────────────────────────────────────────────────── */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-width: 560px;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.formLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--grey-700);
+  letter-spacing: 0.01em;
+}
+
+.formInput,
+.formTextarea {
+  padding: 9px 12px;
+  font-size: 13.5px;
+  color: var(--ink);
+  background: var(--white);
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.12s;
+  width: 100%;
+}
+
+.formInput:focus,
+.formTextarea:focus {
+  border-color: var(--grey-500);
+}
+
+.formTextarea {
+  resize: vertical;
+  line-height: 1.55;
+}
+
+.formActions {
+  display: flex;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+/* ─── Buttons ──────────────────────────────────────────────────────────────── */
+.saveBtn {
+  padding: 9px 20px;
+  background: var(--red);
+  color: var(--white);
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: opacity 0.12s;
+}
+
+.saveBtn:hover {
+  opacity: 0.88;
+}
+
+.secondaryBtn {
+  padding: 9px 16px;
+  background: none;
+  color: var(--grey-700);
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition:
+    border-color 0.12s,
+    color 0.12s;
+}
+
+.secondaryBtn:hover {
+  border-color: var(--grey-300);
+  color: var(--ink);
+}
+
+/* ─── Segmented control ────────────────────────────────────────────────────── */
+.segControl {
+  display: flex;
+  background: var(--grey-100);
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-sm);
+  padding: 3px;
+  gap: 2px;
+  align-self: flex-start;
+}
+
+.segBtn {
+  padding: 5px 14px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--grey-700);
+  background: transparent;
+  border: none;
+  border-radius: calc(var(--radius-sm) - 2px);
+  cursor: pointer;
+  transition: all 0.12s;
+  white-space: nowrap;
+}
+
+.segBtn:hover {
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.65);
+}
+
+.segBtnActive {
+  background: var(--white);
+  color: var(--ink);
+  font-weight: 600;
+  box-shadow:
+    0 1px 3px rgba(15, 15, 15, 0.1),
+    0 0 0 0.5px rgba(15, 15, 15, 0.06);
+}
+
+/* ─── Cover photo ──────────────────────────────────────────────────────────── */
+.coverWrap {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.coverImgWrap {
+  position: relative;
+  width: 160px;
+  aspect-ratio: 4 / 3;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--grey-200);
+  flex: none;
+}
+
+.coverImg {
+  object-fit: cover;
+}
+
+.coverUploadBtn {
+  padding: 7px 14px;
+  background: none;
+  color: var(--grey-700);
+  font-size: 12.5px;
+  font-weight: 500;
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition:
+    border-color 0.12s,
+    color 0.12s;
+}
+
+.coverUploadBtn:hover {
+  border-color: var(--grey-300);
+  color: var(--ink);
+}
+
+/* ─── Step 2 ───────────────────────────────────────────────────────────────── */
+.step2 {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  max-width: 640px;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sectionTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 0 0 2px;
+}
+
+/* ─── Ingredient table ─────────────────────────────────────────────────────── */
+.ingTable {
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.ingHeader {
+  display: grid;
+  grid-template-columns: 1fr 80px 80px 32px;
+  gap: 0;
+  padding: 7px 12px;
+  background: var(--grey-100);
+  border-bottom: 1px solid var(--grey-200);
+}
+
+.ingColIngredient,
+.ingColAmount,
+.ingColUnit {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--grey-500);
+}
+
+.ingRow {
+  display: grid;
+  grid-template-columns: 1fr 80px 80px 32px;
+  gap: 0;
+  border-bottom: 1px solid var(--grey-200);
+  align-items: center;
+}
+
+.ingRow:last-child {
+  border-bottom: none;
+}
+
+.ingInput {
+  padding: 9px 12px;
+  font-size: 13px;
+  color: var(--ink);
+  background: var(--white);
+  border: none;
+  border-right: 1px solid var(--grey-200);
+  font-family: inherit;
+  outline: none;
+  transition: background 0.1s;
+  width: 100%;
+}
+
+.ingInput:focus {
+  background: rgba(214, 64, 69, 0.03);
+}
+
+.ingUnitInput {
+  border-right: none;
+}
+
+.ingRemoveBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--grey-300);
+  transition: color 0.12s;
+}
+
+.ingRemoveBtn:hover {
+  color: var(--red);
+}
+
+.addIngBtn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 13px;
+  background: none;
+  color: var(--grey-700);
+  font-size: 12.5px;
+  font-weight: 500;
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  align-self: flex-start;
+  transition:
+    border-color 0.12s,
+    color 0.12s;
+}
+
+.addIngBtn:hover {
+  border-color: var(--grey-300);
+  color: var(--ink);
+}
+
+/* ─── Nutrition grid ───────────────────────────────────────────────────────── */
+.nutritionGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+/* ─── Allergens ────────────────────────────────────────────────────────────── */
+.allergensWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.allergenList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.allergenLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-pill);
+  font-size: 12.5px;
+  color: var(--grey-700);
+  cursor: pointer;
+  transition:
+    border-color 0.12s,
+    background 0.12s,
+    color 0.12s;
+  user-select: none;
+}
+
+.allergenLabel:has(.allergenCheck:checked) {
+  border-color: var(--red);
+  background: rgba(214, 64, 69, 0.06);
+  color: var(--ink);
+}
+
+.allergenCheck {
+  width: 13px;
+  height: 13px;
+  accent-color: var(--red);
+  cursor: pointer;
+}
+
+/* ─── Empty note ───────────────────────────────────────────────────────────── */
+.emptyNote {
+  font-size: 13px;
+  color: var(--grey-500);
+  margin: 0;
+  padding: 20px;
+  text-align: center;
+  border: 1px dashed var(--grey-200);
+  border-radius: var(--radius-sm);
+}
+
+/* ─── Mobile ───────────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .nutritionGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .ingHeader,
+  .ingRow {
+    grid-template-columns: 1fr 64px 64px 32px;
+  }
+
+  .coverWrap {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .stepLabel {
+    display: none;
+  }
+
+  .step {
+    padding: 7px 8px;
+  }
+}
