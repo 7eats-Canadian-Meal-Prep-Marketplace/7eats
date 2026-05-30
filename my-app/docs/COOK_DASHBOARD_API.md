@@ -522,7 +522,7 @@ All Stripe endpoints fall back to mock responses when `STRIPE_SECRET_KEY` is not
 | `email_notifications_new_review` | `boolean NOT NULL` | `true` | Email on new review |
 | `sms_notifications_new_order` | `boolean NOT NULL` | `false` | SMS on new order |
 
-Apply with: `npm run db:migrate`
+Apply with: `npm run db:push`
 
 ---
 
