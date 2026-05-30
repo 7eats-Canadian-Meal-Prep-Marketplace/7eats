@@ -1,0 +1,284 @@
+/* ─── Page ─────────────────────────────────────────────────────────────────── */
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ─── Header ───────────────────────────────────────────────────────────────── */
+.header {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+}
+
+.title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.weekLabel {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--grey-500);
+  font-feature-settings: "tnum";
+}
+
+/* ─── Week grid ────────────────────────────────────────────────────────────── */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.columnPast {
+  opacity: 0.55;
+}
+
+.dayHead {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+}
+
+.dayHeadToday {
+  background: var(--ink);
+}
+
+.dayName {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--grey-500);
+}
+
+.dayHeadToday .dayName {
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.dayNum {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+  font-feature-settings: "tnum";
+}
+
+.dayHeadToday .dayNum {
+  color: var(--white);
+}
+
+/* ─── Slots ────────────────────────────────────────────────────────────────── */
+.slotList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 40px;
+}
+
+.slotCard {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 9px 10px;
+  background: var(--white);
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  transition:
+    border-color 0.12s,
+    box-shadow 0.12s;
+}
+
+.slotCard:hover {
+  border-color: var(--grey-300);
+}
+
+.slotCardActive {
+  border-color: var(--ink);
+  box-shadow: 0 0 0 1px var(--ink);
+}
+
+.slotTime {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--grey-500);
+  font-feature-settings: "tnum";
+}
+
+.slotTitle {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.3;
+}
+
+.slotMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 1px;
+}
+
+.slotStatus,
+.detailStatus {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--grey-700);
+}
+
+.slotCount {
+  font-size: 11px;
+  color: var(--grey-500);
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.dotOpen {
+  background: #10b981;
+}
+
+.dotFull {
+  background: #f59e0b;
+}
+
+.dotClosed {
+  background: var(--grey-300);
+}
+
+.emptyDay {
+  font-size: 13px;
+  color: var(--grey-300);
+  text-align: center;
+  padding: 8px 0;
+}
+
+/* ─── Detail panel ─────────────────────────────────────────────────────────── */
+.detail {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px 20px;
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-md);
+  background: var(--white);
+  animation: fadeUp 0.14s ease both;
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.detailHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--grey-200);
+}
+
+.detailHeadMain {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.detailTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.detailMeta {
+  font-size: 12.5px;
+  color: var(--grey-500);
+}
+
+.detailStatus {
+  flex: none;
+}
+
+.orderList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.orderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 12px;
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-sm);
+}
+
+.orderCustomer {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.orderQty {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--grey-700);
+  font-feature-settings: "tnum";
+}
+
+.noOrders {
+  font-size: 13px;
+  color: var(--grey-500);
+  margin: 0;
+  padding: 16px;
+  text-align: center;
+  border: 1px dashed var(--grey-200);
+  border-radius: var(--radius-sm);
+}
+
+/* ─── Mobile ───────────────────────────────────────────────────────────────── */
+@media (max-width: 860px) {
+  .grid {
+    grid-template-columns: repeat(7, minmax(120px, 1fr));
+    overflow-x: auto;
+    padding-bottom: 6px;
+  }
+}
+
+@media (max-width: 640px) {
+  .detailHead {
+    flex-direction: column;
+    gap: 8px;
+  }
+}
