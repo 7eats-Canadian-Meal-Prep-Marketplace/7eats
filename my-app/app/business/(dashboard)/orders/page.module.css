@@ -1,0 +1,572 @@
+/* ─── Page layout ────────────────────────────────────────────────────────────── */
+.page {
+  display: flex;
+  margin: -28px -32px;
+  min-height: calc(100vh - 64px);
+}
+
+/* ─── List panel ─────────────────────────────────────────────────────────────── */
+.listPanel {
+  width: 360px;
+  flex: none;
+  border-right: 1px solid var(--grey-200);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+/* ─── List head ──────────────────────────────────────────────────────────────── */
+.listHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 16px 14px;
+  border-bottom: 1px solid var(--grey-200);
+  position: sticky;
+  top: 0;
+  background: var(--white);
+  z-index: 2;
+  flex: none;
+}
+
+.listTitle {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.listHeadCount {
+  font-size: 12px;
+  color: var(--grey-500);
+}
+
+/* ─── List section ───────────────────────────────────────────────────────────── */
+.listSection {
+  display: flex;
+  flex-direction: column;
+}
+
+.sectionLabel {
+  padding: 9px 16px 8px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--grey-500);
+  background: var(--grey-100);
+  border-bottom: 1px solid var(--grey-200);
+}
+
+/* ─── List row ───────────────────────────────────────────────────────────────── */
+.listRowWrap {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--grey-200);
+  border-left: 3px solid transparent;
+  transition: border-left-color 0.12s;
+}
+
+.listRowPending {
+  border-left-color: var(--red);
+}
+
+.listRowFocused {
+  background: rgba(214, 64, 69, 0.04);
+}
+
+.listRowBtn {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  padding: 12px 8px 12px 13px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  transition: background 0.1s;
+}
+
+.listRowBtn:hover {
+  background: var(--grey-100);
+}
+
+.listRowPending .listRowBtn {
+  padding-left: 11px;
+}
+
+.listRowTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.listRowCustomer {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.listRowListing {
+  font-size: 12px;
+  color: var(--grey-500);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.listRowMeta {
+  font-size: 11.5px;
+  color: var(--grey-500);
+  margin-top: 4px;
+}
+
+.listActionBtn {
+  padding: 5px 10px;
+  margin-right: 10px;
+  font-size: 11.5px;
+  font-weight: 600;
+  background: var(--red);
+  color: var(--white);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  flex: none;
+  transition: opacity 0.12s;
+}
+
+.listActionBtn:hover {
+  opacity: 0.88;
+}
+
+/* ─── Status badge ───────────────────────────────────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: var(--radius-pill);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  flex: none;
+}
+
+.badgePending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.badgeConfirmed {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.badgeReady {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.badgeFulfilled {
+  background: var(--grey-100);
+  color: var(--grey-500);
+}
+
+.badgeCancelled {
+  background: var(--grey-100);
+  color: var(--grey-500);
+}
+
+/* ─── Detail panel ───────────────────────────────────────────────────────────── */
+.detailPanel {
+  flex: 1;
+  overflow-y: auto;
+  min-width: 0;
+}
+
+.emptyDetail {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: var(--grey-500);
+}
+
+/* ─── Detail content ─────────────────────────────────────────────────────────── */
+.detail {
+  padding: 28px 32px;
+  position: relative;
+  max-width: 560px;
+}
+
+.detailClose {
+  position: absolute;
+  top: 22px;
+  right: 22px;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--grey-500);
+  transition:
+    background 0.12s,
+    color 0.12s;
+}
+
+.detailClose:hover {
+  background: var(--grey-100);
+  color: var(--ink);
+}
+
+.detailHeader {
+  margin-bottom: 22px;
+}
+
+.detailTitle {
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.02em;
+  margin: 8px 0 4px;
+}
+
+.detailCustomer {
+  font-size: 13.5px;
+  color: var(--grey-500);
+  margin: 0;
+}
+
+/* ─── Meta block ─────────────────────────────────────────────────────────────── */
+.metaBlock {
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  margin-bottom: 22px;
+}
+
+.metaRow {
+  display: flex;
+  gap: 16px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--grey-200);
+}
+
+.metaRow:last-child {
+  border-bottom: none;
+}
+
+.metaKey {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--grey-500);
+  width: 76px;
+  flex: none;
+}
+
+.metaVal {
+  font-size: 12.5px;
+  color: var(--ink);
+}
+
+.metaValBold {
+  font-weight: 700;
+  font-feature-settings: "tnum";
+}
+
+/* ─── Dish breakdown ─────────────────────────────────────────────────────────── */
+.dishSection {
+  margin-bottom: 22px;
+}
+
+.dishSectionLabel {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--grey-500);
+  margin: 0 0 8px;
+}
+
+.dishRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-sm);
+  margin-bottom: 4px;
+}
+
+.dishName {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+  flex: 1;
+}
+
+.dishCuisine {
+  font-size: 11.5px;
+  color: var(--grey-500);
+}
+
+.dishQty {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+  flex: none;
+}
+
+/* ─── Action zone ────────────────────────────────────────────────────────────── */
+.actionZone {
+  border-top: 1px solid var(--grey-200);
+  padding-top: 20px;
+}
+
+.actionBtns {
+  display: flex;
+  gap: 8px;
+}
+
+.advanceBtn {
+  padding: 9px 18px;
+  background: var(--red);
+  color: var(--white);
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: opacity 0.12s;
+}
+
+.advanceBtn:hover {
+  opacity: 0.88;
+}
+
+.cancelBtn {
+  padding: 9px 18px;
+  background: none;
+  color: var(--grey-700);
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition:
+    border-color 0.12s,
+    color 0.12s;
+}
+
+.cancelBtn:hover {
+  border-color: var(--grey-300);
+  color: var(--ink);
+}
+
+/* ─── Cancel confirm ─────────────────────────────────────────────────────────── */
+.cancelConfirm {
+  padding: 14px;
+  background: var(--grey-100);
+  border-radius: var(--radius-sm);
+}
+
+.cancelConfirmText {
+  font-size: 13px;
+  color: var(--ink);
+  margin: 0 0 12px;
+}
+
+.cancelConfirmBtns {
+  display: flex;
+  gap: 8px;
+}
+
+.cancelConfirmYes {
+  padding: 7px 14px;
+  background: var(--ink);
+  color: var(--white);
+  font-size: 12.5px;
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: opacity 0.12s;
+}
+
+.cancelConfirmYes:hover {
+  opacity: 0.82;
+}
+
+.cancelConfirmNo {
+  padding: 7px 14px;
+  background: none;
+  color: var(--grey-700);
+  font-size: 12.5px;
+  font-weight: 500;
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: border-color 0.12s;
+}
+
+.cancelConfirmNo:hover {
+  border-color: var(--grey-300);
+}
+
+/* ─── Verify code ────────────────────────────────────────────────────────────── */
+.verifyForm {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.verifyLabel {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+  margin: 0;
+}
+
+.verifyRow {
+  display: flex;
+  gap: 8px;
+}
+
+.verifyInput {
+  flex: 1;
+  padding: 9px 12px;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  font-feature-settings: "tnum";
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-sm);
+  background: var(--white);
+  color: var(--ink);
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.12s;
+}
+
+.verifyInput:focus {
+  border-color: var(--grey-500);
+}
+
+.verifyInput::placeholder {
+  letter-spacing: 0.18em;
+  color: var(--grey-300);
+}
+
+.verifyBtn {
+  padding: 9px 18px;
+  background: var(--red);
+  color: var(--white);
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: opacity 0.12s;
+  flex: none;
+}
+
+.verifyBtn:hover {
+  opacity: 0.88;
+}
+
+.verifyBtn:disabled {
+  opacity: 0.38;
+  cursor: default;
+}
+
+.verifyError {
+  font-size: 12px;
+  color: var(--red);
+  margin: 0;
+}
+
+.verifyLocked {
+  font-size: 13px;
+  color: var(--grey-500);
+  padding: 11px 14px;
+  background: var(--grey-100);
+  border-radius: var(--radius-sm);
+}
+
+/* ─── Status notes ───────────────────────────────────────────────────────────── */
+.statusNote {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--grey-200);
+  font-size: 13px;
+  color: var(--grey-500);
+}
+
+/* ─── Mobile ─────────────────────────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  .page {
+    margin: -20px -16px;
+  }
+
+  .listPanel {
+    width: 100%;
+    border-right: none;
+  }
+
+  .detailPanel {
+    display: none;
+  }
+}
+
+/* ─── Mobile slide-over ──────────────────────────────────────────────────────── */
+.slideOverlay {
+  position: fixed;
+  inset: 64px 0 0 0;
+  background: rgba(15, 15, 15, 0.35);
+  z-index: 39;
+  border: none;
+  padding: 0;
+  cursor: default;
+}
+
+.slideOver {
+  position: fixed;
+  top: 64px;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: var(--white);
+  z-index: 40;
+  overflow-y: auto;
+  animation: slideIn 0.22s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(40px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@media (min-width: 768px) {
+  .slideOverlay,
+  .slideOver {
+    display: none;
+  }
+}
