@@ -8,6 +8,8 @@ import {
   Inbox,
   LayoutDashboard,
   Menu,
+  ShoppingBag,
+  Star,
   Store,
   TrendingUp,
   X,
@@ -16,7 +18,16 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { MOCK_NOTIFICATIONS, type MockNotification } from "./_notifications";
 import styles from "./_shell.module.css";
+
+function formatNotifTime(iso: string): string {
+  const diffMin = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+  if (diffMin < 1) return "now";
+  if (diffMin < 60) return `${diffMin}m`;
+  if (diffMin < 1440) return `${Math.round(diffMin / 60)}h`;
+  return `${Math.round(diffMin / 1440)}d`;
+}
 
 const NAV_ITEMS = [
   { href: "/business/dashboard", label: "Dashboard", Icon: LayoutDashboard },
@@ -52,8 +63,14 @@ export default function DashboardShell({
   const isSettings = pathname.startsWith("/business/settings");
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifications, setNotifications] =
+    useState<MockNotification[]>(MOCK_NOTIFICATIONS);
   const [signingOut, setSigningOut] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
+  const notifRef = useRef<HTMLDivElement>(null);
+
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   const initials =
     `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase() || "?";
@@ -62,11 +79,12 @@ export default function DashboardShell({
 
   useEffect(() => {
     function handleOutsideClick(e: MouseEvent) {
-      if (
-        profileRef.current &&
-        !profileRef.current.contains(e.target as Node)
-      ) {
+      const target = e.target as Node;
+      if (profileRef.current && !profileRef.current.contains(target)) {
         setProfileOpen(false);
+      }
+      if (notifRef.current && !notifRef.current.contains(target)) {
+        setNotifOpen(false);
       }
     }
     document.addEventListener("mousedown", handleOutsideClick);
@@ -76,7 +94,16 @@ export default function DashboardShell({
   // biome-ignore lint/correctness/useExhaustiveDependencies: pathname is the trigger, not a value used inside
   useEffect(() => {
     setMobileNavOpen(false);
+    setProfileOpen(false);
+    setNotifOpen(false);
   }, [pathname]);
+
+  const handleNotifClick = (id: string) => {
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)),
+    );
+    setNotifOpen(false);
+  };
 
   const handleSignOut = async () => {
     setSigningOut(true);
@@ -116,13 +143,73 @@ export default function DashboardShell({
             <button type="button" className={styles.iconBtn} aria-label="Help">
               <HelpCircle size={20} />
             </button>
-            <button
-              type="button"
-              className={styles.iconBtn}
-              aria-label="Notifications"
-            >
-              <Bell size={20} />
-            </button>
+            <div className={styles.notifWrap} ref={notifRef}>
+              <button
+                type="button"
+                className={styles.iconBtn}
+                aria-label="Notifications"
+                aria-expanded={notifOpen}
+                onClick={() => {
+                  setNotifOpen((v) => !v);
+                  setProfileOpen(false);
+                }}
+              >
+                <Bell size={20} />
+                {unreadCount > 0 && <span className={styles.notifDot} />}
+              </button>
+              {notifOpen && (
+                <div className={styles.notifPanel}>
+                  <div className={styles.notifHead}>
+                    <span className={styles.notifTitle}>Notifications</span>
+                    {unreadCount > 0 && (
+                      <span className={styles.notifCount}>
+                        {unreadCount} new
+                      </span>
+                    )}
+                  </div>
+                  <div className={styles.notifList}>
+                    {notifications.map((n) => (
+                      <Link
+                        key={n.id}
+                        href={n.href}
+                        className={`${styles.notifItem} ${n.isRead ? "" : styles.notifItemUnread}`}
+                        onClick={() => handleNotifClick(n.id)}
+                      >
+                        <span
+                          className={`${styles.notifIcon} ${n.kind === "review" ? styles.notifIconReview : styles.notifIconOrder}`}
+                        >
+                          {n.kind === "review" ? (
+                            <Star size={14} />
+                          ) : (
+                            <ShoppingBag size={14} />
+                          )}
+                        </span>
+                        <span className={styles.notifBody}>
+                          <span className={styles.notifItemTop}>
+                            <span className={styles.notifItemTitle}>
+                              {n.title}
+                              {n.kind === "review" && n.rating != null && (
+                                <span className={styles.notifRating}>
+                                  {n.rating.toFixed(1)}
+                                  <Star size={10} className={styles.starFill} />
+                                </span>
+                              )}
+                            </span>
+                            <span className={styles.notifTime}>
+                              {formatNotifTime(n.timestamp)}
+                            </span>
+                          </span>
+                          <span className={styles.notifDetail}>{n.detail}</span>
+                        </span>
+                        {!n.isRead && (
+                          <span className={styles.notifUnreadDot} />
+                        )}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
             <Link
               href="/business/inbox"
               className={styles.iconBtn}
@@ -135,7 +222,10 @@ export default function DashboardShell({
               <button
                 type="button"
                 className={styles.avatar}
-                onClick={() => setProfileOpen((v) => !v)}
+                onClick={() => {
+                  setProfileOpen((v) => !v);
+                  setNotifOpen(false);
+                }}
                 aria-label="Account menu"
                 aria-expanded={profileOpen}
               >
