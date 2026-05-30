@@ -1,6 +1,7 @@
 "use client";
 
-import { X } from "lucide-react";
+import { MessageSquare, X } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 import { MOCK_ORDERS, type MockOrder } from "./_mock";
 import styles from "./page.module.css";
@@ -132,11 +133,13 @@ function VerifyCode({
 function OrderDetail({
   order,
   onAdvance,
+  onRevert,
   onCancel,
   onClose,
 }: {
   order: MockOrder;
   onAdvance: (id: string) => void;
+  onRevert: (id: string) => void;
   onCancel: (id: string) => void;
   onClose?: () => void;
 }) {
@@ -153,10 +156,18 @@ function OrderDetail({
       )}
 
       <div className={styles.detailHeader}>
-        <StatusBadge status={order.status} />
         <h2 className={styles.detailTitle}>{order.listingTitle}</h2>
-        <p className={styles.detailCustomer}>{order.customerName}</p>
+        <div className={styles.detailSubline}>
+          <span className={styles.detailCustomer}>{order.customerName}</span>
+          <span className={styles.detailDot}>·</span>
+          <StatusBadge status={order.status} />
+        </div>
       </div>
+
+      <Link href="/business/inbox" className={styles.chatBtn}>
+        <MessageSquare size={15} />
+        Message customer
+      </Link>
 
       <div className={styles.metaBlock}>
         <div className={styles.metaRow}>
@@ -165,7 +176,7 @@ function OrderDetail({
         </div>
         <div className={styles.metaRow}>
           <span className={styles.metaKey}>Quantity</span>
-          <span className={styles.metaVal}>&times;{order.quantity}</span>
+          <span className={styles.metaVal}>{order.quantity}</span>
         </div>
         <div className={styles.metaRow}>
           <span className={styles.metaKey}>Unit price</span>
@@ -191,7 +202,7 @@ function OrderDetail({
           <div key={d.name} className={styles.dishRow}>
             <span className={styles.dishName}>{d.name}</span>
             <span className={styles.dishCuisine}>{d.cuisine}</span>
-            <span className={styles.dishQty}>&times;{d.qty}</span>
+            <span className={styles.dishQtyBox}>{d.qty}</span>
           </div>
         ))}
       </div>
@@ -202,6 +213,16 @@ function OrderDetail({
             pickupCode={order.pickupCode}
             onVerify={() => onAdvance(order.id)}
           />
+          <div className={styles.revertBlock}>
+            <span className={styles.revertPrompt}>Still preparing?</span>
+            <button
+              type="button"
+              className={styles.revertBtn}
+              onClick={() => onRevert(order.id)}
+            >
+              Mark as not ready
+            </button>
+          </div>
         </div>
       )}
 
@@ -274,40 +295,30 @@ function OrderListRow({
   order,
   focused,
   onSelect,
-  onAdvance,
 }: {
   order: MockOrder;
   focused: boolean;
   onSelect: () => void;
-  onAdvance: (id: string) => void;
 }) {
-  const action = ACTION_LABEL[order.status];
-
   return (
-    <div
-      className={`${styles.listRowWrap} ${order.status === "pending" ? styles.listRowPending : ""} ${focused ? styles.listRowFocused : ""}`}
+    <button
+      type="button"
+      className={`${styles.listRow} ${order.status === "pending" ? styles.listRowPending : ""} ${focused ? styles.listRowFocused : ""}`}
+      onClick={onSelect}
     >
-      <button type="button" className={styles.listRowBtn} onClick={onSelect}>
-        <div className={styles.listRowTop}>
-          <span className={styles.listRowCustomer}>{order.customerName}</span>
-          <StatusBadge status={order.status} />
-        </div>
-        <div className={styles.listRowListing}>{order.listingTitle}</div>
-        <div className={styles.listRowMeta}>
-          {formatTime(order.pickupAt)} &middot; &times;{order.quantity} &middot;
-          ${order.totalPrice}
-        </div>
-      </button>
-      {action && (
-        <button
-          type="button"
-          className={styles.listActionBtn}
-          onClick={() => onAdvance(order.id)}
-        >
-          {action}
-        </button>
-      )}
-    </div>
+      <div className={styles.listRowLeft}>
+        <span className={styles.listRowCustomer}>{order.customerName}</span>
+        <span className={styles.listRowListing}>{order.listingTitle}</span>
+        <span className={styles.listRowMeta}>
+          {formatTime(order.pickupAt)} &middot;{" "}
+          <span className={styles.listRowQty}>
+            {order.quantity} item{order.quantity !== 1 ? "s" : ""}
+          </span>{" "}
+          &middot; ${order.totalPrice}
+        </span>
+      </div>
+      <StatusBadge status={order.status} />
+    </button>
   );
 }
 
@@ -329,8 +340,13 @@ export default function OrdersPage() {
   const [slideOpen, setSlideOpen] = useState(false);
 
   const focusedOrder = orders.find((o) => o.id === focusedId) ?? null;
-  const pending = orders.filter((o) => o.status === "pending");
-  const rest = orders.filter((o) => o.status !== "pending");
+  const pendingCount = orders.filter((o) => o.status === "pending").length;
+
+  const sorted = [...orders].sort((a, b) => {
+    if (a.status === "pending" && b.status !== "pending") return -1;
+    if (a.status !== "pending" && b.status === "pending") return 1;
+    return 0;
+  });
 
   function handleSelect(id: string) {
     setFocusedId(id);
@@ -347,61 +363,52 @@ export default function OrdersPage() {
     );
   }
 
+  function handleRevert(id: string) {
+    setOrders((prev) =>
+      prev.map((o) => (o.id === id ? { ...o, status: "confirmed" } : o)),
+    );
+  }
+
   function handleCancel(id: string) {
     setOrders((prev) =>
       prev.map((o) => (o.id === id ? { ...o, status: "cancelled" } : o)),
     );
   }
 
-  const detailProps = {
-    onAdvance: handleAdvance,
-    onCancel: handleCancel,
-  };
-
   return (
     <div className={styles.page}>
       {/* Left: order list */}
       <div className={styles.listPanel}>
         <div className={styles.listHead}>
-          <span className={styles.listTitle}>Orders</span>
+          <div className={styles.listHeadLeft}>
+            <span className={styles.listTitle}>Orders</span>
+            {pendingCount > 0 && (
+              <span className={styles.listNeedsAction}>{pendingCount} new</span>
+            )}
+          </div>
           <span className={styles.listHeadCount}>{orders.length}</span>
         </div>
 
-        {pending.length > 0 && (
-          <div className={styles.listSection}>
-            <div className={styles.sectionLabel}>Needs action</div>
-            {pending.map((o) => (
-              <OrderListRow
-                key={o.id}
-                order={o}
-                focused={focusedId === o.id}
-                onSelect={() => handleSelect(o.id)}
-                onAdvance={handleAdvance}
-              />
-            ))}
-          </div>
-        )}
-
-        {rest.length > 0 && (
-          <div className={styles.listSection}>
-            <div className={styles.sectionLabel}>All orders</div>
-            {rest.map((o) => (
-              <OrderListRow
-                key={o.id}
-                order={o}
-                focused={focusedId === o.id}
-                onSelect={() => handleSelect(o.id)}
-                onAdvance={handleAdvance}
-              />
-            ))}
-          </div>
-        )}
+        {sorted.map((o) => (
+          <OrderListRow
+            key={o.id}
+            order={o}
+            focused={focusedId === o.id}
+            onSelect={() => handleSelect(o.id)}
+          />
+        ))}
       </div>
 
       {/* Right: detail panel (desktop) */}
       <div className={styles.detailPanel}>
         {focusedOrder ? (
-          <OrderDetail key={focusedId} order={focusedOrder} {...detailProps} />
+          <OrderDetail
+            key={focusedId}
+            order={focusedOrder}
+            onAdvance={handleAdvance}
+            onRevert={handleRevert}
+            onCancel={handleCancel}
+          />
         ) : (
           <EmptyDetail />
         )}
@@ -420,7 +427,9 @@ export default function OrdersPage() {
             <OrderDetail
               key={focusedId}
               order={focusedOrder}
-              {...detailProps}
+              onAdvance={handleAdvance}
+              onRevert={handleRevert}
+              onCancel={handleCancel}
               onClose={() => setSlideOpen(false)}
             />
           </div>
