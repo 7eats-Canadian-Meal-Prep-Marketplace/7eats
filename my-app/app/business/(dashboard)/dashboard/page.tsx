@@ -1,5 +1,6 @@
 "use client";
 
+import { Calendar, ChevronRight, Inbox, Plus, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { MOCK_QUEUE, MOCK_STATS, type MockQueueOrder } from "./_mock";
@@ -7,99 +8,154 @@ import styles from "./page.module.css";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function formatPickup(iso: string): string {
+function pickupLabel(iso: string): string {
   const d = new Date(iso);
   const now = new Date();
-  const tomorrow = new Date(now);
-  tomorrow.setDate(tomorrow.getDate() + 1);
+  const todayStr = now.toDateString();
+  const tomorrowStr = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate() + 1,
+  ).toDateString();
   const time = d.toLocaleTimeString("en-CA", {
     hour: "numeric",
     minute: "2-digit",
   });
-  if (d.toDateString() === now.toDateString()) return `Today · ${time}`;
-  if (d.toDateString() === tomorrow.toDateString()) return `Tomorrow · ${time}`;
-  return (
-    d.toLocaleDateString("en-CA", { month: "short", day: "numeric" }) +
-    ` · ${time}`
-  );
+  if (d.toDateString() === todayStr) return `Today · ${time}`;
+  if (d.toDateString() === tomorrowStr) return `Tomorrow · ${time}`;
+  return `${d.toLocaleDateString("en-CA", { month: "short", day: "numeric" })} · ${time}`;
 }
 
-// ─── Order row ────────────────────────────────────────────────────────────────
+// ─── Next pickup day logic ─────────────────────────────────────────────────────
 
-function OrderRow({ order }: { order: MockQueueOrder }) {
-  const isPending = order.status === "pending";
-  const isReady = order.status === "ready";
-  const href = `/business/orders?focus=${order.id}`;
+function getNextPickupDayOrders(): {
+  label: string;
+  orders: MockQueueOrder[];
+} {
+  const confirmed = MOCK_QUEUE.filter((o) => o.status !== "pending");
+  if (confirmed.length === 0) return { label: "Today's pickups", orders: [] };
 
+  const dayStart = (iso: string) => {
+    const d = new Date(iso);
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
+  };
+
+  const earliest = Math.min(...confirmed.map((o) => dayStart(o.pickupAt)));
+  const orders = confirmed
+    .filter((o) => dayStart(o.pickupAt) === earliest)
+    .sort(
+      (a, b) => new Date(a.pickupAt).getTime() - new Date(b.pickupAt).getTime(),
+    );
+
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(now);
+  tomorrow.setDate(now.getDate() + 1);
+
+  let label: string;
+  if (earliest === now.getTime()) label = "Today's pickups";
+  else if (earliest === tomorrow.getTime()) label = "Tomorrow's pickups";
+  else {
+    const d = new Date(earliest);
+    label = `${d.toLocaleDateString("en-CA", { weekday: "long", month: "short", day: "numeric" })} pickups`;
+  }
+
+  return { label, orders };
+}
+
+// ─── Pickup row ───────────────────────────────────────────────────────────────
+
+function PickupRow({ order }: { order: MockQueueOrder }) {
   return (
-    <div className={`${styles.row} ${isPending ? styles.rowPending : ""}`}>
-      <Link href={href} className={styles.rowLink}>
-        <div className={styles.rowCustomer}>{order.customerName}</div>
-        <div className={styles.rowListing}>{order.listingTitle}</div>
-        <div className={styles.rowMeta}>
-          {formatPickup(order.pickupAt)}&nbsp;&middot;&nbsp;&times;
-          {order.quantity}
-        </div>
-      </Link>
-      <div className={styles.rowRight}>
-        <span className={styles.rowTotal}>${order.totalPrice}</span>
-        {isPending && (
-          <button type="button" className={styles.actionBtn}>
-            Confirm
-          </button>
-        )}
-        {isReady && <span className={styles.readyTag}>Ready</span>}
+    <div className={styles.pickupRow}>
+      <div className={styles.pickupInfo}>
+        <span className={styles.pickupCustomer}>{order.customerName}</span>
+        <span className={styles.pickupMeta}>
+          {order.listingTitle} &middot; {pickupLabel(order.pickupAt)} &middot;{" "}
+          <span className={styles.metaQty}>&times;{order.quantity}</span>
+        </span>
+      </div>
+      <div className={styles.pickupRight}>
+        <span className={styles.pickupTotal}>${order.totalPrice}</span>
       </div>
     </div>
   );
 }
 
+// ─── Request row ──────────────────────────────────────────────────────────────
+
+function RequestRow({ order }: { order: MockQueueOrder }) {
+  return (
+    <div className={styles.requestRow}>
+      <div className={styles.requestInfo}>
+        <span className={styles.requestCustomer}>{order.customerName}</span>
+        <span className={styles.requestMeta}>
+          {order.listingTitle} &middot; {pickupLabel(order.pickupAt)} &middot;{" "}
+          <span className={styles.metaQty}>&times;{order.quantity}</span>
+        </span>
+      </div>
+      <div className={styles.requestRight}>
+        <span className={styles.requestTotal}>${order.totalPrice}</span>
+        <button type="button" className={styles.confirmBtn}>
+          Confirm
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Quick actions ────────────────────────────────────────────────────────────
+
+const QUICK_ACTIONS = [
+  {
+    href: "/business/listings/new",
+    Icon: Plus,
+    label: "New listing",
+    desc: "Publish a meal for customers to order",
+  },
+  {
+    href: "/business/calendar",
+    Icon: Calendar,
+    label: "Calendar",
+    desc: "See your upcoming pickup schedule",
+  },
+  {
+    href: "/business/inbox",
+    Icon: Inbox,
+    label: "Inbox",
+    desc: "Reply to customer messages",
+  },
+  {
+    href: "/business/earnings",
+    Icon: TrendingUp,
+    label: "Earnings",
+    desc: "Track revenue and payout history",
+  },
+] as const;
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
+
+const COL_LIMIT = 4;
 
 export default function DashboardPage() {
   const [period, setPeriod] = useState<"week" | "month">("week");
+  const [pickupExpanded, setPickupExpanded] = useState(false);
+  const [requestsExpanded, setRequestsExpanded] = useState(false);
 
-  const pending = MOCK_QUEUE.filter((o) => o.status === "pending");
-  const upcoming = MOCK_QUEUE.filter((o) => o.status !== "pending");
+  const { label: pickupDayLabel, orders: pickupOrders } =
+    getNextPickupDayOrders();
+  const requests = MOCK_QUEUE.filter((o) => o.status === "pending");
+
+  const visiblePickups = pickupExpanded
+    ? pickupOrders
+    : pickupOrders.slice(0, COL_LIMIT);
+  const visibleRequests = requestsExpanded
+    ? requests
+    : requests.slice(0, COL_LIMIT);
 
   return (
     <div className={styles.page}>
-      {/* Order queue */}
-      <div className={styles.queue}>
-        {pending.length > 0 && (
-          <div className={styles.section}>
-            <div className={styles.sectionHead}>
-              <span className={styles.sectionLabel}>Needs action</span>
-              <span className={styles.badge}>{pending.length}</span>
-            </div>
-            {pending.map((o) => (
-              <OrderRow key={o.id} order={o} />
-            ))}
-          </div>
-        )}
-
-        {upcoming.length > 0 && (
-          <div className={styles.section}>
-            <div className={styles.sectionHead}>
-              <span className={styles.sectionLabel}>Upcoming</span>
-            </div>
-            {upcoming.map((o) => (
-              <OrderRow key={o.id} order={o} />
-            ))}
-          </div>
-        )}
-
-        {MOCK_QUEUE.length === 0 && (
-          <div className={styles.empty}>
-            No orders yet — your queue is clear.
-          </div>
-        )}
-
-        <Link href="/business/orders" className={styles.viewAll}>
-          View all orders →
-        </Link>
-      </div>
-
       {/* Stats strip */}
       <div className={styles.statsStrip}>
         <div className={styles.statCard}>
@@ -111,14 +167,14 @@ export default function DashboardPage() {
                 className={`${styles.toggleBtn} ${period === "week" ? styles.toggleBtnActive : ""}`}
                 onClick={() => setPeriod("week")}
               >
-                Wk
+                Week
               </button>
               <button
                 type="button"
                 className={`${styles.toggleBtn} ${period === "month" ? styles.toggleBtnActive : ""}`}
                 onClick={() => setPeriod("month")}
               >
-                Mo
+                Month
               </button>
             </div>
           </div>
@@ -148,6 +204,84 @@ export default function DashboardPage() {
               {MOCK_STATS.ratingCount} reviews
             </span>
           </div>
+        </div>
+      </div>
+
+      {/* Two columns */}
+      <div className={styles.columns}>
+        {/* Left: next pickup day */}
+        <div className={styles.col}>
+          <div className={styles.colHead}>
+            <span className={styles.colLabel}>{pickupDayLabel}</span>
+            <span className={styles.colCount}>{pickupOrders.length}</span>
+          </div>
+          <div className={styles.colBody}>
+            {pickupOrders.length > 0 ? (
+              <>
+                {visiblePickups.map((o) => (
+                  <PickupRow key={o.id} order={o} />
+                ))}
+                {!pickupExpanded && pickupOrders.length > COL_LIMIT && (
+                  <button
+                    type="button"
+                    className={styles.viewMore}
+                    onClick={() => setPickupExpanded(true)}
+                  >
+                    View {pickupOrders.length - COL_LIMIT} more
+                  </button>
+                )}
+              </>
+            ) : (
+              <div className={styles.colEmpty}>No pickups scheduled.</div>
+            )}
+          </div>
+        </div>
+
+        {/* Right: new requests */}
+        <div className={styles.col}>
+          <div className={styles.colHead}>
+            <span className={styles.colLabel}>New requests</span>
+            <span className={styles.colCount}>{requests.length}</span>
+          </div>
+          <div className={styles.colBody}>
+            {requests.length > 0 ? (
+              <>
+                {visibleRequests.map((o) => (
+                  <RequestRow key={o.id} order={o} />
+                ))}
+                {!requestsExpanded && requests.length > COL_LIMIT && (
+                  <button
+                    type="button"
+                    className={styles.viewMore}
+                    onClick={() => setRequestsExpanded(true)}
+                  >
+                    View {requests.length - COL_LIMIT} more
+                  </button>
+                )}
+              </>
+            ) : (
+              <div className={styles.colEmpty}>No pending requests.</div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Quick actions */}
+      <div className={styles.quickSection}>
+        <span className={styles.quickLabel}>Quick actions</span>
+        <div className={styles.quickGrid}>
+          {QUICK_ACTIONS.map(({ href, Icon, label, desc }) => (
+            <Link key={href} href={href} className={styles.quickCard}>
+              <span className={styles.quickIcon}>
+                <Icon size={16} />
+              </span>
+              <span className={styles.quickText}>
+                <span className={styles.quickTitle}>{label}</span>
+                <span className={styles.quickDesc}>{desc}</span>
+              </span>
+              <ChevronRight size={15} className={styles.quickArrow} />
+            </Link>
+          ))}
         </div>
       </div>
     </div>
