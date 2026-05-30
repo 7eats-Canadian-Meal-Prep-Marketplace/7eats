@@ -265,10 +265,7 @@ function DishesTab() {
   const [removeBlocked, setRemoveBlocked] = useState(false);
   const [dragId, setDragId] = useState<string | null>(null);
 
-  function handleDragOver(
-    e: React.DragEvent<HTMLDivElement>,
-    targetId: string,
-  ) {
+  function handleDragOver(e: React.DragEvent<HTMLLIElement>, targetId: string) {
     e.preventDefault();
     if (!dragId || dragId === targetId) return;
     setDishes((prev) => {
