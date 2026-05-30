@@ -2,13 +2,16 @@
 .page {
   display: flex;
   flex-direction: column;
+  max-width: 1100px;
+  width: 100%;
+  margin: 0 auto;
 }
 
 /* ─── Tab row ──────────────────────────────────────────────────────────────── */
 .tabRow {
   display: flex;
   border-bottom: 1px solid var(--grey-200);
-  margin-bottom: 24px;
+  margin-bottom: 28px;
 }
 
 .tab {
@@ -34,7 +37,7 @@
 .tabActive {
   color: var(--ink);
   font-weight: 600;
-  border-bottom-color: var(--red);
+  border-bottom-color: var(--ink);
 }
 
 /* ─── Content animation ────────────────────────────────────────────────────── */
@@ -53,12 +56,12 @@
   }
 }
 
-/* ─── Shared stats strip ───────────────────────────────────────────────────── */
+/* ─── Stats strip ──────────────────────────────────────────────────────────── */
 .statsRow {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
-  margin-bottom: 24px;
+  margin-bottom: 28px;
 }
 
 .statCard {
@@ -66,8 +69,9 @@
   flex-direction: column;
   gap: 6px;
   padding: 14px 16px;
-  border: 1px solid var(--grey-200);
+  border: 1px solid #e4e4e7;
   border-radius: var(--radius-sm);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 
 .statLabel {
@@ -75,37 +79,50 @@
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--grey-500);
+  color: #8a8a96;
 }
 
 .statVal {
-  font-size: 22px;
-  font-weight: 700;
+  font-size: 24px;
+  font-weight: 800;
   color: var(--ink);
   letter-spacing: -0.03em;
   font-feature-settings: "tnum";
   line-height: 1;
 }
 
-/* ─── Shared form styles ───────────────────────────────────────────────────── */
-.form {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  max-width: 560px;
+/* ─── Two-column layout ────────────────────────────────────────────────────── */
+.overviewColumns {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 40px;
+  align-items: start;
 }
 
+.overviewLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.overviewRight {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ─── Shared form primitives ───────────────────────────────────────────────── */
 .formGroup {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 7px;
 }
 
 .formLabel {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
-  color: var(--grey-700);
-  letter-spacing: 0.01em;
+  color: #444444;
+  letter-spacing: 0.005em;
 }
 
 .formInput,
@@ -115,8 +132,9 @@
   font-size: 13.5px;
   color: var(--ink);
   background: var(--white);
-  border: 1px solid var(--grey-200);
+  border: 1px solid #e4e4e7;
   border-radius: var(--radius-sm);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   font-family: inherit;
   outline: none;
   transition: border-color 0.12s;
@@ -126,7 +144,7 @@
 .formInput:focus,
 .formTextarea:focus,
 .formSelect:focus {
-  border-color: var(--grey-500);
+  border-color: #a0a0aa;
 }
 
 .formTextarea {
@@ -137,102 +155,149 @@
 .formActions {
   display: flex;
   gap: 8px;
-  padding-top: 4px;
+  padding-top: 6px;
 }
 
 /* ─── Shared buttons ───────────────────────────────────────────────────────── */
 .saveBtn {
-  padding: 9px 20px;
-  background: var(--red);
+  padding: 10px 22px;
+  background: var(--ink);
   color: var(--white);
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   border: none;
   border-radius: var(--radius-sm);
   cursor: pointer;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
   transition: opacity 0.12s;
 }
 
 .saveBtn:hover {
-  opacity: 0.88;
+  opacity: 0.82;
 }
 
-/* ─── Segmented control ────────────────────────────────────────────────────── */
-.segControl {
+/* ─── Availability card (right column) ────────────────────────────────────── */
+.statusCard {
   display: flex;
-  background: var(--grey-100);
-  border: 1px solid var(--grey-200);
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid #e4e4e7;
   border-radius: var(--radius-sm);
-  padding: 3px;
-  gap: 2px;
-  align-self: flex-start;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 
-.segBtn {
-  padding: 5px 14px;
-  font-size: 12.5px;
-  font-weight: 500;
-  color: var(--grey-700);
-  background: transparent;
-  border: none;
-  border-radius: calc(var(--radius-sm) - 2px);
-  cursor: pointer;
-  transition: all 0.12s;
-  white-space: nowrap;
+.statusCardLabel {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #8a8a96;
 }
 
-.segBtn:hover {
-  color: var(--ink);
-  background: rgba(255, 255, 255, 0.65);
-}
-
-.segBtnActive {
-  background: var(--white);
-  color: var(--ink);
-  font-weight: 600;
-  box-shadow:
-    0 1px 3px rgba(15, 15, 15, 0.1),
-    0 0 0 0.5px rgba(15, 15, 15, 0.06);
-}
-
-/* ─── Cover photo ──────────────────────────────────────────────────────────── */
-.coverWrap {
+.listingBlock {
   display: flex;
-  align-items: flex-end;
-  gap: 12px;
+  flex-direction: column;
+  gap: 3px;
+  padding-top: 6px;
+  border-top: 1px solid #e4e4e7;
 }
 
-.coverImgWrap {
+.listingBlockCount {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.listingBlockDesc {
+  font-size: 11.5px;
+  color: #8a8a96;
+  line-height: 1.45;
+}
+
+/* ─── Photos inside left column ────────────────────────────────────────────── */
+.photoLabelRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.photoCount {
+  font-size: 12px;
+  font-weight: 500;
+  color: #a0a0aa;
+}
+
+.photoStrip {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 8px;
+}
+
+.photoThumb {
   position: relative;
-  width: 160px;
   aspect-ratio: 4 / 3;
   border-radius: var(--radius-sm);
   overflow: hidden;
-  border: 1px solid var(--grey-200);
-  flex: none;
+  border: 1px solid #e4e4e7;
 }
 
-.coverImg {
+.photoImg {
   object-fit: cover;
 }
 
-.coverUploadBtn {
-  padding: 7px 14px;
-  background: none;
-  color: var(--grey-700);
-  font-size: 12.5px;
-  font-weight: 500;
-  border: 1px solid var(--grey-200);
-  border-radius: var(--radius-sm);
+.photoRemove {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 15, 15, 0.55);
+  border: none;
+  border-radius: 50%;
+  color: var(--white);
   cursor: pointer;
-  transition:
-    border-color 0.12s,
-    color 0.12s;
+  transition: background 0.12s;
 }
 
-.coverUploadBtn:hover {
-  border-color: var(--grey-300);
-  color: var(--ink);
+.photoRemove:hover {
+  background: rgba(15, 15, 15, 0.8);
+}
+
+.photoAdd {
+  aspect-ratio: 4 / 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 2px dashed #d8d8de;
+  border-radius: var(--radius-sm);
+  background: #fafafa;
+  cursor: pointer;
+  color: #8a8a96;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: inherit;
+  transition:
+    border-color 0.15s,
+    background 0.15s,
+    color 0.15s;
+}
+
+.photoAdd:hover {
+  border-color: #b0b0ba;
+  background: #f5f5f7;
+  color: #555560;
+}
+
+.photoAddIcon {
+  flex: none;
 }
 
 /* ─── Details tab ──────────────────────────────────────────────────────────── */
@@ -247,6 +312,8 @@
   flex-direction: column;
   gap: 32px;
   max-width: 640px;
+  width: 100%;
+  margin: 0 auto;
 }
 
 .section {
@@ -264,7 +331,7 @@
 
 /* ─── Ingredient table ─────────────────────────────────────────────────────── */
 .ingTable {
-  border: 1px solid var(--grey-200);
+  border: 1px solid #e4e4e7;
   border-radius: var(--radius-sm);
   overflow: hidden;
 }
@@ -272,20 +339,18 @@
 .ingHeader {
   display: grid;
   grid-template-columns: 1fr 80px 80px 32px;
-  gap: 0;
-  padding: 7px 12px;
-  background: var(--grey-100);
-  border-bottom: 1px solid var(--grey-200);
+  padding: 8px 12px;
+  border-bottom: 2px solid var(--ink);
 }
 
 .ingColIngredient,
 .ingColAmount,
 .ingColUnit {
   font-size: 10.5px;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--grey-500);
+  color: var(--ink);
 }
 
 .ingColAction {
@@ -295,8 +360,7 @@
 .ingRow {
   display: grid;
   grid-template-columns: 1fr 80px 80px 32px;
-  gap: 0;
-  border-bottom: 1px solid var(--grey-200);
+  border-bottom: 1px solid #e4e4e7;
   align-items: center;
 }
 
@@ -310,7 +374,7 @@
   color: var(--ink);
   background: var(--white);
   border: none;
-  border-right: 1px solid var(--grey-200);
+  border-right: 1px solid #e4e4e7;
   font-family: inherit;
   outline: none;
   transition: background 0.1s;
@@ -318,7 +382,17 @@
 }
 
 .ingInput:focus {
-  background: rgba(214, 64, 69, 0.03);
+  background: #f8f8fb;
+}
+
+.ingInputError {
+  background: rgba(214, 64, 69, 0.05);
+}
+
+.ingError {
+  font-size: 12.5px;
+  color: var(--red);
+  margin: 0;
 }
 
 .ingUnitInput {
@@ -334,7 +408,7 @@
   background: none;
   border: none;
   cursor: pointer;
-  color: var(--grey-300);
+  color: #c0c0c8;
   transition: color 0.12s;
 }
 
@@ -348,10 +422,10 @@
   gap: 5px;
   padding: 7px 13px;
   background: none;
-  color: var(--grey-700);
-  font-size: 12.5px;
+  color: #444444;
+  font-size: 13px;
   font-weight: 500;
-  border: 1px solid var(--grey-200);
+  border: 1px solid #d0d0d8;
   border-radius: var(--radius-sm);
   cursor: pointer;
   align-self: flex-start;
@@ -361,7 +435,7 @@
 }
 
 .addIngBtn:hover {
-  border-color: var(--grey-300);
+  border-color: #a0a0aa;
   color: var(--ink);
 }
 
@@ -376,143 +450,72 @@
 .allergensWrap {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .allergenList {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px 12px;
 }
 
 .allergenLabel {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 5px 11px;
-  border: 1px solid var(--grey-200);
-  border-radius: var(--radius-pill);
-  font-size: 12.5px;
-  color: var(--grey-700);
+  gap: 8px;
+  font-size: 13px;
+  color: #444444;
   cursor: pointer;
-  transition:
-    border-color 0.12s,
-    background 0.12s,
-    color 0.12s;
   user-select: none;
 }
 
-.allergenLabel:has(.allergenCheck:checked) {
-  border-color: var(--red);
-  background: rgba(214, 64, 69, 0.06);
-  color: var(--ink);
+.allergenCheck {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: none;
+  width: 15px;
+  height: 15px;
+  border: 1.5px solid #c0c0c8;
+  border-radius: 3px;
+  cursor: pointer;
+  transition:
+    background 0.1s,
+    border-color 0.1s;
 }
 
-.allergenCheck {
-  width: 13px;
-  height: 13px;
-  accent-color: var(--red);
-  cursor: pointer;
+.allergenCheck:checked {
+  background: var(--ink);
+  border-color: var(--ink);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 8'%3E%3Cpath d='M1 4l3 3 5-6' stroke='white' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 9px 7px;
+}
+
+.otherInput {
+  margin-top: 4px;
+  max-width: 280px;
 }
 
 /* ─── Empty note ───────────────────────────────────────────────────────────── */
 .emptyNote {
   font-size: 13px;
-  color: var(--grey-500);
+  color: #8a8a96;
   margin: 0;
   padding: 20px;
   text-align: center;
-  border: 1px dashed var(--grey-200);
+  border: 1px dashed #e4e4e7;
   border-radius: var(--radius-sm);
-}
-
-/* ─── Stats tab ────────────────────────────────────────────────────────────── */
-.statsTab {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  max-width: 560px;
-}
-
-/* ─── Listings section ─────────────────────────────────────────────────────── */
-.listingsSection {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.listingsSectionLabel {
-  font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  color: var(--grey-500);
-  margin: 0 0 4px;
-}
-
-.listingRow {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 12px 16px;
-  background: var(--white);
-  border: 1px solid var(--grey-200);
-  border-radius: var(--radius-sm);
-  transition: border-color 0.12s;
-}
-
-.listingRow:hover {
-  border-color: var(--grey-300);
-}
-
-.listingMain {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.listingTitle {
-  font-size: 13.5px;
-  font-weight: 600;
-  color: var(--ink);
-}
-
-.listingMeta {
-  font-size: 12px;
-  color: var(--grey-500);
-}
-
-/* ─── Status badges ────────────────────────────────────────────────────────── */
-.badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 7px;
-  border-radius: var(--radius-pill);
-  font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  white-space: nowrap;
-  flex: none;
-}
-
-.badgeActive {
-  background: #d1fae5;
-  color: #065f46;
-}
-
-.badgeDraft {
-  background: #fef3c7;
-  color: #92400e;
-}
-
-.badgeArchived {
-  background: var(--grey-100);
-  color: var(--grey-500);
 }
 
 /* ─── Mobile ───────────────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .overviewColumns {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+}
+
 @media (max-width: 640px) {
   .statsRow {
     grid-template-columns: repeat(2, 1fr);
@@ -522,13 +525,12 @@
     grid-template-columns: repeat(2, 1fr);
   }
 
+  .allergenList {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
   .ingHeader,
   .ingRow {
     grid-template-columns: 1fr 64px 64px 32px;
-  }
-
-  .coverWrap {
-    flex-direction: column;
-    align-items: flex-start;
   }
 }

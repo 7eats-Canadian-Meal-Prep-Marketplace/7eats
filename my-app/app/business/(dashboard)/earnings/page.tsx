@@ -1,5 +1,6 @@
 "use client";
 
+import { TrendingUp } from "lucide-react";
 import { useState } from "react";
 import {
   MOCK_MONTHLY,
@@ -31,6 +32,21 @@ function formatDate(iso: string): string {
   });
 }
 
+function formatTick(v: number): string {
+  if (v === 0) return "$0";
+  if (v >= 1000) return `$${v / 1000}k`;
+  return `$${v}`;
+}
+
+function computeChart(max: number): { ceiling: number; ticks: number[] } {
+  const raw = max * 1.15;
+  const step = raw <= 6000 ? 2000 : raw <= 20000 ? 5000 : 10000;
+  const ceiling = Math.ceil(raw / step) * step;
+  const ticks: number[] = [];
+  for (let v = 0; v <= ceiling; v += step) ticks.push(v);
+  return { ceiling, ticks };
+}
+
 const STATUS_LABEL: Record<PayoutStatus, string> = {
   pending: "Pending",
   paid: "Paid",
@@ -50,18 +66,25 @@ function StatusBadge({ status }: { status: PayoutStatus }) {
 }
 
 const PERIODS: { id: Period; label: string }[] = [
-  { id: "week", label: "Wk" },
-  { id: "month", label: "Mo" },
+  { id: "week", label: "Week" },
+  { id: "month", label: "Month" },
 ];
+
+const PAYOUT_PAGE_SIZE = 15;
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function EarningsPage() {
   const [period, setPeriod] = useState<Period>("week");
+  const [visibleCount, setVisibleCount] = useState(PAYOUT_PAGE_SIZE);
 
   const series = period === "week" ? MOCK_WEEKLY : MOCK_MONTHLY;
   const max = Math.max(...series.map((p) => p.value));
   const periodTotal = series.reduce((sum, p) => sum + p.value, 0);
+  const { ceiling, ticks } = computeChart(max);
+
+  const visiblePayouts = MOCK_PAYOUTS.slice(0, visibleCount);
+  const remaining = MOCK_PAYOUTS.length - visiblePayouts.length;
 
   return (
     <div className={styles.page}>
@@ -87,37 +110,73 @@ export default function EarningsPage() {
           {formatMoney(MOCK_TOTAL_REVENUE)}
         </span>
         <span className={styles.revenueSub}>
+          <TrendingUp size={13} className={styles.trendIcon} />
           {formatMoney(periodTotal)} over the last {series.length}{" "}
           {period === "week" ? "weeks" : "months"}
         </span>
       </div>
 
       <div className={styles.chartCard}>
-        <div className={styles.chart}>
-          {series.map((p) => (
-            <div key={p.label} className={styles.barCol}>
-              <div className={styles.barTrack}>
-                <span className={styles.barTip}>{formatMoney(p.value)}</span>
+        <div className={styles.chartBody}>
+          {/* Y-axis labels, height matches barTrack */}
+          <div className={styles.yAxis}>
+            {ticks.map((tick) => (
+              <span
+                key={tick}
+                className={styles.yLabel}
+                style={{ top: `${((ceiling - tick) / ceiling) * 100}%` }}
+              >
+                {formatTick(tick)}
+              </span>
+            ))}
+          </div>
+
+          <div className={styles.chartMain}>
+            {/* Horizontal grid lines behind the bars */}
+            <div className={styles.gridLayer} aria-hidden="true">
+              {ticks.map((tick) => (
                 <div
-                  className={styles.bar}
-                  style={{ height: `${(p.value / max) * 100}%` }}
+                  key={tick}
+                  className={`${styles.gridLine} ${tick === 0 ? styles.gridBaseline : ""}`}
+                  style={{ bottom: `${(tick / ceiling) * 100}%` }}
                 />
-              </div>
-              <span className={styles.barLabel}>{p.label}</span>
+              ))}
             </div>
-          ))}
+
+            <div className={styles.barsRow}>
+              {series.map((p) => (
+                <div key={p.label} className={styles.barCol}>
+                  <div className={styles.barTrack}>
+                    <span className={styles.barTip}>
+                      {formatMoney(p.value)}
+                    </span>
+                    <div
+                      className={styles.bar}
+                      style={{ height: `${(p.value / ceiling) * 100}%` }}
+                    />
+                  </div>
+                  <span className={styles.barLabel}>{p.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
       <div className={styles.payouts}>
         <h2 className={styles.payoutsTitle}>Payout history</h2>
         <div className={styles.payoutList}>
-          {MOCK_PAYOUTS.map((payout: MockPayout) => (
+          {visiblePayouts.map((payout: MockPayout) => (
             <div key={payout.id} className={styles.payoutRow}>
-              <span className={styles.payoutDate}>
-                {formatDate(payout.date)}
-              </span>
-              <div className={styles.payoutRight}>
+              <div className={styles.payoutColDate}>
+                <span className={styles.payoutDateLabel}>
+                  Payout for {formatDate(payout.date)}
+                </span>
+              </div>
+              <div className={styles.payoutColBank}>
+                <span className={styles.payoutBank}>{payout.account}</span>
+              </div>
+              <div className={styles.payoutColAmount}>
                 <span className={styles.payoutAmount}>
                   {formatMoney(payout.amount)}
                 </span>
@@ -126,6 +185,18 @@ export default function EarningsPage() {
             </div>
           ))}
         </div>
+        {remaining > 0 && (
+          <button
+            type="button"
+            className={styles.showMoreBtn}
+            onClick={() => setVisibleCount((c) => c + PAYOUT_PAGE_SIZE)}
+          >
+            Show more
+            <span className={styles.showMoreCount}>
+              {Math.min(remaining, PAYOUT_PAGE_SIZE)}
+            </span>
+          </button>
+        )}
       </div>
     </div>
   );

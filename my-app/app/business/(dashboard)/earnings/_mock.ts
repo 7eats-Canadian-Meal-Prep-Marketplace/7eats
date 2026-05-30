@@ -35,13 +35,34 @@ export type MockPayout = {
   date: string;
   amount: number;
   status: PayoutStatus;
+  account: string;
 };
 
-export const MOCK_PAYOUTS: MockPayout[] = [
-  { id: "po-1", date: "2026-05-08", amount: 3980, status: "pending" },
-  { id: "po-2", date: "2026-05-01", amount: 3460, status: "paid" },
-  { id: "po-3", date: "2026-04-24", amount: 2740, status: "paid" },
-  { id: "po-4", date: "2026-04-17", amount: 3120, status: "paid" },
-  { id: "po-5", date: "2026-04-10", amount: 2580, status: "paid" },
-  { id: "po-6", date: "2026-04-03", amount: 1690, status: "paid" },
-];
+// Generates ~84 weekly payouts going backwards from the most recent one so the
+// "Show more" pagination has plenty of data to page through during testing.
+function generateMockPayouts(count: number): MockPayout[] {
+  const accounts = ["•••• 4321", "•••• 9087", "•••• 1556"];
+  const start = new Date("2026-05-08T00:00:00");
+  const payouts: MockPayout[] = [];
+
+  for (let i = 0; i < count; i++) {
+    const date = new Date(start);
+    date.setDate(start.getDate() - i * 7);
+
+    // Pseudo-random but deterministic amount between ~$1,500 and ~$4,500.
+    const wobble = Math.round((Math.sin(i * 1.7) + 1) * 750);
+    const amount = 1500 + ((i * 137) % 1500) + wobble;
+
+    payouts.push({
+      id: `po-${i + 1}`,
+      date: date.toISOString().slice(0, 10),
+      amount,
+      status: i === 0 ? "pending" : "paid",
+      account: accounts[i % accounts.length],
+    });
+  }
+
+  return payouts;
+}
+
+export const MOCK_PAYOUTS: MockPayout[] = generateMockPayouts(84);

@@ -1,31 +1,16 @@
 "use client";
 
-import { Package, Plus, Store, Tag } from "lucide-react";
+import { Package, Plus, Store } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { MOCK_DEALS, MOCK_DISHES, MOCK_LISTINGS, type MockDeal } from "./_mock";
+import { MOCK_DISHES, MOCK_LISTINGS } from "./_mock";
 import styles from "./page.module.css";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Tab = "listings" | "dishes" | "deals";
+type Tab = "listings" | "dishes";
 type Filter = "active" | "draft" | "archived";
-type DealFilter = "current" | "past";
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function formatDeal(deal: MockDeal): string {
-  if (deal.type === "percentage_off") return `${deal.value}% off`;
-  if (deal.type === "fixed_off") return `$${deal.value} off`;
-  return `Buy ${deal.buyQty}, get ${deal.getQty} free`;
-}
-
-function formatValidity(deal: MockDeal): string {
-  if (!deal.validUntil) return "No expiry";
-  const d = new Date(deal.validUntil);
-  return d.toLocaleDateString("en-CA", { month: "short", day: "numeric" });
-}
 
 // ─── Status pill (on card image) ──────────────────────────────────────────────
 
@@ -100,7 +85,6 @@ function ListingsContent({ filter }: { filter: Filter }) {
           href={`/business/listings/${listing.id}`}
           className={styles.card}
         >
-          {/* Placeholder image */}
           <div className={styles.cardImg}>
             <Image
               src="/placeholder.jpg"
@@ -117,7 +101,6 @@ function ListingsContent({ filter }: { filter: Filter }) {
             </div>
           </div>
 
-          {/* Body */}
           <div className={styles.cardBody}>
             <div className={styles.cardTitle}>{listing.title}</div>
             <div className={styles.cardSub}>
@@ -173,7 +156,6 @@ function DishesContent({ filter }: { filter: Filter }) {
           href={`/business/listings/dishes/${dish.id}`}
           className={styles.card}
         >
-          {/* Placeholder image */}
           <div className={styles.cardImg}>
             <Image
               src="/placeholder.jpg"
@@ -189,7 +171,6 @@ function DishesContent({ filter }: { filter: Filter }) {
             )}
           </div>
 
-          {/* Body */}
           <div className={styles.cardBody}>
             <div className={styles.cardTitle}>{dish.name}</div>
             <div className={styles.cardDivider} />
@@ -207,56 +188,11 @@ function DishesContent({ filter }: { filter: Filter }) {
   );
 }
 
-// ─── Deals tab ────────────────────────────────────────────────────────────────
-
-function DealsContent({ filter }: { filter: DealFilter }) {
-  const now = new Date();
-  const items = MOCK_DEALS.filter((d) => {
-    const expired = d.validUntil !== null && new Date(d.validUntil) <= now;
-    const isCurrent = d.isActive && !expired;
-    return filter === "current" ? isCurrent : !isCurrent;
-  });
-
-  if (MOCK_DEALS.length === 0) {
-    return (
-      <EmptyState
-        icon={<Tag size={18} />}
-        title="No promotions yet"
-        desc="Create deals to attract more orders — discounts, fixed offers, or buy-one-get-one."
-        actionLabel="New Deal"
-      />
-    );
-  }
-
-  if (items.length === 0) {
-    return <div className={styles.noItems}>No {filter} deals</div>;
-  }
-
-  return (
-    <div className={styles.list}>
-      {items.map((deal) => (
-        <div key={deal.id} className={styles.dealRow}>
-          <span className={styles.dealAmount}>{formatDeal(deal)}</span>
-          <span className={styles.dealDetails}>
-            {deal.listingTitle}
-            {" · "}
-            {formatValidity(deal)}
-            {" · "}
-            {deal.usesCount}
-            {deal.maxUses != null ? `/${deal.maxUses}` : ""} uses
-          </span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "listings", label: "Listings" },
   { id: "dishes", label: "Dishes" },
-  { id: "deals", label: "Deals" },
 ];
 
 const FILTERS: { id: Filter; label: string }[] = [
@@ -265,23 +201,14 @@ const FILTERS: { id: Filter; label: string }[] = [
   { id: "archived", label: "Archived" },
 ];
 
-const DEAL_FILTERS: { id: DealFilter; label: string }[] = [
-  { id: "current", label: "Current" },
-  { id: "past", label: "Past" },
-];
-
 const NEW_LABEL: Record<Tab, string> = {
   listings: "New Listing",
   dishes: "New Dish",
-  deals: "New Deal",
 };
 
 export default function ListingsPage() {
   const [tab, setTab] = useState<Tab>("listings");
   const [filter, setFilter] = useState<Filter>("active");
-  const [dealFilter, setDealFilter] = useState<DealFilter>("current");
-
-  const isDeals = tab === "deals";
 
   return (
     <div className={styles.page}>
@@ -300,27 +227,16 @@ export default function ListingsPage() {
 
       <div className={styles.toolbar}>
         <div className={styles.filterGroup}>
-          {isDeals
-            ? DEAL_FILTERS.map((f) => (
-                <button
-                  key={f.id}
-                  type="button"
-                  onClick={() => setDealFilter(f.id)}
-                  className={`${styles.filterBtn} ${dealFilter === f.id ? styles.filterBtnActive : ""}`}
-                >
-                  {f.label}
-                </button>
-              ))
-            : FILTERS.map((f) => (
-                <button
-                  key={f.id}
-                  type="button"
-                  onClick={() => setFilter(f.id)}
-                  className={`${styles.filterBtn} ${filter === f.id ? styles.filterBtnActive : ""}`}
-                >
-                  {f.label}
-                </button>
-              ))}
+          {FILTERS.map((f) => (
+            <button
+              key={f.id}
+              type="button"
+              onClick={() => setFilter(f.id)}
+              className={`${styles.filterBtn} ${filter === f.id ? styles.filterBtnActive : ""}`}
+            >
+              {f.label}
+            </button>
+          ))}
         </div>
         <button type="button" className={styles.newBtn}>
           <Plus size={14} />
@@ -328,13 +244,9 @@ export default function ListingsPage() {
         </button>
       </div>
 
-      <div
-        className={styles.content}
-        key={isDeals ? `deals-${dealFilter}` : `${tab}-${filter}`}
-      >
+      <div className={styles.content} key={`${tab}-${filter}`}>
         {tab === "listings" && <ListingsContent filter={filter} />}
         {tab === "dishes" && <DishesContent filter={filter} />}
-        {tab === "deals" && <DealsContent filter={dealFilter} />}
       </div>
     </div>
   );

@@ -1,8 +1,15 @@
 "use client";
 
-import { GripVertical, Plus, Trash2, X } from "lucide-react";
-import Image from "next/image";
+import {
+  AlertTriangle,
+  Camera,
+  GripVertical,
+  Plus,
+  Trash2,
+  X,
+} from "lucide-react";
 import { useState } from "react";
+import { BackToListings } from "../_back-link";
 import {
   MOCK_AVAILABLE_DISHES,
   MOCK_LISTING,
@@ -27,12 +34,14 @@ function formatDeal(deal: MockListingDeal): string {
   return `Buy ${deal.buyQty}, get ${deal.getQty} free`;
 }
 
-function formatValidity(deal: MockListingDeal): string {
-  if (!deal.validUntil) return "No expiry";
-  return new Date(deal.validUntil).toLocaleDateString("en-CA", {
-    month: "short",
-    day: "numeric",
-  });
+function daysLeft(validUntil: string | null): number | null {
+  if (!validUntil) return null;
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const end = new Date(validUntil);
+  end.setHours(0, 0, 0, 0);
+  const diff = Math.round((end.getTime() - now.getTime()) / 86_400_000);
+  return diff >= 0 ? diff : null;
 }
 
 function formatTime(iso: string): string {
@@ -115,142 +124,153 @@ function OverviewTab() {
         </div>
       </div>
 
-      <div className={styles.form}>
-        <div className={styles.formGroup}>
-          <label htmlFor="f-title" className={styles.formLabel}>
-            Title
-          </label>
-          <input
-            id="f-title"
-            type="text"
-            className={styles.formInput}
-            value={form.title}
-            onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-          />
-        </div>
-
-        <div className={styles.formGroup}>
-          <label htmlFor="f-description" className={styles.formLabel}>
-            Description
-          </label>
-          <textarea
-            id="f-description"
-            className={styles.formTextarea}
-            value={form.description}
-            rows={4}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, description: e.target.value }))
-            }
-          />
-        </div>
-
-        <div className={styles.formRow}>
+      <div className={styles.overviewColumns}>
+        {/* Left — primary information (60%) */}
+        <div className={styles.overviewLeft}>
           <div className={styles.formGroup}>
-            <label htmlFor="f-base-price" className={styles.formLabel}>
-              Base price
+            <label htmlFor="f-title" className={styles.formLabel}>
+              Title
             </label>
-            <div className={styles.priceWrap}>
-              <span className={styles.pricePre}>$</span>
+            <input
+              id="f-title"
+              type="text"
+              className={styles.formInput}
+              value={form.title}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, title: e.target.value }))
+              }
+            />
+          </div>
+
+          <div className={styles.formGroup}>
+            <label htmlFor="f-description" className={styles.formLabel}>
+              Description
+            </label>
+            <textarea
+              id="f-description"
+              className={styles.formTextarea}
+              value={form.description}
+              rows={5}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, description: e.target.value }))
+              }
+            />
+          </div>
+
+          <div className={styles.formRow3}>
+            <div className={styles.formGroup}>
+              <label htmlFor="f-base-price" className={styles.formLabel}>
+                Base price
+              </label>
+              <div className={styles.priceWrap}>
+                <span className={styles.pricePre}>$</span>
+                <input
+                  id="f-base-price"
+                  type="text"
+                  className={`${styles.formInput} ${styles.priceInput}`}
+                  value={form.basePrice}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, basePrice: e.target.value }))
+                  }
+                />
+              </div>
+            </div>
+            <div className={styles.formGroup}>
+              <label htmlFor="f-min-qty" className={styles.formLabel}>
+                Min dishes
+              </label>
               <input
-                id="f-base-price"
-                type="text"
-                className={`${styles.formInput} ${styles.priceInput}`}
-                value={form.basePrice}
+                id="f-min-qty"
+                type="number"
+                min={1}
+                className={styles.formInput}
+                value={form.minOrderQty}
                 onChange={(e) =>
-                  setForm((f) => ({ ...f, basePrice: e.target.value }))
+                  setForm((f) => ({
+                    ...f,
+                    minOrderQty: Number(e.target.value),
+                  }))
+                }
+              />
+            </div>
+            <div className={styles.formGroup}>
+              <label htmlFor="f-max-qty" className={styles.formLabel}>
+                Max dishes
+              </label>
+              <input
+                id="f-max-qty"
+                type="number"
+                min={1}
+                className={styles.formInput}
+                value={form.maxOrderQty}
+                placeholder="No max"
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, maxOrderQty: e.target.value }))
                 }
               />
             </div>
           </div>
-          <div className={styles.formGroup}>
-            <label htmlFor="f-currency" className={styles.formLabel}>
-              Currency
-            </label>
-            <select
-              id="f-currency"
-              className={styles.formSelect}
-              value={form.currency}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, currency: e.target.value }))
-              }
+
+          <div className={styles.formActions}>
+            <button
+              type="button"
+              className={styles.saveBtn}
+              onClick={handleSave}
             >
-              <option value="CAD">CAD</option>
-              <option value="USD">USD</option>
-            </select>
-          </div>
-        </div>
-
-        <div className={styles.formRow}>
-          <div className={styles.formGroup}>
-            <label htmlFor="f-min-qty" className={styles.formLabel}>
-              Min order qty
-            </label>
-            <input
-              id="f-min-qty"
-              type="number"
-              min={1}
-              className={styles.formInput}
-              value={form.minOrderQty}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, minOrderQty: Number(e.target.value) }))
-              }
-            />
-          </div>
-          <div className={styles.formGroup}>
-            <label htmlFor="f-max-qty" className={styles.formLabel}>
-              Max order qty
-            </label>
-            <input
-              id="f-max-qty"
-              type="number"
-              min={1}
-              className={styles.formInput}
-              value={form.maxOrderQty}
-              placeholder="No max"
-              onChange={(e) =>
-                setForm((f) => ({ ...f, maxOrderQty: e.target.value }))
-              }
-            />
-          </div>
-        </div>
-
-        <div className={styles.formGroup}>
-          <span className={styles.formLabel}>Status</span>
-          <div className={styles.segControl}>
-            {(["active", "archived"] as const).map((s) => (
-              <button
-                key={s}
-                type="button"
-                className={`${styles.segBtn} ${form.status === s ? styles.segBtnActive : ""}`}
-                onClick={() => setForm((f) => ({ ...f, status: s }))}
-              >
-                {s === "active" ? "Active" : "Archived"}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className={styles.formGroup}>
-          <span className={styles.formLabel}>Cover photo</span>
-          <div className={styles.coverWrap}>
-            <div className={styles.coverImgWrap}>
-              <Image
-                src="/placeholder.jpg"
-                alt="Cover"
-                fill
-                className={styles.coverImg}
-              />
-            </div>
-            <button type="button" className={styles.coverUploadBtn}>
-              Upload photo
+              {saved ? "Saved" : "Save changes"}
             </button>
           </div>
         </div>
 
-        <div className={styles.formActions}>
-          <button type="button" className={styles.saveBtn} onClick={handleSave}>
-            {saved ? "Saved" : "Save changes"}
-          </button>
+        {/* Right — metadata & media (40%) */}
+        <div className={styles.overviewRight}>
+          <div className={styles.formGroup}>
+            <span className={styles.formLabel}>Cover photo</span>
+            <div className={styles.dropzone}>
+              <Camera size={20} className={styles.dropzoneIcon} />
+              <span className={styles.dropzoneText}>
+                Drag & drop, or{" "}
+                <span className={styles.dropzoneBrowse}>browse</span>
+              </span>
+              <span className={styles.dropzoneSub}>
+                JPEG, PNG or WEBP · Max 5 MB
+              </span>
+            </div>
+          </div>
+
+          <div className={styles.formRowSnug}>
+            <div className={styles.formGroup}>
+              <span className={styles.formLabel}>Status</span>
+              <div className={styles.segControl}>
+                {(["active", "archived"] as const).map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    className={`${styles.segBtn} ${form.status === s ? styles.segBtnActive : ""}`}
+                    onClick={() => setForm((f) => ({ ...f, status: s }))}
+                  >
+                    {s === "active" ? "Active" : "Archived"}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className={styles.formGroup}>
+              <label htmlFor="f-currency" className={styles.formLabel}>
+                Currency
+              </label>
+              <select
+                id="f-currency"
+                className={styles.formSelect}
+                value={form.currency}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, currency: e.target.value }))
+                }
+              >
+                <option value="CAD">CAD</option>
+                <option value="USD">USD</option>
+              </select>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -303,17 +323,21 @@ function DishesTab() {
     <div className={styles.dishesTab}>
       {removeBlocked && (
         <div className={styles.blockNotice}>
-          <span>
-            Can&apos;t remove a dish while non-cancelled orders exist for this
-            listing.
-          </span>
+          <AlertTriangle size={15} className={styles.blockIcon} />
+          <div className={styles.blockBody}>
+            <span className={styles.blockTitle}>Can&apos;t remove dish</span>
+            <span className={styles.blockDesc}>
+              This dish is part of an open order. Remove it once all open orders
+              are fulfilled or cancelled.
+            </span>
+          </div>
           <button
             type="button"
             className={styles.blockDismiss}
             onClick={() => setRemoveBlocked(false)}
             aria-label="Dismiss"
           >
-            <X size={13} />
+            <X size={14} />
           </button>
         </div>
       )}
@@ -334,30 +358,6 @@ function DishesTab() {
             <div className={styles.dishInfo}>
               <span className={styles.dishName}>{dish.name}</span>
               <span className={styles.dishCuisine}>{dish.cuisine}</span>
-            </div>
-            <div className={styles.dishQtyWrap}>
-              <label
-                htmlFor={`f-dish-qty-${dish.id}`}
-                className={styles.dishQtyLabel}
-              >
-                Qty
-              </label>
-              <input
-                id={`f-dish-qty-${dish.id}`}
-                type="number"
-                min={1}
-                className={styles.dishQtyInput}
-                value={dish.qty}
-                onChange={(e) =>
-                  setDishes((prev) =>
-                    prev.map((d) =>
-                      d.id === dish.id
-                        ? { ...d, qty: Number(e.target.value) }
-                        : d,
-                    ),
-                  )
-                }
-              />
             </div>
             <button
               type="button"
@@ -443,12 +443,7 @@ function DealsTab() {
     validUntil: "",
     maxUses: "",
   });
-
-  function toggleDeal(id: string) {
-    setDeals((prev) =>
-      prev.map((d) => (d.id === id ? { ...d, isActive: !d.isActive } : d)),
-    );
-  }
+  const [formError, setFormError] = useState<string | null>(null);
 
   function deleteDeal(id: string) {
     setDeals((prev) => prev.filter((d) => d.id !== id));
@@ -456,6 +451,13 @@ function DealsTab() {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!newDeal.validUntil && !newDeal.maxUses) {
+      setFormError(
+        "Set either an expiry date or a max redemption limit — a deal can't be unlimited.",
+      );
+      return;
+    }
+    setFormError(null);
     const deal: MockListingDeal = {
       id: `deal-${Date.now()}`,
       type: newDeal.type,
@@ -588,7 +590,7 @@ function DealsTab() {
             </div>
             <div className={styles.formGroup}>
               <label htmlFor="f-deal-valid-until" className={styles.formLabel}>
-                Valid until (optional)
+                Valid until
               </label>
               <input
                 id="f-deal-valid-until"
@@ -604,7 +606,7 @@ function DealsTab() {
 
           <div className={styles.formGroup}>
             <label htmlFor="f-deal-max-uses" className={styles.formLabel}>
-              Max redemptions (optional)
+              Max redemptions
             </label>
             <input
               id="f-deal-max-uses"
@@ -618,6 +620,8 @@ function DealsTab() {
               }
             />
           </div>
+
+          {formError && <p className={styles.dealFormError}>{formError}</p>}
 
           <div className={styles.formActions}>
             <button type="submit" className={styles.saveBtn}>
@@ -635,40 +639,62 @@ function DealsTab() {
       )}
 
       <div className={styles.dealsList}>
-        {deals.map((deal) => (
-          <div
-            key={deal.id}
-            className={`${styles.dealItem} ${!deal.isActive ? styles.dealItemInactive : ""}`}
-          >
-            <div className={styles.dealMain}>
-              <span className={styles.dealAmount}>{formatDeal(deal)}</span>
-              <span className={styles.dealMeta}>
-                {formatValidity(deal)} &middot; {deal.usesCount}
-                {deal.maxUses != null ? `/${deal.maxUses}` : ""} uses
-              </span>
-            </div>
-            <div className={styles.dealActions}>
-              <button
-                type="button"
-                className={`${styles.toggleSwitch} ${deal.isActive ? styles.toggleSwitchOn : ""}`}
-                onClick={() => toggleDeal(deal.id)}
-                aria-label={deal.isActive ? "Deactivate deal" : "Activate deal"}
-              >
-                <span className={styles.toggleKnob} />
-              </button>
-              {deal.usesCount === 0 && (
-                <button
-                  type="button"
-                  className={styles.deleteDealBtn}
-                  onClick={() => deleteDeal(deal.id)}
-                  aria-label="Delete deal"
+        {deals.map((deal) => {
+          const d = daysLeft(deal.validUntil);
+          return (
+            <div key={deal.id} className={styles.dealItem}>
+              <div className={styles.dealHeader}>
+                <span className={styles.dealAmount}>{formatDeal(deal)}</span>
+                {deal.usesCount === 0 && (
+                  <button
+                    type="button"
+                    className={styles.deleteDealBtn}
+                    onClick={() => deleteDeal(deal.id)}
+                    aria-label="Delete deal"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                )}
+              </div>
+              <div className={styles.dealKV}>
+                <div className={styles.dealKVItem}>
+                  <span className={styles.dealKVKey}>Expires</span>
+                  <span className={styles.dealKVVal}>
+                    {deal.validUntil
+                      ? new Date(deal.validUntil).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })
+                      : "No expiry"}
+                  </span>
+                </div>
+                <div className={styles.dealKVItem}>
+                  <span className={styles.dealKVKey}>Uses</span>
+                  <span className={styles.dealKVVal}>
+                    {deal.usesCount}
+                    {deal.maxUses != null
+                      ? ` / ${deal.maxUses}`
+                      : " (unlimited)"}
+                  </span>
+                </div>
+              </div>
+              {d !== null && (
+                <span
+                  className={
+                    d === 0
+                      ? styles.dealDaysPillUrgent
+                      : d <= 7
+                        ? styles.dealDaysPillWarn
+                        : styles.dealDaysPill
+                  }
                 >
-                  <Trash2 size={13} />
-                </button>
+                  {d === 0 ? "Expires today" : `${d}d left`}
+                </span>
               )}
             </div>
-          </div>
-        ))}
+          );
+        })}
 
         {deals.length === 0 && (
           <div className={styles.emptyNote}>
@@ -690,7 +716,8 @@ function OrdersTab() {
           <div className={styles.orderMain}>
             <span className={styles.orderCustomer}>{order.customerName}</span>
             <span className={styles.orderMeta}>
-              {formatTime(order.pickupAt)} &middot; &times;{order.quantity}
+              {formatTime(order.pickupAt)} &middot; {order.quantity}{" "}
+              {order.quantity !== 1 ? "items" : "item"}
             </span>
           </div>
           <div className={styles.orderRight}>
@@ -717,6 +744,7 @@ export default function ListingDetailPage() {
 
   return (
     <div className={styles.page}>
+      <BackToListings />
       <div className={styles.tabRow}>
         {TABS.map((t) => (
           <button

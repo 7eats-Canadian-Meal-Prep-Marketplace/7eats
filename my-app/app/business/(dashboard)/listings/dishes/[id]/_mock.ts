@@ -7,6 +7,7 @@ export const ALLERGENS = [
   "Soy",
   "Fish",
   "Shellfish",
+  "Other",
 ] as const;
 
 export type MockDishDetail = {
@@ -42,6 +43,11 @@ export type MockDishListing = {
   ordersWithDish: number;
 };
 
+export type MockDishPhoto = {
+  id: string;
+  url: string;
+};
+
 export const MOCK_DISH: MockDishDetail = {
   id: "dish-1",
   name: "Jollof Rice",
@@ -72,6 +78,11 @@ export const MOCK_NUTRITION: MockNutrition = {
   fat: 6,
   allergens: [],
 };
+
+export const MOCK_DISH_PHOTOS: MockDishPhoto[] = [
+  { id: "photo-1", url: "/placeholder.jpg" },
+  { id: "photo-2", url: "/placeholder.jpg" },
+];
 
 export const MOCK_DISH_LISTINGS: MockDishListing[] = [
   {

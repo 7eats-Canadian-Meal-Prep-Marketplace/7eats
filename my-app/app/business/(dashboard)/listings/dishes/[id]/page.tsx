@@ -1,42 +1,23 @@
 "use client";
 
-import { Plus, Trash2 } from "lucide-react";
+import { Camera, Plus, Trash2, X } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
+import { BackToDishes } from "../../_back-link";
 import {
   ALLERGENS,
   MOCK_DISH,
-  MOCK_DISH_LISTINGS,
+  MOCK_DISH_PHOTOS,
   MOCK_INGREDIENTS,
   MOCK_NUTRITION,
-  type MockDishListing,
+  type MockDishPhoto,
   type MockIngredient,
 } from "./_mock";
 import styles from "./page.module.css";
 
-type Tab = "details" | "nutrition" | "stats";
+type Tab = "details" | "nutrition";
 
-// ─── Status badge ─────────────────────────────────────────────────────────────
-
-const STATUS_LABEL: Record<MockDishListing["status"], string> = {
-  active: "Active",
-  draft: "Draft",
-  archived: "Archived",
-};
-
-const BADGE_CLS: Record<MockDishListing["status"], string> = {
-  active: styles.badgeActive,
-  draft: styles.badgeDraft,
-  archived: styles.badgeArchived,
-};
-
-function StatusBadge({ status }: { status: MockDishListing["status"] }) {
-  return (
-    <span className={`${styles.badge} ${BADGE_CLS[status]}`}>
-      {STATUS_LABEL[status]}
-    </span>
-  );
-}
+const MAX_PHOTOS = 8;
 
 // ─── Details tab ──────────────────────────────────────────────────────────────
 
@@ -47,7 +28,12 @@ function DetailsTab() {
     description: MOCK_DISH.description,
     status: MOCK_DISH.status as "active" | "draft" | "archived",
   });
+  const [photos, setPhotos] = useState<MockDishPhoto[]>(MOCK_DISH_PHOTOS);
   const [saved, setSaved] = useState(false);
+
+  function removePhoto(id: string) {
+    setPhotos((prev) => prev.filter((p) => p.id !== id));
+  }
 
   function handleSave() {
     setSaved(true);
@@ -73,87 +59,130 @@ function DetailsTab() {
         </div>
       </div>
 
-      <div className={styles.form}>
-        <div className={styles.formGroup}>
-          <label htmlFor="f-name" className={styles.formLabel}>
-            Name
-          </label>
-          <input
-            id="f-name"
-            type="text"
-            className={styles.formInput}
-            value={form.name}
-            onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-          />
-        </div>
-
-        <div className={styles.formGroup}>
-          <label htmlFor="f-cuisine" className={styles.formLabel}>
-            Cuisine
-          </label>
-          <input
-            id="f-cuisine"
-            type="text"
-            className={styles.formInput}
-            value={form.cuisine}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, cuisine: e.target.value }))
-            }
-          />
-        </div>
-
-        <div className={styles.formGroup}>
-          <label htmlFor="f-description" className={styles.formLabel}>
-            Description
-          </label>
-          <textarea
-            id="f-description"
-            className={styles.formTextarea}
-            value={form.description}
-            rows={4}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, description: e.target.value }))
-            }
-          />
-        </div>
-
-        <div className={styles.formGroup}>
-          <span className={styles.formLabel}>Status</span>
-          <div className={styles.segControl}>
-            {(["active", "archived"] as const).map((s) => (
-              <button
-                key={s}
-                type="button"
-                className={`${styles.segBtn} ${form.status === s ? styles.segBtnActive : ""}`}
-                onClick={() => setForm((f) => ({ ...f, status: s }))}
-              >
-                {s === "active" ? "Active" : "Archived"}
-              </button>
-            ))}
+      <div className={styles.overviewColumns}>
+        {/* Left — primary info + photos + save */}
+        <div className={styles.overviewLeft}>
+          <div className={styles.formGroup}>
+            <label htmlFor="f-name" className={styles.formLabel}>
+              Name
+            </label>
+            <input
+              id="f-name"
+              type="text"
+              className={styles.formInput}
+              value={form.name}
+              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+            />
           </div>
-        </div>
 
-        <div className={styles.formGroup}>
-          <span className={styles.formLabel}>Cover photo</span>
-          <div className={styles.coverWrap}>
-            <div className={styles.coverImgWrap}>
-              <Image
-                src="/placeholder.jpg"
-                alt="Cover"
-                fill
-                className={styles.coverImg}
-              />
+          <div className={styles.formGroup}>
+            <label htmlFor="f-cuisine" className={styles.formLabel}>
+              Cuisine
+            </label>
+            <input
+              id="f-cuisine"
+              type="text"
+              className={styles.formInput}
+              value={form.cuisine}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, cuisine: e.target.value }))
+              }
+            />
+          </div>
+
+          <div className={styles.formGroup}>
+            <label htmlFor="f-description" className={styles.formLabel}>
+              Description
+            </label>
+            <textarea
+              id="f-description"
+              className={styles.formTextarea}
+              value={form.description}
+              rows={6}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, description: e.target.value }))
+              }
+            />
+          </div>
+
+          <div className={styles.formGroup}>
+            <div className={styles.photoLabelRow}>
+              <span className={styles.formLabel}>Photos</span>
+              <span className={styles.photoCount}>
+                {photos.length} / {MAX_PHOTOS}
+              </span>
             </div>
-            <button type="button" className={styles.coverUploadBtn}>
-              Upload photo
+            <div className={styles.photoStrip}>
+              {photos.map((photo) => (
+                <div key={photo.id} className={styles.photoThumb}>
+                  <Image
+                    src={photo.url}
+                    alt="Dish photo"
+                    fill
+                    className={styles.photoImg}
+                  />
+                  <button
+                    type="button"
+                    className={styles.photoRemove}
+                    onClick={() => removePhoto(photo.id)}
+                    aria-label="Remove photo"
+                  >
+                    <X size={11} />
+                  </button>
+                </div>
+              ))}
+              {photos.length < MAX_PHOTOS && (
+                <button type="button" className={styles.photoAdd}>
+                  <Camera size={15} className={styles.photoAddIcon} />
+                  <span>Add photo</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className={styles.formActions}>
+            <button
+              type="button"
+              className={styles.saveBtn}
+              onClick={handleSave}
+            >
+              {saved ? "Saved" : "Save changes"}
             </button>
           </div>
         </div>
 
-        <div className={styles.formActions}>
-          <button type="button" className={styles.saveBtn} onClick={handleSave}>
-            {saved ? "Saved" : "Save changes"}
-          </button>
+        {/* Right — availability card */}
+        <div className={styles.overviewRight}>
+          <div className={styles.statusCard}>
+            <span className={styles.statusCardLabel}>Availability</span>
+            <select
+              className={styles.formSelect}
+              value={form.status}
+              onChange={(e) =>
+                setForm((f) => ({
+                  ...f,
+                  status: e.target.value as typeof form.status,
+                }))
+              }
+            >
+              {form.status === "draft" && <option value="draft">Draft</option>}
+              <option value="active">Active</option>
+              <option value="archived" disabled={MOCK_DISH.listingCount > 0}>
+                Archived
+              </option>
+            </select>
+            {MOCK_DISH.listingCount > 0 && (
+              <div className={styles.listingBlock}>
+                <span className={styles.listingBlockCount}>
+                  In {MOCK_DISH.listingCount} listing
+                  {MOCK_DISH.listingCount !== 1 ? "s" : ""}
+                </span>
+                <span className={styles.listingBlockDesc}>
+                  Remove from all listings to archive this dish.
+                </span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -166,7 +195,12 @@ function NutritionTab() {
   const [ingredients, setIngredients] =
     useState<MockIngredient[]>(MOCK_INGREDIENTS);
   const [nutrition, setNutrition] = useState(MOCK_NUTRITION);
+  const [saveAttempted, setSaveAttempted] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [otherChecked, setOtherChecked] = useState(false);
+  const [otherText, setOtherText] = useState("");
+
+  const hasIngError = saveAttempted && ingredients.some((i) => !i.name.trim());
 
   function addIngredient() {
     setIngredients((prev) => [
@@ -190,6 +224,15 @@ function NutritionTab() {
   }
 
   function toggleAllergen(allergen: string) {
+    if (allergen === "Other") {
+      if (otherChecked) {
+        setOtherChecked(false);
+        setOtherText("");
+      } else {
+        setOtherChecked(true);
+      }
+      return;
+    }
     setNutrition((prev) => ({
       ...prev,
       allergens: prev.allergens.includes(allergen)
@@ -199,6 +242,9 @@ function NutritionTab() {
   }
 
   function handleSave() {
+    setSaveAttempted(true);
+    if (ingredients.some((i) => !i.name.trim())) return;
+    setSaveAttempted(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   }
@@ -221,7 +267,7 @@ function NutritionTab() {
                 <input
                   type="text"
                   aria-label="Ingredient name"
-                  className={`${styles.ingInput} ${styles.ingNameInput}`}
+                  className={`${styles.ingInput} ${styles.ingNameInput} ${hasIngError && !ing.name.trim() ? styles.ingInputError : ""}`}
                   value={ing.name}
                   placeholder="e.g. Tomato paste"
                   onChange={(e) =>
@@ -352,25 +398,46 @@ function NutritionTab() {
         <div className={styles.allergensWrap}>
           <span className={styles.formLabel}>Allergens</span>
           <div className={styles.allergenList}>
-            {ALLERGENS.map((allergen) => (
-              <label
-                key={allergen}
-                htmlFor={`allergen-${allergen}`}
-                className={styles.allergenLabel}
-              >
-                <input
-                  id={`allergen-${allergen}`}
-                  type="checkbox"
-                  className={styles.allergenCheck}
-                  checked={nutrition.allergens.includes(allergen)}
-                  onChange={() => toggleAllergen(allergen)}
-                />
-                {allergen}
-              </label>
-            ))}
+            {ALLERGENS.map((allergen) => {
+              const isOther = allergen === "Other";
+              const checked = isOther
+                ? otherChecked
+                : nutrition.allergens.includes(allergen);
+              return (
+                <label
+                  key={allergen}
+                  htmlFor={`allergen-${allergen}`}
+                  className={styles.allergenLabel}
+                >
+                  <input
+                    id={`allergen-${allergen}`}
+                    type="checkbox"
+                    className={styles.allergenCheck}
+                    checked={checked}
+                    onChange={() => toggleAllergen(allergen)}
+                  />
+                  {allergen}
+                </label>
+              );
+            })}
           </div>
+          {otherChecked && (
+            <input
+              type="text"
+              className={`${styles.formInput} ${styles.otherInput}`}
+              value={otherText}
+              placeholder="Specify allergen e.g. Sesame"
+              onChange={(e) => setOtherText(e.target.value)}
+            />
+          )}
         </div>
       </section>
+
+      {hasIngError && (
+        <p className={styles.ingError}>
+          All ingredients must have a name before saving.
+        </p>
+      )}
 
       <div className={styles.formActions}>
         <button type="button" className={styles.saveBtn} onClick={handleSave}>
@@ -381,52 +448,11 @@ function NutritionTab() {
   );
 }
 
-// ─── Stats tab ────────────────────────────────────────────────────────────────
-
-function StatsTab() {
-  return (
-    <div className={styles.statsTab}>
-      <div className={styles.statsRow}>
-        <div className={styles.statCard}>
-          <span className={styles.statLabel}>Total orders</span>
-          <span className={styles.statVal}>{MOCK_DISH.totalOrders}</span>
-        </div>
-        <div className={styles.statCard}>
-          <span className={styles.statLabel}>In listings</span>
-          <span className={styles.statVal}>{MOCK_DISH.listingCount}</span>
-        </div>
-        <div className={styles.statCard}>
-          <span className={styles.statLabel}>Avg qty / order</span>
-          <span className={styles.statVal}>
-            {MOCK_DISH.avgQtyPerOrder.toFixed(1)}
-          </span>
-        </div>
-      </div>
-
-      <div className={styles.listingsSection}>
-        <p className={styles.listingsSectionLabel}>Appears in</p>
-        {MOCK_DISH_LISTINGS.map((listing) => (
-          <div key={listing.id} className={styles.listingRow}>
-            <div className={styles.listingMain}>
-              <span className={styles.listingTitle}>{listing.title}</span>
-              <span className={styles.listingMeta}>
-                {listing.ordersWithDish} orders
-              </span>
-            </div>
-            <StatusBadge status={listing.status} />
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "details", label: "Details" },
   { id: "nutrition", label: "Nutrition & Ingredients" },
-  { id: "stats", label: "Stats" },
 ];
 
 export default function DishDetailPage() {
@@ -434,6 +460,7 @@ export default function DishDetailPage() {
 
   return (
     <div className={styles.page}>
+      <BackToDishes />
       <div className={styles.tabRow}>
         {TABS.map((t) => (
           <button
@@ -450,7 +477,6 @@ export default function DishDetailPage() {
       <div className={styles.content} key={tab}>
         {tab === "details" && <DetailsTab />}
         {tab === "nutrition" && <NutritionTab />}
-        {tab === "stats" && <StatsTab />}
       </div>
     </div>
   );
