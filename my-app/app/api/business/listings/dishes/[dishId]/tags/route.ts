@@ -11,7 +11,7 @@ import { dishes, dishTags, tags } from "@/db/schema";
 
 const attachTagSchema = z
   .object({
-    tagId: z.string().uuid(),
+    tagId: z.uuid(),
   })
   .strict();
 

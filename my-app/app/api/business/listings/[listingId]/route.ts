@@ -17,7 +17,7 @@ const updateListingSchema = z
     description: z.string().optional(),
     basePrice: z.number().positive(),
     currency: z.string().length(3),
-    coverPhotoUrl: z.string().url().nullable(),
+    coverPhotoUrl: z.url().nullable(),
     minOrderQty: z.number().int().min(1),
     maxOrderQty: z.number().int().nullable(),
   })

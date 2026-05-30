@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import z from "zod";
 
-export const waitlistSchema = z.object({ email: z.string().email() }).strict();
+export const waitlistSchema = z.object({ email: z.email() }).strict();
 
 export type WaitlistInput = z.infer<typeof waitlistSchema>;
 

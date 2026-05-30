@@ -15,7 +15,7 @@ import {
 import { authUser } from "./auth";
 import { cookProfiles } from "./cooks";
 import { dishes } from "./dishes";
-import { orderStatus } from "./enums";
+import { lateCancelFeeTypeEnum, orderStatus } from "./enums";
 import { listingPromotions, listings } from "./listings";
 
 const isAdmin = sql`auth.role() = 'admin'`;
@@ -55,6 +55,23 @@ export const orders = pgTable(
     }),
     lateCancelFee: numeric("late_cancel_fee", { precision: 10, scale: 2 }),
     notes: text("notes"),
+    pickupCodeHash: text("pickup_code_hash"),
+    pickupCodeExpiresAt: timestamp("pickup_code_expires_at"),
+    pickupCodeVerifiedAt: timestamp("pickup_code_verified_at"),
+    pickupCodeAttempts: integer("pickup_code_attempts").notNull().default(0),
+    lateCancelFeeEnabled: boolean("late_cancel_fee_enabled")
+      .notNull()
+      .default(false),
+    lateCancelFeeType: lateCancelFeeTypeEnum("late_cancel_fee_type"),
+    lateCancelFeeValue: numeric("late_cancel_fee_value", {
+      precision: 10,
+      scale: 2,
+    }),
+    lateCancelWindowHours: integer("late_cancel_window_hours"),
+    lateCancelFeeApplied: numeric("late_cancel_fee_applied", {
+      precision: 10,
+      scale: 2,
+    }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at")
       .notNull()
@@ -69,6 +86,14 @@ export const orders = pgTable(
       sql`${t.discountAmount} IS NULL OR ${t.discountAmount} >= 0`,
     ),
     check("orders_total_price_non_negative", sql`${t.totalPrice} >= 0`),
+    check(
+      "orders_pickup_code_attempts_non_negative",
+      sql`${t.pickupCodeAttempts} >= 0`,
+    ),
+    check(
+      "orders_late_cancel_fee_applied_non_negative",
+      sql`${t.lateCancelFeeApplied} IS NULL OR ${t.lateCancelFeeApplied} >= 0`,
+    ),
     pgPolicy("orders_select_client", {
       for: "select",
       to: "public",
