@@ -237,10 +237,12 @@ export async function POST(req: NextRequest) {
                     : "paused",
             cancelAtPeriodEnd: subscription.cancel_at_period_end,
             currentPeriodStart: new Date(
-              subscription.items.data[0].current_period_start * 1000,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              (subscription as any).current_period_start * 1000,
             ),
             currentPeriodEnd: new Date(
-              subscription.items.data[0].current_period_end * 1000,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              (subscription as any).current_period_end * 1000,
             ),
           })
           .where(eq(clientSubscriptions.stripeSubscriptionId, subscription.id));
