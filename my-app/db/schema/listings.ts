@@ -44,6 +44,9 @@ export const listings = pgTable(
     stripeProductId: text("stripe_product_id"),
     minOrderQty: integer("min_order_qty").notNull().default(1),
     maxOrderQty: integer("max_order_qty"),
+    // How many days before the next billing period a client must cancel/pause.
+    // null = no restriction.
+    cancellationNoticeDays: integer("cancellation_notice_days"),
     reviewedAt: timestamp("reviewed_at"),
     reviewedBy: text("reviewed_by").references(() => authUser.id, {
       onDelete: "set null",
@@ -61,6 +64,10 @@ export const listings = pgTable(
     check(
       "listings_max_order_qty_valid",
       sql`${t.maxOrderQty} IS NULL OR ${t.maxOrderQty} >= ${t.minOrderQty}`,
+    ),
+    check(
+      "listings_cancellation_notice_days_non_negative",
+      sql`${t.cancellationNoticeDays} IS NULL OR ${t.cancellationNoticeDays} >= 0`,
     ),
     pgPolicy("listings_select_active", {
       for: "select",

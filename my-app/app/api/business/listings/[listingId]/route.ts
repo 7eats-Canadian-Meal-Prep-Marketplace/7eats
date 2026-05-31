@@ -25,6 +25,7 @@ const updateListingSchema = z
     coverPhotoUrl: z.url().nullable(),
     minOrderQty: z.number().int().min(1),
     maxOrderQty: z.number().int().nullable(),
+    cancellationNoticeDays: z.number().int().min(0).nullable(),
   })
   .partial();
 

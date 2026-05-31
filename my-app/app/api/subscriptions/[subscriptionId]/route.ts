@@ -120,8 +120,11 @@ export async function DELETE(req: NextRequest, { params }: Params) {
         clientId: clientSubscriptions.clientId,
         status: clientSubscriptions.status,
         stripeSubscriptionId: clientSubscriptions.stripeSubscriptionId,
+        currentPeriodEnd: clientSubscriptions.currentPeriodEnd,
+        cancellationNoticeDays: listings.cancellationNoticeDays,
       })
       .from(clientSubscriptions)
+      .innerJoin(listings, eq(clientSubscriptions.listingId, listings.id))
       .where(eq(clientSubscriptions.id, subscriptionId))
       .limit(1);
 
@@ -134,6 +137,19 @@ export async function DELETE(req: NextRequest, { params }: Params) {
         { error: "Subscription is already cancelled." },
         { status: 400 },
       );
+    }
+
+    if (sub.cancellationNoticeDays !== null && sub.currentPeriodEnd !== null) {
+      const deadline = new Date(sub.currentPeriodEnd);
+      deadline.setDate(deadline.getDate() - sub.cancellationNoticeDays);
+      if (new Date() > deadline) {
+        return NextResponse.json(
+          {
+            error: `Cancellations must be made at least ${sub.cancellationNoticeDays} day${sub.cancellationNoticeDays === 1 ? "" : "s"} before your next billing date.`,
+          },
+          { status: 422 },
+        );
+      }
     }
 
     await cancelStripeSubscription(sub.stripeSubscriptionId, !immediate);
