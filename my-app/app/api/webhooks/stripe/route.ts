@@ -46,8 +46,22 @@ export async function POST(req: NextRequest) {
         { status: 400 },
       );
     }
-  } else {
+  } else if (
+    process.env.NODE_ENV !== "production" &&
+    process.env.STRIPE_WEBHOOK_INSECURE_DEV === "1"
+  ) {
+    console.warn(
+      "[webhook/stripe] STRIPE_WEBHOOK_INSECURE_DEV=1 — parsing unsigned webhook body (dev only)",
+    );
     event = JSON.parse(buf.toString()) as Stripe.Event;
+  } else {
+    console.error(
+      "[webhook/stripe] missing STRIPE_WEBHOOK_SECRET or STRIPE_SECRET_KEY — refusing to process webhook",
+    );
+    return NextResponse.json(
+      { error: "Webhook is not configured." },
+      { status: 500 },
+    );
   }
 
   // Idempotency: record the event id before processing. Stripe retries
@@ -124,7 +138,12 @@ export async function POST(req: NextRequest) {
 
         if (!cook) break;
 
-        const unitPrice = tier.price;
+        const tierPriceCents = Math.round(Number.parseFloat(tier.price) * 100);
+        const totalCents =
+          typeof invoice.amount_paid === "number" && invoice.amount_paid > 0
+            ? invoice.amount_paid
+            : tierPriceCents;
+        const unitPrice = (totalCents / 100).toFixed(2);
         const totalPrice = unitPrice;
         const periodEnd = invoice.period_end
           ? new Date(invoice.period_end * 1000)
@@ -144,7 +163,10 @@ export async function POST(req: NextRequest) {
             currency: "CAD",
             pickupAt: periodEnd,
           })
+          .onConflictDoNothing()
           .returning();
+
+        if (!order) break;
 
         // Snapshot the listing's current dishes into order_dishes
         const listingDishRows = await db
@@ -170,12 +192,11 @@ export async function POST(req: NextRequest) {
           );
         }
 
-        const feePct = parseFloat(cook.platformFeePct);
-        const total = parseFloat(totalPrice);
-        const platformFeeAmount = ((feePct / 100) * total).toFixed(2);
-        const cookPayoutAmount = (
-          total - parseFloat(platformFeeAmount)
-        ).toFixed(2);
+        const feePct = Number.parseFloat(cook.platformFeePct);
+        const platformFeeCents = Math.round((totalCents * feePct) / 100);
+        const cookPayoutCents = totalCents - platformFeeCents;
+        const platformFeeAmount = (platformFeeCents / 100).toFixed(2);
+        const cookPayoutAmount = (cookPayoutCents / 100).toFixed(2);
 
         // Extract payment intent ID from the payments list (Stripe v22)
         const defaultPayment = invoice.payments?.data?.find(

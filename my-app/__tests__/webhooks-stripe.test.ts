@@ -114,9 +114,9 @@ function paymentSucceededEvent() {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  // Default: no secret + no key -> route parses the body as JSON directly.
   vi.stubEnv("STRIPE_WEBHOOK_SECRET", "");
   vi.stubEnv("STRIPE_SECRET_KEY", "");
+  vi.stubEnv("STRIPE_WEBHOOK_INSECURE_DEV", "1");
   mockUpdate();
   mockDelete();
 });
@@ -146,6 +146,18 @@ describe("Stripe webhook signature verification", () => {
     const res = await POST(makeRequest(paymentSucceededEvent(), "bad-sig"));
 
     expect(res.status).toBe(400);
+  });
+
+  it("fails closed with 500 when no secret is set and the dev bypass is off", async () => {
+    vi.stubEnv("STRIPE_WEBHOOK_SECRET", "");
+    vi.stubEnv("STRIPE_SECRET_KEY", "");
+    vi.stubEnv("STRIPE_WEBHOOK_INSECURE_DEV", "");
+
+    const res = await POST(makeRequest(paymentSucceededEvent()));
+
+    expect(res.status).toBe(500);
+    expect(db.select).not.toHaveBeenCalled();
+    expect(db.insert).not.toHaveBeenCalled();
   });
 });
 

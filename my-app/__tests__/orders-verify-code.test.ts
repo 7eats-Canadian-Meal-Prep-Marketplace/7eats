@@ -51,7 +51,7 @@ function makePost(body: unknown, orderId = ORDER_ID): NextRequest {
 
 function mockSession(userId: string | null) {
   vi.mocked(auth.api.getSession).mockResolvedValue(
-    userId ? ({ user: { id: userId } } as never) : null,
+    userId ? ({ user: { id: userId, role: "cook" } } as never) : null,
   );
 }
 
@@ -199,8 +199,9 @@ describe("POST /api/business/dashboard/orders/[orderId]/verify-code", () => {
       call++;
       if (call === 1) return mockCook(true);
       if (call === 2) return selectChain([readyOrder]);
-      // orderPayments lookup
-      return selectChain([{ stripePaymentIntentId: "pi_123" }]);
+      return selectChain([
+        { stripePaymentIntentId: "pi_123", status: "authorized" },
+      ]);
     });
     mockUpdate([{ id: ORDER_ID, fulfilledAt: new Date() }]);
 
@@ -210,7 +211,49 @@ describe("POST /api/business/dashboard/orders/[orderId]/verify-code", () => {
     const body = await res.json();
     expect(body.success).toBe(true);
     expect(body.data.orderId).toBe(ORDER_ID);
-    expect(captureMock).toHaveBeenCalledWith("pi_123");
+    expect(captureMock).toHaveBeenCalledWith(
+      "pi_123",
+      {},
+      { idempotencyKey: `capture-${ORDER_ID}` },
+    );
+
+    vi.unstubAllEnvs();
+  });
+
+  it("returns 409 and does not capture when the ready->fulfilled update loses the race", async () => {
+    vi.stubEnv("STRIPE_SECRET_KEY", "sk_test_123");
+    let call = 0;
+    vi.mocked(db.select).mockImplementation(() => {
+      call++;
+      return call === 1 ? mockCook(true) : selectChain([readyOrder]);
+    });
+    mockUpdate([]);
+
+    const res = await POST(makePost({ code: "1234" }), { params });
+
+    expect(res.status).toBe(409);
+    expect(captureMock).not.toHaveBeenCalled();
+
+    vi.unstubAllEnvs();
+  });
+
+  it("does not capture when the payment is no longer authorized", async () => {
+    vi.stubEnv("STRIPE_SECRET_KEY", "sk_test_123");
+    let call = 0;
+    vi.mocked(db.select).mockImplementation(() => {
+      call++;
+      if (call === 1) return mockCook(true);
+      if (call === 2) return selectChain([readyOrder]);
+      return selectChain([
+        { stripePaymentIntentId: "pi_123", status: "released" },
+      ]);
+    });
+    mockUpdate([{ id: ORDER_ID, fulfilledAt: new Date() }]);
+
+    const res = await POST(makePost({ code: "1234" }), { params });
+
+    expect(res.status).toBe(200);
+    expect(captureMock).not.toHaveBeenCalled();
 
     vi.unstubAllEnvs();
   });

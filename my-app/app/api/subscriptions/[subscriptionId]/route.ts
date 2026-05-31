@@ -9,12 +9,7 @@ import {
   orders,
 } from "@/db/schema";
 import { cancelStripeSubscription } from "@/lib/stripe-subscriptions";
-import {
-  forbidden,
-  getClientSession,
-  notFound,
-  unauthorized,
-} from "../_lib/client-auth";
+import { getClientSession, notFound, unauthorized } from "../_lib/client-auth";
 
 export type Params = { params: Promise<{ subscriptionId: string }> };
 
@@ -125,12 +120,15 @@ export async function DELETE(req: NextRequest, { params }: Params) {
       })
       .from(clientSubscriptions)
       .innerJoin(listings, eq(clientSubscriptions.listingId, listings.id))
-      .where(eq(clientSubscriptions.id, subscriptionId))
+      .where(
+        and(
+          eq(clientSubscriptions.id, subscriptionId),
+          eq(clientSubscriptions.clientId, session.user.id),
+        ),
+      )
       .limit(1);
 
     if (!sub) return notFound("Subscription");
-
-    if (sub.clientId !== session.user.id) return forbidden();
 
     if (sub.status === "cancelled") {
       return NextResponse.json(
@@ -162,7 +160,12 @@ export async function DELETE(req: NextRequest, { params }: Params) {
     const [updated] = await db
       .update(clientSubscriptions)
       .set(updateFields)
-      .where(eq(clientSubscriptions.id, subscriptionId))
+      .where(
+        and(
+          eq(clientSubscriptions.id, subscriptionId),
+          eq(clientSubscriptions.clientId, session.user.id),
+        ),
+      )
       .returning();
 
     return NextResponse.json({ success: true, data: updated });

@@ -139,10 +139,22 @@ describe("POST /api/setup/verify-otp", () => {
     return { set };
   }
 
+  beforeEach(() => {
+    vi.mocked(logAndCheckRateLimit).mockResolvedValue(true);
+  });
+
   it("returns 401 when unauthenticated", async () => {
     mockSession(null);
     const res = await verifyOtp(makeRequest({ code: "123456" }));
     expect(res.status).toBe(401);
+  });
+
+  it("returns 429 when the verify rate limit is exceeded", async () => {
+    mockSession(USER_ID);
+    vi.mocked(logAndCheckRateLimit).mockResolvedValue(false);
+    const res = await verifyOtp(makeRequest({ code: "123456" }));
+    expect(res.status).toBe(429);
+    expect(verificationChecksCreate).not.toHaveBeenCalled();
   });
 
   it("returns 400 when the code is missing", async () => {

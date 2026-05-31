@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/auth", () => ({
   auth: { api: { getSession: vi.fn() } },
@@ -41,7 +41,7 @@ const mockPhoto = {
 
 function mockSession(userId: string | null) {
   vi.mocked(auth.api.getSession).mockResolvedValue(
-    userId ? ({ user: { id: userId } } as never) : null,
+    userId ? ({ user: { id: userId, role: "cook" } } as never) : null,
   );
 }
 
@@ -148,8 +148,14 @@ const photoParams = {
 // POST /dishes/:id/photos
 // ---------------------------------------------------------------------------
 
+const CDN = "https://cdn.7eats.test";
+
 describe("POST /api/business/listings/dishes/[dishId]/photos", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubEnv("R2_PUBLIC_BUCKET_URL_LISTINGS", CDN);
+  });
+  afterEach(() => vi.unstubAllEnvs());
 
   it("returns 401 when unauthenticated", async () => {
     mockSession(null);
@@ -189,13 +195,26 @@ describe("POST /api/business/listings/dishes/[dishId]/photos", () => {
     expect(body.error).toBeDefined();
   });
 
+  it("returns 422 for a URL not hosted on the CDN", async () => {
+    mockSession(USER_ID);
+    mockTwoSelects(mockDish);
+
+    const res = await POST(
+      makePost({ url: "https://evil.example.com/photo.jpg" }),
+      dishParams,
+    );
+
+    expect(res.status).toBe(422);
+    expect(vi.mocked(db.insert)).not.toHaveBeenCalled();
+  });
+
   it("returns 201 for a simple insert when isPrimary is false (default)", async () => {
     mockSession(USER_ID);
     mockTwoSelects(mockDish);
     mockInsert(mockPhoto);
 
     const res = await POST(
-      makePost({ url: "https://example.com/photo.jpg" }),
+      makePost({ url: `${CDN}/listings/photo.jpg` }),
       dishParams,
     );
     const body = await res.json();
@@ -212,7 +231,7 @@ describe("POST /api/business/listings/dishes/[dishId]/photos", () => {
     mockTransaction(mockPhoto);
 
     const res = await POST(
-      makePost({ url: "https://example.com/photo.jpg", isPrimary: true }),
+      makePost({ url: `${CDN}/listings/photo.jpg`, isPrimary: true }),
       dishParams,
     );
     const body = await res.json();
@@ -234,7 +253,7 @@ describe("POST /api/business/listings/dishes/[dishId]/photos", () => {
     } as never);
 
     const res = await POST(
-      makePost({ url: "https://example.com/photo.jpg" }),
+      makePost({ url: `${CDN}/listings/photo.jpg` }),
       dishParams,
     );
 

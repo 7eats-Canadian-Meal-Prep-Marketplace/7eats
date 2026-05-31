@@ -30,6 +30,8 @@ export async function GET(req: NextRequest) {
   const session = await getClientSession(req.headers);
   if (!session) return unauthorized();
 
+  if (session.user.role !== "client") return forbidden();
+
   try {
     const subs = await db
       .select({

@@ -84,6 +84,10 @@ export const orders = pgTable(
       .$onUpdate(() => new Date()),
   },
   (t) => [
+    uniqueIndex("orders_subscription_period_uidx").on(
+      t.subscriptionId,
+      t.pickupAt,
+    ),
     check("orders_quantity_positive", sql`${t.quantity} >= 1`),
     check("orders_unit_price_positive", sql`${t.unitPrice} > 0`),
     check(

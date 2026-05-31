@@ -4,7 +4,7 @@ vi.mock("@/lib/auth", () => ({
   auth: { api: { signUpEmail: vi.fn(), signInEmail: vi.fn() } },
 }));
 vi.mock("@/db", () => ({
-  db: { select: vi.fn() },
+  db: { select: vi.fn(), update: vi.fn() },
   dbPool: { transaction: vi.fn() },
 }));
 vi.mock("@/db/schema", () => ({
@@ -54,25 +54,20 @@ function authResponse(
   return { ok, status, headers, json: async () => json } as never;
 }
 
-// The route makes two sequential db.select calls: first for setupTokens,
-// then for cookApplications. Track call count to return the right data.
 function setupDbSelects(tokenRow: object | null, application: object | null) {
-  let callCount = 0;
-  vi.mocked(db.select).mockImplementation(() => {
-    callCount++;
-    const data =
-      callCount === 1
-        ? tokenRow
-          ? [tokenRow]
-          : []
-        : application
-          ? [application]
-          : [];
-    const limit = vi.fn().mockResolvedValue(data);
-    const where = vi.fn(() => ({ limit }));
-    const from = vi.fn(() => ({ where }));
-    return { from } as never;
-  });
+  const returning = vi.fn().mockResolvedValue(tokenRow ? [tokenRow] : []);
+  const claimWhere = vi.fn(() => ({ returning }));
+  const claimSet = vi.fn((_values?: { consumedAt?: Date }) => ({
+    where: claimWhere,
+  }));
+  vi.mocked(db.update).mockReturnValue({ set: claimSet } as never);
+
+  const limit = vi.fn().mockResolvedValue(application ? [application] : []);
+  const where = vi.fn(() => ({ limit }));
+  const from = vi.fn(() => ({ where }));
+  vi.mocked(db.select).mockReturnValue({ from } as never);
+
+  return { claimSet };
 }
 
 const tokenRow = {
@@ -227,18 +222,18 @@ describe("POST /api/setup/create-account", () => {
     expect(vi.mocked(dbPool.transaction)).toHaveBeenCalledTimes(1);
   });
 
-  it("updates setupTokens.consumedAt inside the transaction", async () => {
-    const { updateFn, setFn } = setupTransaction();
+  it("consumes the setup token atomically before processing", async () => {
+    const { claimSet } = setupDbSelects(tokenRow, application);
+    const { updateFn } = setupTransaction();
 
     await POST(makeRequest({ token: "valid-token", password: "secret123" }));
 
-    // update() is called twice: once for authUser, once for setupTokens.
-    expect(updateFn.mock.calls.length).toBe(2);
+    expect(claimSet).toHaveBeenCalledTimes(1);
+    expect(claimSet).toHaveBeenCalledWith(
+      expect.objectContaining({ consumedAt: expect.any(Date) }),
+    );
 
-    // The second update targets setupTokens; its set() call should include consumedAt.
-    const setCallsForSecondUpdate = setFn.mock.calls[1];
-    expect(setCallsForSecondUpdate[0]).toHaveProperty("consumedAt");
-    expect(setCallsForSecondUpdate[0].consumedAt).toBeInstanceOf(Date);
+    expect(updateFn.mock.calls.length).toBe(1);
   });
 
   it("sets role=cook and status=active on authUser inside the transaction", async () => {
