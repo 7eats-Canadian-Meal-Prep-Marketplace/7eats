@@ -18,6 +18,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { HostProvider } from "./_host-context";
 import { MOCK_NOTIFICATIONS, type MockNotification } from "./_notifications";
 import styles from "./_shell.module.css";
 
@@ -27,6 +28,17 @@ function formatNotifTime(iso: string): string {
   if (diffMin < 60) return `${diffMin}m`;
   if (diffMin < 1440) return `${Math.round(diffMin / 60)}h`;
   return `${Math.round(diffMin / 1440)}d`;
+}
+
+// Detail strings come through as "Customer Name · Dish Name"; split them so the
+// customer reads crisp and the dish reads as softer secondary text.
+function splitNotifDetail(detail: string): { who: string; what: string } {
+  const idx = detail.indexOf("·");
+  if (idx === -1) return { who: detail.trim(), what: "" };
+  return {
+    who: detail.slice(0, idx).trim(),
+    what: detail.slice(idx + 1).trim(),
+  };
 }
 
 const NAV_ITEMS = [
@@ -179,27 +191,45 @@ export default function DashboardShell({
                           className={`${styles.notifIcon} ${n.kind === "review" ? styles.notifIconReview : styles.notifIconOrder}`}
                         >
                           {n.kind === "review" ? (
-                            <Star size={14} />
+                            <Star size={17} />
                           ) : (
-                            <ShoppingBag size={14} />
+                            <ShoppingBag size={17} />
                           )}
                         </span>
                         <span className={styles.notifBody}>
-                          <span className={styles.notifItemTop}>
-                            <span className={styles.notifItemTitle}>
-                              {n.title}
-                              {n.kind === "review" && n.rating != null && (
-                                <span className={styles.notifRating}>
-                                  {n.rating.toFixed(1)}
-                                  <Star size={10} className={styles.starFill} />
-                                </span>
-                              )}
-                            </span>
-                            <span className={styles.notifTime}>
-                              {formatNotifTime(n.timestamp)}
-                            </span>
+                          <span className={styles.notifItemTitle}>
+                            {n.title}
+                            {n.kind === "review" && n.rating != null && (
+                              <span className={styles.notifRating}>
+                                <span className={styles.notifBullet}>•</span>
+                                {n.rating.toFixed(1)}
+                                <Star size={11} className={styles.starFill} />
+                              </span>
+                            )}
                           </span>
-                          <span className={styles.notifDetail}>{n.detail}</span>
+                          <span className={styles.notifDetail}>
+                            {(() => {
+                              const { who, what } = splitNotifDetail(n.detail);
+                              return (
+                                <>
+                                  <span className={styles.notifWho}>{who}</span>
+                                  {what && (
+                                    <>
+                                      <span className={styles.notifDot2}>
+                                        ·
+                                      </span>
+                                      <span className={styles.notifWhat}>
+                                        {what}
+                                      </span>
+                                    </>
+                                  )}
+                                </>
+                              );
+                            })()}
+                          </span>
+                        </span>
+                        <span className={styles.notifTime}>
+                          {formatNotifTime(n.timestamp)}
                         </span>
                         {!n.isRead && (
                           <span className={styles.notifUnreadDot} />
@@ -325,7 +355,9 @@ export default function DashboardShell({
               </ul>
             </div>
           )}
-          {children}
+          <HostProvider value={{ firstName, lastName }}>
+            {children}
+          </HostProvider>
         </main>
       </div>
     </div>

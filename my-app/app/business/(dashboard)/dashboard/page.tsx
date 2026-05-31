@@ -3,10 +3,18 @@
 import { Calendar, ChevronRight, Inbox, Plus, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { useHost } from "../_host-context";
 import { MOCK_QUEUE, MOCK_STATS, type MockQueueOrder } from "./_mock";
 import styles from "./page.module.css";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function greeting(): string {
+  const h = new Date().getHours();
+  if (h < 12) return "Good morning";
+  if (h < 18) return "Good afternoon";
+  return "Good evening";
+}
 
 function pickupLabel(iso: string): string {
   const d = new Date(iso);
@@ -139,6 +147,7 @@ const QUICK_ACTIONS = [
 const COL_LIMIT = 4;
 
 export default function DashboardPage() {
+  const { firstName } = useHost();
   const [period, setPeriod] = useState<"week" | "month">("week");
   const [pickupExpanded, setPickupExpanded] = useState(false);
   const [requestsExpanded, setRequestsExpanded] = useState(false);
@@ -156,6 +165,17 @@ export default function DashboardPage() {
 
   return (
     <div className={styles.page}>
+      {/* Welcome header */}
+      <div className={styles.welcome}>
+        <h1 className={styles.welcomeTitle}>
+          {greeting()}
+          {firstName ? `, ${firstName}` : ""}
+        </h1>
+        <p className={styles.welcomeSub}>
+          Here&apos;s a snapshot of your kitchen today.
+        </p>
+      </div>
+
       {/* Stats strip */}
       <div className={styles.statsStrip}>
         <div className={styles.statCard}>

@@ -1,153 +1,180 @@
-export type SlotStatus = "open" | "full" | "closed";
+// ─── Types ─────────────────────────────────────────────────────────────────────
 
-export type MockSlotOrder = {
+export type Fulfillment = "pickup" | "delivery";
+
+// Recurring weekly availability window (mirrors cook_profiles pickup days/window
+// + delivery). weekday: 0 = Sun … 6 = Sat. Times are 24h "HH:MM" local.
+export type AvailabilityWindow = {
+  weekday: number;
+  kind: Fulfillment;
+  from: string;
+  to: string;
+};
+
+export type CalendarOrder = {
   id: string;
+  datetime: string; // ISO
+  kind: Fulfillment;
   customerName: string;
-  quantity: number;
-};
-
-export type MockSlot = {
-  id: string;
-  date: string;
   listingTitle: string;
-  count: number;
-  status: SlotStatus;
-  orders: MockSlotOrder[];
+  quantity: number;
+  // Whether the customer's pickup/delivery code has been verified at handoff.
+  // This is the moment an order is actually fulfilled.
+  codeVerified: boolean;
 };
 
-// Monday (00:00 local) of the week containing today.
-export function currentWeekStart(): Date {
-  const now = new Date();
-  const day = now.getDay(); // 0 = Sun … 6 = Sat
+export type WindowGroup = {
+  window: AvailabilityWindow;
+  orders: CalendarOrder[];
+};
+
+export type DaySchedule = {
+  date: Date;
+  windows: WindowGroup[];
+};
+
+// ─── A realistic cook's recurring schedule ──────────────────────────────────────
+// Two pickup days a week, and the Saturday pickup day doubles as the one delivery
+// day — i.e. some days carry both a pickup and a delivery window.
+
+export const WEEKLY_AVAILABILITY: AvailabilityWindow[] = [
+  { weekday: 2, kind: "pickup", from: "18:00", to: "22:00" }, // Tuesday 6–10 PM
+  { weekday: 6, kind: "pickup", from: "11:00", to: "14:00" }, // Saturday 11 AM–2 PM
+  { weekday: 6, kind: "delivery", from: "15:00", to: "18:00" }, // Saturday 3–6 PM
+];
+
+const CUSTOMERS = [
+  "Amara Okafor",
+  "Liam Chen",
+  "Priya Nair",
+  "Marcus Reid",
+  "Sofia Russo",
+  "Kenji Tanaka",
+  "Dana White",
+  "Hassan Ali",
+  "Grace Lin",
+  "Noah Park",
+  "Aisha Khan",
+  "Theo Martin",
+  "Emily Zhou",
+  "Omar Said",
+  "Lena Vogel",
+  "Ruby Singh",
+];
+
+const LISTINGS = [
+  "Weekend West African Feast",
+  "Lunch Bento Box",
+  "Evening Tikka Bowls",
+  "Falafel Wrap Combo",
+  "Miso Salmon Dinner",
+  "Brunch Flatbread Set",
+  "Sunday Suya Platter",
+];
+
+// ─── Date helpers ────────────────────────────────────────────────────────────────
+
+// Monday (00:00 local) of the week containing `d`.
+export function mondayOf(d: Date): Date {
+  const day = d.getDay();
   const diff = day === 0 ? -6 : 1 - day;
-  const monday = new Date(now);
-  monday.setDate(now.getDate() + diff);
+  const monday = new Date(d);
+  monday.setDate(d.getDate() + diff);
   monday.setHours(0, 0, 0, 0);
   return monday;
 }
 
-function slotDate(dayOffset: number, hour: number, minute = 0): string {
-  const d = currentWeekStart();
-  d.setDate(d.getDate() + dayOffset);
-  d.setHours(hour, minute, 0, 0);
-  return d.toISOString();
+export function currentWeekStart(): Date {
+  return mondayOf(new Date());
 }
 
-export const MOCK_SLOTS: MockSlot[] = [
-  {
-    id: "s-1",
-    date: slotDate(0, 12, 0),
-    listingTitle: "Weekend West African Feast",
-    count: 3,
-    status: "open",
-    orders: [
-      { id: "o-1", customerName: "Amara Okafor", quantity: 1 },
-      { id: "o-2", customerName: "Liam Chen", quantity: 1 },
-      { id: "o-3", customerName: "Priya Nair", quantity: 1 },
-    ],
-  },
-  {
-    id: "s-2",
-    date: slotDate(1, 11, 30),
-    listingTitle: "Lunch Bento Box",
-    count: 5,
-    status: "full",
-    orders: [
-      { id: "o-4", customerName: "Marcus Reid", quantity: 2 },
-      { id: "o-5", customerName: "Sofia Russo", quantity: 1 },
-      { id: "o-6", customerName: "Kenji Tanaka", quantity: 1 },
-      { id: "o-7", customerName: "Dana White", quantity: 1 },
-    ],
-  },
-  {
-    id: "s-3",
-    date: slotDate(1, 17, 30),
-    listingTitle: "Evening Tikka Bowls",
-    count: 2,
-    status: "open",
-    orders: [
-      { id: "o-8", customerName: "Hassan Ali", quantity: 1 },
-      { id: "o-9", customerName: "Grace Lin", quantity: 1 },
-    ],
-  },
-  {
-    id: "s-4",
-    date: slotDate(2, 12, 0),
-    listingTitle: "Falafel Wrap Combo",
-    count: 4,
-    status: "open",
-    orders: [
-      { id: "o-10", customerName: "Noah Park", quantity: 2 },
-      { id: "o-11", customerName: "Aisha Khan", quantity: 1 },
-      { id: "o-12", customerName: "Theo Martin", quantity: 1 },
-    ],
-  },
-  {
-    id: "s-5",
-    date: slotDate(3, 11, 0),
-    listingTitle: "Lunch Bento Box",
-    count: 6,
-    status: "full",
-    orders: [
-      { id: "o-13", customerName: "Emily Zhou", quantity: 2 },
-      { id: "o-14", customerName: "Omar Said", quantity: 2 },
-      { id: "o-15", customerName: "Lena Vogel", quantity: 1 },
-      { id: "o-16", customerName: "Caleb Moore", quantity: 1 },
-    ],
-  },
-  {
-    id: "s-6",
-    date: slotDate(3, 18, 0),
-    listingTitle: "Miso Salmon Dinner",
-    count: 0,
-    status: "closed",
-    orders: [],
-  },
-  {
-    id: "s-7",
-    date: slotDate(4, 12, 30),
-    listingTitle: "Weekend West African Feast",
-    count: 4,
-    status: "open",
-    orders: [
-      { id: "o-17", customerName: "Ruby Singh", quantity: 1 },
-      { id: "o-18", customerName: "Jonas Berg", quantity: 2 },
-      { id: "o-19", customerName: "Maya Cohen", quantity: 1 },
-    ],
-  },
-  {
-    id: "s-8",
-    date: slotDate(4, 17, 0),
-    listingTitle: "Evening Tikka Bowls",
-    count: 3,
-    status: "open",
-    orders: [
-      { id: "o-20", customerName: "Felix Wong", quantity: 1 },
-      { id: "o-21", customerName: "Isla Murphy", quantity: 1 },
-      { id: "o-22", customerName: "Diego Cruz", quantity: 1 },
-    ],
-  },
-  {
-    id: "s-9",
-    date: slotDate(5, 13, 0),
-    listingTitle: "Brunch Flatbread Set",
-    count: 5,
-    status: "full",
-    orders: [
-      { id: "o-23", customerName: "Hana Yoshida", quantity: 2 },
-      { id: "o-24", customerName: "Owen Clarke", quantity: 1 },
-      { id: "o-25", customerName: "Nadia Haddad", quantity: 2 },
-    ],
-  },
-  {
-    id: "s-10",
-    date: slotDate(6, 12, 0),
-    listingTitle: "Sunday Suya Platter",
-    count: 2,
-    status: "open",
-    orders: [
-      { id: "o-26", customerName: "Eli Foster", quantity: 1 },
-      { id: "o-27", customerName: "Zoe Adams", quantity: 1 },
-    ],
-  },
-];
+export function addDays(d: Date, n: number): Date {
+  const x = new Date(d);
+  x.setDate(d.getDate() + n);
+  return x;
+}
+
+export function sameDay(a: Date, b: Date): boolean {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
+export function formatHM(hm: string): string {
+  const [h, m] = hm.split(":").map(Number);
+  const period = h >= 12 ? "PM" : "AM";
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return m === 0
+    ? `${h12} ${period}`
+    : `${h12}:${String(m).padStart(2, "0")} ${period}`;
+}
+
+// ─── Deterministic mock generation ───────────────────────────────────────────────
+// Orders are derived from a stable hash of (date + window kind) so the same week
+// always renders the same data, while different weeks vary naturally.
+
+function hashStr(s: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+function ordersForWindow(date: Date, w: AvailabilityWindow): CalendarOrder[] {
+  const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}-${w.kind}`;
+  const seed = hashStr(key);
+
+  // Pickup windows tend to be busier than the single delivery run.
+  const cap = w.kind === "delivery" ? 4 : 6;
+  const count = seed % (cap + 1); // 0 … cap
+
+  const [fromH, fromM] = w.from.split(":").map(Number);
+  const [toH] = w.to.split(":").map(Number);
+  const windowMinutes = (toH - fromH) * 60;
+  const now = Date.now();
+
+  // For realism, exactly one order per past window is left "not collected" —
+  // the cook handed it off without scanning the code (fraud exposure). The
+  // rest of a past window is verified; future windows are all awaiting.
+  const missedIndex = count > 0 ? seed % count : -1;
+
+  const orders: CalendarOrder[] = [];
+  for (let i = 0; i < count; i++) {
+    const t = new Date(date);
+    const offset = (seed >> (i + 1)) % windowMinutes;
+    t.setHours(fromH, fromM + offset, 0, 0);
+
+    const isPast = t.getTime() < now;
+    const codeVerified = isPast && i !== missedIndex;
+
+    orders.push({
+      id: `${key}-${i}`,
+      datetime: t.toISOString(),
+      kind: w.kind,
+      customerName: CUSTOMERS[(seed + i * 7) % CUSTOMERS.length],
+      listingTitle: LISTINGS[(seed + i * 3) % LISTINGS.length],
+      quantity: 1 + ((seed >> i) % 2),
+      codeVerified,
+    });
+  }
+
+  return orders.sort((a, b) => a.datetime.localeCompare(b.datetime));
+}
+
+// Build Mon→Sun for the week starting at `weekStart`, attaching each day's
+// recurring windows and their generated orders.
+export function buildWeek(weekStart: Date): DaySchedule[] {
+  const days: DaySchedule[] = [];
+  for (let i = 0; i < 7; i++) {
+    const date = addDays(weekStart, i);
+    const windows = WEEKLY_AVAILABILITY.filter(
+      (w) => w.weekday === date.getDay(),
+    ).map((window) => ({ window, orders: ordersForWindow(date, window) }));
+    days.push({ date, windows });
+  }
+  return days;
+}

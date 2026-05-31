@@ -1,3 +1,14 @@
+export type MockPricingTier = {
+  id: string;
+  minQty: number;
+  pricePerUnit: string;
+};
+
+export const MOCK_PRICING_TIERS: MockPricingTier[] = [
+  { id: "tier-1", minQty: 5, pricePerUnit: "25.00" },
+  { id: "tier-2", minQty: 10, pricePerUnit: "22.00" },
+];
+
 export type MockListingDetail = {
   id: string;
   title: string;
@@ -167,4 +178,55 @@ export const MOCK_AVAILABLE_DISHES: MockAvailableDish[] = [
   { id: "dish-4", name: "Kelewele", cuisine: "Ghanaian" },
   { id: "dish-5", name: "Egusi Soup", cuisine: "Nigerian" },
   { id: "dish-6", name: "Coleslaw", cuisine: "West African" },
+];
+
+export type MockListingReview = {
+  id: string;
+  customerName: string;
+  rating: number;
+  comment: string;
+  date: string;
+};
+
+export const MOCK_LISTING_REVIEWS: MockListingReview[] = [
+  {
+    id: "rev-1",
+    customerName: "Amara Diallo",
+    rating: 5,
+    comment:
+      "Absolutely incredible. The jollof rice was perfectly smoky and the chicken stew was rich and comforting. Will order again without question.",
+    date: daysAgo(2),
+  },
+  {
+    id: "rev-2",
+    customerName: "Sophie Bernard",
+    rating: 5,
+    comment:
+      "Best West African food I've had outside of home cooking. The plantain was perfectly ripe. Highly recommended.",
+    date: daysAgo(5),
+  },
+  {
+    id: "rev-3",
+    customerName: "Marcus Osei",
+    rating: 4,
+    comment:
+      "Great flavours and generous portions. Pickup was seamless. Docking one star only because the stew could have been a touch hotter on arrival.",
+    date: daysAgo(8),
+  },
+  {
+    id: "rev-4",
+    customerName: "Kofi Adu",
+    rating: 5,
+    comment:
+      "The jollof rice is genuinely top tier. Reminded me of my grandmother's cooking. Thank you for this.",
+    date: daysAgo(12),
+  },
+  {
+    id: "rev-5",
+    customerName: "Priya Nair",
+    rating: 3,
+    comment:
+      "Good food overall but the portion felt a little smaller than expected for the price. Flavours were on point though.",
+    date: daysAgo(18),
+  },
 ];

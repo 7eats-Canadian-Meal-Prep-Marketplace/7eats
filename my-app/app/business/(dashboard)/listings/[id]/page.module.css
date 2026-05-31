@@ -878,6 +878,289 @@
   border-color: var(--red);
 }
 
+/* ─── Volume pricing tier table ────────────────────────────────────────────── */
+.tierTable {
+  border: 1px solid #e4e4e7;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.tierHeader {
+  display: grid;
+  grid-template-columns: 100px 1fr 32px;
+  padding: 7px 12px;
+  border-bottom: 2px solid var(--ink);
+}
+
+.tierHeaderCell {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.tierRow {
+  display: grid;
+  grid-template-columns: 100px 1fr 32px;
+  align-items: center;
+  border-bottom: 1px solid #e4e4e7;
+}
+
+.tierRow:last-child {
+  border-bottom: none;
+}
+
+.tierBaseRow {
+  background: #fafafa;
+}
+
+.tierQtyCell {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 12px;
+  border-right: 1px solid #e4e4e7;
+  height: 100%;
+}
+
+.tierPriceCell {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0 12px;
+}
+
+.tierBaseText {
+  padding: 9px 0;
+  font-size: 13px;
+  color: #8a8a96;
+  font-feature-settings: "tnum";
+}
+
+.tierQtyInput {
+  width: 44px;
+  padding: 9px 0;
+  font-size: 13px;
+  color: var(--ink);
+  background: none;
+  border: none;
+  outline: none;
+  font-family: inherit;
+  font-feature-settings: "tnum";
+}
+
+.tierQtyPlus {
+  font-size: 12px;
+  color: #a0a0aa;
+}
+
+.tierPricePre {
+  font-size: 12px;
+  color: #8a8a96;
+  flex: none;
+}
+
+.tierPriceInput {
+  flex: 1;
+  padding: 9px 0;
+  font-size: 13px;
+  color: var(--ink);
+  background: none;
+  border: none;
+  outline: none;
+  font-family: inherit;
+  font-feature-settings: "tnum";
+}
+
+.tierRemoveBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #c0c0c8;
+  transition: color 0.12s;
+}
+
+.tierRemoveBtn:hover {
+  color: var(--red);
+}
+
+.addTierBtn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 13px;
+  background: none;
+  color: #444444;
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid #d0d0d8;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  align-self: flex-start;
+  transition:
+    border-color 0.12s,
+    color 0.12s;
+}
+
+.addTierBtn:hover {
+  border-color: #a0a0aa;
+  color: var(--ink);
+}
+
+/* ─── Reviews tab ─────────────────────────────────────────────────────────── */
+.reviewsTab {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.reviewSummary {
+  display: flex;
+  align-items: center;
+  gap: 36px;
+  padding: 20px 24px;
+  border: 1px solid #e4e4e7;
+  border-radius: var(--radius-sm);
+  background: var(--white);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.reviewAvgBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+}
+
+.reviewAvgNum {
+  font-size: 40px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.reviewAvgCount {
+  font-size: 12px;
+  color: #8a8a96;
+  font-weight: 500;
+}
+
+.reviewDist {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  max-width: 260px;
+}
+
+.reviewDistRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.reviewDistLabel {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #555560;
+  width: 8px;
+  text-align: right;
+  flex: none;
+}
+
+.reviewDistTrack {
+  flex: 1;
+  height: 6px;
+  background: #f0f0f3;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.reviewDistFill {
+  height: 100%;
+  background: #f59e0b;
+  border-radius: 3px;
+}
+
+.reviewDistCount {
+  font-size: 11px;
+  color: #a0a0aa;
+  font-weight: 500;
+  width: 14px;
+  flex: none;
+}
+
+.reviewList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.reviewCard {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  background: var(--white);
+  border: 1px solid #e4e4e7;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.reviewCardHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.reviewCardLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.reviewCustomer {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.reviewDate {
+  font-size: 11.5px;
+  color: #8a8a96;
+}
+
+.reviewComment {
+  font-size: 13.5px;
+  color: #555560;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.starRow {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.starFilled {
+  color: #f59e0b;
+  fill: #f59e0b;
+}
+
+.starEmpty {
+  color: #d8d8de;
+}
+
 /* ─── Mobile ───────────────────────────────────────────────────────────────── */
 @media (max-width: 900px) {
   .overviewColumns {

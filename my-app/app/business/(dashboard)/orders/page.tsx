@@ -2,7 +2,7 @@
 
 import { MessageSquare, X } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { MOCK_ORDERS, type MockOrder } from "./_mock";
 import styles from "./page.module.css";
 
@@ -338,6 +338,16 @@ export default function OrdersPage() {
     MOCK_ORDERS.find((o) => o.status === "pending")?.id ?? MOCK_ORDERS[0].id,
   );
   const [slideOpen, setSlideOpen] = useState(false);
+
+  // Deep-link support: /business/orders?order=<id> focuses that order (e.g. from
+  // the Inbox "View order" button) and opens the slide-over on mobile.
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("order");
+    if (id && MOCK_ORDERS.some((o) => o.id === id)) {
+      setFocusedId(id);
+      setSlideOpen(true);
+    }
+  }, []);
 
   const focusedOrder = orders.find((o) => o.id === focusedId) ?? null;
   const pendingCount = orders.filter((o) => o.status === "pending").length;

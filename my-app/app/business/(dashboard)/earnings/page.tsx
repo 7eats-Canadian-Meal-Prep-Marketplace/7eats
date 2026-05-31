@@ -48,7 +48,7 @@ function computeChart(max: number): { ceiling: number; ticks: number[] } {
 }
 
 const STATUS_LABEL: Record<PayoutStatus, string> = {
-  pending: "Pending",
+  pending: "Open",
   paid: "Paid",
 };
 
@@ -90,6 +90,23 @@ export default function EarningsPage() {
     <div className={styles.page}>
       <div className={styles.header}>
         <h1 className={styles.title}>Earnings</h1>
+        <p className={styles.tagline}>
+          Track your revenue and payouts at a glance.
+        </p>
+      </div>
+
+      <div className={styles.revenueRow}>
+        <div className={styles.revenueBlock}>
+          <span className={styles.revenueLabel}>Total revenue</span>
+          <span className={styles.revenueValue}>
+            {formatMoney(MOCK_TOTAL_REVENUE)}
+          </span>
+          <span className={styles.revenueSub}>
+            <TrendingUp size={13} className={styles.trendIcon} />
+            {formatMoney(periodTotal)} over the last {series.length}{" "}
+            {period === "week" ? "weeks" : "months"}
+          </span>
+        </div>
         <div className={styles.segControl}>
           {PERIODS.map((p) => (
             <button
@@ -102,18 +119,6 @@ export default function EarningsPage() {
             </button>
           ))}
         </div>
-      </div>
-
-      <div className={styles.revenueBlock}>
-        <span className={styles.revenueLabel}>Total revenue</span>
-        <span className={styles.revenueValue}>
-          {formatMoney(MOCK_TOTAL_REVENUE)}
-        </span>
-        <span className={styles.revenueSub}>
-          <TrendingUp size={13} className={styles.trendIcon} />
-          {formatMoney(periodTotal)} over the last {series.length}{" "}
-          {period === "week" ? "weeks" : "months"}
-        </span>
       </div>
 
       <div className={styles.chartCard}>

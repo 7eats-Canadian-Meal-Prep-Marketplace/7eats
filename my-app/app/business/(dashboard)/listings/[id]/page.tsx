@@ -5,6 +5,7 @@ import {
   Camera,
   GripVertical,
   Plus,
+  Star,
   Trash2,
   X,
 } from "lucide-react";
@@ -16,15 +17,19 @@ import {
   MOCK_LISTING_DEALS,
   MOCK_LISTING_DISHES,
   MOCK_LISTING_ORDERS,
+  MOCK_LISTING_REVIEWS,
+  MOCK_PRICING_TIERS,
   type MockAvailableDish,
   type MockDealType,
   type MockListingDeal,
   type MockListingDish,
   type MockListingOrder,
+  type MockListingReview,
+  type MockPricingTier,
 } from "./_mock";
 import styles from "./page.module.css";
 
-type Tab = "overview" | "dishes" | "deals" | "orders";
+type Tab = "overview" | "dishes" | "deals" | "orders" | "reviews";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -100,7 +105,53 @@ function OverviewTab() {
     maxOrderQty: MOCK_LISTING.maxOrderQty ?? "",
     status: MOCK_LISTING.status as "active" | "draft" | "archived",
   });
+  const [tiers, setTiers] = useState<MockPricingTier[]>(MOCK_PRICING_TIERS);
   const [saved, setSaved] = useState(false);
+
+  function addTier() {
+    const nextQty =
+      tiers.length > 0 ? Math.max(...tiers.map((t) => t.minQty)) + 5 : 5;
+    setTiers((prev) => [
+      ...prev,
+      { id: `tier-${Date.now()}`, minQty: nextQty, pricePerUnit: "" },
+    ]);
+  }
+
+  function removeTier(id: string) {
+    setTiers((prev) => prev.filter((t) => t.id !== id));
+  }
+
+  function updateTierQty(id: string, qty: number) {
+    if (Number.isNaN(qty)) return;
+    setTiers((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, minQty: qty } : t)),
+    );
+  }
+
+  function clampTierQty(id: string) {
+    setTiers((prev) => {
+      const sorted = [...prev].sort((a, b) => a.minQty - b.minQty);
+      const idx = sorted.findIndex((t) => t.id === id);
+      if (idx === -1) return prev;
+      const lo = idx === 0 ? 2 : sorted[idx - 1].minQty + 1;
+      const hi =
+        idx < sorted.length - 1
+          ? sorted[idx + 1].minQty - 1
+          : Number.POSITIVE_INFINITY;
+      const raw = sorted[idx].minQty;
+      const clamped = Math.max(
+        lo,
+        Number.isFinite(hi) ? Math.min(hi, raw) : raw,
+      );
+      return prev.map((t) => (t.id === id ? { ...t, minQty: clamped } : t));
+    });
+  }
+
+  function updateTierPrice(id: string, price: string) {
+    setTiers((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, pricePerUnit: price } : t)),
+    );
+  }
 
   function handleSave() {
     setSaved(true);
@@ -209,6 +260,78 @@ function OverviewTab() {
                 }
               />
             </div>
+          </div>
+
+          <div className={styles.formGroup}>
+            <span className={styles.formLabel}>Volume pricing</span>
+            <div className={styles.tierTable}>
+              <div className={styles.tierHeader}>
+                <span className={styles.tierHeaderCell}>Min qty</span>
+                <span className={styles.tierHeaderCell}>Price / unit</span>
+                <span />
+              </div>
+              <div className={`${styles.tierRow} ${styles.tierBaseRow}`}>
+                <div className={styles.tierQtyCell}>
+                  <span className={styles.tierBaseText}>1+</span>
+                </div>
+                <div className={styles.tierPriceCell}>
+                  <span className={styles.tierPricePre}>$</span>
+                  <span className={styles.tierBaseText}>
+                    {form.basePrice || "—"}
+                  </span>
+                </div>
+                <div />
+              </div>
+              {[...tiers]
+                .sort((a, b) => a.minQty - b.minQty)
+                .map((tier) => (
+                  <div key={tier.id} className={styles.tierRow}>
+                    <div className={styles.tierQtyCell}>
+                      <input
+                        type="number"
+                        min={2}
+                        aria-label="Minimum quantity"
+                        className={styles.tierQtyInput}
+                        value={tier.minQty}
+                        onChange={(e) =>
+                          updateTierQty(tier.id, Number(e.target.value))
+                        }
+                        onBlur={() => clampTierQty(tier.id)}
+                      />
+                      <span className={styles.tierQtyPlus}>+</span>
+                    </div>
+                    <div className={styles.tierPriceCell}>
+                      <span className={styles.tierPricePre}>$</span>
+                      <input
+                        type="text"
+                        aria-label="Price per unit"
+                        className={styles.tierPriceInput}
+                        value={tier.pricePerUnit}
+                        placeholder="0.00"
+                        onChange={(e) =>
+                          updateTierPrice(tier.id, e.target.value)
+                        }
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      className={styles.tierRemoveBtn}
+                      onClick={() => removeTier(tier.id)}
+                      aria-label="Remove tier"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                ))}
+            </div>
+            <button
+              type="button"
+              className={styles.addTierBtn}
+              onClick={addTier}
+            >
+              <Plus size={13} />
+              Add tier
+            </button>
           </div>
 
           <div className={styles.formActions}>
@@ -730,6 +853,83 @@ function OrdersTab() {
   );
 }
 
+// ─── Reviews tab ──────────────────────────────────────────────────────────────
+
+function StarRating({ rating, size = 13 }: { rating: number; size?: number }) {
+  return (
+    <div className={styles.starRow}>
+      {[1, 2, 3, 4, 5].map((n) => (
+        <Star
+          key={n}
+          size={size}
+          className={n <= rating ? styles.starFilled : styles.starEmpty}
+        />
+      ))}
+    </div>
+  );
+}
+
+function ReviewsTab() {
+  const reviews: MockListingReview[] = MOCK_LISTING_REVIEWS;
+  const total = reviews.length;
+  const avg = reviews.reduce((s, r) => s + r.rating, 0) / total;
+
+  const dist = [5, 4, 3, 2, 1].map((star) => ({
+    star,
+    count: reviews.filter((r) => r.rating === star).length,
+  }));
+
+  return (
+    <div className={styles.reviewsTab}>
+      <div className={styles.reviewSummary}>
+        <div className={styles.reviewAvgBlock}>
+          <span className={styles.reviewAvgNum}>{avg.toFixed(1)}</span>
+          <StarRating rating={Math.round(avg)} size={16} />
+          <span className={styles.reviewAvgCount}>{total} reviews</span>
+        </div>
+        <div className={styles.reviewDist}>
+          {dist.map(({ star, count }) => (
+            <div key={star} className={styles.reviewDistRow}>
+              <span className={styles.reviewDistLabel}>{star}</span>
+              <Star size={11} className={styles.starFilled} />
+              <div className={styles.reviewDistTrack}>
+                <div
+                  className={styles.reviewDistFill}
+                  style={{ width: `${(count / total) * 100}%` }}
+                />
+              </div>
+              <span className={styles.reviewDistCount}>{count}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className={styles.reviewList}>
+        {reviews.map((review) => (
+          <div key={review.id} className={styles.reviewCard}>
+            <div className={styles.reviewCardHead}>
+              <div className={styles.reviewCardLeft}>
+                <span className={styles.reviewCustomer}>
+                  {review.customerName}
+                </span>
+                <span className={styles.reviewDate}>
+                  {new Date(review.date).toLocaleDateString("en-CA", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
+                </span>
+              </div>
+              <StarRating rating={review.rating} />
+            </div>
+            <p className={styles.reviewComment}>{review.comment}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 const TABS: { id: Tab; label: string }[] = [
@@ -737,6 +937,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "dishes", label: "Dishes" },
   { id: "deals", label: "Deals" },
   { id: "orders", label: "Orders" },
+  { id: "reviews", label: "Reviews" },
 ];
 
 export default function ListingDetailPage() {
@@ -763,6 +964,7 @@ export default function ListingDetailPage() {
         {tab === "dishes" && <DishesTab />}
         {tab === "deals" && <DealsTab />}
         {tab === "orders" && <OrdersTab />}
+        {tab === "reviews" && <ReviewsTab />}
       </div>
     </div>
   );
