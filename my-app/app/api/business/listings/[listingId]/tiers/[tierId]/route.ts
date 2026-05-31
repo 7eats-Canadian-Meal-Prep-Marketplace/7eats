@@ -58,7 +58,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 
   try {
     const [listing] = await db
-      .select({ id: listings.id })
+      .select({ id: listings.id, stripeProductId: listings.stripeProductId })
       .from(listings)
       .where(and(eq(listings.id, listingId), eq(listings.cookId, cookId)))
       .limit(1);
@@ -99,13 +99,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
         );
       }
 
-      const [listing2] = await db
-        .select({ stripeProductId: listings.stripeProductId })
-        .from(listings)
-        .where(eq(listings.id, listingId))
-        .limit(1);
-
-      if (!listing2?.stripeProductId) {
+      if (!listing.stripeProductId) {
         return NextResponse.json(
           { error: "Listing has no Stripe product." },
           { status: 400 },
@@ -118,7 +112,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 
       const newPriceId = await createStripePrice(
         cook.stripeAccountId,
-        listing2.stripeProductId,
+        listing.stripeProductId,
         tier.interval,
         Math.round(parsed.data.price * 100),
       );
@@ -222,6 +216,27 @@ export async function DELETE(req: NextRequest, { params }: Params) {
       .update(listingSubscriptionTiers)
       .set({ isActive: false })
       .where(eq(listingSubscriptionTiers.id, tierId));
+
+    // Sync listing basePrice after tier deactivation
+    const remainingTiers = await db
+      .select({ price: listingSubscriptionTiers.price })
+      .from(listingSubscriptionTiers)
+      .where(
+        and(
+          eq(listingSubscriptionTiers.listingId, listingId),
+          eq(listingSubscriptionTiers.isActive, true),
+        ),
+      );
+
+    if (remainingTiers.length > 0) {
+      const cheapest = Math.min(
+        ...remainingTiers.map((t) => parseFloat(t.price)),
+      );
+      await db
+        .update(listings)
+        .set({ basePrice: String(cheapest) })
+        .where(eq(listings.id, listingId));
+    }
 
     return NextResponse.json({ success: true });
   } catch (err) {
