@@ -154,6 +154,39 @@ export const orderPayments = pgTable(
   ],
 ).enableRLS();
 
+// ─── Stripe Webhook Events ────────────────────────────────────────────────────
+// Idempotency ledger for incoming Stripe webhooks. The primary key is the
+// Stripe event id, so an `onConflictDoNothing` insert lets the handler detect
+// and skip events Stripe has already delivered (retries are routine).
+
+export const stripeWebhookEvents = pgTable(
+  "stripe_webhook_events",
+  {
+    id: text("id").primaryKey(),
+    type: text("type").notNull(),
+    receivedAt: timestamp("received_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  () => [
+    pgPolicy("stripe_webhook_events_select_admin", {
+      for: "select",
+      to: "public",
+      using: isAdmin,
+    }),
+    pgPolicy("stripe_webhook_events_insert_service", {
+      for: "insert",
+      to: "public",
+      withCheck: sql`auth.role() = 'service_role'`,
+    }),
+    pgPolicy("stripe_webhook_events_delete_service", {
+      for: "delete",
+      to: "public",
+      using: sql`auth.role() = 'service_role'`,
+    }),
+  ],
+).enableRLS();
+
 // ─── Cook Payouts ─────────────────────────────────────────────────────────────
 // Tracks Stripe Connect bank payouts to cook accounts. Written exclusively
 // by the service role (webhook handler / payout scheduler).

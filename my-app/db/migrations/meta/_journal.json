@@ -43,6 +43,13 @@
       "when": 1780200427350,
       "tag": "0005_open_deathstrike",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1780201715703,
+      "tag": "0006_fat_rumiko_fujikawa",
+      "breakpoints": true
     }
   ]
 }

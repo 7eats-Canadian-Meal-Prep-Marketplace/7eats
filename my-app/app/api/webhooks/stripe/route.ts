@@ -12,6 +12,7 @@ import {
   orderDishes,
   orderPayments,
   orders,
+  stripeWebhookEvents,
 } from "@/db/schema";
 
 function getStripe(): Stripe | null {
@@ -47,6 +48,33 @@ export async function POST(req: NextRequest) {
     }
   } else {
     event = JSON.parse(buf.toString()) as Stripe.Event;
+  }
+
+  // Idempotency: record the event id before processing. Stripe retries
+  // deliveries, so an event we've already handled must be acknowledged
+  // without re-running its side effects (duplicate orders, double payouts).
+  if (event.id) {
+    let recorded: { id: string } | undefined;
+    try {
+      [recorded] = await db
+        .insert(stripeWebhookEvents)
+        .values({ id: event.id, type: event.type })
+        .onConflictDoNothing()
+        .returning({ id: stripeWebhookEvents.id });
+    } catch (err) {
+      console.error("[webhook/stripe] idempotency insert failed", err);
+      return NextResponse.json(
+        { error: "Failed to process webhook event." },
+        { status: 500 },
+      );
+    }
+
+    if (!recorded) {
+      return NextResponse.json(
+        { received: true, duplicate: true },
+        { status: 200 },
+      );
+    }
   }
 
   try {
@@ -315,6 +343,14 @@ export async function POST(req: NextRequest) {
     }
   } catch (err) {
     console.error("[webhook/stripe]", err);
+    // Roll back the idempotency marker so Stripe's retry can reprocess this
+    // event instead of being treated as an already-handled duplicate.
+    if (event.id) {
+      await db
+        .delete(stripeWebhookEvents)
+        .where(eq(stripeWebhookEvents.id, event.id))
+        .catch(() => {});
+    }
     return NextResponse.json(
       { error: "Failed to process webhook event." },
       { status: 500 },

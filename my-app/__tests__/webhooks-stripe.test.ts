@@ -5,7 +5,7 @@ const { constructEventMock } = vi.hoisted(() => ({
 }));
 
 vi.mock("@/db", () => ({
-  db: { select: vi.fn(), insert: vi.fn(), update: vi.fn() },
+  db: { select: vi.fn(), insert: vi.fn(), update: vi.fn(), delete: vi.fn() },
 }));
 vi.mock("@/db/schema", () => ({
   clientSubscriptions: {},
@@ -17,6 +17,7 @@ vi.mock("@/db/schema", () => ({
   orderDishes: {},
   orderPayments: {},
   orders: {},
+  stripeWebhookEvents: { id: "id" },
 }));
 vi.mock("drizzle-orm", () => ({
   eq: vi.fn(),
@@ -27,15 +28,16 @@ vi.mock("stripe", () => ({
   },
 }));
 
+import { NextRequest } from "next/server";
 import { POST } from "@/app/api/webhooks/stripe/route";
 import { db } from "@/db";
 
-function makeRequest(event: unknown, signature?: string): Request {
+function makeRequest(event: unknown, signature?: string): NextRequest {
   const headers: Record<string, string> = {
     "content-type": "application/json",
   };
   if (signature !== undefined) headers["stripe-signature"] = signature;
-  return new Request("http://localhost/api/webhooks/stripe", {
+  return new NextRequest("http://localhost/api/webhooks/stripe", {
     method: "POST",
     body: JSON.stringify(event),
     headers,
@@ -60,12 +62,21 @@ function joinChain(rows: unknown[]) {
 
 let insertValues: ReturnType<typeof vi.fn>;
 let updateSet: ReturnType<typeof vi.fn>;
+let deleteWhere: ReturnType<typeof vi.fn>;
 
-function mockInsert(returnedOrder: object) {
-  insertValues = vi.fn(() => ({
-    returning: vi.fn().mockResolvedValue([returnedOrder]),
-    onConflictDoNothing: vi.fn().mockResolvedValue(undefined),
-  }));
+function mockInsert(returnedRow: object) {
+  const returning = vi.fn().mockResolvedValue([returnedRow]);
+  const onConflictDoNothing = vi.fn(() => ({ returning }));
+  insertValues = vi.fn(() => ({ returning, onConflictDoNothing }));
+  vi.mocked(db.insert).mockReturnValue({ values: insertValues } as never);
+}
+
+// Simulates the idempotency insert finding an existing event: the
+// onConflictDoNothing().returning() resolves to [] (nothing inserted).
+function mockDuplicateInsert() {
+  const returning = vi.fn().mockResolvedValue([]);
+  const onConflictDoNothing = vi.fn(() => ({ returning }));
+  insertValues = vi.fn(() => ({ returning, onConflictDoNothing }));
   vi.mocked(db.insert).mockReturnValue({ values: insertValues } as never);
 }
 
@@ -73,6 +84,11 @@ function mockUpdate() {
   const where = vi.fn().mockResolvedValue(undefined);
   updateSet = vi.fn(() => ({ where }));
   vi.mocked(db.update).mockReturnValue({ set: updateSet } as never);
+}
+
+function mockDelete() {
+  deleteWhere = vi.fn().mockResolvedValue(undefined);
+  vi.mocked(db.delete).mockReturnValue({ where: deleteWhere } as never);
 }
 
 const SUB_ID = "sub_123";
@@ -102,6 +118,7 @@ beforeEach(() => {
   vi.stubEnv("STRIPE_WEBHOOK_SECRET", "");
   vi.stubEnv("STRIPE_SECRET_KEY", "");
   mockUpdate();
+  mockDelete();
 });
 
 afterEach(() => {
@@ -184,11 +201,75 @@ describe("invoice.payment_succeeded", () => {
     expect(res.status).toBe(200);
     expect(db.insert).not.toHaveBeenCalled();
   });
+});
 
-  // KNOWN GAP: the handler has no idempotency guard keyed on the Stripe event
-  // or invoice id, so a webhook retry would insert a duplicate order + payment.
-  // This test documents the behavior we want once a guard is added.
-  it.skip("does not create a duplicate order when the same event is delivered twice", () => {});
+describe("idempotency", () => {
+  function withSubscriptionData() {
+    let call = 0;
+    vi.mocked(db.select).mockImplementation(() => {
+      call++;
+      if (call === 1)
+        return limitChain([
+          {
+            id: "subrow-1",
+            clientId: "client-1",
+            listingId: "listing-1",
+            tierId: "tier-1",
+            cookId: "cook-1",
+          },
+        ]);
+      if (call === 2) return limitChain([{ price: "20.00" }]);
+      if (call === 3) return limitChain([{ platformFeePct: "15.00" }]);
+      return joinChain([]);
+    });
+  }
+
+  it("records the event id and processes a first-time delivery", async () => {
+    withSubscriptionData();
+    mockInsert({ id: "order-1" });
+
+    const res = await POST(
+      makeRequest({ id: "evt_1", ...paymentSucceededEvent() }),
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.duplicate).toBeUndefined();
+    // First insert is the idempotency ledger row keyed on the event id.
+    expect(insertValues.mock.calls[0]?.[0]).toMatchObject({
+      id: "evt_1",
+      type: "invoice.payment_succeeded",
+    });
+  });
+
+  it("acknowledges a duplicate delivery without re-running side effects", async () => {
+    mockDuplicateInsert();
+
+    const res = await POST(
+      makeRequest({ id: "evt_1", ...paymentSucceededEvent() }),
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.duplicate).toBe(true);
+    // We bail out before touching any subscription/order tables.
+    expect(db.select).not.toHaveBeenCalled();
+  });
+
+  it("rolls back the idempotency marker when processing fails", async () => {
+    mockInsert({ id: "evt_2" });
+    vi.mocked(db.select).mockImplementation(() => {
+      throw new Error("db exploded");
+    });
+
+    const res = await POST(
+      makeRequest({ id: "evt_2", ...paymentSucceededEvent() }),
+    );
+
+    expect(res.status).toBe(500);
+    // The marker is deleted so Stripe's retry can reprocess the event.
+    expect(deleteWhere).toHaveBeenCalled();
+  });
 });
 
 describe("subscription lifecycle events", () => {
@@ -326,8 +407,8 @@ describe("misc", () => {
 });
 
 // Connect events carry an `account` field at the top level of the event.
-function makeRequestWithAccount(event: Record<string, unknown>): Request {
-  return new Request("http://localhost/api/webhooks/stripe", {
+function makeRequestWithAccount(event: Record<string, unknown>): NextRequest {
+  return new NextRequest("http://localhost/api/webhooks/stripe", {
     method: "POST",
     body: JSON.stringify({ ...event, account: "acct_123" }),
     headers: { "content-type": "application/json" },
