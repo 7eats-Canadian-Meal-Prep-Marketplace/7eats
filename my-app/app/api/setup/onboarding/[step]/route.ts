@@ -10,6 +10,7 @@ import {
 import { auth } from "@/lib/auth";
 import { uploadAvatar } from "@/lib/storage/avatars";
 import { uploadCert } from "@/lib/storage/certs";
+import { sniffFileType } from "@/lib/upload-validation";
 
 export async function POST(
   req: Request,
@@ -81,9 +82,16 @@ async function step1(req: Request, userId: string) {
         { error: "Photo must be smaller than 5 MB." },
         { status: 400 },
       );
+    const buf = Buffer.from(await photo.arrayBuffer());
+    const sniffed = sniffFileType(buf);
+    if (sniffed !== "image/jpeg" && sniffed !== "image/png") {
+      return NextResponse.json(
+        { error: "Photo must be a valid JPEG or PNG." },
+        { status: 400 },
+      );
+    }
     try {
-      const buf = Buffer.from(await photo.arrayBuffer());
-      photoUrl = await uploadAvatar(userId, photo.name, buf, photo.type);
+      photoUrl = await uploadAvatar(userId, photo.name, buf, sniffed);
     } catch {
       return NextResponse.json(
         { error: "Photo upload failed. Please try again." },
@@ -257,14 +265,20 @@ async function step3(req: Request, userId: string) {
         { error: "Certificate file must be smaller than 10 MB." },
         { status: 400 },
       );
-    try {
-      const buf = Buffer.from(await certPhoto.arrayBuffer());
-      fileUrl = await uploadCert(
-        profile.id,
-        certPhoto.name,
-        buf,
-        certPhoto.type,
+    const buf = Buffer.from(await certPhoto.arrayBuffer());
+    const sniffed = sniffFileType(buf);
+    if (
+      sniffed !== "image/jpeg" &&
+      sniffed !== "image/png" &&
+      sniffed !== "application/pdf"
+    ) {
+      return NextResponse.json(
+        { error: "Certificate file must be a valid JPEG, PNG, or PDF." },
+        { status: 400 },
       );
+    }
+    try {
+      fileUrl = await uploadCert(profile.id, certPhoto.name, buf, sniffed);
     } catch {
       return NextResponse.json(
         { error: "Certificate upload failed. Please try again." },

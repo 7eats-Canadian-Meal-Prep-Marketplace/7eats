@@ -33,9 +33,6 @@ export async function POST(req: Request) {
 
   const normalizedEmail = (email as string).toLowerCase().trim();
 
-  // Look up role + verification status before attempting sign-in so unverified
-  // clients get a clear message and never receive a session. Cooks are never
-  // gated on email verification (they're provisioned via a trusted setup link).
   const [account] = await db
     .select({ role: authUser.role, emailVerified: authUser.emailVerified })
     .from(authUser)
@@ -65,9 +62,6 @@ export async function POST(req: Request) {
     );
   }
 
-  // One login endpoint serves both audiences; route by role. Cooks land on
-  // their dashboard (middleware bounces them to onboarding if setup is
-  // incomplete); clients land on their account.
   const redirect =
     account?.role === "cook" || account?.role === "admin"
       ? "/business/dashboard"

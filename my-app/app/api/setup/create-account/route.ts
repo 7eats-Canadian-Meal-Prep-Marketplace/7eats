@@ -19,8 +19,8 @@ export async function POST(req: Request) {
   const tokenHash = createHash("sha256").update(token).digest("hex");
 
   const [tokenRow] = await db
-    .select()
-    .from(setupTokens)
+    .update(setupTokens)
+    .set({ consumedAt: new Date() })
     .where(
       and(
         eq(setupTokens.tokenHash, tokenHash),
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
         gt(setupTokens.expiresAt, new Date()),
       ),
     )
-    .limit(1);
+    .returning();
 
   if (!tokenRow) {
     return NextResponse.json(
@@ -88,6 +88,7 @@ export async function POST(req: Request) {
           firstName: application.contactFirstName,
           lastName: application.contactLastName,
           phoneVerified: false,
+          emailVerified: true,
         })
         .where(eq(authUser.id, betterAuthUserId));
 
@@ -96,11 +97,6 @@ export async function POST(req: Request) {
         applicationId: application.id,
         displayName: application.kitchenName,
       });
-
-      await tx
-        .update(setupTokens)
-        .set({ consumedAt: new Date() })
-        .where(eq(setupTokens.id, tokenRow.id));
     });
   } catch (err) {
     console.error("[create-account] transaction failed:", err);

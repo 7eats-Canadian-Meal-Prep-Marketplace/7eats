@@ -9,6 +9,7 @@ vi.mock("@/db", () => ({
 vi.mock("@/db/schema", () => ({
   listings: {},
   listingDishes: {},
+  listingSubscriptionTiers: {},
   dishes: {},
   cookProfiles: {},
 }));
@@ -48,7 +49,7 @@ function makeRequest(method: string, body?: unknown): NextRequest {
 
 function mockSession(userId: string | null) {
   vi.mocked(auth.api.getSession).mockResolvedValue(
-    userId ? ({ user: { id: userId } } as never) : null,
+    userId ? ({ user: { id: userId, role: "cook" } } as never) : null,
   );
 }
 
@@ -125,11 +126,18 @@ describe("GET /api/business/listings/[listingId]", () => {
         const from = vi.fn(() => ({ where }));
         return { from } as never;
       }
-      // listingDishes join
+      if (callCount === 3) {
+        // listingDishes join
+        const orderBy = vi.fn().mockResolvedValue([]);
+        const where = vi.fn(() => ({ orderBy }));
+        const innerJoin = vi.fn(() => ({ where }));
+        const from = vi.fn(() => ({ innerJoin }));
+        return { from } as never;
+      }
+      // listingSubscriptionTiers
       const orderBy = vi.fn().mockResolvedValue([]);
       const where = vi.fn(() => ({ orderBy }));
-      const innerJoin = vi.fn(() => ({ where }));
-      const from = vi.fn(() => ({ innerJoin }));
+      const from = vi.fn(() => ({ where }));
       return { from } as never;
     });
 

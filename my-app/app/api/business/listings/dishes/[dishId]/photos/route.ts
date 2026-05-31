@@ -11,9 +11,33 @@ import { dishes, dishPhotos } from "@/db/schema";
 
 type Params = { params: Promise<{ dishId: string }> };
 
+function allowedPhotoOrigins(): string[] {
+  return [
+    process.env.R2_PUBLIC_BUCKET_URL_LISTINGS,
+    process.env.R2_PUBLIC_BUCKET_URL_AVATARS,
+  ]
+    .filter((v): v is string => Boolean(v))
+    .map((v) => {
+      try {
+        return new URL(v).origin;
+      } catch {
+        return "";
+      }
+    })
+    .filter(Boolean);
+}
+
 const postSchema = z
   .object({
-    url: z.url(),
+    url: z.url().refine((u) => {
+      const origins = allowedPhotoOrigins();
+      if (origins.length === 0) return false;
+      try {
+        return origins.includes(new URL(u).origin);
+      } catch {
+        return false;
+      }
+    }, "Photo URL must be hosted on the 7eats CDN."),
     isPrimary: z.boolean().optional().default(false),
     sortOrder: z.number().int().optional().default(0),
   })
