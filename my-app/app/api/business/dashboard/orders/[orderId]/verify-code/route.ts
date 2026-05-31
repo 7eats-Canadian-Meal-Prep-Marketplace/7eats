@@ -1,13 +1,14 @@
 import { createHash } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
+import Stripe from "stripe";
 import { z } from "zod";
 import {
   getCookId,
   unauthorized,
 } from "@/app/api/business/listings/_lib/cook-auth";
 import { db } from "@/db";
-import { orders } from "@/db/schema";
+import { orderPayments, orders } from "@/db/schema";
 
 export type Params = { params: Promise<{ orderId: string }> };
 
@@ -119,6 +120,28 @@ export async function POST(req: NextRequest, { params }: Params) {
       })
       .where(and(eq(orders.id, orderId), eq(orders.cookId, cookId)))
       .returning({ id: orders.id, fulfilledAt: orders.fulfilledAt });
+
+    // Capture the held PaymentIntent to release funds to the cook
+    const stripeKey = process.env.STRIPE_SECRET_KEY;
+    if (stripeKey && fulfilled) {
+      const stripe = new Stripe(stripeKey, { apiVersion: "2026-05-27.dahlia" });
+
+      const [payment] = await db
+        .select({
+          stripePaymentIntentId: orderPayments.stripePaymentIntentId,
+        })
+        .from(orderPayments)
+        .where(eq(orderPayments.orderId, orderId))
+        .limit(1);
+
+      if (payment?.stripePaymentIntentId) {
+        await stripe.paymentIntents.capture(payment.stripePaymentIntentId);
+        await db
+          .update(orderPayments)
+          .set({ status: "released", releasedAt: fulfilledAt })
+          .where(eq(orderPayments.orderId, orderId));
+      }
+    }
 
     return NextResponse.json({
       success: true,
