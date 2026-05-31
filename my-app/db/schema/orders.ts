@@ -17,6 +17,7 @@ import { cookProfiles } from "./cooks";
 import { dishes } from "./dishes";
 import { lateCancelFeeTypeEnum, orderStatus } from "./enums";
 import { listingPromotions, listings } from "./listings";
+import { clientSubscriptions } from "./subscriptions";
 
 const isAdmin = sql`auth.role() = 'admin'`;
 const currentCookOwnsOrder = sql`cook_id IN (SELECT id FROM cook_profiles WHERE user_id = auth.uid())`;
@@ -55,6 +56,10 @@ export const orders = pgTable(
     }),
     lateCancelFee: numeric("late_cancel_fee", { precision: 10, scale: 2 }),
     notes: text("notes"),
+    subscriptionId: uuid("subscription_id").references(
+      () => clientSubscriptions.id,
+      { onDelete: "set null" },
+    ),
     pickupCodeHash: text("pickup_code_hash"),
     pickupCodeExpiresAt: timestamp("pickup_code_expires_at"),
     pickupCodeVerifiedAt: timestamp("pickup_code_verified_at"),

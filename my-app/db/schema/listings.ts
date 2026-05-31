@@ -41,6 +41,7 @@ export const listings = pgTable(
     currency: varchar("currency", { length: 3 }).notNull().default("CAD"),
     // If null the UI generates a collage from the listing's dish photos.
     coverPhotoUrl: text("cover_photo_url"),
+    stripeProductId: text("stripe_product_id"),
     minOrderQty: integer("min_order_qty").notNull().default(1),
     maxOrderQty: integer("max_order_qty"),
     reviewedAt: timestamp("reviewed_at"),

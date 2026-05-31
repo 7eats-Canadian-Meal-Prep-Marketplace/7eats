@@ -29,6 +29,7 @@ export const authUser = pgTable(
     lastName: varchar("last_name", { length: 100 }),
     phone: varchar("phone", { length: 20 }),
     phoneVerified: boolean("phone_verified").notNull().default(false),
+    stripeCustomerId: text("stripe_customer_id"),
   },
   () => [
     // Public read required: other tables' RLS policies JOIN this table to check
