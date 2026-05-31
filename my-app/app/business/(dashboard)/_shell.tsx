@@ -188,10 +188,12 @@ export default function DashboardShell({
                         onClick={() => handleNotifClick(n.id)}
                       >
                         <span
-                          className={`${styles.notifIcon} ${n.kind === "review" ? styles.notifIconReview : styles.notifIconOrder}`}
+                          className={`${styles.notifIcon} ${n.kind === "review" ? styles.notifIconReview : n.kind === "cancelled" ? styles.notifIconCancelled : styles.notifIconOrder}`}
                         >
                           {n.kind === "review" ? (
                             <Star size={17} />
+                          ) : n.kind === "cancelled" ? (
+                            <X size={17} />
                           ) : (
                             <ShoppingBag size={17} />
                           )}

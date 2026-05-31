@@ -213,6 +213,10 @@
   color: var(--ink);
 }
 
+.notifIconCancelled {
+  color: var(--red);
+}
+
 .notifBody {
   flex: 1;
   min-width: 0;

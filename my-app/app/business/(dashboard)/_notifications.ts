@@ -1,4 +1,4 @@
-export type NotificationKind = "order" | "review";
+export type NotificationKind = "order" | "review" | "cancelled";
 
 export type MockNotification = {
   id: string;
@@ -26,6 +26,15 @@ export const MOCK_NOTIFICATIONS: MockNotification[] = [
     title: "New order",
     detail: "Amara Okafor · Weekend West African Feast",
     timestamp: ago(12),
+    href: "/business/orders",
+    isRead: false,
+  },
+  {
+    id: "n-1b",
+    kind: "cancelled",
+    title: "Order cancelled",
+    detail: "Marcus Reid · Lunch Bento Box",
+    timestamp: ago(25),
     href: "/business/orders",
     isRead: false,
   },

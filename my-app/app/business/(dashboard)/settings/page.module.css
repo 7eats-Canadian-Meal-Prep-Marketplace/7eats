@@ -1,8 +1,17 @@
+/* ─── Page ─────────────────────────────────────────────────────────────────── */
 .page {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  max-width: 720px;
+  max-width: 1100px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 40px;
 }
 
 .back {
@@ -16,6 +25,7 @@
   transition: color 0.12s;
   width: fit-content;
 }
+
 .back:hover {
   color: var(--ink);
 }
@@ -28,73 +38,86 @@
   margin: 0;
 }
 
-/* ─── Tab row ───────────────────────────────────────────────────────────────── */
-.tabRow {
+/* ─── Two-column layout ────────────────────────────────────────────────────── */
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 160px;
+  gap: 64px;
+  align-items: start;
+}
+
+/* ─── Sections (left column) ───────────────────────────────────────────────── */
+.sections {
   display: flex;
-  border-bottom: 1px solid var(--grey-200);
+  flex-direction: column;
+  gap: 52px;
+  padding-bottom: 120px;
 }
 
-.tab {
-  position: relative;
-  bottom: -1px;
-  padding: 0 4px 11px;
-  margin-right: 24px;
-  font-size: 13.5px;
-  font-weight: 500;
-  color: var(--grey-500);
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
-  cursor: pointer;
-  transition: color 0.12s;
-  white-space: nowrap;
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  scroll-margin-top: 32px;
 }
 
-.tab:hover {
+.sectionTitle {
+  font-size: 16px;
+  font-weight: 700;
   color: var(--ink);
+  margin: 0;
+  letter-spacing: -0.01em;
 }
 
-.tabActive {
-  color: var(--ink);
-  font-weight: 600;
-  border-bottom-color: var(--red);
+/* ─── Card ──────────────────────────────────────────────────────────────────── */
+.card {
+  background: var(--white);
+  border: 1px solid #e4e4e7;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  overflow: hidden;
 }
 
-/* ─── Content animation ────────────────────────────────────────────────────── */
-.content {
-  animation: fadeUp 0.14s ease both;
-}
-
-@keyframes fadeUp {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* ─── Shared form styles ───────────────────────────────────────────────────── */
-.form {
+.cardForm {
   display: flex;
   flex-direction: column;
   gap: 18px;
-  max-width: 560px;
+  padding: 20px 24px;
 }
 
+.cardFooter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 24px;
+  border-top: 1px solid #f0f0f3;
+  background: #fafafa;
+}
+
+/* ─── Form primitives ──────────────────────────────────────────────────────── */
 .formGroup {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
+.formGroupNarrow {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 200px;
+}
+
 .formLabel {
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 600;
-  color: var(--grey-700);
-  letter-spacing: 0.01em;
+  color: #444444;
+  letter-spacing: 0.005em;
+}
+
+.formLabelOptional {
+  font-weight: 400;
+  color: #a0a0aa;
 }
 
 .formInput {
@@ -102,8 +125,9 @@
   font-size: 13.5px;
   color: var(--ink);
   background: var(--white);
-  border: 1px solid var(--grey-200);
+  border: 1px solid #e4e4e7;
   border-radius: var(--radius-sm);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
   font-family: inherit;
   outline: none;
   transition: border-color 0.12s;
@@ -111,7 +135,51 @@
 }
 
 .formInput:focus {
-  border-color: var(--grey-500);
+  border-color: #a0a0aa;
+}
+
+.formSelect {
+  padding: 9px 32px 9px 12px;
+  font-size: 13.5px;
+  color: var(--ink);
+  background: var(--white);
+  border: 1px solid #e4e4e7;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.12s;
+  width: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238a8a96' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  cursor: pointer;
+}
+
+.formSelect:focus {
+  border-color: #a0a0aa;
+}
+
+.formTextarea {
+  padding: 9px 12px;
+  font-size: 13.5px;
+  color: var(--ink);
+  background: var(--white);
+  border: 1px solid #e4e4e7;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.12s;
+  width: 100%;
+  resize: vertical;
+  line-height: 1.55;
+}
+
+.formTextarea:focus {
+  border-color: #a0a0aa;
 }
 
 .formRow {
@@ -126,109 +194,229 @@
   gap: 14px;
 }
 
-.formActions {
-  display: flex;
-  gap: 8px;
-  padding-top: 4px;
+.formDivider {
+  border: none;
+  border-top: 1px solid #f0f0f3;
+  margin: 2px 0;
+}
+
+/* ─── Read-only value ──────────────────────────────────────────────────────── */
+.readonlyVal {
+  font-size: 13.5px;
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.readonlyNote {
+  margin-left: 6px;
+  font-size: 12px;
+  color: #a0a0aa;
+  font-weight: 400;
 }
 
 /* ─── Buttons ──────────────────────────────────────────────────────────────── */
 .saveBtn {
   padding: 9px 20px;
-  background: var(--red);
+  background: var(--ink);
   color: var(--white);
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   border: none;
   border-radius: var(--radius-sm);
   cursor: pointer;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
   transition: opacity 0.12s;
 }
 
 .saveBtn:hover {
-  opacity: 0.88;
+  opacity: 0.82;
 }
 
-/* ─── Segmented control ────────────────────────────────────────────────────── */
-.segControl {
-  display: flex;
-  background: var(--grey-100);
-  border: 1px solid var(--grey-200);
+.outlineBtn {
+  padding: 8px 16px;
+  background: none;
+  color: #444444;
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid #d0d0d8;
   border-radius: var(--radius-sm);
-  padding: 3px;
-  gap: 2px;
+  cursor: pointer;
+  align-self: flex-start;
+  transition:
+    border-color 0.12s,
+    color 0.12s;
+}
+
+.outlineBtn:hover {
+  border-color: #a0a0aa;
+  color: var(--ink);
+}
+
+.cancelBtn {
+  padding: 4px 0;
+  background: none;
+  color: #8a8a96;
+  font-size: 12.5px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  align-self: flex-start;
+  transition: color 0.12s;
+}
+
+.cancelBtn:hover {
+  color: var(--ink);
+}
+
+/* ─── Photo dropzone ────────────────────────────────────────────────────────── */
+.dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 28px 24px;
+  border: 2px dashed #d8d8de;
+  border-radius: var(--radius-sm);
+  background: #fafafa;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+  text-align: center;
+}
+
+.dropzone:hover {
+  border-color: #b0b0ba;
+  background: #f5f5f7;
+}
+
+.dropzoneIcon {
+  color: #b0b0ba;
+  flex: none;
+}
+
+.dropzoneText {
+  font-size: 13px;
+  font-weight: 500;
+  color: #555560;
+  line-height: 1.4;
+}
+
+.dropzoneBrowse {
+  color: var(--ink);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.dropzoneSub {
+  font-size: 11.5px;
+  color: #a0a0aa;
+}
+
+/* ─── Password sub-form ────────────────────────────────────────────────────── */
+.pwForm {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid #e4e4e7;
+  border-radius: var(--radius-sm);
+  background: #fafafa;
+}
+
+/* ─── Stripe billing ─────────────────────────────────────────────────────────── */
+.stripeStatus {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.stripeInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.stripeBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
   align-self: flex-start;
 }
 
-.segBtn {
-  padding: 5px 14px;
+.stripeBadgeConnected {
+  background: rgba(34, 197, 94, 0.1);
+  color: #166534;
+}
+
+.stripeBadgePending {
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.stripeDetails {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.stripeBank {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.stripeAccount {
+  font-size: 12.5px;
+  color: #8a8a96;
+  font-feature-settings: "tnum";
+}
+
+.stripeBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 14px;
+  background: none;
+  color: #444444;
   font-size: 12.5px;
   font-weight: 500;
-  color: var(--grey-700);
-  background: transparent;
-  border: none;
-  border-radius: calc(var(--radius-sm) - 2px);
-  cursor: pointer;
-  transition: all 0.12s;
-  white-space: nowrap;
-}
-
-.segBtn:hover {
-  color: var(--ink);
-  background: rgba(255, 255, 255, 0.65);
-}
-
-.segBtnActive {
-  background: var(--white);
-  color: var(--ink);
-  font-weight: 600;
-  box-shadow:
-    0 1px 3px rgba(15, 15, 15, 0.1),
-    0 0 0 0.5px rgba(15, 15, 15, 0.06);
-}
-
-/* ─── Price input ──────────────────────────────────────────────────────────── */
-.priceWrap {
-  display: flex;
-  align-items: center;
-  border: 1px solid var(--grey-200);
+  border: 1px solid #d0d0d8;
   border-radius: var(--radius-sm);
-  overflow: hidden;
-  transition: border-color 0.12s;
-  background: var(--white);
-  max-width: 200px;
+  text-decoration: none;
+  flex: none;
+  transition:
+    border-color 0.12s,
+    color 0.12s;
 }
 
-.priceWrap:focus-within {
-  border-color: var(--grey-500);
-}
-
-.pricePre {
-  padding: 0 10px;
-  font-size: 13.5px;
-  color: var(--grey-500);
-  background: var(--grey-100);
-  border-right: 1px solid var(--grey-200);
-  display: flex;
-  align-items: center;
-  align-self: stretch;
-}
-
-.priceInput {
-  flex: 1;
-}
-
-.priceWrap .formInput {
-  border: none;
-  border-radius: 0;
+.stripeBtn:hover {
+  border-color: #a0a0aa;
+  color: var(--ink);
 }
 
 /* ─── Notifications ────────────────────────────────────────────────────────── */
-.notifList {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  max-width: 560px;
+.notifGroupHeader {
+  padding: 12px 24px 8px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #a0a0aa;
+}
+
+.notifGroupDivider {
+  border: none;
+  border-top: 1px solid #e4e4e7;
+  margin: 4px 0;
 }
 
 .notifRow {
@@ -236,9 +424,11 @@
   align-items: center;
   justify-content: space-between;
   gap: 20px;
-  padding: 14px 16px;
-  border: 1px solid var(--grey-200);
-  border-radius: var(--radius-sm);
+  padding: 14px 24px;
+}
+
+.notifRowBorder {
+  border-bottom: 1px solid #f0f0f3;
 }
 
 .notifInfo {
@@ -256,7 +446,7 @@
 
 .notifDesc {
   font-size: 12.5px;
-  color: var(--grey-500);
+  color: #8a8a96;
   line-height: 1.4;
 }
 
@@ -265,7 +455,7 @@
   width: 36px;
   height: 20px;
   border-radius: var(--radius-pill);
-  background: var(--grey-300);
+  background: #d8d8de;
   border: none;
   padding: 0;
   cursor: pointer;
@@ -275,7 +465,7 @@
 }
 
 .toggleSwitchOn {
-  background: var(--red);
+  background: var(--ink);
 }
 
 .toggleKnob {
@@ -293,64 +483,124 @@
   transform: translateX(16px);
 }
 
-/* ─── Bank card ────────────────────────────────────────────────────────────── */
-.bankCard {
+/* ─── Danger zone ──────────────────────────────────────────────────────────── */
+.dangerCard {
+  border-color: rgba(214, 64, 69, 0.22);
+}
+
+.dangerRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  padding: 14px 16px;
-  border: 1px solid var(--grey-200);
-  border-radius: var(--radius-sm);
+  gap: 24px;
+  padding: 20px 24px;
 }
 
-.bankInfo {
+.dangerInfo {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
 }
 
-.bankNumber {
+.dangerTitle {
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--ink);
-  letter-spacing: 0.04em;
-  font-feature-settings: "tnum";
 }
 
-.bankInstitution {
-  font-size: 12.5px;
-  color: var(--grey-500);
+.dangerDesc {
+  font-size: 13px;
+  color: #8a8a96;
+  line-height: 1.45;
+  max-width: 440px;
 }
 
-.bankBtn {
-  padding: 7px 14px;
+.deleteBtn {
+  padding: 9px 18px;
   background: none;
-  color: var(--grey-700);
-  font-size: 12.5px;
-  font-weight: 500;
-  border: 1px solid var(--grey-200);
+  color: var(--red);
+  font-size: 13px;
+  font-weight: 600;
+  border: 1.5px solid var(--red);
   border-radius: var(--radius-sm);
   cursor: pointer;
   flex: none;
   transition:
-    border-color 0.12s,
+    background 0.12s,
     color 0.12s;
 }
 
-.bankBtn:hover {
-  border-color: var(--grey-300);
+.deleteBtn:hover {
+  background: var(--red);
+  color: var(--white);
+}
+
+/* ─── Sticky right nav ─────────────────────────────────────────────────────── */
+.sideNav {
+  position: sticky;
+  top: 32px;
+  display: flex;
+  flex-direction: column;
+}
+
+.navItem {
+  display: block;
+  width: 100%;
+  padding: 7px 0 7px 16px;
+  border: none;
+  box-shadow: inset 2px 0 0 #e8e8ec;
+  background: none;
+  font-size: 13px;
+  font-weight: 500;
+  color: #8a8a96;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  transition:
+    color 0.12s,
+    box-shadow 0.12s;
+}
+
+.navItem:hover {
   color: var(--ink);
+  box-shadow: inset 2px 0 0 #c0c0c8;
+}
+
+.navItemActive {
+  box-shadow: inset 3px 0 0 var(--ink);
+  color: var(--ink);
+  font-weight: 600;
 }
 
 /* ─── Mobile ───────────────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .sideNav {
+    display: none;
+  }
+}
+
 @media (max-width: 640px) {
   .formRow,
   .formRow3 {
     grid-template-columns: 1fr;
   }
 
-  .bankCard {
+  .formGroupNarrow {
+    max-width: 100%;
+  }
+
+  .dangerRow {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .stripeRow {
     flex-direction: column;
     align-items: flex-start;
   }

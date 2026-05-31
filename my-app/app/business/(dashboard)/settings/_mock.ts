@@ -1,21 +1,45 @@
-export type MockProfile = {
-  businessName: string;
-  contactEmail: string;
-  phone: string;
+export type MockKitchen = {
+  kitchenName: string;
+  kitchenType: string;
+  yearsOperating: string;
   street: string;
   city: string;
   province: string;
   postalCode: string;
+  website: string;
+  businessPhone: string;
+  businessEmail: string;
+  bio: string;
 };
 
-export const MOCK_PROFILE: MockProfile = {
-  businessName: "Amara's Kitchen",
-  contactEmail: "hello@amaraskitchen.ca",
-  phone: "+1 (416) 555-0182",
+export const MOCK_KITCHEN: MockKitchen = {
+  kitchenName: "Amara's Kitchen",
+  kitchenType: "licensed_home",
+  yearsOperating: "3-5 years",
   street: "248 Roncesvalles Ave",
   city: "Toronto",
   province: "ON",
   postalCode: "M6R 2M1",
+  website: "amaraskitchen.ca",
+  businessPhone: "+1 (416) 555-0182",
+  businessEmail: "hello@amaraskitchen.ca",
+  bio: "Bringing the rich, bold flavours of West Africa to Toronto — one home-cooked meal at a time.",
+};
+
+export type MockAccount = {
+  firstName: string;
+  lastName: string;
+  role: string;
+  personalPhone: string;
+  loginEmail: string;
+};
+
+export const MOCK_ACCOUNT: MockAccount = {
+  firstName: "Amara",
+  lastName: "Diallo",
+  role: "Owner",
+  personalPhone: "+1 (416) 555-0182",
+  loginEmail: "amara@amaraskitchen.ca",
 };
 
 export type MockNotification = {
@@ -41,8 +65,15 @@ export const MOCK_NOTIFICATIONS: MockNotification[] = [
   {
     id: "daily_summary",
     label: "Daily summary",
-    description: "A once-a-day recap of orders, revenue, and pickups.",
+    description:
+      "A once-a-day recap of orders, revenue, and upcoming pickup days.",
     enabled: false,
+  },
+  {
+    id: "messages",
+    label: "Messages",
+    description: "Get notified when a customer sends you a message.",
+    enabled: true,
   },
   {
     id: "marketing_emails",
@@ -52,18 +83,28 @@ export const MOCK_NOTIFICATIONS: MockNotification[] = [
   },
 ];
 
-export type PayoutSchedule = "weekly" | "biweekly" | "monthly";
-
-export type MockPayoutSettings = {
-  bankLast4: string;
-  institution: string;
-  schedule: PayoutSchedule;
-  minThreshold: string;
+export type MockChannels = {
+  email: boolean;
+  sms: boolean;
 };
 
-export const MOCK_PAYOUT_SETTINGS: MockPayoutSettings = {
-  bankLast4: "4821",
+export const MOCK_CHANNELS: MockChannels = {
+  email: true,
+  sms: false,
+};
+
+export type StripeStatus = "connected" | "pending" | "not_connected";
+
+export type MockStripeAccount = {
+  status: StripeStatus;
+  institution: string;
+  last4: string;
+  schedule: "weekly" | "biweekly" | "monthly";
+};
+
+export const MOCK_STRIPE_ACCOUNT: MockStripeAccount = {
+  status: "connected",
   institution: "Royal Bank of Canada",
+  last4: "4821",
   schedule: "weekly",
-  minThreshold: "50",
 };
