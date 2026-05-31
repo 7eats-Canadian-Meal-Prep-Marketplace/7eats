@@ -89,7 +89,7 @@ function makeDelete(): NextRequest {
 
 function mockSession(userId: string | null) {
   vi.mocked(auth.api.getSession).mockResolvedValue(
-    userId ? ({ user: { id: userId } } as never) : null,
+    userId ? ({ user: { id: userId, role: "cook" } } as never) : null,
   );
 }
 

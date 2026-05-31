@@ -1,13 +1,14 @@
 import { createHash } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
+import Stripe from "stripe";
 import { z } from "zod";
 import {
   getCookId,
   unauthorized,
 } from "@/app/api/business/listings/_lib/cook-auth";
 import { db } from "@/db";
-import { orders } from "@/db/schema";
+import { orderPayments, orders } from "@/db/schema";
 
 export type Params = { params: Promise<{ orderId: string }> };
 
@@ -117,8 +118,52 @@ export async function POST(req: NextRequest, { params }: Params) {
         pickupCodeVerifiedAt: fulfilledAt,
         fulfilledAt,
       })
-      .where(and(eq(orders.id, orderId), eq(orders.cookId, cookId)))
+      .where(
+        and(
+          eq(orders.id, orderId),
+          eq(orders.cookId, cookId),
+          eq(orders.status, "ready"),
+        ),
+      )
       .returning({ id: orders.id, fulfilledAt: orders.fulfilledAt });
+
+    if (!fulfilled) {
+      return NextResponse.json(
+        { error: "Order is no longer awaiting pickup." },
+        { status: 409 },
+      );
+    }
+
+    const stripeKey = process.env.STRIPE_SECRET_KEY;
+    if (stripeKey) {
+      const stripe = new Stripe(stripeKey, { apiVersion: "2026-05-27.dahlia" });
+
+      const [payment] = await db
+        .select({
+          stripePaymentIntentId: orderPayments.stripePaymentIntentId,
+          status: orderPayments.status,
+        })
+        .from(orderPayments)
+        .where(eq(orderPayments.orderId, orderId))
+        .limit(1);
+
+      if (payment?.status === "authorized" && payment.stripePaymentIntentId) {
+        await stripe.paymentIntents.capture(
+          payment.stripePaymentIntentId,
+          {},
+          { idempotencyKey: `capture-${orderId}` },
+        );
+        await db
+          .update(orderPayments)
+          .set({ status: "released", releasedAt: fulfilledAt })
+          .where(
+            and(
+              eq(orderPayments.orderId, orderId),
+              eq(orderPayments.status, "authorized"),
+            ),
+          );
+      }
+    }
 
     return NextResponse.json({
       success: true,

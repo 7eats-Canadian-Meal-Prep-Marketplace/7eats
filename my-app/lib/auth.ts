@@ -25,6 +25,7 @@ export const auth = betterAuth({
     // Sign-up never starts a session. Cooks sign in explicitly via
     // create-account; clients must confirm their email first (see below).
     autoSignIn: false,
+    requireEmailVerification: true,
     sendResetPassword: async ({ user, url }) => {
       const resend = new Resend(process.env.RESEND_API_KEY);
       const { error } = await resend.emails.send({
@@ -51,11 +52,15 @@ export const auth = betterAuth({
     expiresIn: 60 * 60 * 24, // 24 hours
     autoSignInAfterVerification: false,
     sendVerificationEmail: async ({ user, url }) => {
-      // Log so the link is testable from the terminal when RESEND_API_KEY is
-      // unset, mirroring the cook setup-email behavior.
-      console.log(
-        `[verify-email] confirmation link for ${user.email}:\n${url}`,
-      );
+      if (process.env.NODE_ENV !== "production") {
+        console.log(
+          `[verify-email] confirmation link for ${user.email}:\n${url}`,
+        );
+      } else {
+        console.log(
+          `[verify-email] sending confirmation link to ${user.email}`,
+        );
+      }
       await sendMail({
         to: user.email,
         subject: "Confirm your email — 7eats",
@@ -80,6 +85,16 @@ export const auth = betterAuth({
       lastName: { type: "string", required: false },
       phone: { type: "string", required: false },
       phoneVerified: { type: "boolean", defaultValue: false, required: false },
+    },
+  },
+  rateLimit: {
+    enabled: true,
+    window: 60,
+    max: 60,
+    customRules: {
+      "/sign-in/email": { window: 900, max: 5 },
+      "/sign-up/email": { window: 900, max: 5 },
+      "/forget-password": { window: 900, max: 5 },
     },
   },
   secret:

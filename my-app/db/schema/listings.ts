@@ -41,8 +41,12 @@ export const listings = pgTable(
     currency: varchar("currency", { length: 3 }).notNull().default("CAD"),
     // If null the UI generates a collage from the listing's dish photos.
     coverPhotoUrl: text("cover_photo_url"),
+    stripeProductId: text("stripe_product_id"),
     minOrderQty: integer("min_order_qty").notNull().default(1),
     maxOrderQty: integer("max_order_qty"),
+    // How many days before the next billing period a client must cancel/pause.
+    // null = no restriction.
+    cancellationNoticeDays: integer("cancellation_notice_days"),
     reviewedAt: timestamp("reviewed_at"),
     reviewedBy: text("reviewed_by").references(() => authUser.id, {
       onDelete: "set null",
@@ -60,6 +64,10 @@ export const listings = pgTable(
     check(
       "listings_max_order_qty_valid",
       sql`${t.maxOrderQty} IS NULL OR ${t.maxOrderQty} >= ${t.minOrderQty}`,
+    ),
+    check(
+      "listings_cancellation_notice_days_non_negative",
+      sql`${t.cancellationNoticeDays} IS NULL OR ${t.cancellationNoticeDays} >= 0`,
     ),
     pgPolicy("listings_select_active", {
       for: "select",
@@ -309,6 +317,82 @@ export const listingPromotions = pgTable(
         SELECT l.id FROM listings l
         JOIN cook_profiles cp ON l.cook_id = cp.id
         WHERE cp.user_id = auth.uid()
+      )`,
+    }),
+  ],
+).enableRLS();
+
+// ─── Listing Bundles ─────────────────────────────────────────────────────────
+// Volume-price tiers for one_time listings (e.g. 3 wings for $10, 6 for $17).
+
+export const listingBundles = pgTable(
+  "listing_bundles",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    listingId: uuid("listing_id")
+      .notNull()
+      .references(() => listings.id, { onDelete: "cascade" }),
+    label: varchar("label", { length: 100 }),
+    quantity: integer("quantity").notNull(),
+    price: numeric("price", { precision: 10, scale: 2 }).notNull(),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at")
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    uniqueIndex("listing_bundles_listing_qty_uidx").on(t.listingId, t.quantity),
+    check("bundle_quantity_positive", sql`${t.quantity} >= 1`),
+    check("bundle_price_positive", sql`${t.price} > 0`),
+    pgPolicy("listing_bundles_select_public", {
+      for: "select",
+      to: "public",
+      using: sql`
+        is_active = TRUE
+        AND listing_id IN (SELECT id FROM listings WHERE status = 'active')
+      `,
+    }),
+    pgPolicy("listing_bundles_select_own", {
+      for: "select",
+      to: "public",
+      using: sql`listing_id IN (
+        SELECT l.id FROM listings l
+        JOIN cook_profiles cp ON l.cook_id = cp.id
+        WHERE cp.user_id = auth.uid()::text
+      )`,
+    }),
+    pgPolicy("listing_bundles_select_admin", {
+      for: "select",
+      to: "public",
+      using: isAdmin,
+    }),
+    pgPolicy("listing_bundles_insert_own", {
+      for: "insert",
+      to: "public",
+      withCheck: sql`listing_id IN (
+        SELECT l.id FROM listings l
+        JOIN cook_profiles cp ON l.cook_id = cp.id
+        WHERE cp.user_id = auth.uid()::text
+      )`,
+    }),
+    pgPolicy("listing_bundles_update_own", {
+      for: "update",
+      to: "public",
+      using: sql`listing_id IN (
+        SELECT l.id FROM listings l
+        JOIN cook_profiles cp ON l.cook_id = cp.id
+        WHERE cp.user_id = auth.uid()::text
+      )`,
+    }),
+    pgPolicy("listing_bundles_delete_own", {
+      for: "delete",
+      to: "public",
+      using: sql`listing_id IN (
+        SELECT l.id FROM listings l
+        JOIN cook_profiles cp ON l.cook_id = cp.id
+        WHERE cp.user_id = auth.uid()::text
       )`,
     }),
   ],

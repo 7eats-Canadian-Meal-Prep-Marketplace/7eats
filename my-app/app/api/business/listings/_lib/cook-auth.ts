@@ -8,6 +8,8 @@ export async function getCookId(headers: Headers): Promise<string | null> {
   const session = await auth.api.getSession({ headers });
   if (!session) return null;
 
+  if (session.user.role !== "cook") return null;
+
   const [cook] = await db
     .select({ id: cookProfiles.id })
     .from(cookProfiles)

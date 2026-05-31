@@ -77,3 +77,16 @@ export const lateCancelFeeTypeEnum = pgEnum("late_cancel_fee_type", [
   "flat",
   "percentage",
 ]);
+
+export const subscriptionInterval = pgEnum("subscription_interval", [
+  "weekly",
+  "biweekly",
+  "monthly",
+]);
+
+export const subscriptionStatus = pgEnum("subscription_status", [
+  "active",
+  "paused",
+  "cancelled",
+  "past_due",
+]);

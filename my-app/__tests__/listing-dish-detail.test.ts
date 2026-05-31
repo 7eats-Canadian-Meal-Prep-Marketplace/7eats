@@ -29,7 +29,7 @@ const params = Promise.resolve({ listingId: LISTING_ID, dishId: DISH_ID });
 
 function mockSession(userId: string | null) {
   vi.mocked(auth.api.getSession).mockResolvedValue(
-    userId ? ({ user: { id: userId } } as never) : null,
+    userId ? ({ user: { id: userId, role: "cook" } } as never) : null,
   );
 }
 
