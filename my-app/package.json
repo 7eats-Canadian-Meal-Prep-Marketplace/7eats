@@ -12,6 +12,7 @@
     "test:run": "vitest run",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
     "prepare": "cd .. && husky"
   },
   "lint-staged": {
@@ -29,6 +30,7 @@
     "react-dom": "19.2.4",
     "resend": "^6.12.4",
     "sonner": "^2.0.7",
+    "stripe": "^22.2.0",
     "twilio": "^6.0.2",
     "ws": "^8.21.0",
     "zod": "^4.4.3"

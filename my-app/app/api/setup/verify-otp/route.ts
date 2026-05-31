@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { authUser } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { verifySignedPhone } from "@/lib/cookie";
+import { logAndCheckRateLimit } from "@/lib/rate-limit";
 
 function twilioClient() {
   const sid = process.env.TWILIO_ACCOUNT_SID;
@@ -29,6 +30,17 @@ export async function POST(req: Request) {
   const { code } = await req.json();
   if (!code) {
     return NextResponse.json({ error: "Code is required." }, { status: 400 });
+  }
+
+  const allowed = await logAndCheckRateLimit(`verify-otp:${session.user.id}`, {
+    windowMinutes: 10,
+    maxAttempts: 5,
+  });
+  if (!allowed) {
+    return NextResponse.json(
+      { error: "Too many attempts. Please request a new code." },
+      { status: 429 },
+    );
   }
 
   const jar = await cookies();

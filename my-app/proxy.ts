@@ -74,8 +74,8 @@ export async function proxy(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // dashboard: require steps 1 & 2 complete (step >= 3); steps 3 & 4 can be deferred
-  if (pathname.startsWith("/business/dashboard")) {
+  // All /business/* dashboard routes require steps 1 & 2 complete (step >= 3)
+  if (pathname.startsWith("/business/")) {
     const state = await getCookState(userId);
     if (!state) {
       return NextResponse.redirect(new URL("/business-auth/login", req.url));
@@ -105,7 +105,7 @@ export async function proxy(req: NextRequest) {
     const step = req.nextUrl.searchParams.get("step");
     const current = state.currentSetupStep;
     const stepNum = Number(step);
-    if (isNaN(stepNum) || stepNum < 1 || stepNum > current) {
+    if (Number.isNaN(stepNum) || stepNum < 1 || stepNum > current) {
       return NextResponse.redirect(
         new URL(`/business-auth/setup/onboarding?step=${current}`, req.url),
       );

@@ -1,0 +1,443 @@
+/* ─── Page ────────────────────────────────────────────────────────────────── */
+.page {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─── Tab row ─────────────────────────────────────────────────────────────── */
+.tabRow {
+  display: flex;
+  border-bottom: 1px solid var(--grey-200);
+  margin-bottom: 20px;
+}
+
+.tab {
+  position: relative;
+  bottom: -1px;
+  padding: 0 4px 11px;
+  margin-right: 24px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--grey-500);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: color 0.12s;
+  white-space: nowrap;
+}
+
+.tab:hover {
+  color: var(--ink);
+}
+
+.tabActive {
+  color: var(--ink);
+  font-weight: 600;
+  border-bottom-color: var(--red);
+}
+
+/* ─── Toolbar ─────────────────────────────────────────────────────────────── */
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+/* ─── Filter segmented control ────────────────────────────────────────────── */
+.filterGroup {
+  display: flex;
+  background: var(--grey-100);
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-sm);
+  padding: 3px;
+  gap: 2px;
+}
+
+.filterBtn {
+  padding: 5px 14px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--grey-600);
+  background: transparent;
+  border: none;
+  border-radius: calc(var(--radius-sm) - 2px);
+  cursor: pointer;
+  transition: all 0.12s;
+  white-space: nowrap;
+}
+
+.filterBtn:hover {
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.65);
+}
+
+.filterBtnActive {
+  background: var(--white);
+  color: var(--ink);
+  font-weight: 600;
+  box-shadow:
+    0 1px 3px rgba(15, 15, 15, 0.1),
+    0 0 0 0.5px rgba(15, 15, 15, 0.06);
+}
+
+/* ─── New button ──────────────────────────────────────────────────────────── */
+.newBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: var(--red);
+  color: var(--white);
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  flex: none;
+  white-space: nowrap;
+  transition: opacity 0.12s;
+}
+
+.newBtn:hover {
+  opacity: 0.88;
+}
+
+/* ─── Content animation ───────────────────────────────────────────────────── */
+.content {
+  animation: fadeUp 0.15s ease both;
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ─── Card grid ───────────────────────────────────────────────────────────── */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+/* ─── Card shell ──────────────────────────────────────────────────────────── */
+.card {
+  display: flex;
+  flex-direction: column;
+  background: var(--white);
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  text-decoration: none;
+  color: inherit;
+  transition:
+    box-shadow 0.18s ease,
+    border-color 0.14s;
+}
+
+.card:hover {
+  box-shadow: 0 4px 20px rgba(15, 15, 15, 0.11);
+  border-color: var(--grey-400);
+}
+
+/* ─── Card image ──────────────────────────────────────────────────────────── */
+.cardImg {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  background: var(--grey-100);
+}
+
+.cardImgEl {
+  object-fit: cover;
+}
+
+/* Bottom-to-top scrim keeps overlays readable */
+.imgScrim {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(
+    180deg,
+    rgba(15, 15, 15, 0) 40%,
+    rgba(15, 15, 15, 0.32) 100%
+  );
+  pointer-events: none;
+}
+
+/* ─── Status pill ─────────────────────────────────────────────────────────── */
+.imgPill {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px 4px 7px;
+  border-radius: 4px;
+  background: rgba(15, 15, 15, 0.52);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.92);
+  letter-spacing: 0.03em;
+}
+
+.pillDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.dotActive {
+  background: var(--red);
+}
+
+.dotDraft {
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.dotArchived {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* ─── Price overlay (listings) ────────────────────────────────────────────── */
+.priceTag {
+  position: absolute;
+  bottom: 11px;
+  left: 12px;
+  z-index: 2;
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  padding: 5px 10px;
+  background: rgba(15, 15, 15, 0.78);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: 5px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--white);
+  letter-spacing: -0.02em;
+  font-feature-settings: "tnum";
+}
+
+.priceTagCurr {
+  font-size: 9px;
+  font-weight: 500;
+  opacity: 0.58;
+  letter-spacing: 0.04em;
+}
+
+/* ─── Cuisine overlay (dishes) ────────────────────────────────────────────── */
+.cuisineTag {
+  position: absolute;
+  bottom: 10px;
+  left: 11px;
+  z-index: 2;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: rgba(15, 15, 15, 0.58);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.92);
+  letter-spacing: 0.02em;
+}
+
+/* ─── Card body ───────────────────────────────────────────────────────────── */
+.cardBody {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 13px 15px 14px;
+  flex: 1;
+}
+
+.cardTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.cardSub {
+  font-size: 11.5px;
+  color: var(--grey-500);
+}
+
+.cardDivider {
+  height: 1px;
+  background: var(--grey-100);
+  margin: 2px 0;
+}
+
+/* ─── Stats (plain text, no pill boxes) ───────────────────────────────────── */
+.cardStats {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--grey-500);
+}
+
+.statNum {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.statSep {
+  color: var(--grey-300);
+  font-size: 10px;
+}
+
+/* ─── Dish card footer ────────────────────────────────────────────────────── */
+.dishFooter {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--grey-500);
+}
+
+.dishFooterMuted {
+  color: var(--grey-300);
+}
+
+/* ─── Deals (row layout) ──────────────────────────────────────────────────── */
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dealRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--white);
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-sm);
+  transition: border-color 0.12s;
+}
+
+.dealRow:hover {
+  border-color: var(--grey-400);
+}
+
+.dealAmount {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--ink);
+  white-space: nowrap;
+  flex: none;
+}
+
+.dealDetails {
+  font-size: 12.5px;
+  color: var(--grey-500);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ─── No items ────────────────────────────────────────────────────────────── */
+.noItems {
+  padding: 40px 24px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--grey-400);
+  border: 1px dashed var(--grey-200);
+  border-radius: var(--radius-sm);
+}
+
+/* ─── Empty state ─────────────────────────────────────────────────────────── */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 72px 24px;
+  text-align: center;
+  gap: 8px;
+  border: 1px dashed var(--grey-200);
+  border-radius: var(--radius-sm);
+}
+
+.emptyIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  background: var(--grey-100);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--grey-500);
+  margin-bottom: 6px;
+}
+
+.emptyTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 0;
+}
+
+.emptyDesc {
+  font-size: 12.5px;
+  color: var(--grey-500);
+  max-width: 300px;
+  line-height: 1.55;
+  margin: 0;
+}
+
+.emptyBtn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 16px;
+  background: var(--ink);
+  color: var(--white);
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  margin-top: 4px;
+  transition: opacity 0.12s;
+}
+
+.emptyBtn:hover {
+  opacity: 0.82;
+}
+
+/* ─── Mobile ──────────────────────────────────────────────────────────────── */
+@media (max-width: 540px) {
+  .grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .cardImg {
+    aspect-ratio: 16 / 9;
+  }
+
+  .dealDetails {
+    display: none;
+  }
+}
