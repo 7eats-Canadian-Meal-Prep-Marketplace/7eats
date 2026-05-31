@@ -390,7 +390,6 @@ function OverviewTab() {
                 }
               >
                 <option value="CAD">CAD</option>
-                <option value="USD">USD</option>
               </select>
             </div>
           </div>
