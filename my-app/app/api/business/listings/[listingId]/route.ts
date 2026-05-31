@@ -7,7 +7,12 @@ import {
   unauthorized,
 } from "@/app/api/business/listings/_lib/cook-auth";
 import { db } from "@/db";
-import { dishes, listingDishes, listings } from "@/db/schema";
+import {
+  dishes,
+  listingDishes,
+  listingSubscriptionTiers,
+  listings,
+} from "@/db/schema";
 
 export type Params = { params: Promise<{ listingId: string }> };
 
@@ -52,9 +57,15 @@ export async function GET(req: NextRequest, { params }: Params) {
       .where(eq(listingDishes.listingId, listingId))
       .orderBy(asc(listingDishes.sortOrder));
 
+    const tierRows = await db
+      .select()
+      .from(listingSubscriptionTiers)
+      .where(eq(listingSubscriptionTiers.listingId, listingId))
+      .orderBy(listingSubscriptionTiers.interval);
+
     return NextResponse.json({
       success: true,
-      data: { ...listing, dishes: dishRows },
+      data: { ...listing, dishes: dishRows, tiers: tierRows },
     });
   } catch (err) {
     console.error("[listings]", err);
