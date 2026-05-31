@@ -215,12 +215,10 @@ export async function POST(req: NextRequest) {
         stripeSubscriptionId: stripeSub.id,
         stripeCustomerId,
         currentPeriodStart: new Date(
-          (stripeSub.items.data[0]?.current_period_start ??
-            stripeSub.start_date) * 1000,
+          stripeSub.items.data[0].current_period_start * 1000,
         ),
         currentPeriodEnd: new Date(
-          (stripeSub.items.data[0]?.current_period_end ??
-            stripeSub.start_date) * 1000,
+          stripeSub.items.data[0].current_period_end * 1000,
         ),
       })
       .returning();
