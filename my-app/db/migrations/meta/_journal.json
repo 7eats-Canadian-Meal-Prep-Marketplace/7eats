@@ -36,6 +36,13 @@
       "when": 1780196276761,
       "tag": "0004_sparkling_warbound",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1780200427350,
+      "tag": "0005_open_deathstrike",
+      "breakpoints": true
     }
   ]
 }
