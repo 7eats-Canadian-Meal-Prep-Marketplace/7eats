@@ -33,8 +33,10 @@ export const listingSubscriptionTiers = pgTable(
     price: numeric("price", { precision: 10, scale: 2 }).notNull(),
     stripePriceId: text("stripe_price_id"),
     isActive: boolean("is_active").notNull().default(true),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at")
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
       .defaultNow()
       .$onUpdate(() => new Date()),
@@ -70,6 +72,7 @@ export const listingSubscriptionTiers = pgTable(
       for: "update",
       to: "public",
       using: isServiceRole,
+      withCheck: isServiceRole,
     }),
     pgPolicy("tiers_delete_service", {
       for: "delete",
@@ -142,5 +145,7 @@ export const clientSubscriptions = pgTable(
       to: "public",
       using: isServiceRole,
     }),
+    // No delete policy — cancellation is via status field update, never hard DELETE.
+    // Default-deny on DELETE is intentional.
   ],
 ).enableRLS();
