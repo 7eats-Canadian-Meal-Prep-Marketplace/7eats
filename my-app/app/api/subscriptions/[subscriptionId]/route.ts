@@ -18,7 +18,7 @@ import {
 
 export type Params = { params: Promise<{ subscriptionId: string }> };
 
-const subscriptionIdSchema = z.string().uuid();
+const subscriptionIdSchema = z.uuid();
 
 export async function GET(req: NextRequest, { params }: Params) {
   const session = await getClientSession(req.headers);
