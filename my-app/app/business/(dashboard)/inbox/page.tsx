@@ -2,15 +2,50 @@
 
 import { ArrowLeft, ArrowRight, Send } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
-import {
-  type ChatMessage,
-  type ConversationOrder,
-  MOCK_CONVERSATIONS,
-  type MockConversation,
-  type OrderStatus,
-} from "./_mock";
+import { useCallback, useEffect, useRef, useState } from "react";
 import styles from "./page.module.css";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type OrderStatus =
+  | "pending"
+  | "confirmed"
+  | "ready"
+  | "fulfilled"
+  | "cancelled";
+
+type OrderInfo = {
+  status: OrderStatus | null;
+  quantity: number | null;
+  totalPrice: string | null;
+  pickupAt: string | null;
+  listingTitle: string | null;
+};
+
+type Message = {
+  id: string;
+  conversationId: string;
+  senderRole: "cook" | "client";
+  body: string;
+  isReadByCook: boolean;
+  createdAt: string;
+};
+
+type ConversationSummary = {
+  id: string;
+  clientId: string;
+  orderId: string | null;
+  lastMessageAt: string;
+  clientName: string | null;
+  clientFirstName: string | null;
+  unreadCount: number;
+  lastMessage: { body: string; senderRole: string; createdAt: string } | null;
+  orderInfo: OrderInfo | null;
+};
+
+type ConversationDetail = ConversationSummary & {
+  messages: Message[];
+};
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -21,6 +56,15 @@ function initials(name: string): string {
     .map((p) => p.charAt(0))
     .join("")
     .toUpperCase();
+}
+
+function displayName(conv: {
+  clientName: string | null;
+  clientFirstName: string | null;
+}): string {
+  if (conv.clientName) return conv.clientName;
+  if (conv.clientFirstName) return conv.clientFirstName;
+  return "Customer";
 }
 
 function listTime(iso: string): string {
@@ -44,7 +88,8 @@ function bubbleTime(iso: string): string {
   });
 }
 
-function pickupLabel(iso: string): string {
+function pickupLabel(iso: string | null): string {
+  if (!iso) return "—";
   const d = new Date(iso);
   const now = new Date();
   const tomorrow = new Date(now);
@@ -83,41 +128,53 @@ const STATUS_CLS: Record<OrderStatus, string> = {
   cancelled: styles.statusMuted,
 };
 
-function lastMessage(c: MockConversation): ChatMessage {
-  return c.messages[c.messages.length - 1];
-}
+// ─── Order context bar ────────────────────────────────────────────────────────
 
-// ─── Order context bar ─────────────────────────────────────────────────────────
-
-function OrderBar({ order }: { order: ConversationOrder }) {
+function OrderBar({
+  orderInfo,
+  orderId,
+}: {
+  orderInfo: OrderInfo;
+  orderId: string;
+}) {
+  const status = orderInfo.status as OrderStatus | null;
   return (
     <div className={styles.orderBar}>
       <div className={styles.orderBarTop}>
-        <span className={styles.orderTitle}>{order.listingTitle}</span>
-        <span className={`${styles.statusBadge} ${STATUS_CLS[order.status]}`}>
-          {STATUS_LABEL[order.status]}
+        <span className={styles.orderTitle}>
+          {orderInfo.listingTitle ?? "Order"}
         </span>
+        {status && (
+          <span className={`${styles.statusBadge} ${STATUS_CLS[status]}`}>
+            {STATUS_LABEL[status]}
+          </span>
+        )}
       </div>
 
       <div className={styles.orderFacts}>
-        <div className={styles.fact}>
-          <span className={styles.factLabel}>Quantity</span>
-          <span className={styles.factValue}>
-            {order.quantity} {order.quantity === 1 ? "serving" : "servings"}
-          </span>
-        </div>
-        <div className={styles.fact}>
-          <span className={styles.factLabel}>Order total</span>
-          <span className={styles.factValue}>${order.totalPrice}</span>
-        </div>
+        {orderInfo.quantity != null && (
+          <div className={styles.fact}>
+            <span className={styles.factLabel}>Quantity</span>
+            <span className={styles.factValue}>
+              {orderInfo.quantity}{" "}
+              {orderInfo.quantity === 1 ? "serving" : "servings"}
+            </span>
+          </div>
+        )}
+        {orderInfo.totalPrice != null && (
+          <div className={styles.fact}>
+            <span className={styles.factLabel}>Order total</span>
+            <span className={styles.factValue}>${orderInfo.totalPrice}</span>
+          </div>
+        )}
         <div className={styles.fact}>
           <span className={styles.factLabel}>Pickup</span>
           <span className={styles.factValue}>
-            {pickupLabel(order.pickupAt)}
+            {pickupLabel(orderInfo.pickupAt)}
           </span>
         </div>
         <Link
-          href={`/business/orders?order=${order.id}`}
+          href={`/business/orders?order=${orderId}`}
           className={styles.viewOrderBtn}
         >
           View full order
@@ -128,19 +185,21 @@ function OrderBar({ order }: { order: ConversationOrder }) {
   );
 }
 
-// ─── Thread (chat) ──────────────────────────────────────────────────────────────
+// ─── Thread ───────────────────────────────────────────────────────────────────
 
 function Thread({
   conversation,
   onSend,
   onBack,
 }: {
-  conversation: MockConversation;
+  conversation: ConversationDetail;
   onSend: (body: string) => void;
   onBack?: () => void;
 }) {
   const [draft, setDraft] = useState("");
+  const [sending, setSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const name = displayName(conversation);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: scroll on new messages / conversation switch
   useEffect(() => {
@@ -148,11 +207,26 @@ function Thread({
     if (el) el.scrollTop = el.scrollHeight;
   }, [conversation.id, conversation.messages.length]);
 
-  function submit() {
+  async function submit() {
     const body = draft.trim();
-    if (!body) return;
-    onSend(body);
-    setDraft("");
+    if (!body || sending) return;
+    setSending(true);
+    try {
+      const res = await fetch(
+        `/api/business/inbox/conversations/${conversation.id}/messages`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ body }),
+        },
+      );
+      if (res.ok) {
+        onSend(body);
+        setDraft("");
+      }
+    } finally {
+      setSending(false);
+    }
   }
 
   return (
@@ -168,26 +242,29 @@ function Thread({
             <ArrowLeft size={18} />
           </button>
         )}
-        <span className={styles.threadAvatar}>
-          {initials(conversation.customerName)}
-        </span>
-        <span className={styles.threadName}>{conversation.customerName}</span>
+        <span className={styles.threadAvatar}>{initials(name)}</span>
+        <span className={styles.threadName}>{name}</span>
       </div>
 
-      <OrderBar order={conversation.order} />
+      {conversation.orderInfo && conversation.orderId && (
+        <OrderBar
+          orderInfo={conversation.orderInfo}
+          orderId={conversation.orderId}
+        />
+      )}
 
       <div className={styles.messages} ref={scrollRef}>
         {conversation.messages.map((m) => (
           <div
             key={m.id}
-            className={`${styles.bubbleRow} ${m.from === "cook" ? styles.bubbleRowMine : ""}`}
+            className={`${styles.bubbleRow} ${m.senderRole === "cook" ? styles.bubbleRowMine : ""}`}
           >
             <div
-              className={`${styles.bubble} ${m.from === "cook" ? styles.bubbleMine : ""}`}
+              className={`${styles.bubble} ${m.senderRole === "cook" ? styles.bubbleMine : ""}`}
             >
               {m.body}
             </div>
-            <span className={styles.bubbleTime}>{bubbleTime(m.timestamp)}</span>
+            <span className={styles.bubbleTime}>{bubbleTime(m.createdAt)}</span>
           </div>
         ))}
       </div>
@@ -195,7 +272,7 @@ function Thread({
       <div className={styles.composer}>
         <textarea
           className={styles.composerInput}
-          placeholder={`Message ${conversation.customerName.split(" ")[0]}…`}
+          placeholder={`Message ${name.split(" ")[0]}…`}
           value={draft}
           rows={1}
           onChange={(e) => setDraft(e.target.value)}
@@ -210,7 +287,7 @@ function Thread({
           type="button"
           className={styles.sendBtn}
           onClick={submit}
-          disabled={!draft.trim()}
+          disabled={!draft.trim() || sending}
           aria-label="Send message"
         >
           <Send size={16} />
@@ -223,45 +300,87 @@ function Thread({
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function InboxPage() {
-  const [conversations, setConversations] =
-    useState<MockConversation[]>(MOCK_CONVERSATIONS);
+  const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [focusedId, setFocusedId] = useState<string | null>(null);
+  const [focusedDetail, setFocusedDetail] = useState<ConversationDetail | null>(
+    null,
+  );
+  const [loadingList, setLoadingList] = useState(true);
+  const [loadingDetail, setLoadingDetail] = useState(false);
   const [slideOpen, setSlideOpen] = useState(false);
 
-  const focused = conversations.find((c) => c.id === focusedId) ?? null;
-  const unreadCount = conversations.filter((c) => c.unread).length;
+  const loadConversations = useCallback(async () => {
+    setLoadingList(true);
+    try {
+      const res = await fetch("/api/business/inbox/conversations");
+      if (res.ok) {
+        const json = await res.json();
+        setConversations(json.data ?? []);
+      }
+    } finally {
+      setLoadingList(false);
+    }
+  }, []);
 
-  // Most recent activity first.
+  useEffect(() => {
+    loadConversations();
+  }, [loadConversations]);
+
+  useEffect(() => {
+    if (!focusedId) return;
+    setLoadingDetail(true);
+    fetch(`/api/business/inbox/conversations/${focusedId}`)
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.success) {
+          setFocusedDetail(json.data);
+          // Mark as read in local state
+          setConversations((prev) =>
+            prev.map((c) =>
+              c.id === focusedId ? { ...c, unreadCount: 0 } : c,
+            ),
+          );
+        }
+      })
+      .finally(() => setLoadingDetail(false));
+  }, [focusedId]);
+
+  const unreadCount = conversations.reduce((sum, c) => sum + c.unreadCount, 0);
+
   const sorted = [...conversations].sort(
     (a, b) =>
-      new Date(lastMessage(b).timestamp).getTime() -
-      new Date(lastMessage(a).timestamp).getTime(),
+      new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime(),
   );
 
   function handleSelect(id: string) {
     setFocusedId(id);
     setSlideOpen(true);
-    setConversations((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, unread: false } : c)),
-    );
   }
 
   function handleSend(body: string) {
-    if (!focusedId) return;
+    if (!focusedId || !focusedDetail) return;
+    const newMsg: Message = {
+      id: `temp-${Date.now()}`,
+      conversationId: focusedId,
+      senderRole: "cook",
+      body,
+      isReadByCook: true,
+      createdAt: new Date().toISOString(),
+    };
+    setFocusedDetail((prev) =>
+      prev ? { ...prev, messages: [...prev.messages, newMsg] } : prev,
+    );
     setConversations((prev) =>
       prev.map((c) =>
         c.id === focusedId
           ? {
               ...c,
-              messages: [
-                ...c.messages,
-                {
-                  id: `${c.id}-${c.messages.length + 1}`,
-                  from: "cook",
-                  body,
-                  timestamp: new Date().toISOString(),
-                },
-              ],
+              lastMessageAt: newMsg.createdAt,
+              lastMessage: {
+                body,
+                senderRole: "cook",
+                createdAt: newMsg.createdAt,
+              },
             }
           : c,
       ),
@@ -279,50 +398,69 @@ export default function InboxPage() {
           )}
         </div>
 
-        {sorted.map((c) => {
-          const last = lastMessage(c);
-          return (
-            <button
-              key={c.id}
-              type="button"
-              className={`${styles.listRow} ${focusedId === c.id ? styles.listRowFocused : ""} ${c.unread ? styles.listRowUnread : ""}`}
-              onClick={() => handleSelect(c.id)}
-            >
-              <span className={styles.listAvatar}>
-                {initials(c.customerName)}
-              </span>
-              <span className={styles.listRowMain}>
-                <span className={styles.listRowTop}>
-                  <span
-                    className={`${styles.listName} ${c.unread ? styles.listNameUnread : ""}`}
-                  >
-                    {c.customerName}
+        {loadingList ? (
+          <div style={{ padding: "1rem", color: "var(--muted)" }}>Loading…</div>
+        ) : conversations.length === 0 ? (
+          <div style={{ padding: "1rem", color: "var(--muted)" }}>
+            No messages yet.
+          </div>
+        ) : (
+          sorted.map((c) => {
+            const last = c.lastMessage;
+            const name = displayName(c);
+            return (
+              <button
+                key={c.id}
+                type="button"
+                className={`${styles.listRow} ${focusedId === c.id ? styles.listRowFocused : ""} ${c.unreadCount > 0 ? styles.listRowUnread : ""}`}
+                onClick={() => handleSelect(c.id)}
+              >
+                <span className={styles.listAvatar}>{initials(name)}</span>
+                <span className={styles.listRowMain}>
+                  <span className={styles.listRowTop}>
+                    <span
+                      className={`${styles.listName} ${c.unreadCount > 0 ? styles.listNameUnread : ""}`}
+                    >
+                      {name}
+                    </span>
+                    <span
+                      className={`${styles.listTime} ${c.unreadCount > 0 ? styles.listTimeUnread : ""}`}
+                    >
+                      {listTime(c.lastMessageAt)}
+                    </span>
                   </span>
-                  <span
-                    className={`${styles.listTime} ${c.unread ? styles.listTimeUnread : ""}`}
-                  >
-                    {listTime(last.timestamp)}
-                  </span>
-                </span>
-                <span className={styles.listOrder}>{c.order.listingTitle}</span>
-                <span
-                  className={`${styles.listPreview} ${c.unread ? styles.listPreviewUnread : ""}`}
-                >
-                  {last.from === "cook" && (
-                    <span className={styles.listYou}>You: </span>
+                  {c.orderInfo?.listingTitle && (
+                    <span className={styles.listOrder}>
+                      {c.orderInfo.listingTitle}
+                    </span>
                   )}
-                  {last.body}
+                  {last && (
+                    <span
+                      className={`${styles.listPreview} ${c.unreadCount > 0 ? styles.listPreviewUnread : ""}`}
+                    >
+                      {last.senderRole === "cook" && (
+                        <span className={styles.listYou}>You: </span>
+                      )}
+                      {last.body}
+                    </span>
+                  )}
                 </span>
-              </span>
-            </button>
-          );
-        })}
+              </button>
+            );
+          })
+        )}
       </div>
 
       {/* Right: thread (desktop) */}
       <div className={styles.threadPanel}>
-        {focused ? (
-          <Thread key={focused.id} conversation={focused} onSend={handleSend} />
+        {loadingDetail ? (
+          <div className={styles.emptyThread}>Loading…</div>
+        ) : focusedDetail ? (
+          <Thread
+            key={focusedDetail.id}
+            conversation={focusedDetail}
+            onSend={handleSend}
+          />
         ) : (
           <div className={styles.emptyThread}>
             Select a conversation to start chatting
@@ -331,11 +469,11 @@ export default function InboxPage() {
       </div>
 
       {/* Mobile slide-over */}
-      {slideOpen && focused && (
+      {slideOpen && focusedDetail && (
         <div className={styles.slideOver}>
           <Thread
-            key={focused.id}
-            conversation={focused}
+            key={focusedDetail.id}
+            conversation={focusedDetail}
             onSend={handleSend}
             onBack={() => setSlideOpen(false)}
           />

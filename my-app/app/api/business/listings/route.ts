@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, getTableColumns, sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import {
@@ -49,7 +49,17 @@ export async function GET(req: NextRequest) {
       : eq(listings.cookId, cookId);
 
     const rows = await db
-      .select()
+      .select({
+        ...getTableColumns(listings),
+        dishCount:
+          sql<number>`(SELECT COUNT(*) FROM listing_dishes WHERE listing_id = ${listings.id})`.as(
+            "dish_count",
+          ),
+        orderCount:
+          sql<number>`(SELECT COUNT(*) FROM orders WHERE listing_id = ${listings.id})`.as(
+            "order_count",
+          ),
+      })
       .from(listings)
       .where(conditions)
       .orderBy(desc(listings.createdAt));

@@ -19,7 +19,7 @@ const bodySchema = z.object({
 const VALID_TRANSITIONS: Record<string, string[]> = {
   pending: ["confirmed", "cancelled"],
   confirmed: ["ready", "cancelled"],
-  ready: ["cancelled"],
+  ready: ["confirmed", "cancelled"],
 };
 
 export async function PATCH(req: NextRequest, { params }: Params) {

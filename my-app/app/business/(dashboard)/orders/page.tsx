@@ -2,9 +2,41 @@
 
 import { MessageSquare, X } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { MOCK_ORDERS, type MockOrder } from "./_mock";
+import { useCallback, useEffect, useState } from "react";
 import styles from "./page.module.css";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type OrderStatus =
+  | "pending"
+  | "confirmed"
+  | "ready"
+  | "fulfilled"
+  | "cancelled";
+
+type DishSnapshot = {
+  id: string;
+  dishId: string;
+  dishName: string;
+  quantity: number;
+  sortOrder: number;
+};
+
+type Order = {
+  id: string;
+  status: OrderStatus;
+  customerName: string | null;
+  customerFirstName: string | null;
+  listingTitle: string | null;
+  quantity: number;
+  unitPrice: string;
+  totalPrice: string;
+  pickupAt: string;
+  notes: string | null;
+  pickupCodeAttempts: number;
+  createdAt: string;
+  dishes?: DishSnapshot[];
+};
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -26,7 +58,19 @@ function formatTime(iso: string): string {
   return `${d.toLocaleDateString("en-CA", { weekday: "short", month: "short", day: "numeric" })} · ${time}`;
 }
 
-const STATUS_LABEL: Record<MockOrder["status"], string> = {
+function customerDisplay(order: Order): string {
+  if (order.customerFirstName)
+    return (
+      order.customerFirstName +
+      (order.customerName?.split(" ")[1]
+        ? ` ${order.customerName.split(" ")[1]}`
+        : "")
+    );
+  if (order.customerName) return order.customerName;
+  return "Customer";
+}
+
+const STATUS_LABEL: Record<OrderStatus, string> = {
   pending: "Pending",
   confirmed: "Confirmed",
   ready: "Ready",
@@ -34,12 +78,12 @@ const STATUS_LABEL: Record<MockOrder["status"], string> = {
   cancelled: "Cancelled",
 };
 
-const ACTION_LABEL: Partial<Record<MockOrder["status"], string>> = {
+const ACTION_LABEL: Partial<Record<OrderStatus, string>> = {
   pending: "Confirm",
   confirmed: "Mark ready",
 };
 
-const BADGE_CLS: Record<MockOrder["status"], string> = {
+const BADGE_CLS: Record<OrderStatus, string> = {
   pending: styles.badgePending,
   confirmed: styles.badgeConfirmed,
   ready: styles.badgeReady,
@@ -47,18 +91,19 @@ const BADGE_CLS: Record<MockOrder["status"], string> = {
   cancelled: styles.badgeCancelled,
 };
 
-function nextStatus(s: MockOrder["status"]): MockOrder["status"] | null {
-  const map: Partial<Record<MockOrder["status"], MockOrder["status"]>> = {
+const MAX_ATTEMPTS = 5;
+
+function nextStatus(s: OrderStatus): "confirmed" | "ready" | null {
+  const map: Partial<Record<OrderStatus, "confirmed" | "ready">> = {
     pending: "confirmed",
     confirmed: "ready",
-    ready: "fulfilled",
   };
   return map[s] ?? null;
 }
 
 // ─── Status badge ─────────────────────────────────────────────────────────────
 
-function StatusBadge({ status }: { status: MockOrder["status"] }) {
+function StatusBadge({ status }: { status: OrderStatus }) {
   return (
     <span className={`${styles.badge} ${BADGE_CLS[status]}`}>
       {STATUS_LABEL[status]}
@@ -69,30 +114,56 @@ function StatusBadge({ status }: { status: MockOrder["status"] }) {
 // ─── Pickup code verification ─────────────────────────────────────────────────
 
 function VerifyCode({
-  pickupCode,
+  orderId,
+  initialAttempts,
   onVerify,
 }: {
-  pickupCode: string;
+  orderId: string;
+  initialAttempts: number;
   onVerify: () => void;
 }) {
   const [code, setCode] = useState("");
-  const [attempts, setAttempts] = useState(0);
-  const locked = attempts >= 3;
+  const [attempts, setAttempts] = useState(initialAttempts);
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const locked = attempts >= MAX_ATTEMPTS;
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (code === pickupCode) {
-      onVerify();
-    } else {
-      setAttempts((a) => a + 1);
-      setCode("");
+    if (submitting || locked) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      const res = await fetch(
+        `/api/business/dashboard/orders/${orderId}/verify-code`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code }),
+        },
+      );
+      const json = await res.json();
+      if (res.ok) {
+        onVerify();
+      } else {
+        const remaining = json.attemptsRemaining ?? MAX_ATTEMPTS - attempts - 1;
+        setAttempts(MAX_ATTEMPTS - remaining);
+        setError(
+          remaining <= 0
+            ? "Code entry locked."
+            : `Incorrect — ${remaining} attempt${remaining === 1 ? "" : "s"} left`,
+        );
+        setCode("");
+      }
+    } finally {
+      setSubmitting(false);
     }
   }
 
   if (locked) {
     return (
       <div className={styles.verifyLocked}>
-        Code entry locked after 3 failed attempts.
+        Code entry locked after {MAX_ATTEMPTS} failed attempts.
       </div>
     );
   }
@@ -113,17 +184,12 @@ function VerifyCode({
         <button
           type="submit"
           className={styles.verifyBtn}
-          disabled={code.length < 6}
+          disabled={code.length < 6 || submitting}
         >
-          Verify
+          {submitting ? "…" : "Verify"}
         </button>
       </div>
-      {attempts > 0 && (
-        <p className={styles.verifyError}>
-          Incorrect —{" "}
-          {3 - attempts === 1 ? "1 attempt" : `${3 - attempts} attempts`} left
-        </p>
-      )}
+      {error && <p className={styles.verifyError}>{error}</p>}
     </form>
   );
 }
@@ -132,20 +198,48 @@ function VerifyCode({
 
 function OrderDetail({
   order,
-  onAdvance,
-  onRevert,
-  onCancel,
+  onStatusChange,
   onClose,
 }: {
-  order: MockOrder;
-  onAdvance: (id: string) => void;
-  onRevert: (id: string) => void;
-  onCancel: (id: string) => void;
+  order: Order;
+  onStatusChange: (id: string, newStatus: OrderStatus) => void;
   onClose?: () => void;
 }) {
   const [cancelConfirm, setCancelConfirm] = useState(false);
+  const [mutating, setMutating] = useState(false);
   const canCancel = order.status === "pending" || order.status === "confirmed";
   const canAdvance = order.status === "pending" || order.status === "confirmed";
+
+  async function patchStatus(status: "confirmed" | "ready" | "cancelled") {
+    setMutating(true);
+    try {
+      const res = await fetch(
+        `/api/business/dashboard/orders/${order.id}/status`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status }),
+        },
+      );
+      if (res.ok) onStatusChange(order.id, status);
+    } finally {
+      setMutating(false);
+    }
+  }
+
+  async function handleRevert() {
+    await patchStatus("confirmed");
+  }
+
+  async function handleAdvance() {
+    const next = nextStatus(order.status);
+    if (next) await patchStatus(next);
+  }
+
+  async function handleCancel() {
+    await patchStatus("cancelled");
+    setCancelConfirm(false);
+  }
 
   return (
     <div className={styles.detail}>
@@ -156,9 +250,11 @@ function OrderDetail({
       )}
 
       <div className={styles.detailHeader}>
-        <h2 className={styles.detailTitle}>{order.listingTitle}</h2>
+        <h2 className={styles.detailTitle}>{order.listingTitle ?? "Order"}</h2>
         <div className={styles.detailSubline}>
-          <span className={styles.detailCustomer}>{order.customerName}</span>
+          <span className={styles.detailCustomer}>
+            {customerDisplay(order)}
+          </span>
           <span className={styles.detailDot}>·</span>
           <StatusBadge status={order.status} />
         </div>
@@ -196,29 +292,32 @@ function OrderDetail({
         )}
       </div>
 
-      <div className={styles.dishSection}>
-        <p className={styles.dishSectionLabel}>What&apos;s included</p>
-        {order.dishes.map((d) => (
-          <div key={d.name} className={styles.dishRow}>
-            <span className={styles.dishName}>{d.name}</span>
-            <span className={styles.dishCuisine}>{d.cuisine}</span>
-            <span className={styles.dishQtyBox}>{d.qty}</span>
-          </div>
-        ))}
-      </div>
+      {order.dishes && order.dishes.length > 0 && (
+        <div className={styles.dishSection}>
+          <p className={styles.dishSectionLabel}>What&apos;s included</p>
+          {order.dishes.map((d) => (
+            <div key={d.id} className={styles.dishRow}>
+              <span className={styles.dishName}>{d.dishName}</span>
+              <span className={styles.dishQtyBox}>{d.quantity}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       {order.status === "ready" && (
         <div className={styles.actionZone}>
           <VerifyCode
-            pickupCode={order.pickupCode}
-            onVerify={() => onAdvance(order.id)}
+            orderId={order.id}
+            initialAttempts={order.pickupCodeAttempts}
+            onVerify={() => onStatusChange(order.id, "fulfilled")}
           />
           <div className={styles.revertBlock}>
             <span className={styles.revertPrompt}>Still preparing?</span>
             <button
               type="button"
               className={styles.revertBtn}
-              onClick={() => onRevert(order.id)}
+              onClick={handleRevert}
+              disabled={mutating}
             >
               Mark as not ready
             </button>
@@ -237,10 +336,8 @@ function OrderDetail({
                 <button
                   type="button"
                   className={styles.cancelConfirmYes}
-                  onClick={() => {
-                    onCancel(order.id);
-                    setCancelConfirm(false);
-                  }}
+                  onClick={handleCancel}
+                  disabled={mutating}
                 >
                   Yes, cancel order
                 </button>
@@ -259,7 +356,8 @@ function OrderDetail({
                 <button
                   type="button"
                   className={styles.advanceBtn}
-                  onClick={() => onAdvance(order.id)}
+                  onClick={handleAdvance}
+                  disabled={mutating}
                 >
                   {ACTION_LABEL[order.status]}
                 </button>
@@ -296,7 +394,7 @@ function OrderListRow({
   focused,
   onSelect,
 }: {
-  order: MockOrder;
+  order: Order;
   focused: boolean;
   onSelect: () => void;
 }) {
@@ -307,8 +405,10 @@ function OrderListRow({
       onClick={onSelect}
     >
       <div className={styles.listRowLeft}>
-        <span className={styles.listRowCustomer}>{order.customerName}</span>
-        <span className={styles.listRowListing}>{order.listingTitle}</span>
+        <span className={styles.listRowCustomer}>{customerDisplay(order)}</span>
+        <span className={styles.listRowListing}>
+          {order.listingTitle ?? "Order"}
+        </span>
         <span className={styles.listRowMeta}>
           {formatTime(order.pickupAt)} &middot;{" "}
           <span className={styles.listRowQty}>
@@ -333,23 +433,55 @@ function EmptyDetail() {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function OrdersPage() {
-  const [orders, setOrders] = useState<MockOrder[]>(MOCK_ORDERS);
-  const [focusedId, setFocusedId] = useState<string>(
-    MOCK_ORDERS.find((o) => o.status === "pending")?.id ?? MOCK_ORDERS[0].id,
-  );
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [focusedId, setFocusedId] = useState<string | null>(null);
+  const [focusedDetail, setFocusedDetail] = useState<Order | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
   const [slideOpen, setSlideOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  // Deep-link support: /business/orders?order=<id> focuses that order (e.g. from
-  // the Inbox "View order" button) and opens the slide-over on mobile.
+  const loadOrders = useCallback(async () => {
+    try {
+      const res = await fetch("/api/business/dashboard/orders?limit=100");
+      if (res.ok) {
+        const json = await res.json();
+        setOrders(json.data ?? []);
+        // Auto-focus first pending order
+        const firstPending = (json.data ?? []).find(
+          (o: Order) => o.status === "pending",
+        );
+        if (firstPending) setFocusedId((prev) => prev ?? firstPending.id);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    loadOrders();
+  }, [loadOrders]);
+
+  // Deep-link support: /business/orders?order=<id>
   useEffect(() => {
     const id = new URLSearchParams(window.location.search).get("order");
-    if (id && MOCK_ORDERS.some((o) => o.id === id)) {
+    if (id) {
       setFocusedId(id);
       setSlideOpen(true);
     }
   }, []);
 
-  const focusedOrder = orders.find((o) => o.id === focusedId) ?? null;
+  // Fetch order detail (with dishes) when selection changes
+  useEffect(() => {
+    if (!focusedId) return;
+    setDetailLoading(true);
+    fetch(`/api/business/dashboard/orders/${focusedId}`)
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.success) setFocusedDetail(json.data);
+      })
+      .finally(() => setDetailLoading(false));
+  }, [focusedId]);
+
   const pendingCount = orders.filter((o) => o.status === "pending").length;
 
   const sorted = [...orders].sort((a, b) => {
@@ -363,27 +495,19 @@ export default function OrdersPage() {
     setSlideOpen(true);
   }
 
-  function handleAdvance(id: string) {
+  function handleStatusChange(id: string, newStatus: OrderStatus) {
     setOrders((prev) =>
-      prev.map((o) => {
-        if (o.id !== id) return o;
-        const n = nextStatus(o.status);
-        return n ? { ...o, status: n } : o;
-      }),
+      prev.map((o) => (o.id === id ? { ...o, status: newStatus } : o)),
     );
+    if (focusedDetail?.id === id) {
+      setFocusedDetail((prev) =>
+        prev ? { ...prev, status: newStatus } : prev,
+      );
+    }
   }
 
-  function handleRevert(id: string) {
-    setOrders((prev) =>
-      prev.map((o) => (o.id === id ? { ...o, status: "confirmed" } : o)),
-    );
-  }
-
-  function handleCancel(id: string) {
-    setOrders((prev) =>
-      prev.map((o) => (o.id === id ? { ...o, status: "cancelled" } : o)),
-    );
-  }
+  const displayedDetail =
+    focusedDetail ?? orders.find((o) => o.id === focusedId) ?? null;
 
   return (
     <div className={styles.page}>
@@ -399,6 +523,12 @@ export default function OrdersPage() {
           <span className={styles.listHeadCount}>{orders.length}</span>
         </div>
 
+        {loading && (
+          <div className={styles.emptyDetail} style={{ padding: "2rem" }}>
+            Loading orders…
+          </div>
+        )}
+
         {sorted.map((o) => (
           <OrderListRow
             key={o.id}
@@ -411,13 +541,13 @@ export default function OrdersPage() {
 
       {/* Right: detail panel (desktop) */}
       <div className={styles.detailPanel}>
-        {focusedOrder ? (
+        {detailLoading ? (
+          <div className={styles.emptyDetail}>Loading…</div>
+        ) : displayedDetail ? (
           <OrderDetail
             key={focusedId}
-            order={focusedOrder}
-            onAdvance={handleAdvance}
-            onRevert={handleRevert}
-            onCancel={handleCancel}
+            order={displayedDetail}
+            onStatusChange={handleStatusChange}
           />
         ) : (
           <EmptyDetail />
@@ -425,7 +555,7 @@ export default function OrdersPage() {
       </div>
 
       {/* Mobile slide-over */}
-      {slideOpen && focusedOrder && (
+      {slideOpen && displayedDetail && (
         <>
           <button
             type="button"
@@ -436,10 +566,8 @@ export default function OrdersPage() {
           <div className={styles.slideOver}>
             <OrderDetail
               key={focusedId}
-              order={focusedOrder}
-              onAdvance={handleAdvance}
-              onRevert={handleRevert}
-              onCancel={handleCancel}
+              order={displayedDetail}
+              onStatusChange={handleStatusChange}
               onClose={() => setSlideOpen(false)}
             />
           </div>

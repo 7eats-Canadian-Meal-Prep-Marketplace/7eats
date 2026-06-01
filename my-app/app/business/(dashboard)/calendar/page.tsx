@@ -11,17 +11,164 @@ import {
   Truck,
 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
-import {
-  addDays,
-  buildWeek,
-  type CalendarOrder,
-  currentWeekStart,
-  type Fulfillment,
-  formatHM,
-  sameDay,
-} from "./_mock";
+import { useCallback, useEffect, useState } from "react";
 import styles from "./page.module.css";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type Fulfillment = "pickup" | "delivery";
+
+type AvailabilityWindow = {
+  weekday: number; // 0=Sun … 6=Sat
+  kind: Fulfillment;
+  from: string; // "HH:MM"
+  to: string;
+};
+
+type CalendarOrder = {
+  id: string;
+  datetime: string;
+  kind: Fulfillment;
+  customerName: string;
+  listingTitle: string;
+  quantity: number;
+  pickupCodeVerifiedAt: string | null;
+};
+
+type WindowGroup = {
+  window: AvailabilityWindow;
+  orders: CalendarOrder[];
+};
+
+type DaySchedule = {
+  date: Date;
+  windows: WindowGroup[];
+};
+
+// ─── Date helpers ─────────────────────────────────────────────────────────────
+
+const DAY_NAMES = [
+  "sunday",
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+];
+
+function mondayOf(d: Date): Date {
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  const monday = new Date(d);
+  monday.setDate(d.getDate() + diff);
+  monday.setHours(0, 0, 0, 0);
+  return monday;
+}
+
+function currentWeekStart(): Date {
+  return mondayOf(new Date());
+}
+
+function addDays(d: Date, n: number): Date {
+  const x = new Date(d);
+  x.setDate(d.getDate() + n);
+  return x;
+}
+
+function sameDay(a: Date, b: Date): boolean {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
+function formatHM(hm: string): string {
+  const [h, m] = hm.split(":").map(Number);
+  const period = (h ?? 0) >= 12 ? "PM" : "AM";
+  const h12 = (h ?? 0) % 12 === 0 ? 12 : (h ?? 0) % 12;
+  return (m ?? 0) === 0
+    ? `${h12} ${period}`
+    : `${h12}:${String(m ?? 0).padStart(2, "0")} ${period}`;
+}
+
+function toISODateLocal(d: Date): string {
+  const y = d.getFullYear();
+  const mo = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${mo}-${day}`;
+}
+
+// ─── Build week from availability + orders ────────────────────────────────────
+
+function buildWeekFromData(
+  weekStart: Date,
+  availability: {
+    pickupDays: string[] | null;
+    pickupFrom: string | null;
+    pickupTo: string | null;
+    delivery: string | null;
+  },
+  orders: CalendarOrder[],
+): DaySchedule[] {
+  const pickupDays = availability.pickupDays ?? [];
+  const pickupFrom = availability.pickupFrom ?? "11:00";
+  const pickupTo = availability.pickupTo ?? "14:00";
+  const hasDelivery =
+    availability.delivery !== "none" && availability.delivery != null;
+
+  const days: DaySchedule[] = [];
+
+  for (let i = 0; i < 7; i++) {
+    const date = addDays(weekStart, i);
+    const dayName = DAY_NAMES[date.getDay()] ?? "";
+    const isPickupDay = pickupDays.includes(dayName);
+
+    const windows: WindowGroup[] = [];
+
+    if (isPickupDay) {
+      const pickupOrders = orders.filter((o) => {
+        if (o.kind !== "pickup") return false;
+        return sameDay(new Date(o.datetime), date);
+      });
+      windows.push({
+        window: {
+          weekday: date.getDay(),
+          kind: "pickup",
+          from: pickupFrom,
+          to: pickupTo,
+        },
+        orders: pickupOrders.sort(
+          (a, b) =>
+            new Date(a.datetime).getTime() - new Date(b.datetime).getTime(),
+        ),
+      });
+
+      if (hasDelivery) {
+        const deliveryOrders = orders.filter((o) => {
+          if (o.kind !== "delivery") return false;
+          return sameDay(new Date(o.datetime), date);
+        });
+        if (deliveryOrders.length > 0) {
+          windows.push({
+            window: {
+              weekday: date.getDay(),
+              kind: "delivery",
+              from: pickupFrom,
+              to: pickupTo,
+            },
+            orders: deliveryOrders,
+          });
+        }
+      }
+    }
+
+    days.push({ date, windows });
+  }
+
+  return days;
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -56,15 +203,10 @@ function formatOrderTime(iso: string): string {
   });
 }
 
-// ─── Verification state ──────────────────────────────────────────────────────
-// verified = code scanned at handoff. awaiting = still upcoming, code not due
-// yet (normal). missed = handoff time has passed but the code was never
-// collected — the cook fulfilled without verifying, which is the fraud risk.
-
 type VerifyState = "verified" | "awaiting" | "missed";
 
 function verifyState(order: CalendarOrder, now: number): VerifyState {
-  if (order.codeVerified) return "verified";
+  if (order.pickupCodeVerifiedAt) return "verified";
   return new Date(order.datetime).getTime() < now ? "missed" : "awaiting";
 }
 
@@ -77,18 +219,21 @@ const VERIFY_META: Record<
   missed: { label: "Not collected", Icon: AlertTriangle, cls: styles.missed },
 };
 
-// ─── Order row ──────────────────────────────────────────────────────────────────
+// ─── Order row ────────────────────────────────────────────────────────────────
 
 function OrderRow({ order, now }: { order: CalendarOrder; now: number }) {
   const { label, Icon, cls } = VERIFY_META[verifyState(order, now)];
+  const name = order.customerName || "Customer";
   return (
     <div className={styles.orderRow}>
       <span className={styles.orderTime}>
         {formatOrderTime(order.datetime)}
       </span>
       <span className={styles.orderMain}>
-        <span className={styles.orderCustomer}>{order.customerName}</span>
-        <span className={styles.orderListing}>{order.listingTitle}</span>
+        <span className={styles.orderCustomer}>{name}</span>
+        <span className={styles.orderListing}>
+          {order.listingTitle ?? "Order"}
+        </span>
       </span>
       <span className={styles.orderQty}>×{order.quantity}</span>
       <span className={`${styles.verifyChip} ${cls}`}>
@@ -103,10 +248,69 @@ function OrderRow({ order, now }: { order: CalendarOrder; now: number }) {
 
 export default function CalendarPage() {
   const [weekStart, setWeekStart] = useState<Date>(currentWeekStart());
+  const [week, setWeek] = useState<DaySchedule[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const loadWeek = useCallback(async (ws: Date) => {
+    setLoading(true);
+    try {
+      const dateFrom = toISODateLocal(ws);
+      const dateTo = toISODateLocal(addDays(ws, 7));
+
+      const [availRes, ordersRes] = await Promise.all([
+        fetch("/api/business/dashboard/availability"),
+        fetch(
+          `/api/business/dashboard/orders?dateFrom=${dateFrom}&dateTo=${dateTo}&limit=200`,
+        ),
+      ]);
+
+      const avail = availRes.ok ? (await availRes.json()).data : null;
+      const ordersData = ordersRes.ok ? (await ordersRes.json()).data : [];
+
+      const calendarOrders: CalendarOrder[] = (ordersData ?? []).map(
+        (o: {
+          id: string;
+          pickupAt: string;
+          customerName: string | null;
+          customerFirstName: string | null;
+          listingTitle: string | null;
+          quantity: number;
+          pickupCodeVerifiedAt: string | null;
+        }) => ({
+          id: o.id,
+          datetime: o.pickupAt,
+          kind: "pickup" as Fulfillment,
+          customerName:
+            o.customerName ??
+            (o.customerFirstName ? o.customerFirstName : "Customer"),
+          listingTitle: o.listingTitle ?? "Order",
+          quantity: o.quantity,
+          pickupCodeVerifiedAt: o.pickupCodeVerifiedAt,
+        }),
+      );
+
+      const built = buildWeekFromData(
+        ws,
+        avail ?? {
+          pickupDays: [],
+          pickupFrom: null,
+          pickupTo: null,
+          delivery: null,
+        },
+        calendarOrders,
+      );
+      setWeek(built);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadWeek(weekStart);
+  }, [weekStart, loadWeek]);
 
   const today = new Date();
   const now = today.getTime();
-  const week = buildWeek(weekStart);
   const isCurrentWeek = sameDay(weekStart, currentWeekStart());
   const activeDays = week.filter((d) => d.windows.length > 0);
 
@@ -116,7 +320,7 @@ export default function CalendarPage() {
 
   return (
     <div className={styles.page}>
-      {/* ─── A: navigable header ─── */}
+      {/* Header */}
       <div className={styles.header}>
         <div className={styles.headerTop}>
           <div className={styles.titleBlock}>
@@ -160,9 +364,15 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      {/* ─── Week ribbon (at-a-glance rhythm) ─── */}
+      {/* Week ribbon */}
       <div className={styles.weekStrip}>
-        {week.map((day, i) => {
+        {(week.length === 7
+          ? week
+          : Array.from({ length: 7 }, (_, i) => ({
+              date: addDays(weekStart, i),
+              windows: [],
+            }))
+        ).map((day, i) => {
           const isToday = sameDay(day.date, today);
           const isActive = day.windows.length > 0;
           const kinds = new Set(day.windows.map((w) => w.window.kind));
@@ -186,7 +396,7 @@ export default function CalendarPage() {
         })}
       </div>
 
-      {/* ─── Legend ─── */}
+      {/* Legend */}
       <div className={styles.legend}>
         <span className={styles.legendGroup}>
           <span className={styles.legendItem}>
@@ -215,22 +425,24 @@ export default function CalendarPage() {
         </span>
       </div>
 
-      {/* ─── Fraud disclaimer (only when codes were missed) ─── */}
+      {/* Fraud disclaimer */}
       {missedCount > 0 && (
         <div className={styles.fraudNote}>
           <AlertTriangle size={15} className={styles.fraudIcon} />
           <span>
             {missedCount} handoff{missedCount === 1 ? "" : "s"} went through
-            without a verified code this week. Scanning the customer's code at
-            pickup or delivery confirms the right person collected the order —
-            skipping it leaves you exposed to fraud and chargeback disputes.
+            without a verified code this week. Scanning the customer&apos;s code
+            at pickup or delivery confirms the right person collected the order
+            — skipping it leaves you exposed to fraud and chargeback disputes.
           </span>
         </div>
       )}
 
-      {/* ─── Agenda ─── */}
+      {/* Agenda */}
       <div className={styles.agenda}>
-        {activeDays.length === 0 ? (
+        {loading ? (
+          <div className={styles.empty}>Loading schedule…</div>
+        ) : activeDays.length === 0 ? (
           <div className={styles.empty}>
             No pickup or delivery days this week.
           </div>

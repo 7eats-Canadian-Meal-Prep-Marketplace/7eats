@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
+import { and, count, desc, eq, gte, lte } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import {
@@ -6,7 +6,7 @@ import {
   unauthorized,
 } from "@/app/api/business/listings/_lib/cook-auth";
 import { db } from "@/db";
-import { listings, orders } from "@/db/schema";
+import { authUser, listings, orders } from "@/db/schema";
 
 const querySchema = z.object({
   status: z
@@ -67,9 +67,13 @@ export async function GET(req: NextRequest) {
           lateCancelWindowHours: orders.lateCancelWindowHours,
           lateCancelFeeApplied: orders.lateCancelFeeApplied,
           listingTitle: listings.title,
+          customerName: authUser.name,
+          customerFirstName: authUser.firstName,
+          customerLastName: authUser.lastName,
         })
         .from(orders)
         .leftJoin(listings, eq(orders.listingId, listings.id))
+        .leftJoin(authUser, eq(orders.clientId, authUser.id))
         .where(where)
         .orderBy(desc(orders.createdAt))
         .limit(limit)

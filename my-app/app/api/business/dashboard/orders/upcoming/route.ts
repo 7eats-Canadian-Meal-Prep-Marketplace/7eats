@@ -5,7 +5,7 @@ import {
   unauthorized,
 } from "@/app/api/business/listings/_lib/cook-auth";
 import { db } from "@/db";
-import { listings, orders } from "@/db/schema";
+import { authUser, listings, orders } from "@/db/schema";
 
 export async function GET(req: NextRequest) {
   const cookId = await getCookId(req.headers);
@@ -36,9 +36,13 @@ export async function GET(req: NextRequest) {
         lateCancelWindowHours: orders.lateCancelWindowHours,
         lateCancelFeeApplied: orders.lateCancelFeeApplied,
         listingTitle: listings.title,
+        customerName: authUser.name,
+        customerFirstName: authUser.firstName,
+        customerLastName: authUser.lastName,
       })
       .from(orders)
       .leftJoin(listings, eq(orders.listingId, listings.id))
+      .leftJoin(authUser, eq(orders.clientId, authUser.id))
       .where(
         and(
           eq(orders.cookId, cookId),
