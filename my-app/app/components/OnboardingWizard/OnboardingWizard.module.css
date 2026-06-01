@@ -249,6 +249,28 @@
   color: var(--white);
 }
 
+/* ── Per-day pickup windows ──────────────────────────────────── */
+.perDayWindows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.perDayRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.perDayName {
+  width: 36px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--grey-600);
+  flex-shrink: 0;
+}
+
 /* ── Time row ────────────────────────────────────────────────── */
 .timeRow {
   display: flex;

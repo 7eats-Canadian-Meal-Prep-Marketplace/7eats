@@ -10,11 +10,11 @@ export const metadata: Metadata = {
 export default async function ResetPasswordPage({
   searchParams,
 }: {
-  searchParams: Promise<{ token?: string }>;
+  searchParams: Promise<{ token?: string; error?: string }>;
 }) {
-  const { token } = await searchParams;
-  if (!token) {
-    redirect("/business-auth/forgot-password");
+  const { token, error } = await searchParams;
+  if (error === "INVALID_TOKEN" || !token) {
+    redirect("/business-auth/forgot-password?error=expired");
   }
 
   return (

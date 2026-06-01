@@ -90,3 +90,9 @@ export const subscriptionStatus = pgEnum("subscription_status", [
   "cancelled",
   "past_due",
 ]);
+
+export const notificationEntityTypeEnum = pgEnum("notification_entity_type", [
+  "order_new",
+  "order_cancelled",
+  "review",
+]);

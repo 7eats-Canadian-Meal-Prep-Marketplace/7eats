@@ -37,17 +37,21 @@ describe("logAndCheckRateLimit", () => {
     expect(result).toBe(true);
   });
 
-  it("returns true when count exactly equals max attempts (3)", async () => {
+  it("returns false and does not insert when count equals max attempts (3)", async () => {
     mockWhere.mockResolvedValue([{ count: 3 }]);
 
     const result = await logAndCheckRateLimit("abc123");
-    expect(result).toBe(true);
+
+    expect(vi.mocked(db.insert)).not.toHaveBeenCalled();
+    expect(result).toBe(false);
   });
 
-  it("returns false when count exceeds max attempts", async () => {
+  it("returns false and does not insert when count exceeds max attempts", async () => {
     mockWhere.mockResolvedValue([{ count: 4 }]);
 
     const result = await logAndCheckRateLimit("abc123");
+
+    expect(vi.mocked(db.insert)).not.toHaveBeenCalled();
     expect(result).toBe(false);
   });
 });

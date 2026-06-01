@@ -3,44 +3,9 @@
 import { ArrowLeft, ExternalLink, ImagePlus } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import {
-  MOCK_ACCOUNT,
-  MOCK_CHANNELS,
-  MOCK_KITCHEN,
-  MOCK_NOTIFICATIONS,
-  MOCK_STRIPE_ACCOUNT,
-  type MockChannels,
-  type MockNotification,
-} from "./_mock";
 import styles from "./page.module.css";
 
 type SectionId = "kitchen" | "account" | "billing" | "notifications" | "danger";
-
-const KITCHEN_TYPES = [
-  { value: "licensed_home", label: "Licensed home kitchen" },
-  { value: "commercial_rented", label: "Commercial kitchen (rented)" },
-  { value: "ghost_kitchen", label: "Ghost kitchen" },
-  { value: "restaurant_cafe", label: "Restaurant / café" },
-  { value: "community_kitchen", label: "Community kitchen" },
-  { value: "other", label: "Other" },
-];
-
-const YEARS_OPERATING = [
-  "Less than 1 year",
-  "1-2 years",
-  "3-5 years",
-  "6-10 years",
-  "10+ years",
-];
-
-const ROLES = [
-  "Owner",
-  "Co-owner",
-  "Head Chef / Cook",
-  "Manager",
-  "Operations Lead",
-  "Other",
-];
 
 const SECTIONS: { id: SectionId; label: string }[] = [
   { id: "kitchen", label: "Kitchen" },
@@ -63,9 +28,62 @@ function useSaved() {
 
 // ─── Kitchen ───────────────────────────────────────────────────────────────────
 
+type KitchenForm = {
+  displayName: string;
+  bio: string;
+  pickupAddress: string;
+  socialLink: string;
+};
+
 function KitchenSection() {
-  const [form, setForm] = useState(MOCK_KITCHEN);
+  const [form, setForm] = useState<KitchenForm>({
+    displayName: "",
+    bio: "",
+    pickupAddress: "",
+    socialLink: "",
+  });
+  const [loading, setLoading] = useState(true);
   const { saved, triggerSaved } = useSaved();
+
+  useEffect(() => {
+    fetch("/api/business/profile")
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.success) {
+          setForm({
+            displayName: json.data.displayName ?? "",
+            bio: json.data.bio ?? "",
+            pickupAddress: json.data.pickupAddress ?? "",
+            socialLink: json.data.socialLink ?? "",
+          });
+        }
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  async function handleSave() {
+    await fetch("/api/business/profile", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        displayName: form.displayName || undefined,
+        bio: form.bio || undefined,
+        pickupAddress: form.pickupAddress || undefined,
+        socialLink: form.socialLink || undefined,
+      }),
+    });
+    triggerSaved();
+  }
+
+  if (loading) {
+    return (
+      <div className={styles.card}>
+        <div className={styles.cardForm}>
+          <span style={{ color: "var(--muted)" }}>Loading…</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.card}>
@@ -95,167 +113,54 @@ function KitchenSection() {
           />
         </div>
 
-        <div className={styles.formRow}>
-          <div className={styles.formGroup}>
-            <label htmlFor="s-kitchen-name" className={styles.formLabel}>
-              Kitchen name
-            </label>
-            <input
-              id="s-kitchen-name"
-              type="text"
-              className={styles.formInput}
-              value={form.kitchenName}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, kitchenName: e.target.value }))
-              }
-            />
-          </div>
-          <div className={styles.formGroup}>
-            <label htmlFor="s-kitchen-type" className={styles.formLabel}>
-              Kitchen type
-            </label>
-            <select
-              id="s-kitchen-type"
-              className={styles.formSelect}
-              value={form.kitchenType}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, kitchenType: e.target.value }))
-              }
-            >
-              {KITCHEN_TYPES.map(({ value, label }) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div className={styles.formGroupNarrow}>
-          <label htmlFor="s-years" className={styles.formLabel}>
-            Years operating
-          </label>
-          <select
-            id="s-years"
-            className={styles.formSelect}
-            value={form.yearsOperating}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, yearsOperating: e.target.value }))
-            }
-          >
-            {YEARS_OPERATING.map((y) => (
-              <option key={y} value={y}>
-                {y}
-              </option>
-            ))}
-          </select>
-        </div>
-
         <div className={styles.formGroup}>
-          <label htmlFor="s-street" className={styles.formLabel}>
-            Street address
+          <label htmlFor="s-display-name" className={styles.formLabel}>
+            Kitchen name
           </label>
           <input
-            id="s-street"
+            id="s-display-name"
             type="text"
             className={styles.formInput}
-            value={form.street}
-            onChange={(e) => setForm((f) => ({ ...f, street: e.target.value }))}
+            value={form.displayName}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, displayName: e.target.value }))
+            }
           />
         </div>
 
-        <div className={styles.formRow3}>
-          <div className={styles.formGroup}>
-            <label htmlFor="s-city" className={styles.formLabel}>
-              City
-            </label>
-            <input
-              id="s-city"
-              type="text"
-              className={styles.formInput}
-              value={form.city}
-              onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
-            />
-          </div>
-          <div className={styles.formGroup}>
-            <label htmlFor="s-province" className={styles.formLabel}>
-              Province
-            </label>
-            <input
-              id="s-province"
-              type="text"
-              className={styles.formInput}
-              value={form.province}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, province: e.target.value }))
-              }
-            />
-          </div>
-          <div className={styles.formGroup}>
-            <label htmlFor="s-postal" className={styles.formLabel}>
-              Postal code
-            </label>
-            <input
-              id="s-postal"
-              type="text"
-              className={styles.formInput}
-              value={form.postalCode}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, postalCode: e.target.value }))
-              }
-            />
-          </div>
-        </div>
-
-        <div className={styles.formRow}>
-          <div className={styles.formGroup}>
-            <label htmlFor="s-biz-phone" className={styles.formLabel}>
-              Business phone
-            </label>
-            <input
-              id="s-biz-phone"
-              type="tel"
-              className={styles.formInput}
-              value={form.businessPhone}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, businessPhone: e.target.value }))
-              }
-            />
-          </div>
-          <div className={styles.formGroup}>
-            <label htmlFor="s-biz-email" className={styles.formLabel}>
-              Business email
-            </label>
-            <input
-              id="s-biz-email"
-              type="email"
-              className={styles.formInput}
-              value={form.businessEmail}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, businessEmail: e.target.value }))
-              }
-            />
-          </div>
+        <div className={styles.formGroup}>
+          <label htmlFor="s-pickup-address" className={styles.formLabel}>
+            Pickup address
+          </label>
+          <input
+            id="s-pickup-address"
+            type="text"
+            className={styles.formInput}
+            value={form.pickupAddress}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, pickupAddress: e.target.value }))
+            }
+          />
         </div>
 
         <div className={styles.formGroup}>
-          <label htmlFor="s-website" className={styles.formLabel}>
+          <label htmlFor="s-social" className={styles.formLabel}>
             Website <span className={styles.formLabelOptional}>(optional)</span>
           </label>
           <input
-            id="s-website"
+            id="s-social"
             type="url"
             className={styles.formInput}
-            value={form.website}
+            value={form.socialLink}
             onChange={(e) =>
-              setForm((f) => ({ ...f, website: e.target.value }))
+              setForm((f) => ({ ...f, socialLink: e.target.value }))
             }
           />
         </div>
       </div>
 
       <div className={styles.cardFooter}>
-        <button type="button" className={styles.saveBtn} onClick={triggerSaved}>
+        <button type="button" className={styles.saveBtn} onClick={handleSave}>
           {saved ? "Saved" : "Save changes"}
         </button>
       </div>
@@ -265,10 +170,62 @@ function KitchenSection() {
 
 // ─── Account ───────────────────────────────────────────────────────────────────
 
+type AccountForm = {
+  firstName: string;
+  lastName: string;
+  phone: string;
+  loginEmail: string;
+};
+
 function AccountSection() {
-  const [form, setForm] = useState(MOCK_ACCOUNT);
+  const [form, setForm] = useState<AccountForm>({
+    firstName: "",
+    lastName: "",
+    phone: "",
+    loginEmail: "",
+  });
+  const [loading, setLoading] = useState(true);
   const [showPwForm, setShowPwForm] = useState(false);
   const { saved, triggerSaved } = useSaved();
+
+  useEffect(() => {
+    fetch("/api/business/me")
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.success) {
+          setForm({
+            firstName: json.data.firstName ?? "",
+            lastName: json.data.lastName ?? "",
+            phone: json.data.phone ?? "",
+            loginEmail: json.data.email ?? "",
+          });
+        }
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  async function handleSave() {
+    await fetch("/api/business/me", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        firstName: form.firstName || undefined,
+        lastName: form.lastName || undefined,
+        phone: form.phone || null,
+      }),
+    });
+    triggerSaved();
+  }
+
+  if (loading) {
+    return (
+      <div className={styles.card}>
+        <div className={styles.cardForm}>
+          <span style={{ color: "var(--muted)" }}>Loading…</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.card}>
@@ -304,36 +261,18 @@ function AccountSection() {
           </div>
         </div>
 
-        <div className={styles.formGroup}>
-          <label htmlFor="s-role" className={styles.formLabel}>
-            Role
-          </label>
-          <select
-            id="s-role"
-            className={styles.formSelect}
-            value={form.role}
-            onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}
-          >
-            {ROLES.map((r) => (
-              <option key={r} value={r}>
-                {r}
-              </option>
-            ))}
-          </select>
-        </div>
-
         <div className={styles.formRow}>
           <div className={styles.formGroup}>
             <label htmlFor="s-personal-phone" className={styles.formLabel}>
-              Personal phone
+              Phone
             </label>
             <input
               id="s-personal-phone"
               type="tel"
               className={styles.formInput}
-              value={form.personalPhone}
+              value={form.phone}
               onChange={(e) =>
-                setForm((f) => ({ ...f, personalPhone: e.target.value }))
+                setForm((f) => ({ ...f, phone: e.target.value }))
               }
             />
           </div>
@@ -346,9 +285,8 @@ function AccountSection() {
               type="email"
               className={styles.formInput}
               value={form.loginEmail}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, loginEmail: e.target.value }))
-              }
+              readOnly
+              style={{ opacity: 0.7 }}
             />
           </div>
         </div>
@@ -400,7 +338,7 @@ function AccountSection() {
       </div>
 
       <div className={styles.cardFooter}>
-        <button type="button" className={styles.saveBtn} onClick={triggerSaved}>
+        <button type="button" className={styles.saveBtn} onClick={handleSave}>
           {saved ? "Saved" : "Save changes"}
         </button>
       </div>
@@ -410,49 +348,91 @@ function AccountSection() {
 
 // ─── Billing ───────────────────────────────────────────────────────────────────
 
-const SCHEDULE_LABELS: Record<string, string> = {
-  weekly: "Weekly",
-  biweekly: "Biweekly",
-  monthly: "Monthly",
+type StripeStatusData = {
+  hasAccount: boolean;
+  chargesEnabled: boolean;
+  payoutsEnabled: boolean;
+  requirementsCount: number;
 };
 
 function BillingSection() {
-  const stripe = MOCK_STRIPE_ACCOUNT;
-  const isConnected = stripe.status === "connected";
+  const [stripeStatus, setStripeStatus] = useState<StripeStatusData | null>(
+    null,
+  );
+  const [loading, setLoading] = useState(true);
+  const [linkLoading, setLinkLoading] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/business/dashboard/stripe/status")
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.success) setStripeStatus(json.data);
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  async function handleStripeAction() {
+    setLinkLoading(true);
+    try {
+      const endpoint =
+        stripeStatus?.hasAccount && stripeStatus?.chargesEnabled
+          ? "/api/business/dashboard/stripe/dashboard-link"
+          : "/api/business/dashboard/stripe/onboarding-link";
+      const res = await fetch(endpoint, { method: "POST" });
+      const json = await res.json();
+      if (json.success && json.data?.url) {
+        window.open(json.data.url, "_blank");
+      }
+    } finally {
+      setLinkLoading(false);
+    }
+  }
+
+  const isConnected =
+    stripeStatus?.hasAccount &&
+    stripeStatus?.chargesEnabled &&
+    stripeStatus?.payoutsEnabled;
 
   return (
     <div className={styles.card}>
       <div className={styles.cardForm}>
         <div className={styles.stripeStatus}>
           <div className={styles.stripeInfo}>
-            <span
-              className={`${styles.stripeBadge} ${isConnected ? styles.stripeBadgeConnected : styles.stripeBadgePending}`}
-            >
-              {isConnected ? "Connected" : "Not connected"}
-            </span>
-            {isConnected && (
-              <div className={styles.stripeDetails}>
-                <span className={styles.stripeBank}>{stripe.institution}</span>
-                <span className={styles.stripeAccount}>
-                  •••• {stripe.last4}
+            {loading ? (
+              <span style={{ color: "var(--muted)" }}>Loading…</span>
+            ) : (
+              <>
+                <span
+                  className={`${styles.stripeBadge} ${isConnected ? styles.stripeBadgeConnected : styles.stripeBadgePending}`}
+                >
+                  {isConnected ? "Connected" : "Not connected"}
                 </span>
-              </div>
+                {stripeStatus?.requirementsCount != null &&
+                  stripeStatus.requirementsCount > 0 && (
+                    <span className={styles.stripeDetails}>
+                      <span className={styles.stripeBank}>
+                        {stripeStatus.requirementsCount} requirement
+                        {stripeStatus.requirementsCount !== 1 ? "s" : ""}{" "}
+                        pending
+                      </span>
+                    </span>
+                  )}
+              </>
             )}
           </div>
-          <button type="button" className={styles.stripeBtn}>
-            {isConnected ? "Manage in Stripe" : "Connect with Stripe"}
+          <button
+            type="button"
+            className={styles.stripeBtn}
+            onClick={handleStripeAction}
+            disabled={loading || linkLoading}
+          >
+            {linkLoading
+              ? "Opening…"
+              : isConnected
+                ? "Manage in Stripe"
+                : "Connect with Stripe"}
             <ExternalLink size={13} />
           </button>
-        </div>
-
-        <div className={styles.formDivider} />
-
-        <div className={styles.formGroup}>
-          <span className={styles.formLabel}>Payout schedule</span>
-          <span className={styles.readonlyVal}>
-            {SCHEDULE_LABELS[stripe.schedule]}
-            <span className={styles.readonlyNote}>— managed by Stripe</span>
-          </span>
         </div>
       </div>
     </div>
@@ -460,6 +440,12 @@ function BillingSection() {
 }
 
 // ─── Notifications ─────────────────────────────────────────────────────────────
+
+type NotifSettings = {
+  emailNotificationsNewOrder: boolean;
+  emailNotificationsNewReview: boolean;
+  smsNotificationsNewOrder: boolean;
+};
 
 function Toggle({
   on,
@@ -484,74 +470,80 @@ function Toggle({
 }
 
 function NotificationsSection() {
-  const [channels, setChannels] = useState<MockChannels>(MOCK_CHANNELS);
-  const [items, setItems] = useState<MockNotification[]>(MOCK_NOTIFICATIONS);
+  const [settings, setSettings] = useState<NotifSettings>({
+    emailNotificationsNewOrder: true,
+    emailNotificationsNewReview: true,
+    smsNotificationsNewOrder: false,
+  });
+  const [loading, setLoading] = useState(true);
 
-  function toggleChannel(key: keyof MockChannels) {
-    setChannels((prev) => ({ ...prev, [key]: !prev[key] }));
+  useEffect(() => {
+    fetch("/api/business/dashboard/settings")
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.success) {
+          setSettings({
+            emailNotificationsNewOrder: json.data.emailNotificationsNewOrder,
+            emailNotificationsNewReview: json.data.emailNotificationsNewReview,
+            smsNotificationsNewOrder: json.data.smsNotificationsNewOrder,
+          });
+        }
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  async function toggle(key: keyof NotifSettings) {
+    const newValue = !settings[key];
+    setSettings((prev) => ({ ...prev, [key]: newValue }));
+    await fetch("/api/business/dashboard/settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ [key]: newValue }),
+    });
   }
 
-  function toggleItem(id: string) {
-    setItems((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, enabled: !n.enabled } : n)),
-    );
-  }
+  const items = [
+    {
+      key: "emailNotificationsNewOrder" as const,
+      label: "New orders (email)",
+      description: "Get notified by email when a customer places an order.",
+    },
+    {
+      key: "emailNotificationsNewReview" as const,
+      label: "Reviews (email)",
+      description: "Get notified by email when a customer leaves a review.",
+    },
+    {
+      key: "smsNotificationsNewOrder" as const,
+      label: "New orders (SMS)",
+      description: "Get a text message when a customer places an order.",
+    },
+  ];
 
   return (
     <div className={styles.card}>
-      <div className={styles.notifGroupHeader}>Channels</div>
-
-      <div className={styles.notifRowBorder}>
-        <div className={styles.notifRow}>
-          <div className={styles.notifInfo}>
-            <span className={styles.notifLabel}>Email</span>
-            <span className={styles.notifDesc}>
-              Receive all alerts by email.
-            </span>
-          </div>
-          <Toggle
-            on={channels.email}
-            onToggle={() => toggleChannel("email")}
-            label="Email"
-          />
-        </div>
-      </div>
-
-      <div className={styles.notifRow}>
-        <div className={styles.notifInfo}>
-          <span className={styles.notifLabel}>SMS</span>
-          <span className={styles.notifDesc}>
-            Receive urgent alerts by text message.
-          </span>
-        </div>
-        <Toggle
-          on={channels.sms}
-          onToggle={() => toggleChannel("sms")}
-          label="SMS"
-        />
-      </div>
-
-      <div className={styles.notifGroupDivider} />
-      <div className={styles.notifGroupHeader}>Alerts</div>
-
-      {items.map((n, i) => (
-        <div
-          key={n.id}
-          className={i < items.length - 1 ? styles.notifRowBorder : ""}
-        >
-          <div className={styles.notifRow}>
-            <div className={styles.notifInfo}>
-              <span className={styles.notifLabel}>{n.label}</span>
-              <span className={styles.notifDesc}>{n.description}</span>
+      {loading ? (
+        <div style={{ padding: "1rem", color: "var(--muted)" }}>Loading…</div>
+      ) : (
+        items.map((item, i) => (
+          <div
+            key={item.key}
+            className={i < items.length - 1 ? styles.notifRowBorder : ""}
+          >
+            <div className={styles.notifRow}>
+              <div className={styles.notifInfo}>
+                <span className={styles.notifLabel}>{item.label}</span>
+                <span className={styles.notifDesc}>{item.description}</span>
+              </div>
+              <Toggle
+                on={settings[item.key]}
+                onToggle={() => toggle(item.key)}
+                label={item.label}
+              />
             </div>
-            <Toggle
-              on={n.enabled}
-              onToggle={() => toggleItem(n.id)}
-              label={n.label}
-            />
           </div>
-        </div>
-      ))}
+        ))
+      )}
     </div>
   );
 }

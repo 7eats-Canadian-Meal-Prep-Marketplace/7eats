@@ -1,4 +1,4 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import {
@@ -37,18 +37,36 @@ export async function GET(req: NextRequest, { params }: Params) {
 
   try {
     const [listing] = await db
-      .select()
+      .select({
+        listing: listings,
+        totalOrders:
+          sql<number>`(SELECT COUNT(*)::int FROM orders WHERE listing_id = ${listingId} AND status != 'cancelled')`.as(
+            "total_orders",
+          ),
+        totalRevenue:
+          sql<string>`(SELECT COALESCE(SUM(total_price), 0) FROM orders WHERE listing_id = ${listingId} AND status = 'fulfilled')`.as(
+            "total_revenue",
+          ),
+      })
       .from(listings)
       .where(and(eq(listings.id, listingId), eq(listings.cookId, cookId)))
       .limit(1);
 
     if (!listing) return notFound("Listing");
 
+    const totalOrders = Number(listing.totalOrders);
+    const totalRevenue = Number(listing.totalRevenue);
+    const avgOrderValue =
+      totalOrders > 0
+        ? Math.round((totalRevenue / totalOrders) * 100) / 100
+        : 0;
+
     const dishRows = await db
       .select({
         id: listingDishes.id,
         dishId: listingDishes.dishId,
         name: dishes.name,
+        cuisine: dishes.cuisine,
         quantity: listingDishes.quantity,
         sortOrder: listingDishes.sortOrder,
         dishStatus: dishes.status,
@@ -66,7 +84,12 @@ export async function GET(req: NextRequest, { params }: Params) {
 
     return NextResponse.json({
       success: true,
-      data: { ...listing, dishes: dishRows, tiers: tierRows },
+      data: {
+        ...listing.listing,
+        stats: { totalOrders, totalRevenue, avgOrderValue },
+        dishes: dishRows,
+        tiers: tierRows,
+      },
     });
   } catch (err) {
     console.error("[listings]", err);

@@ -9,31 +9,28 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { useParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import { BackToListings } from "../_back-link";
 import {
-  MOCK_AVAILABLE_DISHES,
-  MOCK_LISTING,
-  MOCK_LISTING_DEALS,
-  MOCK_LISTING_DISHES,
-  MOCK_LISTING_ORDERS,
-  MOCK_LISTING_REVIEWS,
-  MOCK_PRICING_TIERS,
-  type MockAvailableDish,
-  type MockDealType,
-  type MockListingDeal,
-  type MockListingDish,
-  type MockListingOrder,
-  type MockListingReview,
-  type MockPricingTier,
-} from "./_mock";
+  type AvailableDish,
+  bundleToTier,
+  type ListingDeal,
+  ListingDetailProvider,
+  type ListingDish,
+  type ListingOrder,
+  type ListingReview,
+  type PricingTier,
+  type UiDealType,
+  useListingDetail,
+} from "./_listing-detail-context";
 import styles from "./page.module.css";
 
 type Tab = "overview" | "dishes" | "deals" | "orders" | "reviews";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function formatDeal(deal: MockListingDeal): string {
+function formatDeal(deal: ListingDeal): string {
   if (deal.type === "percentage_off") return `${deal.value}% off`;
   if (deal.type === "fixed_off") return `$${deal.value} off`;
   return `Buy ${deal.buyQty}, get ${deal.getQty} free`;
@@ -67,7 +64,7 @@ function formatTime(iso: string): string {
   return `${d.toLocaleDateString("en-CA", { month: "short", day: "numeric" })} · ${time}`;
 }
 
-const STATUS_LABEL: Record<MockListingOrder["status"], string> = {
+const STATUS_LABEL: Record<ListingOrder["status"], string> = {
   pending: "Pending",
   confirmed: "Confirmed",
   ready: "Ready",
@@ -75,7 +72,7 @@ const STATUS_LABEL: Record<MockListingOrder["status"], string> = {
   cancelled: "Cancelled",
 };
 
-const BADGE_CLS: Record<MockListingOrder["status"], string> = {
+const BADGE_CLS: Record<ListingOrder["status"], string> = {
   pending: styles.badgePending,
   confirmed: styles.badgeConfirmed,
   ready: styles.badgeReady,
@@ -85,7 +82,7 @@ const BADGE_CLS: Record<MockListingOrder["status"], string> = {
 
 // ─── Status badge ─────────────────────────────────────────────────────────────
 
-function StatusBadge({ status }: { status: MockListingOrder["status"] }) {
+function StatusBadge({ status }: { status: ListingOrder["status"] }) {
   return (
     <span className={`${styles.badge} ${BADGE_CLS[status]}`}>
       {STATUS_LABEL[status]}
@@ -96,17 +93,35 @@ function StatusBadge({ status }: { status: MockListingOrder["status"] }) {
 // ─── Overview tab ─────────────────────────────────────────────────────────────
 
 function OverviewTab() {
+  const { stats, listing, bundles, saveOverview, loading } = useListingDetail();
   const [form, setForm] = useState({
-    title: MOCK_LISTING.title,
-    description: MOCK_LISTING.description,
-    basePrice: MOCK_LISTING.basePrice,
-    currency: MOCK_LISTING.currency,
-    minOrderQty: MOCK_LISTING.minOrderQty,
-    maxOrderQty: MOCK_LISTING.maxOrderQty ?? "",
-    status: MOCK_LISTING.status as "active" | "draft" | "archived",
+    title: "",
+    description: "",
+    basePrice: "",
+    currency: "CAD",
+    minOrderQty: 1,
+    maxOrderQty: "" as string | number,
+    status: "active" as "active" | "draft" | "archived",
   });
-  const [tiers, setTiers] = useState<MockPricingTier[]>(MOCK_PRICING_TIERS);
+  const [tiers, setTiers] = useState<PricingTier[]>([]);
   const [saved, setSaved] = useState(false);
+  const [initialized, setInitialized] = useState(false);
+
+  useEffect(() => {
+    if (!loading && listing && !initialized) {
+      setForm({
+        title: listing.title,
+        description: listing.description,
+        basePrice: listing.basePrice,
+        currency: listing.currency,
+        minOrderQty: listing.minOrderQty,
+        maxOrderQty: listing.maxOrderQty ?? "",
+        status: listing.status,
+      });
+      setTiers(bundles.map(bundleToTier));
+      setInitialized(true);
+    }
+  }, [loading, listing, bundles, initialized]);
 
   function addTier() {
     const nextQty =
@@ -153,9 +168,19 @@ function OverviewTab() {
     );
   }
 
-  function handleSave() {
+  async function handleSave() {
+    const ok = await saveOverview({
+      ...form,
+      maxOrderQty: String(form.maxOrderQty),
+      tiers,
+    });
+    if (!ok) return;
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
+  }
+
+  if (loading && !initialized) {
+    return <p className={styles.emptyNote}>Loading listing…</p>;
   }
 
   return (
@@ -163,15 +188,15 @@ function OverviewTab() {
       <div className={styles.statsRow}>
         <div className={styles.statCard}>
           <span className={styles.statLabel}>Total orders</span>
-          <span className={styles.statVal}>{MOCK_LISTING.totalOrders}</span>
+          <span className={styles.statVal}>{stats.totalOrders}</span>
         </div>
         <div className={styles.statCard}>
           <span className={styles.statLabel}>Total revenue</span>
-          <span className={styles.statVal}>${MOCK_LISTING.totalRevenue}</span>
+          <span className={styles.statVal}>${stats.totalRevenue}</span>
         </div>
         <div className={styles.statCard}>
           <span className={styles.statLabel}>Avg order value</span>
-          <span className={styles.statVal}>${MOCK_LISTING.avgOrderValue}</span>
+          <span className={styles.statVal}>${stats.avgOrderValue}</span>
         </div>
       </div>
 
@@ -402,7 +427,15 @@ function OverviewTab() {
 // ─── Dishes tab ───────────────────────────────────────────────────────────────
 
 function DishesTab() {
-  const [dishes, setDishes] = useState<MockListingDish[]>(MOCK_LISTING_DISHES);
+  const {
+    dishes,
+    setDishes,
+    availableDishes,
+    hasActiveOrders,
+    addDish,
+    removeDish,
+    persistDishOrder,
+  } = useListingDetail();
   const [showPicker, setShowPicker] = useState(false);
   const [removeBlocked, setRemoveBlocked] = useState(false);
   const [dragId, setDragId] = useState<string | null>(null);
@@ -421,25 +454,21 @@ function DishesTab() {
     });
   }
 
-  function handleRemove(dish: MockListingDish) {
-    if (dish.hasActiveOrders) {
+  async function handleRemove(dish: ListingDish) {
+    if (hasActiveOrders) {
       setRemoveBlocked(true);
       return;
     }
-    setDishes((prev) => prev.filter((d) => d.id !== dish.id));
+    const ok = await removeDish(dish);
+    if (!ok) setRemoveBlocked(true);
   }
 
-  function handleAddDish(available: MockAvailableDish) {
-    setDishes((prev) => [
-      ...prev,
-      { ...available, qty: 1, hasActiveOrders: false },
-    ]);
-    setShowPicker(false);
+  async function handleAddDish(available: AvailableDish) {
+    const ok = await addDish(available);
+    if (ok) setShowPicker(false);
   }
 
-  const pickerOptions = MOCK_AVAILABLE_DISHES.filter(
-    (a) => !dishes.some((d) => d.id === a.id),
-  );
+  const pickerOptions = availableDishes;
 
   return (
     <div className={styles.dishesTab}>
@@ -472,7 +501,10 @@ function DishesTab() {
             draggable
             onDragStart={() => setDragId(dish.id)}
             onDragOver={(e) => handleDragOver(e, dish.id)}
-            onDragEnd={() => setDragId(null)}
+            onDragEnd={() => {
+              setDragId(null);
+              void persistDishOrder(dishes);
+            }}
           >
             <span className={styles.dragHandle}>
               <GripVertical size={14} />
@@ -547,17 +579,17 @@ function DishesTab() {
 
 // ─── Deals tab ────────────────────────────────────────────────────────────────
 
-const DEAL_TYPE_LABELS: [MockDealType, string][] = [
+const DEAL_TYPE_LABELS: [UiDealType, string][] = [
   ["percentage_off", "% Off"],
   ["fixed_off", "$ Off"],
   ["bogo", "Buy X Get Y"],
 ];
 
 function DealsTab() {
-  const [deals, setDeals] = useState<MockListingDeal[]>(MOCK_LISTING_DEALS);
+  const { deals, createDeal, deleteDeal } = useListingDetail();
   const [showForm, setShowForm] = useState(false);
   const [newDeal, setNewDeal] = useState({
-    type: "percentage_off" as MockDealType,
+    type: "percentage_off" as UiDealType,
     value: "",
     buyQty: "",
     getQty: "",
@@ -567,11 +599,11 @@ function DealsTab() {
   });
   const [formError, setFormError] = useState<string | null>(null);
 
-  function deleteDeal(id: string) {
-    setDeals((prev) => prev.filter((d) => d.id !== id));
+  async function handleDeleteDeal(id: string) {
+    await deleteDeal(id);
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!newDeal.validUntil && !newDeal.maxUses) {
       setFormError(
@@ -580,19 +612,11 @@ function DealsTab() {
       return;
     }
     setFormError(null);
-    const deal: MockListingDeal = {
-      id: `deal-${Date.now()}`,
-      type: newDeal.type,
-      value: Number(newDeal.value),
-      buyQty: newDeal.buyQty ? Number(newDeal.buyQty) : null,
-      getQty: newDeal.getQty ? Number(newDeal.getQty) : null,
-      isActive: true,
-      validFrom: newDeal.validFrom || null,
-      validUntil: newDeal.validUntil || null,
-      maxUses: newDeal.maxUses ? Number(newDeal.maxUses) : null,
-      usesCount: 0,
-    };
-    setDeals((prev) => [...prev, deal]);
+    const err = await createDeal(newDeal);
+    if (err) {
+      setFormError(err);
+      return;
+    }
     setShowForm(false);
     setNewDeal({
       type: "percentage_off",
@@ -771,7 +795,7 @@ function DealsTab() {
                   <button
                     type="button"
                     className={styles.deleteDealBtn}
-                    onClick={() => deleteDeal(deal.id)}
+                    onClick={() => void handleDeleteDeal(deal.id)}
                     aria-label="Delete deal"
                   >
                     <Trash2 size={13} />
@@ -831,9 +855,15 @@ function DealsTab() {
 // ─── Orders tab ───────────────────────────────────────────────────────────────
 
 function OrdersTab() {
+  const { orders, loading } = useListingDetail();
+
+  if (loading) {
+    return <p className={styles.emptyNote}>Loading orders…</p>;
+  }
+
   return (
     <div className={styles.ordersTab}>
-      {MOCK_LISTING_ORDERS.map((order) => (
+      {orders.map((order) => (
         <div key={order.id} className={styles.orderRow}>
           <div className={styles.orderMain}>
             <span className={styles.orderCustomer}>{order.customerName}</span>
@@ -869,14 +899,18 @@ function StarRating({ rating, size = 13 }: { rating: number; size?: number }) {
 }
 
 function ReviewsTab() {
-  const reviews: MockListingReview[] = MOCK_LISTING_REVIEWS;
+  const { reviews, loading } = useListingDetail();
   const total = reviews.length;
-  const avg = reviews.reduce((s, r) => s + r.rating, 0) / total;
+  const avg = total > 0 ? reviews.reduce((s, r) => s + r.rating, 0) / total : 0;
 
   const dist = [5, 4, 3, 2, 1].map((star) => ({
     star,
     count: reviews.filter((r) => r.rating === star).length,
   }));
+
+  if (loading) {
+    return <p className={styles.emptyNote}>Loading reviews…</p>;
+  }
 
   return (
     <div className={styles.reviewsTab}>
@@ -894,7 +928,7 @@ function ReviewsTab() {
               <div className={styles.reviewDistTrack}>
                 <div
                   className={styles.reviewDistFill}
-                  style={{ width: `${(count / total) * 100}%` }}
+                  style={{ width: `${total > 0 ? (count / total) * 100 : 0}%` }}
                 />
               </div>
               <span className={styles.reviewDistCount}>{count}</span>
@@ -940,7 +974,41 @@ const TABS: { id: Tab; label: string }[] = [
 ];
 
 export default function ListingDetailPage() {
+  const params = useParams<{ id: string }>();
+  const listingId = params.id;
+
+  if (!listingId) {
+    return <p className={styles.emptyNote}>Listing not found.</p>;
+  }
+
+  return (
+    <ListingDetailProvider listingId={listingId}>
+      <ListingDetailContent />
+    </ListingDetailProvider>
+  );
+}
+
+function ListingDetailContent() {
+  const { loading, error } = useListingDetail();
   const [tab, setTab] = useState<Tab>("overview");
+
+  if (loading) {
+    return (
+      <div className={styles.page}>
+        <BackToListings />
+        <p className={styles.emptyNote}>Loading listing…</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className={styles.page}>
+        <BackToListings />
+        <p className={styles.emptyNote}>{error}</p>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.page}>

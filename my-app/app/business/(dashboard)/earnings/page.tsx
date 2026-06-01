@@ -1,18 +1,25 @@
 "use client";
 
 import { TrendingUp } from "lucide-react";
-import { useState } from "react";
-import {
-  MOCK_MONTHLY,
-  MOCK_PAYOUTS,
-  MOCK_TOTAL_REVENUE,
-  MOCK_WEEKLY,
-  type MockPayout,
-  type PayoutStatus,
-} from "./_mock";
+import { useCallback, useEffect, useState } from "react";
 import styles from "./page.module.css";
 
 type Period = "week" | "month";
+
+type EarningPoint = { label: string; value: number };
+
+type PayoutStatus = "pending" | "in_transit" | "paid" | "failed" | "cancelled";
+
+type Payout = {
+  id: string;
+  amount: string;
+  currency: string | null;
+  status: PayoutStatus;
+  arrivalDate: string | null;
+  periodStart: string | null;
+  periodEnd: string | null;
+  createdAt: string;
+};
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -24,7 +31,8 @@ function formatMoney(value: number): string {
   });
 }
 
-function formatDate(iso: string): string {
+function formatDate(iso: string | null): string {
+  if (!iso) return "—";
   return new Date(iso).toLocaleDateString("en-CA", {
     month: "short",
     day: "numeric",
@@ -49,12 +57,18 @@ function computeChart(max: number): { ceiling: number; ticks: number[] } {
 
 const STATUS_LABEL: Record<PayoutStatus, string> = {
   pending: "Open",
+  in_transit: "In transit",
   paid: "Paid",
+  failed: "Failed",
+  cancelled: "Cancelled",
 };
 
 const BADGE_CLS: Record<PayoutStatus, string> = {
   pending: styles.badgePending,
+  in_transit: styles.badgePending,
   paid: styles.badgePaid,
+  failed: styles.badgePending,
+  cancelled: styles.badgePending,
 };
 
 function StatusBadge({ status }: { status: PayoutStatus }) {
@@ -76,15 +90,75 @@ const PAYOUT_PAGE_SIZE = 15;
 
 export default function EarningsPage() {
   const [period, setPeriod] = useState<Period>("week");
-  const [visibleCount, setVisibleCount] = useState(PAYOUT_PAGE_SIZE);
+  const [series, setSeries] = useState<EarningPoint[]>([]);
+  const [seriesTotal, setSeriesTotal] = useState(0);
+  const [payouts, setPayouts] = useState<Payout[]>([]);
+  const [payoutsMeta, setPayoutsMeta] = useState({
+    total: 0,
+    page: 1,
+    limit: PAYOUT_PAGE_SIZE,
+  });
+  const [loadingChart, setLoadingChart] = useState(true);
+  const [loadingPayouts, setLoadingPayouts] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
 
-  const series = period === "week" ? MOCK_WEEKLY : MOCK_MONTHLY;
-  const max = Math.max(...series.map((p) => p.value));
-  const periodTotal = series.reduce((sum, p) => sum + p.value, 0);
-  const { ceiling, ticks } = computeChart(max);
+  const loadChart = useCallback(async (p: Period) => {
+    setLoadingChart(true);
+    try {
+      const count = p === "week" ? 8 : 12;
+      const res = await fetch(
+        `/api/business/dashboard/earnings/history?period=${p}&count=${count}`,
+      );
+      if (res.ok) {
+        const json = await res.json();
+        setSeries(json.data?.series ?? []);
+        setSeriesTotal(json.data?.total ?? 0);
+      }
+    } finally {
+      setLoadingChart(false);
+    }
+  }, []);
 
-  const visiblePayouts = MOCK_PAYOUTS.slice(0, visibleCount);
-  const remaining = MOCK_PAYOUTS.length - visiblePayouts.length;
+  const loadPayouts = useCallback(async (page: number) => {
+    if (page === 1) setLoadingPayouts(true);
+    else setLoadingMore(true);
+    try {
+      const res = await fetch(
+        `/api/business/dashboard/payouts?page=${page}&limit=${PAYOUT_PAGE_SIZE}`,
+      );
+      if (res.ok) {
+        const json = await res.json();
+        if (page === 1) {
+          setPayouts(json.data ?? []);
+        } else {
+          setPayouts((prev) => [...prev, ...(json.data ?? [])]);
+        }
+        setPayoutsMeta(
+          json.meta ?? { total: 0, page, limit: PAYOUT_PAGE_SIZE },
+        );
+      }
+    } finally {
+      setLoadingPayouts(false);
+      setLoadingMore(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadChart(period);
+  }, [period, loadChart]);
+
+  useEffect(() => {
+    loadPayouts(1);
+  }, [loadPayouts]);
+
+  const max = series.length > 0 ? Math.max(...series.map((p) => p.value)) : 0;
+  const { ceiling, ticks } = computeChart(max || 1);
+
+  const remaining = payoutsMeta.total - payouts.length;
+
+  function handleShowMore() {
+    loadPayouts(payoutsMeta.page + 1);
+  }
 
   return (
     <div className={styles.page}>
@@ -97,14 +171,17 @@ export default function EarningsPage() {
 
       <div className={styles.revenueRow}>
         <div className={styles.revenueBlock}>
-          <span className={styles.revenueLabel}>Total revenue</span>
+          <span className={styles.revenueLabel}>
+            {period === "week" ? "Last 8 weeks" : "Last 12 months"}
+          </span>
           <span className={styles.revenueValue}>
-            {formatMoney(MOCK_TOTAL_REVENUE)}
+            {loadingChart ? "—" : formatMoney(seriesTotal)}
           </span>
           <span className={styles.revenueSub}>
             <TrendingUp size={13} className={styles.trendIcon} />
-            {formatMoney(periodTotal)} over the last {series.length}{" "}
-            {period === "week" ? "weeks" : "months"}
+            {loadingChart
+              ? "Loading…"
+              : `${formatMoney(seriesTotal)} over the last ${series.length} ${period === "week" ? "weeks" : "months"}`}
           </span>
         </div>
         <div className={styles.segControl}>
@@ -123,7 +200,7 @@ export default function EarningsPage() {
 
       <div className={styles.chartCard}>
         <div className={styles.chartBody}>
-          {/* Y-axis labels, height matches barTrack */}
+          {/* Y-axis labels */}
           <div className={styles.yAxis}>
             {ticks.map((tick) => (
               <span
@@ -137,7 +214,7 @@ export default function EarningsPage() {
           </div>
 
           <div className={styles.chartMain}>
-            {/* Horizontal grid lines behind the bars */}
+            {/* Horizontal grid lines behind bars */}
             <div className={styles.gridLayer} aria-hidden="true">
               {ticks.map((tick) => (
                 <div
@@ -149,20 +226,32 @@ export default function EarningsPage() {
             </div>
 
             <div className={styles.barsRow}>
-              {series.map((p) => (
-                <div key={p.label} className={styles.barCol}>
-                  <div className={styles.barTrack}>
-                    <span className={styles.barTip}>
-                      {formatMoney(p.value)}
-                    </span>
-                    <div
-                      className={styles.bar}
-                      style={{ height: `${(p.value / ceiling) * 100}%` }}
-                    />
-                  </div>
-                  <span className={styles.barLabel}>{p.label}</span>
-                </div>
-              ))}
+              {loadingChart
+                ? Array.from({ length: period === "week" ? 8 : 12 }, (_, i) => (
+                    // biome-ignore lint/suspicious/noArrayIndexKey: loading skeleton only
+                    <div key={i} className={styles.barCol}>
+                      <div className={styles.barTrack}>
+                        <div className={styles.bar} style={{ height: "0%" }} />
+                      </div>
+                      <span className={styles.barLabel}>—</span>
+                    </div>
+                  ))
+                : series.map((p) => (
+                    <div key={p.label} className={styles.barCol}>
+                      <div className={styles.barTrack}>
+                        <span className={styles.barTip}>
+                          {formatMoney(p.value)}
+                        </span>
+                        <div
+                          className={styles.bar}
+                          style={{
+                            height: `${ceiling > 0 ? (p.value / ceiling) * 100 : 0}%`,
+                          }}
+                        />
+                      </div>
+                      <span className={styles.barLabel}>{p.label}</span>
+                    </div>
+                  ))}
             </div>
           </div>
         </div>
@@ -171,35 +260,49 @@ export default function EarningsPage() {
       <div className={styles.payouts}>
         <h2 className={styles.payoutsTitle}>Payout history</h2>
         <div className={styles.payoutList}>
-          {visiblePayouts.map((payout: MockPayout) => (
-            <div key={payout.id} className={styles.payoutRow}>
-              <div className={styles.payoutColDate}>
-                <span className={styles.payoutDateLabel}>
-                  Payout for {formatDate(payout.date)}
-                </span>
-              </div>
-              <div className={styles.payoutColBank}>
-                <span className={styles.payoutBank}>{payout.account}</span>
-              </div>
-              <div className={styles.payoutColAmount}>
-                <span className={styles.payoutAmount}>
-                  {formatMoney(payout.amount)}
-                </span>
-                <StatusBadge status={payout.status} />
-              </div>
+          {loadingPayouts ? (
+            <div style={{ padding: "1rem", color: "var(--muted)" }}>
+              Loading payouts…
             </div>
-          ))}
+          ) : payouts.length === 0 ? (
+            <div style={{ padding: "1rem", color: "var(--muted)" }}>
+              No payouts yet.
+            </div>
+          ) : (
+            payouts.map((payout) => (
+              <div key={payout.id} className={styles.payoutRow}>
+                <div className={styles.payoutColDate}>
+                  <span className={styles.payoutDateLabel}>
+                    Payout for{" "}
+                    {formatDate(payout.arrivalDate ?? payout.createdAt)}
+                  </span>
+                </div>
+                <div className={styles.payoutColBank}>
+                  <span className={styles.payoutBank}>Stripe</span>
+                </div>
+                <div className={styles.payoutColAmount}>
+                  <span className={styles.payoutAmount}>
+                    {formatMoney(Number(payout.amount))}
+                  </span>
+                  <StatusBadge status={payout.status} />
+                </div>
+              </div>
+            ))
+          )}
         </div>
         {remaining > 0 && (
           <button
             type="button"
             className={styles.showMoreBtn}
-            onClick={() => setVisibleCount((c) => c + PAYOUT_PAGE_SIZE)}
+            onClick={handleShowMore}
+            disabled={loadingMore}
           >
-            Show more
-            <span className={styles.showMoreCount}>
-              {Math.min(remaining, PAYOUT_PAGE_SIZE)}
-            </span>
+            {loadingMore ? "Loading…" : "Show more"}
+            {!loadingMore && (
+              <span className={styles.showMoreCount}>
+                {Math.min(remaining, PAYOUT_PAGE_SIZE)}
+              </span>
+            )}
           </button>
         )}
       </div>

@@ -18,8 +18,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import type { Notification } from "@/app/api/business/dashboard/notifications/_lib";
 import { HostProvider } from "./_host-context";
-import { MOCK_NOTIFICATIONS, type MockNotification } from "./_notifications";
 import styles from "./_shell.module.css";
 
 function formatNotifTime(iso: string): string {
@@ -76,8 +76,7 @@ export default function DashboardShell({
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
-  const [notifications, setNotifications] =
-    useState<MockNotification[]>(MOCK_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [signingOut, setSigningOut] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
@@ -103,6 +102,15 @@ export default function DashboardShell({
     return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, []);
 
+  useEffect(() => {
+    fetch("/api/business/dashboard/notifications")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success) setNotifications(data.data);
+      })
+      .catch(() => {});
+  }, []);
+
   // biome-ignore lint/correctness/useExhaustiveDependencies: pathname is the trigger, not a value used inside
   useEffect(() => {
     setMobileNavOpen(false);
@@ -115,6 +123,11 @@ export default function DashboardShell({
       prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)),
     );
     setNotifOpen(false);
+    fetch("/api/business/dashboard/notifications/mark-read", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: [id] }),
+    }).catch(() => {});
   };
 
   const handleSignOut = async () => {
