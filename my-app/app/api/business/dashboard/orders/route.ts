@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
+import { and, count, desc, eq, gte, lte } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import {
@@ -6,12 +6,13 @@ import {
   unauthorized,
 } from "@/app/api/business/listings/_lib/cook-auth";
 import { db } from "@/db";
-import { listings, orders } from "@/db/schema";
+import { authUser, listings, orders } from "@/db/schema";
 
 const querySchema = z.object({
   status: z
     .enum(["pending", "confirmed", "ready", "fulfilled", "cancelled"])
     .optional(),
+  listingId: z.uuid().optional(),
   dateFrom: z.string().optional(),
   dateTo: z.string().optional(),
   page: z.coerce.number().int().min(1).default(1),
@@ -31,11 +32,12 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const { status, dateFrom, dateTo, page, limit } = parsed.data;
+  const { status, listingId, dateFrom, dateTo, page, limit } = parsed.data;
   const offset = (page - 1) * limit;
 
   const conditions = [eq(orders.cookId, cookId)];
   if (status) conditions.push(eq(orders.status, status));
+  if (listingId) conditions.push(eq(orders.listingId, listingId));
   if (dateFrom) conditions.push(gte(orders.pickupAt, new Date(dateFrom)));
   if (dateTo) conditions.push(lte(orders.pickupAt, new Date(dateTo)));
 
@@ -67,9 +69,13 @@ export async function GET(req: NextRequest) {
           lateCancelWindowHours: orders.lateCancelWindowHours,
           lateCancelFeeApplied: orders.lateCancelFeeApplied,
           listingTitle: listings.title,
+          customerName: authUser.name,
+          customerFirstName: authUser.firstName,
+          customerLastName: authUser.lastName,
         })
         .from(orders)
         .leftJoin(listings, eq(orders.listingId, listings.id))
+        .leftJoin(authUser, eq(orders.clientId, authUser.id))
         .where(where)
         .orderBy(desc(orders.createdAt))
         .limit(limit)

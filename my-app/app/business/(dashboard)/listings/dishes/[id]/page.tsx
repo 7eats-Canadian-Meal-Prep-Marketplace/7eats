@@ -2,17 +2,15 @@
 
 import { Camera, Plus, Trash2, X } from "lucide-react";
 import Image from "next/image";
-import { useState } from "react";
+import { useParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import { BackToDishes } from "../../_back-link";
 import {
   ALLERGENS,
-  MOCK_DISH,
-  MOCK_DISH_PHOTOS,
-  MOCK_INGREDIENTS,
-  MOCK_NUTRITION,
-  type MockDishPhoto,
-  type MockIngredient,
-} from "./_mock";
+  DishDetailProvider,
+  type IngredientRow,
+  useDishDetail,
+} from "./_dish-detail-context";
 import styles from "./page.module.css";
 
 type Tab = "details" | "nutrition";
@@ -22,22 +20,41 @@ const MAX_PHOTOS = 8;
 // ─── Details tab ──────────────────────────────────────────────────────────────
 
 function DetailsTab() {
-  const [form, setForm] = useState({
-    name: MOCK_DISH.name,
-    cuisine: MOCK_DISH.cuisine,
-    description: MOCK_DISH.description,
-    status: MOCK_DISH.status as "active" | "draft" | "archived",
+  const { stats, form, photos, saveDetails, removePhoto, loading } =
+    useDishDetail();
+  const [localForm, setLocalForm] = useState({
+    name: "",
+    cuisine: "",
+    description: "",
+    status: "active" as "active" | "draft" | "archived",
   });
-  const [photos, setPhotos] = useState<MockDishPhoto[]>(MOCK_DISH_PHOTOS);
   const [saved, setSaved] = useState(false);
+  const [initialized, setInitialized] = useState(false);
 
-  function removePhoto(id: string) {
-    setPhotos((prev) => prev.filter((p) => p.id !== id));
+  useEffect(() => {
+    if (form && !initialized) {
+      setLocalForm(form);
+      setInitialized(true);
+    }
+  }, [form, initialized]);
+
+  async function handleRemovePhoto(id: string) {
+    await removePhoto(id);
   }
 
-  function handleSave() {
+  async function handleSave() {
+    const ok = await saveDetails({
+      name: localForm.name,
+      cuisine: localForm.cuisine,
+      description: localForm.description,
+    });
+    if (!ok) return;
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
+  }
+
+  if (loading && !initialized) {
+    return <p className={styles.emptyNote}>Loading dish…</p>;
   }
 
   return (
@@ -45,16 +62,16 @@ function DetailsTab() {
       <div className={styles.statsRow}>
         <div className={styles.statCard}>
           <span className={styles.statLabel}>Total orders</span>
-          <span className={styles.statVal}>{MOCK_DISH.totalOrders}</span>
+          <span className={styles.statVal}>{stats.totalOrders}</span>
         </div>
         <div className={styles.statCard}>
           <span className={styles.statLabel}>In listings</span>
-          <span className={styles.statVal}>{MOCK_DISH.listingCount}</span>
+          <span className={styles.statVal}>{stats.listingCount}</span>
         </div>
         <div className={styles.statCard}>
           <span className={styles.statLabel}>Avg qty / order</span>
           <span className={styles.statVal}>
-            {MOCK_DISH.avgQtyPerOrder.toFixed(1)}
+            {stats.avgQtyPerOrder.toFixed(1)}
           </span>
         </div>
       </div>
@@ -70,8 +87,10 @@ function DetailsTab() {
               id="f-name"
               type="text"
               className={styles.formInput}
-              value={form.name}
-              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              value={localForm.name}
+              onChange={(e) =>
+                setLocalForm((f) => ({ ...f, name: e.target.value }))
+              }
             />
           </div>
 
@@ -83,9 +102,9 @@ function DetailsTab() {
               id="f-cuisine"
               type="text"
               className={styles.formInput}
-              value={form.cuisine}
+              value={localForm.cuisine}
               onChange={(e) =>
-                setForm((f) => ({ ...f, cuisine: e.target.value }))
+                setLocalForm((f) => ({ ...f, cuisine: e.target.value }))
               }
             />
           </div>
@@ -97,10 +116,10 @@ function DetailsTab() {
             <textarea
               id="f-description"
               className={styles.formTextarea}
-              value={form.description}
+              value={localForm.description}
               rows={6}
               onChange={(e) =>
-                setForm((f) => ({ ...f, description: e.target.value }))
+                setLocalForm((f) => ({ ...f, description: e.target.value }))
               }
             />
           </div>
@@ -124,7 +143,7 @@ function DetailsTab() {
                   <button
                     type="button"
                     className={styles.photoRemove}
-                    onClick={() => removePhoto(photo.id)}
+                    onClick={() => void handleRemovePhoto(photo.id)}
                     aria-label="Remove photo"
                   >
                     <X size={11} />
@@ -157,25 +176,27 @@ function DetailsTab() {
             <span className={styles.statusCardLabel}>Availability</span>
             <select
               className={styles.formSelect}
-              value={form.status}
+              value={localForm.status}
               onChange={(e) =>
-                setForm((f) => ({
+                setLocalForm((f) => ({
                   ...f,
-                  status: e.target.value as typeof form.status,
+                  status: e.target.value as typeof localForm.status,
                 }))
               }
             >
-              {form.status === "draft" && <option value="draft">Draft</option>}
+              {localForm.status === "draft" && (
+                <option value="draft">Draft</option>
+              )}
               <option value="active">Active</option>
-              <option value="archived" disabled={MOCK_DISH.listingCount > 0}>
+              <option value="archived" disabled={stats.listingCount > 0}>
                 Archived
               </option>
             </select>
-            {MOCK_DISH.listingCount > 0 && (
+            {stats.listingCount > 0 && (
               <div className={styles.listingBlock}>
                 <span className={styles.listingBlockCount}>
-                  In {MOCK_DISH.listingCount} listing
-                  {MOCK_DISH.listingCount !== 1 ? "s" : ""}
+                  In {stats.listingCount} listing
+                  {stats.listingCount !== 1 ? "s" : ""}
                 </span>
                 <span className={styles.listingBlockDesc}>
                   Remove from all listings to archive this dish.
@@ -192,13 +213,25 @@ function DetailsTab() {
 // ─── Nutrition & Ingredients tab ──────────────────────────────────────────────
 
 function NutritionTab() {
-  const [ingredients, setIngredients] =
-    useState<MockIngredient[]>(MOCK_INGREDIENTS);
-  const [nutrition, setNutrition] = useState(MOCK_NUTRITION);
+  const {
+    ingredients,
+    setIngredients,
+    nutrition,
+    setNutrition,
+    saveNutrition,
+    loading,
+  } = useDishDetail();
   const [saveAttempted, setSaveAttempted] = useState(false);
   const [saved, setSaved] = useState(false);
   const [otherChecked, setOtherChecked] = useState(false);
   const [otherText, setOtherText] = useState("");
+  const [initialized, setInitialized] = useState(false);
+
+  useEffect(() => {
+    if (!loading && !initialized) {
+      setInitialized(true);
+    }
+  }, [loading, initialized]);
 
   const hasIngError = saveAttempted && ingredients.some((i) => !i.name.trim());
 
@@ -215,7 +248,7 @@ function NutritionTab() {
 
   function updateIngredient(
     id: string,
-    field: keyof MockIngredient,
+    field: keyof IngredientRow,
     value: string,
   ) {
     setIngredients((prev) =>
@@ -241,12 +274,23 @@ function NutritionTab() {
     }));
   }
 
-  function handleSave() {
+  async function handleSave() {
     setSaveAttempted(true);
     if (ingredients.some((i) => !i.name.trim())) return;
     setSaveAttempted(false);
+    const ok = await saveNutrition({
+      ingredients,
+      nutrition,
+      otherChecked,
+      otherText,
+    });
+    if (!ok) return;
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
+  }
+
+  if (loading && !initialized) {
+    return <p className={styles.emptyNote}>Loading nutrition…</p>;
   }
 
   return (
@@ -456,7 +500,41 @@ const TABS: { id: Tab; label: string }[] = [
 ];
 
 export default function DishDetailPage() {
+  const params = useParams<{ id: string }>();
+  const dishId = params.id;
+
+  if (!dishId) {
+    return <p className={styles.emptyNote}>Dish not found.</p>;
+  }
+
+  return (
+    <DishDetailProvider dishId={dishId}>
+      <DishDetailContent />
+    </DishDetailProvider>
+  );
+}
+
+function DishDetailContent() {
+  const { loading, error } = useDishDetail();
   const [tab, setTab] = useState<Tab>("details");
+
+  if (loading) {
+    return (
+      <div className={styles.page}>
+        <BackToDishes />
+        <p className={styles.emptyNote}>Loading dish…</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className={styles.page}>
+        <BackToDishes />
+        <p className={styles.emptyNote}>{error}</p>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.page}>

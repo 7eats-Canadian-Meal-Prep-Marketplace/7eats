@@ -20,6 +20,11 @@ vi.mock("drizzle-orm", () => ({
   and: vi.fn(),
   asc: vi.fn(),
   desc: vi.fn(),
+  sql: Object.assign(
+    vi.fn().mockReturnValue({ as: vi.fn().mockReturnValue({}) }),
+    { join: vi.fn() },
+  ),
+  getTableColumns: vi.fn().mockReturnValue({}),
 }));
 
 import { NextRequest } from "next/server";

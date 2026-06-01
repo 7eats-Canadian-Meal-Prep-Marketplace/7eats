@@ -2,10 +2,43 @@
 
 import { Calendar, ChevronRight, Inbox, Plus, TrendingUp } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useHost } from "../_host-context";
-import { MOCK_QUEUE, MOCK_STATS, type MockQueueOrder } from "./_mock";
 import styles from "./page.module.css";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type OrderStatus = "pending" | "confirmed" | "ready";
+
+type QueueOrder = {
+  id: string;
+  status: OrderStatus;
+  customerName: string | null;
+  customerFirstName: string | null;
+  listingTitle: string | null;
+  quantity: number;
+  totalPrice: string;
+  pickupAt: string;
+  notes: string | null;
+};
+
+type DashboardStats = {
+  orders: {
+    pending: number;
+    confirmed: number;
+    ready: number;
+    fulfilledThisMonth: number;
+    fulfilledAllTime: number;
+  };
+  earnings: {
+    thisWeek: number;
+    thisMonth: number;
+    allTime: number;
+    pending: number;
+  };
+  listings: { active: number };
+  rating: { average: number | null; count: number };
+};
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -34,13 +67,27 @@ function pickupLabel(iso: string): string {
   return `${d.toLocaleDateString("en-CA", { month: "short", day: "numeric" })} · ${time}`;
 }
 
+function displayName(order: QueueOrder): string {
+  if (order.customerFirstName) return order.customerFirstName;
+  if (order.customerName)
+    return order.customerName.split(" ")[0] ?? order.customerName;
+  return "Customer";
+}
+
+function formatMoney(cents: number): string {
+  return cents.toLocaleString("en-CA", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
 // ─── Next pickup day logic ─────────────────────────────────────────────────────
 
-function getNextPickupDayOrders(): {
+function getNextPickupDayOrders(orders: QueueOrder[]): {
   label: string;
-  orders: MockQueueOrder[];
+  orders: QueueOrder[];
 } {
-  const confirmed = MOCK_QUEUE.filter((o) => o.status !== "pending");
+  const confirmed = orders.filter((o) => o.status !== "pending");
   if (confirmed.length === 0) return { label: "Today's pickups", orders: [] };
 
   const dayStart = (iso: string) => {
@@ -50,7 +97,7 @@ function getNextPickupDayOrders(): {
   };
 
   const earliest = Math.min(...confirmed.map((o) => dayStart(o.pickupAt)));
-  const orders = confirmed
+  const dayOrders = confirmed
     .filter((o) => dayStart(o.pickupAt) === earliest)
     .sort(
       (a, b) => new Date(a.pickupAt).getTime() - new Date(b.pickupAt).getTime(),
@@ -69,16 +116,16 @@ function getNextPickupDayOrders(): {
     label = `${d.toLocaleDateString("en-CA", { weekday: "long", month: "short", day: "numeric" })} pickups`;
   }
 
-  return { label, orders };
+  return { label, orders: dayOrders };
 }
 
 // ─── Pickup row ───────────────────────────────────────────────────────────────
 
-function PickupRow({ order }: { order: MockQueueOrder }) {
+function PickupRow({ order }: { order: QueueOrder }) {
   return (
     <div className={styles.pickupRow}>
       <div className={styles.pickupInfo}>
-        <span className={styles.pickupCustomer}>{order.customerName}</span>
+        <span className={styles.pickupCustomer}>{displayName(order)}</span>
         <span className={styles.pickupMeta}>
           {order.listingTitle} &middot; {pickupLabel(order.pickupAt)} &middot;{" "}
           <span className={styles.metaQty}>&times;{order.quantity}</span>
@@ -93,11 +140,36 @@ function PickupRow({ order }: { order: MockQueueOrder }) {
 
 // ─── Request row ──────────────────────────────────────────────────────────────
 
-function RequestRow({ order }: { order: MockQueueOrder }) {
+function RequestRow({
+  order,
+  onConfirm,
+}: {
+  order: QueueOrder;
+  onConfirm: (id: string) => void;
+}) {
+  const [confirming, setConfirming] = useState(false);
+
+  async function handleConfirm() {
+    setConfirming(true);
+    try {
+      const res = await fetch(
+        `/api/business/dashboard/orders/${order.id}/status`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: "confirmed" }),
+        },
+      );
+      if (res.ok) onConfirm(order.id);
+    } finally {
+      setConfirming(false);
+    }
+  }
+
   return (
     <div className={styles.requestRow}>
       <div className={styles.requestInfo}>
-        <span className={styles.requestCustomer}>{order.customerName}</span>
+        <span className={styles.requestCustomer}>{displayName(order)}</span>
         <span className={styles.requestMeta}>
           {order.listingTitle} &middot; {pickupLabel(order.pickupAt)} &middot;{" "}
           <span className={styles.metaQty}>&times;{order.quantity}</span>
@@ -105,8 +177,13 @@ function RequestRow({ order }: { order: MockQueueOrder }) {
       </div>
       <div className={styles.requestRight}>
         <span className={styles.requestTotal}>${order.totalPrice}</span>
-        <button type="button" className={styles.confirmBtn}>
-          Confirm
+        <button
+          type="button"
+          className={styles.confirmBtn}
+          onClick={handleConfirm}
+          disabled={confirming}
+        >
+          {confirming ? "..." : "Confirm"}
         </button>
       </div>
     </div>
@@ -152,9 +229,44 @@ export default function DashboardPage() {
   const [pickupExpanded, setPickupExpanded] = useState(false);
   const [requestsExpanded, setRequestsExpanded] = useState(false);
 
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [queueOrders, setQueueOrders] = useState<QueueOrder[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const loadData = useCallback(async () => {
+    try {
+      const [statsRes, ordersRes] = await Promise.all([
+        fetch("/api/business/dashboard/stats"),
+        fetch("/api/business/dashboard/orders/upcoming"),
+      ]);
+      if (statsRes.ok) {
+        const json = await statsRes.json();
+        setStats(json.data);
+      }
+      if (ordersRes.ok) {
+        const json = await ordersRes.json();
+        setQueueOrders(json.data ?? []);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  function handleConfirm(id: string) {
+    setQueueOrders((prev) =>
+      prev.map((o) =>
+        o.id === id ? { ...o, status: "confirmed" as const } : o,
+      ),
+    );
+  }
+
   const { label: pickupDayLabel, orders: pickupOrders } =
-    getNextPickupDayOrders();
-  const requests = MOCK_QUEUE.filter((o) => o.status === "pending");
+    getNextPickupDayOrders(queueOrders);
+  const requests = queueOrders.filter((o) => o.status === "pending");
 
   const visiblePickups = pickupExpanded
     ? pickupOrders
@@ -162,6 +274,13 @@ export default function DashboardPage() {
   const visibleRequests = requestsExpanded
     ? requests
     : requests.slice(0, COL_LIMIT);
+
+  const earningsWeek = stats ? formatMoney(stats.earnings.thisWeek) : "—";
+  const earningsMonth = stats ? formatMoney(stats.earnings.thisMonth) : "—";
+  const pendingCount = stats?.orders.pending ?? 0;
+  const activeListings = stats?.listings.active ?? 0;
+  const ratingAvg = stats?.rating.average;
+  const ratingCount = stats?.rating.count ?? 0;
 
   return (
     <div className={styles.page}>
@@ -199,30 +318,31 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className={styles.statValue}>
-            $
-            {period === "week"
-              ? MOCK_STATS.earningsWeek
-              : MOCK_STATS.earningsMonth}
+            {loading
+              ? "—"
+              : `$${period === "week" ? earningsWeek : earningsMonth}`}
           </div>
         </div>
 
         <div className={styles.statCard}>
           <span className={styles.statLabel}>Pending orders</span>
-          <div className={styles.statValue}>{MOCK_STATS.pendingCount}</div>
+          <div className={styles.statValue}>{loading ? "—" : pendingCount}</div>
         </div>
 
         <div className={styles.statCard}>
           <span className={styles.statLabel}>Active listings</span>
-          <div className={styles.statValue}>{MOCK_STATS.activeListings}</div>
+          <div className={styles.statValue}>
+            {loading ? "—" : activeListings}
+          </div>
         </div>
 
         <div className={styles.statCard}>
           <span className={styles.statLabel}>Rating</span>
           <div className={styles.statValue}>
-            {MOCK_STATS.ratingAverage}
-            <span className={styles.statSub}>
-              {MOCK_STATS.ratingCount} reviews
-            </span>
+            {loading ? "—" : ratingAvg != null ? ratingAvg.toFixed(1) : "—"}
+            {!loading && ratingAvg != null && (
+              <span className={styles.statSub}>{ratingCount} reviews</span>
+            )}
           </div>
         </div>
       </div>
@@ -252,7 +372,9 @@ export default function DashboardPage() {
                 )}
               </>
             ) : (
-              <div className={styles.colEmpty}>No pickups scheduled.</div>
+              <div className={styles.colEmpty}>
+                {loading ? "Loading…" : "No pickups scheduled."}
+              </div>
             )}
           </div>
         </div>
@@ -267,7 +389,7 @@ export default function DashboardPage() {
             {requests.length > 0 ? (
               <>
                 {visibleRequests.map((o) => (
-                  <RequestRow key={o.id} order={o} />
+                  <RequestRow key={o.id} order={o} onConfirm={handleConfirm} />
                 ))}
                 {!requestsExpanded && requests.length > COL_LIMIT && (
                   <button
@@ -280,7 +402,9 @@ export default function DashboardPage() {
                 )}
               </>
             ) : (
-              <div className={styles.colEmpty}>No pending requests.</div>
+              <div className={styles.colEmpty}>
+                {loading ? "Loading…" : "No pending requests."}
+              </div>
             )}
           </div>
         </div>

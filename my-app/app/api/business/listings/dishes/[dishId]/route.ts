@@ -1,4 +1,4 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import {
@@ -42,13 +42,34 @@ export async function GET(req: NextRequest, { params }: Params) {
   const { dishId } = await params;
 
   try {
-    const [dish] = await db
-      .select()
+    const [dishRow] = await db
+      .select({
+        dish: dishes,
+        listingCount:
+          sql<number>`(SELECT COUNT(*)::int FROM listing_dishes WHERE dish_id = ${dishId})`.as(
+            "listing_count",
+          ),
+        totalOrders:
+          sql<number>`(SELECT COUNT(DISTINCT order_id)::int FROM order_dishes WHERE dish_id = ${dishId})`.as(
+            "total_orders",
+          ),
+        totalQty:
+          sql<number>`(SELECT COALESCE(SUM(quantity), 0)::int FROM order_dishes WHERE dish_id = ${dishId})`.as(
+            "total_qty",
+          ),
+      })
       .from(dishes)
       .where(and(eq(dishes.id, dishId), eq(dishes.cookId, cookId)))
       .limit(1);
 
-    if (!dish) return notFound("Dish");
+    if (!dishRow) return notFound("Dish");
+
+    const dish = dishRow.dish;
+    const listingCount = Number(dishRow.listingCount);
+    const totalOrders = Number(dishRow.totalOrders);
+    const totalQty = Number(dishRow.totalQty);
+    const avgQtyPerOrder =
+      totalOrders > 0 ? Math.round((totalQty / totalOrders) * 10) / 10 : 0;
 
     const [photos, ingredients, nutritionRows, tagRows] = await Promise.all([
       db
@@ -85,7 +106,14 @@ export async function GET(req: NextRequest, { params }: Params) {
 
     return NextResponse.json({
       success: true,
-      data: { ...dish, photos, ingredients, nutrition, tags: tagRows },
+      data: {
+        ...dish,
+        photos,
+        ingredients,
+        nutrition,
+        tags: tagRows,
+        stats: { listingCount, totalOrders, avgQtyPerOrder },
+      },
     });
   } catch (err) {
     console.error("[dishes/id]", err);

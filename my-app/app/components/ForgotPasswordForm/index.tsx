@@ -7,10 +7,18 @@ import styles from "./ForgotPasswordForm.module.css";
 
 type Stage = "email" | "sent";
 
-export default function ForgotPasswordForm() {
+export default function ForgotPasswordForm({
+  expiredLink = false,
+}: {
+  expiredLink?: boolean;
+}) {
   const [stage, setStage] = useState<Stage>("email");
   const [email, setEmail] = useState("");
-  const [error, setError] = useState("");
+  const [error, setError] = useState(
+    expiredLink
+      ? "That reset link has expired or is no longer valid. Request a new one below."
+      : "",
+  );
   const [isPending, startTransition] = useTransition();
 
   const handleSubmit = (e: React.FormEvent) => {

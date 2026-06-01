@@ -4,7 +4,12 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import OnboardingWizard from "@/app/components/OnboardingWizard";
 import { db } from "@/db";
-import { cookProfiles, cookProfileTags, tags } from "@/db/schema";
+import {
+  cookPickupWindows,
+  cookProfiles,
+  cookProfileTags,
+  tags,
+} from "@/db/schema";
 import { auth } from "@/lib/auth";
 
 export default async function OnboardingPage() {
@@ -19,9 +24,6 @@ export default async function OnboardingPage() {
       photoUrl: cookProfiles.photoUrl,
       socialLink: cookProfiles.socialLink,
       pickupAddress: cookProfiles.pickupAddress,
-      pickupDays: cookProfiles.pickupDays,
-      pickupFrom: cookProfiles.pickupFrom,
-      pickupTo: cookProfiles.pickupTo,
       leadTime: cookProfiles.leadTime,
       maxCapacity: cookProfiles.maxCapacity,
       delivery: cookProfiles.delivery,
@@ -32,14 +34,26 @@ export default async function OnboardingPage() {
     .where(eq(cookProfiles.userId, session.user.id))
     .limit(1);
 
-  const tagSlugs = profile
-    ? await db
-        .select({ slug: tags.slug })
-        .from(cookProfileTags)
-        .innerJoin(tags, eq(cookProfileTags.tagId, tags.id))
-        .where(eq(cookProfileTags.cookProfileId, profile.id))
-        .then((rows) => rows.map((r) => r.slug))
-    : [];
+  const [tagSlugs, windows] = await Promise.all([
+    profile
+      ? db
+          .select({ slug: tags.slug })
+          .from(cookProfileTags)
+          .innerJoin(tags, eq(cookProfileTags.tagId, tags.id))
+          .where(eq(cookProfileTags.cookProfileId, profile.id))
+          .then((rows) => rows.map((r) => r.slug))
+      : Promise.resolve([]),
+    profile
+      ? db
+          .select({
+            dayOfWeek: cookPickupWindows.dayOfWeek,
+            fromTime: cookPickupWindows.fromTime,
+            toTime: cookPickupWindows.toTime,
+          })
+          .from(cookPickupWindows)
+          .where(eq(cookPickupWindows.cookId, profile.id))
+      : Promise.resolve([]),
+  ]);
 
   return (
     <Suspense>
@@ -52,9 +66,11 @@ export default async function OnboardingPage() {
                 photoUrl: profile.photoUrl ?? null,
                 socialLink: profile.socialLink ?? "",
                 pickupAddress: profile.pickupAddress ?? "",
-                pickupDays: profile.pickupDays ?? [],
-                pickupFrom: profile.pickupFrom ?? "",
-                pickupTo: profile.pickupTo ?? "",
+                pickupWindows: windows.map((w) => ({
+                  day: w.dayOfWeek,
+                  from: w.fromTime.slice(0, 5),
+                  to: w.toTime.slice(0, 5),
+                })),
                 leadTime: profile.leadTime ?? "",
                 maxCapacity: profile.maxCapacity?.toString() ?? "",
                 delivery: profile.delivery ?? "none",

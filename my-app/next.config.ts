@@ -14,12 +14,11 @@ const securityHeaders = [
       "img-src 'self' data: blob: https:",
       "font-src 'self' data:",
       "style-src 'self' 'unsafe-inline'",
-      isDev
-        ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
-        : "script-src 'self' 'unsafe-inline'",
+      // React dev mode uses eval for debugging; production builds do not.
+      `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
       "connect-src 'self' https://api.stripe.com",
       "frame-src 'self' https://js.stripe.com https://hooks.stripe.com",
-      "upgrade-insecure-requests",
+      ...(isDev ? [] : ["upgrade-insecure-requests"]),
     ].join("; "),
   },
   {

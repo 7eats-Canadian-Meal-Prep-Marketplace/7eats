@@ -3,8 +3,7 @@
 import { Package, Plus, Store } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
-import { MOCK_DISHES, MOCK_LISTINGS } from "./_mock";
+import { useCallback, useEffect, useState } from "react";
 import styles from "./page.module.css";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -12,9 +11,41 @@ import styles from "./page.module.css";
 type Tab = "listings" | "dishes";
 type Filter = "active" | "draft" | "archived";
 
+type Listing = {
+  id: string;
+  title: string;
+  status: "draft" | "pending_review" | "active" | "archived";
+  basePrice: string;
+  currency: string;
+  dishCount: number;
+  orderCount: number;
+  minOrderQty: number;
+  maxOrderQty: number | null;
+};
+
+type Dish = {
+  id: string;
+  name: string;
+  cuisine: string | null;
+  categories: string[];
+  status: "draft" | "active" | "archived";
+  isHalal: boolean;
+  isVegan: boolean;
+  isVegetarian: boolean;
+  isGlutenFree: boolean;
+  isDairyFree: boolean;
+  isNutFree: boolean;
+  isKosher: boolean;
+  listingCount: number;
+};
+
 // ─── Status pill (on card image) ──────────────────────────────────────────────
 
-function ImgPill({ status }: { status: "active" | "draft" | "archived" }) {
+function ImgPill({
+  status,
+}: {
+  status: "active" | "draft" | "archived" | "pending_review";
+}) {
   const dotCls =
     status === "active"
       ? styles.dotActive
@@ -22,7 +53,13 @@ function ImgPill({ status }: { status: "active" | "draft" | "archived" }) {
         ? styles.dotDraft
         : styles.dotArchived;
   const label =
-    status === "active" ? "Active" : status === "draft" ? "Draft" : "Archived";
+    status === "active"
+      ? "Active"
+      : status === "draft"
+        ? "Draft"
+        : status === "pending_review"
+          ? "Pending review"
+          : "Archived";
   return (
     <span className={styles.imgPill}>
       <span className={`${styles.pillDot} ${dotCls}`} />
@@ -59,10 +96,27 @@ function EmptyState({
 
 // ─── Listings tab ─────────────────────────────────────────────────────────────
 
-function ListingsContent({ filter }: { filter: Filter }) {
-  const items = MOCK_LISTINGS.filter((l) => l.status === filter);
+function ListingsContent({
+  listings,
+  filter,
+  loading,
+}: {
+  listings: Listing[];
+  filter: Filter;
+  loading: boolean;
+}) {
+  const items = listings.filter((l) => {
+    if (filter === "archived") return l.status === "archived";
+    if (filter === "draft")
+      return l.status === "draft" || l.status === "pending_review";
+    return l.status === "active";
+  });
 
-  if (MOCK_LISTINGS.length === 0) {
+  if (loading) {
+    return <div className={styles.noItems}>Loading…</div>;
+  }
+
+  if (listings.length === 0) {
     return (
       <EmptyState
         icon={<Store size={18} />}
@@ -112,13 +166,17 @@ function ListingsContent({ filter }: { filter: Filter }) {
             <div className={styles.cardDivider} />
             <div className={styles.cardStats}>
               <span>
-                <span className={styles.statNum}>{listing.dishCount}</span>{" "}
-                {listing.dishCount === 1 ? "dish" : "dishes"}
+                <span className={styles.statNum}>
+                  {Number(listing.dishCount)}
+                </span>{" "}
+                {Number(listing.dishCount) === 1 ? "dish" : "dishes"}
               </span>
               <span className={styles.statSep}>·</span>
               <span>
-                <span className={styles.statNum}>{listing.orderCount}</span>{" "}
-                {listing.orderCount === 1 ? "order" : "orders"}
+                <span className={styles.statNum}>
+                  {Number(listing.orderCount)}
+                </span>{" "}
+                {Number(listing.orderCount) === 1 ? "order" : "orders"}
               </span>
             </div>
           </div>
@@ -130,10 +188,22 @@ function ListingsContent({ filter }: { filter: Filter }) {
 
 // ─── Dishes tab ───────────────────────────────────────────────────────────────
 
-function DishesContent({ filter }: { filter: Filter }) {
-  const items = MOCK_DISHES.filter((d) => d.status === filter);
+function DishesContent({
+  dishes,
+  filter,
+  loading,
+}: {
+  dishes: Dish[];
+  filter: Filter;
+  loading: boolean;
+}) {
+  const items = dishes.filter((d) => d.status === filter);
 
-  if (MOCK_DISHES.length === 0) {
+  if (loading) {
+    return <div className={styles.noItems}>Loading…</div>;
+  }
+
+  if (dishes.length === 0) {
     return (
       <EmptyState
         icon={<Package size={18} />}
@@ -175,11 +245,11 @@ function DishesContent({ filter }: { filter: Filter }) {
             <div className={styles.cardTitle}>{dish.name}</div>
             <div className={styles.cardDivider} />
             <div
-              className={`${styles.dishFooter} ${dish.listingCount === 0 ? styles.dishFooterMuted : ""}`}
+              className={`${styles.dishFooter} ${Number(dish.listingCount) === 0 ? styles.dishFooterMuted : ""}`}
             >
-              {dish.listingCount === 0
+              {Number(dish.listingCount) === 0
                 ? "Not in any listing yet"
-                : `In ${dish.listingCount} listing${dish.listingCount !== 1 ? "s" : ""}`}
+                : `In ${Number(dish.listingCount)} listing${Number(dish.listingCount) !== 1 ? "s" : ""}`}
             </div>
           </div>
         </Link>
@@ -209,6 +279,41 @@ const NEW_LABEL: Record<Tab, string> = {
 export default function ListingsPage() {
   const [tab, setTab] = useState<Tab>("listings");
   const [filter, setFilter] = useState<Filter>("active");
+  const [listings, setListings] = useState<Listing[]>([]);
+  const [dishes, setDishes] = useState<Dish[]>([]);
+  const [loadingListings, setLoadingListings] = useState(true);
+  const [loadingDishes, setLoadingDishes] = useState(true);
+
+  const loadListings = useCallback(async () => {
+    setLoadingListings(true);
+    try {
+      const res = await fetch("/api/business/listings");
+      if (res.ok) {
+        const json = await res.json();
+        setListings(json.data ?? []);
+      }
+    } finally {
+      setLoadingListings(false);
+    }
+  }, []);
+
+  const loadDishes = useCallback(async () => {
+    setLoadingDishes(true);
+    try {
+      const res = await fetch("/api/business/listings/dishes");
+      if (res.ok) {
+        const json = await res.json();
+        setDishes(json.data ?? []);
+      }
+    } finally {
+      setLoadingDishes(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadListings();
+    loadDishes();
+  }, [loadListings, loadDishes]);
 
   return (
     <div className={styles.page}>
@@ -245,8 +350,20 @@ export default function ListingsPage() {
       </div>
 
       <div className={styles.content} key={`${tab}-${filter}`}>
-        {tab === "listings" && <ListingsContent filter={filter} />}
-        {tab === "dishes" && <DishesContent filter={filter} />}
+        {tab === "listings" && (
+          <ListingsContent
+            listings={listings}
+            filter={filter}
+            loading={loadingListings}
+          />
+        )}
+        {tab === "dishes" && (
+          <DishesContent
+            dishes={dishes}
+            filter={filter}
+            loading={loadingDishes}
+          />
+        )}
       </div>
     </div>
   );
