@@ -65,7 +65,7 @@ export async function POST(req: Request) {
   const redirect =
     account?.role === "cook" || account?.role === "admin"
       ? "/business/dashboard"
-      : "/app-auth/account";
+      : "/app/browse";
 
   const res = NextResponse.json({ redirect });
   for (const cookie of (

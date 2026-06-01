@@ -29,6 +29,24 @@ export async function proxy(req: NextRequest) {
     return NextResponse.next();
   }
 
+  // ── Client (consumer) app routes ──────────────────────────────────────
+  // Browse is public — anyone can explore listings without signing in.
+  if (pathname === "/app/browse") {
+    return NextResponse.next();
+  }
+
+  // All other /app/* routes require a verified client session.
+  if (pathname.startsWith("/app/")) {
+    const session = await getSession(req);
+    if (!session) {
+      return NextResponse.redirect(new URL("/app-auth/login", req.url));
+    }
+    if (session.user.role !== "client") {
+      return NextResponse.redirect(new URL("/business/dashboard", req.url));
+    }
+    return NextResponse.next();
+  }
+
   // Public marketing pages — no checks
   if (
     pathname === "/business/application" ||
@@ -132,7 +150,7 @@ async function homeForUser(userId: string): Promise<string> {
     .limit(1);
   return row?.role === "cook" || row?.role === "admin"
     ? "/business/dashboard"
-    : "/app-auth/account";
+    : "/app/browse";
 }
 
 async function getCookState(userId: string) {
@@ -161,5 +179,16 @@ export const config = {
     "/app-auth/account",
     "/app-auth/login",
     "/app-auth/signup",
+    // Client (consumer) app — only known routes, so unknown paths 404 naturally
+    "/app/browse",
+    "/app/cart",
+    "/app/checkout",
+    "/app/cooks/:id",
+    "/app/inbox",
+    "/app/listings/:id",
+    "/app/orders",
+    "/app/orders/:id",
+    "/app/saved",
+    "/app/settings",
   ],
 };

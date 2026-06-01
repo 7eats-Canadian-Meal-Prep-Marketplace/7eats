@@ -131,6 +131,40 @@
   opacity: 0.85;
 }
 
+/* ─── Guest actions (logged-out header) ─────────────────────────────────────── */
+.guestActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.loginBtn {
+  padding: 7px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  border-radius: var(--radius-sm);
+  transition: background 0.12s;
+}
+
+.loginBtn:hover {
+  background: var(--grey-100);
+}
+
+.signupBtn {
+  padding: 7px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  background: var(--red);
+  color: var(--white);
+  border-radius: var(--radius-sm);
+  transition: opacity 0.12s;
+}
+
+.signupBtn:hover {
+  opacity: 0.88;
+}
+
 /* ─── Main ──────────────────────────────────────────────────────────────────── */
 .main {
   flex: 1;
