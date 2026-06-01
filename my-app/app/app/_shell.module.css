@@ -1,0 +1,216 @@
+/* ─── Shell ────────────────────────────────────────────────────────────────── */
+.shell {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  background: var(--white);
+}
+
+/* ─── Header ───────────────────────────────────────────────────────────────── */
+.header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 200;
+  height: 60px;
+  background: var(--white);
+  border-bottom: 1px solid var(--grey-200);
+}
+
+.headerInner {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: 0 20px;
+  gap: 20px;
+}
+
+.brandLink {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* ─── Desktop nav ───────────────────────────────────────────────────────────── */
+.desktopNav {
+  display: none;
+  align-items: center;
+  gap: 2px;
+}
+
+@media (min-width: 768px) {
+  .desktopNav {
+    display: flex;
+  }
+}
+
+.navLink {
+  padding: 7px 13px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--grey-700);
+  border-radius: var(--radius-sm);
+  transition:
+    color 0.12s,
+    background 0.12s;
+  white-space: nowrap;
+}
+
+.navLink:hover {
+  color: var(--ink);
+  background: var(--grey-100);
+}
+
+.navLinkActive {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+/* ─── Header right ──────────────────────────────────────────────────────────── */
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.cartBtn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  color: var(--ink);
+  transition: background 0.12s;
+}
+
+.cartBtn:hover {
+  background: var(--grey-100);
+}
+
+.cartBadge {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  min-width: 17px;
+  height: 17px;
+  border-radius: var(--radius-pill);
+  background: var(--red);
+  color: var(--white);
+  font-size: 9.5px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 3px;
+  line-height: 1;
+}
+
+.avatarBtn {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--white);
+  font-size: 11.5px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  letter-spacing: 0.02em;
+  transition: opacity 0.12s;
+}
+
+.avatarBtn:hover {
+  opacity: 0.85;
+}
+
+/* ─── Main ──────────────────────────────────────────────────────────────────── */
+.main {
+  flex: 1;
+  padding-top: 60px;
+  padding-bottom: 64px;
+}
+
+@media (min-width: 768px) {
+  .main {
+    padding-bottom: 0;
+  }
+}
+
+.mainOnboarding {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+/* ─── Bottom nav (mobile only) ──────────────────────────────────────────────── */
+.bottomNav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 200;
+  height: 64px;
+  background: var(--white);
+  border-top: 1px solid var(--grey-200);
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@media (min-width: 768px) {
+  .bottomNav {
+    display: none;
+  }
+}
+
+.bottomNavItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  color: #bbbbc0;
+  transition: color 0.12s;
+  text-decoration: none;
+}
+
+.bottomNavItemActive {
+  color: var(--red);
+}
+
+.bottomNavIconWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bottomNavBadge {
+  position: absolute;
+  top: -5px;
+  right: -7px;
+  min-width: 15px;
+  height: 15px;
+  border-radius: var(--radius-pill);
+  background: var(--red);
+  color: var(--white);
+  font-size: 8.5px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 3px;
+}
+
+.bottomNavLabel {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}

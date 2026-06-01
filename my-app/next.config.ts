@@ -1,5 +1,7 @@
 import type { NextConfig } from "next";
 
+const isDev = process.env.NODE_ENV === "development";
+
 const securityHeaders = [
   {
     key: "Content-Security-Policy",
@@ -12,7 +14,9 @@ const securityHeaders = [
       "img-src 'self' data: blob: https:",
       "font-src 'self' data:",
       "style-src 'self' 'unsafe-inline'",
-      "script-src 'self' 'unsafe-inline'",
+      isDev
+        ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
+        : "script-src 'self' 'unsafe-inline'",
       "connect-src 'self' https://api.stripe.com",
       "frame-src 'self' https://js.stripe.com https://hooks.stripe.com",
       "upgrade-insecure-requests",

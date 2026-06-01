@@ -1,0 +1,380 @@
+/* ─── Page ──────────────────────────────────────────────────────────────────── */
+.page {
+  background: var(--white);
+  min-height: 100%;
+}
+
+.inner {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 24px 20px 80px;
+}
+
+/* ─── Profile card ──────────────────────────────────────────────────────────── */
+.profileCard {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.avatarLg {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--white);
+  font-size: 18px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.profileName {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.02em;
+}
+
+.profileEmail {
+  font-size: 13px;
+  color: var(--grey-500);
+}
+
+/* ─── Tabs ──────────────────────────────────────────────────────────────────── */
+.tabs {
+  display: flex;
+  border-bottom: 1px solid var(--grey-200);
+  margin-bottom: 24px;
+}
+
+.tab {
+  padding: 10px 0;
+  margin-right: 28px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--grey-500);
+  border: none;
+  border-bottom: 2.5px solid transparent;
+  background: none;
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    color 0.12s,
+    border-color 0.12s;
+}
+
+.tab:hover {
+  color: var(--ink);
+}
+
+.tabActive {
+  color: var(--ink);
+  border-bottom-color: var(--red);
+}
+
+/* ─── Tab content ───────────────────────────────────────────────────────────── */
+.tabContent {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ─── Card ──────────────────────────────────────────────────────────────────── */
+.card {
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.cardTitle {
+  padding: 16px 18px 14px;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--ink);
+  border-bottom: 1px solid var(--grey-200);
+  letter-spacing: -0.005em;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 16px 18px 0;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 0 18px;
+  margin-bottom: 12px;
+}
+
+.formGrid .formGroup {
+  padding: 0;
+}
+
+.label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--grey-700);
+}
+
+.input {
+  padding: 9px 12px;
+  border: 1.5px solid var(--grey-200);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--ink);
+  background: var(--white);
+  outline: none;
+  transition: border-color 0.12s;
+}
+
+.input:focus {
+  border-color: var(--grey-700);
+}
+
+.cardFooter {
+  padding: 12px 18px;
+  border-top: 1px solid var(--grey-200);
+  background: #fafafa;
+}
+
+.saveBtn {
+  padding: 9px 20px;
+  background: var(--ink);
+  color: var(--white);
+  font-size: 13.5px;
+  font-weight: 700;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity 0.12s;
+}
+
+.saveBtn:hover {
+  opacity: 0.85;
+}
+
+/* ─── Danger ────────────────────────────────────────────────────────────────── */
+.dangerCard {
+  border-color: rgba(214, 64, 69, 0.25);
+}
+
+.dangerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 18px;
+}
+
+.dangerTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 3px;
+}
+
+.dangerDesc {
+  font-size: 13px;
+  color: var(--grey-500);
+  line-height: 1.5;
+  max-width: 360px;
+}
+
+.deleteBtn {
+  padding: 9px 18px;
+  background: none;
+  color: var(--red);
+  font-size: 13px;
+  font-weight: 700;
+  border: 1.5px solid var(--red);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-family: inherit;
+  flex-shrink: 0;
+  transition:
+    background 0.12s,
+    color 0.12s;
+}
+
+.deleteBtn:hover {
+  background: var(--red);
+  color: var(--white);
+}
+
+/* ─── Preferences ───────────────────────────────────────────────────────────── */
+.prefIntro {
+  font-size: 14px;
+  color: var(--grey-700);
+  line-height: 1.6;
+  margin-bottom: 4px;
+}
+
+.prefCard {
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-md);
+  padding: 16px;
+}
+
+.prefHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.prefQuestion {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.4;
+}
+
+.editPrefBtn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 12px;
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-pill);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink);
+  background: none;
+  cursor: pointer;
+  font-family: inherit;
+  flex-shrink: 0;
+  transition: border-color 0.12s;
+}
+
+.editPrefBtn:hover {
+  border-color: var(--grey-700);
+}
+
+.prefAnswers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.answerTag {
+  padding: 4px 12px;
+  background: var(--red);
+  color: var(--white);
+  border-radius: var(--radius-pill);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.unanswered {
+  font-size: 13px;
+  color: var(--grey-500);
+  font-style: italic;
+}
+
+.prefOptions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.optionChip {
+  padding: 6px 14px;
+  border: 1.5px solid var(--grey-200);
+  border-radius: var(--radius-pill);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+  background: var(--white);
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    border-color 0.12s,
+    background 0.12s,
+    color 0.12s;
+}
+
+.optionChip:hover {
+  border-color: var(--grey-700);
+}
+
+.optionChipSelected {
+  background: var(--red);
+  border-color: var(--red);
+  color: var(--white);
+}
+
+/* ─── Notifications ─────────────────────────────────────────────────────────── */
+.notifRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 18px;
+  border-bottom: 1px solid #f4f4f4;
+}
+
+.notifRow:last-child {
+  border-bottom: none;
+}
+
+.notifInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.notifLabel {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.notifDesc {
+  font-size: 12.5px;
+  color: var(--grey-500);
+  line-height: 1.4;
+}
+
+.toggle {
+  width: 38px;
+  height: 22px;
+  border-radius: var(--radius-pill);
+  background: var(--grey-300);
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.toggleOn {
+  background: var(--red);
+}
+
+.toggleKnob {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--white);
+  top: 3px;
+  left: 3px;
+  transition: transform 0.18s;
+}
+
+.toggleOn .toggleKnob {
+  transform: translateX(16px);
+}

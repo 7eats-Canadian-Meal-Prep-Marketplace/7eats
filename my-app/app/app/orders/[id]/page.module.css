@@ -1,0 +1,353 @@
+/* ─── Page ──────────────────────────────────────────────────────────────────── */
+.page {
+  background: var(--white);
+  min-height: 100%;
+}
+
+.inner {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 20px 20px 80px;
+}
+
+/* ─── Back row ──────────────────────────────────────────────────────────────── */
+.backRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.backBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--grey-700);
+  text-decoration: none;
+  transition: color 0.12s;
+}
+
+.backBtn:hover {
+  color: var(--ink);
+}
+
+.orderId {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--grey-500);
+  font-family: monospace;
+  letter-spacing: 0.05em;
+}
+
+/* ─── Hero card ─────────────────────────────────────────────────────────────── */
+.heroCard {
+  border-radius: var(--radius-md);
+  padding: 20px 20px 20px 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.heroEmoji {
+  font-size: 48px;
+  line-height: 1;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.3));
+}
+
+.heroInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.heroCook {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.75);
+  margin-bottom: 3px;
+}
+
+.heroTitle {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--white);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+/* ─── Code card ─────────────────────────────────────────────────────────────── */
+.codeCard {
+  border: 2px dashed var(--grey-300);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  text-align: center;
+  margin-bottom: 14px;
+}
+
+.codeLabel {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--grey-500);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 10px;
+}
+
+.codeDisplay {
+  font-size: 40px;
+  font-weight: 900;
+  color: var(--ink);
+  letter-spacing: 0.1em;
+  font-family: monospace;
+  margin-bottom: 8px;
+  line-height: 1;
+}
+
+.codeDesc {
+  font-size: 13px;
+  color: var(--grey-500);
+  margin-bottom: 14px;
+}
+
+.copyBtn {
+  padding: 8px 24px;
+  background: var(--ink);
+  color: var(--white);
+  font-size: 13px;
+  font-weight: 700;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity 0.12s;
+}
+
+.copyBtn:hover {
+  opacity: 0.85;
+}
+
+/* ─── Section cards ─────────────────────────────────────────────────────────── */
+.statusCard,
+.detailsCard,
+.itemsCard {
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-md);
+  padding: 18px;
+  margin-bottom: 14px;
+}
+
+.sectionTitle {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.005em;
+  margin-bottom: 16px;
+}
+
+/* ─── Status tracker ────────────────────────────────────────────────────────── */
+.tracker {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.step {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.stepLeft {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.stepDot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--grey-300);
+  background: var(--white);
+  color: var(--grey-300);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.stepDotDone {
+  border-color: var(--red);
+  background: var(--red);
+  color: var(--white);
+}
+
+.stepLine {
+  width: 2px;
+  height: 24px;
+  background: var(--grey-200);
+  margin: 2px 0;
+}
+
+.stepLineDone {
+  background: var(--red);
+}
+
+.stepLabel {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--grey-500);
+  padding: 5px 0;
+}
+
+.stepLabelDone {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+/* ─── Detail rows ───────────────────────────────────────────────────────────── */
+.detailRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.detailRow:last-child {
+  margin-bottom: 0;
+}
+
+.detailIcon {
+  color: var(--grey-500);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.detailLabel {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--grey-500);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 2px;
+}
+
+.detailVal {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* ─── Dish rows ─────────────────────────────────────────────────────────────── */
+.dishRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.dishQty {
+  font-size: 13px;
+  color: var(--grey-500);
+  width: 24px;
+  flex-shrink: 0;
+  font-weight: 600;
+}
+
+.dishName {
+  flex: 1;
+  font-size: 14px;
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.dishPrice {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  flex-shrink: 0;
+}
+
+.totalDivider {
+  border: none;
+  border-top: 1px solid var(--grey-200);
+  margin: 10px 0;
+}
+
+.summaryLabel {
+  flex: 1;
+  font-size: 13px;
+  color: var(--grey-500);
+}
+
+.summaryVal {
+  font-size: 13px;
+  color: var(--grey-700);
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.totalRow {
+  margin-top: 4px;
+}
+
+.totalLabel {
+  flex: 1;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.totalVal {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--ink);
+  flex-shrink: 0;
+}
+
+/* ─── Actions ───────────────────────────────────────────────────────────────── */
+.actions {
+  display: flex;
+  gap: 10px;
+}
+
+.messageBtn,
+.rateBtn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 11px 20px;
+  border: 1.5px solid var(--grey-200);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  text-decoration: none;
+  background: none;
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    border-color 0.12s,
+    background 0.12s;
+}
+
+.messageBtn:hover,
+.rateBtn:hover {
+  border-color: var(--ink);
+  background: var(--grey-100);
+}
+
+.rateBtn {
+  background: var(--red);
+  border-color: var(--red);
+  color: var(--white);
+}
+
+.rateBtn:hover {
+  background: var(--red-deep);
+  border-color: var(--red-deep);
+}
