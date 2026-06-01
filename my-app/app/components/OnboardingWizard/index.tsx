@@ -48,6 +48,16 @@ const DIETARY_TAGS = [
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
+const DAY_FULL: Record<string, string> = {
+  Mon: "monday",
+  Tue: "tuesday",
+  Wed: "wednesday",
+  Thu: "thursday",
+  Fri: "friday",
+  Sat: "saturday",
+  Sun: "sunday",
+};
+
 const LEAD_TIME_OPTIONS = [
   { value: "same_day", label: "Same day" },
   { value: "1_day", label: "1 day before" },
@@ -76,8 +86,7 @@ type FormState = {
   socialLink: string;
   // Step 2
   pickupAddress: string;
-  pickupFrom: string;
-  pickupTo: string;
+  pickupWindows: Record<string, { from: string; to: string }>;
   pickupDays: string[];
   leadTime: string;
   maxCapacity: string;
@@ -99,9 +108,7 @@ type InitialData = {
   photoUrl: string | null;
   socialLink: string;
   pickupAddress: string;
-  pickupDays: string[];
-  pickupFrom: string;
-  pickupTo: string;
+  pickupWindows: Array<{ day: string; from: string; to: string }>;
   leadTime: string;
   maxCapacity: string;
   delivery: string;
@@ -150,9 +157,18 @@ export default function OnboardingWizard({
       ) ?? [],
     socialLink: initialData?.socialLink ?? "",
     pickupAddress: initialData?.pickupAddress ?? "",
-    pickupFrom: initialData?.pickupFrom ?? "",
-    pickupTo: initialData?.pickupTo ?? "",
-    pickupDays: initialData?.pickupDays ?? [],
+    pickupWindows: Object.fromEntries(
+      (initialData?.pickupWindows ?? []).map((w) => [
+        w.day,
+        { from: w.from, to: w.to },
+      ]),
+    ),
+    pickupDays: (initialData?.pickupWindows ?? []).map((w) => {
+      const short = Object.entries(DAY_FULL).find(
+        ([, full]) => full === w.day,
+      )?.[0];
+      return short ?? w.day;
+    }),
     leadTime: initialData?.leadTime ?? "",
     maxCapacity: initialData?.maxCapacity ?? "",
     delivery: initialData?.delivery ?? "none",
@@ -265,9 +281,9 @@ export default function OnboardingWizard({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             pickupAddress: form.pickupAddress,
-            pickupDays: form.pickupDays,
-            pickupFrom: form.pickupFrom,
-            pickupTo: form.pickupTo,
+            pickupWindows: Object.entries(form.pickupWindows).map(
+              ([day, win]) => ({ day, from: win.from, to: win.to }),
+            ),
             leadTime: form.leadTime,
             maxCapacity: form.maxCapacity,
             delivery: form.delivery,
@@ -357,7 +373,7 @@ export default function OnboardingWizard({
           {step === 1 && (
             <Step1 form={form} set={set} photoFileRef={photoFileRef} />
           )}
-          {step === 2 && <Step2 form={form} set={set} />}
+          {step === 2 && <Step2 form={form} setForm={setForm} />}
           {step === 3 && (
             <Step3
               form={form}
@@ -598,11 +614,42 @@ function Step1({
 
 function Step2({
   form,
-  set,
+  setForm,
 }: {
   form: FormState;
-  set: <K extends keyof FormState>(k: K, v: FormState[K]) => void;
+  setForm: React.Dispatch<React.SetStateAction<FormState>>;
 }) {
+  const togglePickupDay = (d: string) => {
+    const fullName = DAY_FULL[d] ?? d.toLowerCase();
+    setForm((f) => {
+      const isSelected = f.pickupDays.includes(d);
+      const newDays = isSelected
+        ? f.pickupDays.filter((x) => x !== d)
+        : [...f.pickupDays, d];
+      const newWindows = { ...f.pickupWindows };
+      if (isSelected) {
+        delete newWindows[fullName];
+      } else {
+        newWindows[fullName] = { from: "11:00", to: "14:00" };
+      }
+      return { ...f, pickupDays: newDays, pickupWindows: newWindows };
+    });
+  };
+
+  const setDayWindow = (d: string, field: "from" | "to", value: string) => {
+    const fullName = DAY_FULL[d] ?? d.toLowerCase();
+    setForm((f) => ({
+      ...f,
+      pickupWindows: {
+        ...f.pickupWindows,
+        [fullName]: {
+          ...(f.pickupWindows[fullName] ?? { from: "11:00", to: "14:00" }),
+          [field]: value,
+        },
+      },
+    }));
+  };
+
   return (
     <div className={styles.stepContent}>
       <div className={styles.formHead}>
@@ -624,7 +671,9 @@ function Step2({
             type="text"
             className={styles.input}
             value={form.pickupAddress}
-            onChange={(e) => set("pickupAddress", e.target.value)}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, pickupAddress: e.target.value }))
+            }
             placeholder="Street address"
             autoComplete="street-address"
           />
@@ -634,54 +683,56 @@ function Step2({
         </div>
 
         <div className={styles.field}>
-          <span className={styles.label}>Pickup days</span>
+          <span className={styles.label}>Pickup days &amp; hours</span>
           <div className={styles.pillGroup}>
             {DAYS.map((d) => (
               <button
                 key={d}
                 type="button"
-                onClick={() =>
-                  set("pickupDays", toggleList(form.pickupDays, d))
-                }
+                onClick={() => togglePickupDay(d)}
                 className={`${styles.pill} ${form.pickupDays.includes(d) ? styles.pillActive : ""}`}
               >
                 {d}
               </button>
             ))}
           </div>
-        </div>
-
-        <div className={styles.field}>
-          <span className={styles.label}>Pickup window</span>
-          <div className={styles.timeRow}>
-            <div className={styles.timeField}>
-              <label htmlFor="pickupFrom" className={styles.timeLabel}>
-                From
-              </label>
-              <input
-                id="pickupFrom"
-                type="time"
-                className={styles.input}
-                value={form.pickupFrom}
-                onChange={(e) => set("pickupFrom", e.target.value)}
-              />
+          {form.pickupDays.length > 0 && (
+            <div className={styles.perDayWindows}>
+              {DAYS.filter((d) => form.pickupDays.includes(d)).map((d) => {
+                const fullName = DAY_FULL[d] ?? d.toLowerCase();
+                const win = form.pickupWindows[fullName] ?? {
+                  from: "11:00",
+                  to: "14:00",
+                };
+                return (
+                  <div key={d} className={styles.perDayRow}>
+                    <span className={styles.perDayName}>{d}</span>
+                    <div className={styles.timeRow}>
+                      <input
+                        type="time"
+                        className={styles.input}
+                        value={win.from}
+                        onChange={(e) =>
+                          setDayWindow(d, "from", e.target.value)
+                        }
+                        aria-label={`${d} pickup from`}
+                      />
+                      <span className={styles.timeSep}>–</span>
+                      <input
+                        type="time"
+                        className={styles.input}
+                        value={win.to}
+                        onChange={(e) => setDayWindow(d, "to", e.target.value)}
+                        aria-label={`${d} pickup to`}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-            <span className={styles.timeSep}>-</span>
-            <div className={styles.timeField}>
-              <label htmlFor="pickupTo" className={styles.timeLabel}>
-                To
-              </label>
-              <input
-                id="pickupTo"
-                type="time"
-                className={styles.input}
-                value={form.pickupTo}
-                onChange={(e) => set("pickupTo", e.target.value)}
-              />
-            </div>
-          </div>
+          )}
           <p className={styles.hint}>
-            Applied to all pickup days. Same hours every week.
+            Set a pickup window for each day you&apos;re available.
           </p>
         </div>
 
@@ -698,7 +749,7 @@ function Step2({
                   name="leadTime"
                   value={value}
                   checked={form.leadTime === value}
-                  onChange={() => set("leadTime", value)}
+                  onChange={() => setForm((f) => ({ ...f, leadTime: value }))}
                   className={styles.radioInput}
                 />
                 <span className={styles.radioLabel}>{label}</span>
@@ -723,7 +774,9 @@ function Step2({
             max={500}
             className={styles.input}
             value={form.maxCapacity}
-            onChange={(e) => set("maxCapacity", e.target.value)}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, maxCapacity: e.target.value }))
+            }
             placeholder="e.g. 250"
           />
           <p className={styles.hint}>
@@ -744,7 +797,7 @@ function Step2({
                   name="delivery"
                   value={value}
                   checked={form.delivery === value}
-                  onChange={() => set("delivery", value)}
+                  onChange={() => setForm((f) => ({ ...f, delivery: value }))}
                   className={styles.radioInput}
                 />
                 <span className={styles.radioLabel}>{label}</span>
@@ -760,7 +813,12 @@ function Step2({
               type="checkbox"
               className={styles.checkbox}
               checked={form.acceptsSpecialRequests}
-              onChange={(e) => set("acceptsSpecialRequests", e.target.checked)}
+              onChange={(e) =>
+                setForm((f) => ({
+                  ...f,
+                  acceptsSpecialRequests: e.target.checked,
+                }))
+              }
             />
             <span className={styles.checkLabel}>
               I accept ingredient swaps and special requests from customers.

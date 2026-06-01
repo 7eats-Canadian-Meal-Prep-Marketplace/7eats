@@ -5,31 +5,31 @@ import {
   getCookId,
   unauthorized,
 } from "@/app/api/business/listings/_lib/cook-auth";
-import { db } from "@/db";
-import { cookProfiles } from "@/db/schema";
+import { db, dbPool } from "@/db";
+import { cookPickupWindows, cookProfiles } from "@/db/schema";
+
+const DAY_ORDER = [
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+  "sunday",
+] as const;
+
+type DayOfWeek = (typeof DAY_ORDER)[number];
+
+const pickupWindowSchema = z
+  .object({
+    day: z.enum(DAY_ORDER),
+    from: z.string().regex(/^\d{2}:\d{2}$/),
+    to: z.string().regex(/^\d{2}:\d{2}$/),
+  })
+  .refine((w) => w.to > w.from, { message: "to must be after from" });
 
 const bodySchema = z.object({
-  pickupDays: z
-    .array(
-      z.enum([
-        "monday",
-        "tuesday",
-        "wednesday",
-        "thursday",
-        "friday",
-        "saturday",
-        "sunday",
-      ]),
-    )
-    .optional(),
-  pickupFrom: z
-    .string()
-    .regex(/^\d{2}:\d{2}$/)
-    .optional(),
-  pickupTo: z
-    .string()
-    .regex(/^\d{2}:\d{2}$/)
-    .optional(),
+  pickupWindows: z.array(pickupWindowSchema).optional(),
   leadTime: z
     .enum(["same_day", "1_day", "2_days", "3_days", "4_days", "5_days"])
     .optional(),
@@ -37,31 +37,57 @@ const bodySchema = z.object({
   delivery: z.enum(["none", "self"]).optional(),
 });
 
+function formatTime(t: string): string {
+  return t.slice(0, 5);
+}
+
 export async function GET(req: NextRequest) {
   const cookId = await getCookId(req.headers);
   if (!cookId) return unauthorized();
 
   try {
-    const [cook] = await db
-      .select({
-        pickupDays: cookProfiles.pickupDays,
-        pickupFrom: cookProfiles.pickupFrom,
-        pickupTo: cookProfiles.pickupTo,
-        leadTime: cookProfiles.leadTime,
-        maxCapacity: cookProfiles.maxCapacity,
-        delivery: cookProfiles.delivery,
-      })
-      .from(cookProfiles)
-      .where(eq(cookProfiles.id, cookId))
-      .limit(1);
+    const [[cook], windows] = await Promise.all([
+      db
+        .select({
+          leadTime: cookProfiles.leadTime,
+          maxCapacity: cookProfiles.maxCapacity,
+          delivery: cookProfiles.delivery,
+        })
+        .from(cookProfiles)
+        .where(eq(cookProfiles.id, cookId))
+        .limit(1),
+      db
+        .select({
+          dayOfWeek: cookPickupWindows.dayOfWeek,
+          fromTime: cookPickupWindows.fromTime,
+          toTime: cookPickupWindows.toTime,
+        })
+        .from(cookPickupWindows)
+        .where(eq(cookPickupWindows.cookId, cookId)),
+    ]);
 
     if (!cook) {
       return NextResponse.json({ error: "Cook not found." }, { status: 404 });
     }
 
-    return NextResponse.json({ success: true, data: cook });
+    const sortedWindows = windows
+      .sort(
+        (a, b) =>
+          DAY_ORDER.indexOf(a.dayOfWeek as DayOfWeek) -
+          DAY_ORDER.indexOf(b.dayOfWeek as DayOfWeek),
+      )
+      .map((w) => ({
+        day: w.dayOfWeek,
+        from: formatTime(w.fromTime),
+        to: formatTime(w.toTime),
+      }));
+
+    return NextResponse.json({
+      success: true,
+      data: { ...cook, pickupWindows: sortedWindows },
+    });
   } catch (err) {
-    console.error("[dashboard/availability]", err);
+    console.error("[dashboard/availability GET]", err);
     return NextResponse.json(
       { error: "Failed to fetch availability." },
       { status: 500 },
@@ -88,45 +114,84 @@ export async function PUT(req: NextRequest) {
     );
   }
 
-  const validData = parsed.data;
+  const { pickupWindows, ...profileFields } = parsed.data;
 
-  if (Object.keys(validData).length === 0) {
+  if (!pickupWindows && Object.keys(profileFields).length === 0) {
     return NextResponse.json(
       { error: "No fields to update." },
       { status: 400 },
     );
   }
 
-  if (validData.pickupFrom && validData.pickupTo) {
-    if (validData.pickupTo <= validData.pickupFrom) {
-      return NextResponse.json(
-        { error: "pickupTo must be after pickupFrom." },
-        { status: 400 },
-      );
-    }
-  }
-
   try {
-    const [updated] = await db
-      .update(cookProfiles)
-      .set(validData)
-      .where(eq(cookProfiles.id, cookId))
-      .returning({
-        pickupDays: cookProfiles.pickupDays,
-        pickupFrom: cookProfiles.pickupFrom,
-        pickupTo: cookProfiles.pickupTo,
-        leadTime: cookProfiles.leadTime,
-        maxCapacity: cookProfiles.maxCapacity,
-        delivery: cookProfiles.delivery,
-      });
+    await dbPool.transaction(async (tx) => {
+      if (Object.keys(profileFields).length > 0) {
+        await tx
+          .update(cookProfiles)
+          .set(profileFields)
+          .where(eq(cookProfiles.id, cookId));
+      }
 
-    if (!updated) {
+      if (pickupWindows !== undefined) {
+        await tx
+          .delete(cookPickupWindows)
+          .where(eq(cookPickupWindows.cookId, cookId));
+
+        if (pickupWindows.length > 0) {
+          await tx.insert(cookPickupWindows).values(
+            pickupWindows.map((w) => ({
+              cookId,
+              dayOfWeek: w.day,
+              fromTime: w.from,
+              toTime: w.to,
+            })),
+          );
+        }
+      }
+    });
+
+    const [[updatedCook], updatedWindows] = await Promise.all([
+      db
+        .select({
+          leadTime: cookProfiles.leadTime,
+          maxCapacity: cookProfiles.maxCapacity,
+          delivery: cookProfiles.delivery,
+        })
+        .from(cookProfiles)
+        .where(eq(cookProfiles.id, cookId))
+        .limit(1),
+      db
+        .select({
+          dayOfWeek: cookPickupWindows.dayOfWeek,
+          fromTime: cookPickupWindows.fromTime,
+          toTime: cookPickupWindows.toTime,
+        })
+        .from(cookPickupWindows)
+        .where(eq(cookPickupWindows.cookId, cookId)),
+    ]);
+
+    if (!updatedCook) {
       return NextResponse.json({ error: "Cook not found." }, { status: 404 });
     }
 
-    return NextResponse.json({ success: true, data: updated });
+    const sortedWindows = updatedWindows
+      .sort(
+        (a, b) =>
+          DAY_ORDER.indexOf(a.dayOfWeek as DayOfWeek) -
+          DAY_ORDER.indexOf(b.dayOfWeek as DayOfWeek),
+      )
+      .map((w) => ({
+        day: w.dayOfWeek,
+        from: formatTime(w.fromTime),
+        to: formatTime(w.toTime),
+      }));
+
+    return NextResponse.json({
+      success: true,
+      data: { ...updatedCook, pickupWindows: sortedWindows },
+    });
   } catch (err) {
-    console.error("[dashboard/availability]", err);
+    console.error("[dashboard/availability PUT]", err);
     return NextResponse.json(
       { error: "Failed to update availability." },
       { status: 500 },

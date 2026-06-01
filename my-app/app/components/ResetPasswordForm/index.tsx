@@ -2,12 +2,10 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import styles from "./ResetPasswordForm.module.css";
 
 export default function ResetPasswordForm({ token }: { token: string }) {
-  const router = useRouter();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
@@ -35,7 +33,7 @@ export default function ResetPasswordForm({ token }: { token: string }) {
         setError(data.error ?? "Something went wrong.");
         return;
       }
-      router.push(data.redirect);
+      window.location.href = data.redirect;
     });
   };
 

@@ -18,6 +18,7 @@ vi.mock("drizzle-orm", () => ({
   and: vi.fn(),
   asc: vi.fn(),
   desc: vi.fn(),
+  sql: vi.fn(() => ({ as: vi.fn((alias: string) => alias) })),
 }));
 
 import { NextRequest } from "next/server";
@@ -120,8 +121,14 @@ describe("GET /api/business/listings/[listingId]", () => {
         return { from } as never;
       }
       if (callCount === 2) {
-        // listing ownership
-        const limit = vi.fn().mockResolvedValue([mockListing]);
+        // listing ownership + stats
+        const limit = vi.fn().mockResolvedValue([
+          {
+            listing: mockListing,
+            totalOrders: 0,
+            totalRevenue: "0",
+          },
+        ]);
         const where = vi.fn(() => ({ limit }));
         const from = vi.fn(() => ({ where }));
         return { from } as never;
@@ -145,7 +152,11 @@ describe("GET /api/business/listings/[listingId]", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.success).toBe(true);
-    expect(body.data).toMatchObject({ ...mockListing, dishes: [] });
+    expect(body.data).toMatchObject({
+      ...mockListing,
+      dishes: [],
+      stats: { totalOrders: 0, totalRevenue: 0, avgOrderValue: 0 },
+    });
   });
 
   it("returns 500 on db error", async () => {

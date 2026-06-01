@@ -9,6 +9,7 @@ import { db } from "@/db";
 import { listings, reviews } from "@/db/schema";
 
 const querySchema = z.object({
+  listingId: z.uuid().optional(),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
 });
@@ -19,6 +20,7 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url);
   const parsed = querySchema.safeParse({
+    listingId: searchParams.get("listingId") ?? undefined,
     page: searchParams.get("page") ?? undefined,
     limit: searchParams.get("limit") ?? undefined,
   });
@@ -30,12 +32,13 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const { page, limit } = parsed.data;
+  const { listingId, page, limit } = parsed.data;
   const offset = (page - 1) * limit;
 
   const conditions = and(
     eq(reviews.cookId, cookId),
     eq(reviews.isVisible, true),
+    ...(listingId ? [eq(reviews.listingId, listingId)] : []),
   );
 
   try {

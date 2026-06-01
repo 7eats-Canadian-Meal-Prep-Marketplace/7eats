@@ -6,10 +6,16 @@ export const metadata: Metadata = {
   title: "Forgot password | 7eats",
 };
 
-export default function ForgotPasswordPage() {
+export default async function ForgotPasswordPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
+  const { error } = await searchParams;
+
   return (
     <main className={styles.page}>
-      <ForgotPasswordForm />
+      <ForgotPasswordForm expiredLink={error === "expired"} />
     </main>
   );
 }

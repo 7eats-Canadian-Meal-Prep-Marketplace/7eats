@@ -26,7 +26,10 @@ export const auth = betterAuth({
     // create-account; clients must confirm their email first (see below).
     autoSignIn: false,
     requireEmailVerification: true,
-    sendResetPassword: async ({ user, url }) => {
+    sendResetPassword: async ({ user, token }) => {
+      const baseUrl =
+        process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+      const resetUrl = `${baseUrl}/business-auth/reset-password?token=${token}`;
       const resend = new Resend(process.env.RESEND_API_KEY);
       const { error } = await resend.emails.send({
         from: process.env.RESEND_FROM_EMAIL ?? "noreply@7eats.ca",
@@ -38,7 +41,7 @@ export const auth = betterAuth({
           "We received a request to reset your 7eats password.",
           "Use the link below to set a new one. It expires in 1 hour.",
           "",
-          url,
+          resetUrl,
           "",
           "If you didn't request this, you can safely ignore this email.",
           "",

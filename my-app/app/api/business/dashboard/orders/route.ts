@@ -12,6 +12,7 @@ const querySchema = z.object({
   status: z
     .enum(["pending", "confirmed", "ready", "fulfilled", "cancelled"])
     .optional(),
+  listingId: z.uuid().optional(),
   dateFrom: z.string().optional(),
   dateTo: z.string().optional(),
   page: z.coerce.number().int().min(1).default(1),
@@ -31,11 +32,12 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const { status, dateFrom, dateTo, page, limit } = parsed.data;
+  const { status, listingId, dateFrom, dateTo, page, limit } = parsed.data;
   const offset = (page - 1) * limit;
 
   const conditions = [eq(orders.cookId, cookId)];
   if (status) conditions.push(eq(orders.status, status));
+  if (listingId) conditions.push(eq(orders.listingId, listingId));
   if (dateFrom) conditions.push(gte(orders.pickupAt, new Date(dateFrom)));
   if (dateTo) conditions.push(lte(orders.pickupAt, new Date(dateTo)));
 

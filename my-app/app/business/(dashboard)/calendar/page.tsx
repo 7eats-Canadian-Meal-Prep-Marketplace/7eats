@@ -105,16 +105,14 @@ function toISODateLocal(d: Date): string {
 function buildWeekFromData(
   weekStart: Date,
   availability: {
-    pickupDays: string[] | null;
-    pickupFrom: string | null;
-    pickupTo: string | null;
+    pickupWindows: Array<{ day: string; from: string; to: string }>;
     delivery: string | null;
   },
   orders: CalendarOrder[],
 ): DaySchedule[] {
-  const pickupDays = availability.pickupDays ?? [];
-  const pickupFrom = availability.pickupFrom ?? "11:00";
-  const pickupTo = availability.pickupTo ?? "14:00";
+  const windowMap = Object.fromEntries(
+    availability.pickupWindows.map((w) => [w.day, { from: w.from, to: w.to }]),
+  );
   const hasDelivery =
     availability.delivery !== "none" && availability.delivery != null;
 
@@ -123,11 +121,11 @@ function buildWeekFromData(
   for (let i = 0; i < 7; i++) {
     const date = addDays(weekStart, i);
     const dayName = DAY_NAMES[date.getDay()] ?? "";
-    const isPickupDay = pickupDays.includes(dayName);
+    const dayWindow = windowMap[dayName];
 
     const windows: WindowGroup[] = [];
 
-    if (isPickupDay) {
+    if (dayWindow) {
       const pickupOrders = orders.filter((o) => {
         if (o.kind !== "pickup") return false;
         return sameDay(new Date(o.datetime), date);
@@ -136,8 +134,8 @@ function buildWeekFromData(
         window: {
           weekday: date.getDay(),
           kind: "pickup",
-          from: pickupFrom,
-          to: pickupTo,
+          from: dayWindow.from,
+          to: dayWindow.to,
         },
         orders: pickupOrders.sort(
           (a, b) =>
@@ -155,8 +153,8 @@ function buildWeekFromData(
             window: {
               weekday: date.getDay(),
               kind: "delivery",
-              from: pickupFrom,
-              to: pickupTo,
+              from: dayWindow.from,
+              to: dayWindow.to,
             },
             orders: deliveryOrders,
           });
@@ -291,12 +289,7 @@ export default function CalendarPage() {
 
       const built = buildWeekFromData(
         ws,
-        avail ?? {
-          pickupDays: [],
-          pickupFrom: null,
-          pickupTo: null,
-          delivery: null,
-        },
+        avail ?? { pickupWindows: [], delivery: null },
         calendarOrders,
       );
       setWeek(built);

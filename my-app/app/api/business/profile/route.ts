@@ -16,9 +16,6 @@ const PROFILE_FIELDS = {
   photoUrl: cookProfiles.photoUrl,
   socialLink: cookProfiles.socialLink,
   pickupAddress: cookProfiles.pickupAddress,
-  pickupDays: cookProfiles.pickupDays,
-  pickupFrom: cookProfiles.pickupFrom,
-  pickupTo: cookProfiles.pickupTo,
   leadTime: cookProfiles.leadTime,
   maxCapacity: cookProfiles.maxCapacity,
   delivery: cookProfiles.delivery,
@@ -39,9 +36,6 @@ const bodySchema = z.object({
   photoUrl: z.string().url().optional().nullable(),
   socialLink: z.string().url().optional().nullable(),
   pickupAddress: z.string().max(500).optional(),
-  pickupDays: z.array(z.string()).optional(),
-  pickupFrom: z.string().optional(),
-  pickupTo: z.string().optional(),
   leadTime: z
     .enum(["same_day", "1_day", "2_days", "3_days", "4_days", "5_days"])
     .optional(),

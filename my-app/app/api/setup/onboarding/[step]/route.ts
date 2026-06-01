@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { db, dbPool } from "@/db";
 import {
   cookCertifications,
+  cookPickupWindows,
   cookProfiles,
   cookProfileTags,
   tags,
@@ -183,28 +184,48 @@ async function step2(req: Request, userId: string) {
     ? null
     : Math.min(Math.max(rawCap, 5), 500);
 
+  const windows: Array<{ day: string; from: string; to: string }> =
+    Array.isArray(data.pickupWindows) ? data.pickupWindows : [];
+
   const [profile] = await db
-    .select({ currentSetupStep: cookProfiles.currentSetupStep })
+    .select({
+      id: cookProfiles.id,
+      currentSetupStep: cookProfiles.currentSetupStep,
+    })
     .from(cookProfiles)
     .where(eq(cookProfiles.userId, userId))
     .limit(1);
   if (!profile)
     return NextResponse.json({ error: "Profile not found." }, { status: 404 });
 
-  await db
-    .update(cookProfiles)
-    .set({
-      pickupAddress,
-      pickupDays: data.pickupDays,
-      pickupFrom: data.pickupFrom || null,
-      pickupTo: data.pickupTo || null,
-      leadTime,
-      maxCapacity,
-      delivery,
-      acceptsSpecialRequests: data.acceptsSpecialRequests,
-      currentSetupStep: Math.max(profile.currentSetupStep, 3),
-    })
-    .where(eq(cookProfiles.userId, userId));
+  await dbPool.transaction(async (tx) => {
+    await tx
+      .update(cookProfiles)
+      .set({
+        pickupAddress,
+        leadTime,
+        maxCapacity,
+        delivery,
+        acceptsSpecialRequests: data.acceptsSpecialRequests,
+        currentSetupStep: Math.max(profile.currentSetupStep, 3),
+      })
+      .where(eq(cookProfiles.userId, userId));
+
+    await tx
+      .delete(cookPickupWindows)
+      .where(eq(cookPickupWindows.cookId, profile.id));
+
+    if (windows.length > 0) {
+      await tx.insert(cookPickupWindows).values(
+        windows.map((w) => ({
+          cookId: profile.id,
+          dayOfWeek: w.day,
+          fromTime: w.from,
+          toTime: w.to,
+        })),
+      );
+    }
+  });
 
   return NextResponse.json({ success: true });
 }

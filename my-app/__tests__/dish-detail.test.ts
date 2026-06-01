@@ -20,6 +20,7 @@ vi.mock("drizzle-orm", () => ({
   and: vi.fn(),
   asc: vi.fn(),
   desc: vi.fn(),
+  sql: vi.fn(() => ({ as: vi.fn((alias: string) => alias) })),
 }));
 
 import { NextRequest } from "next/server";
@@ -111,8 +112,15 @@ describe("GET /api/business/listings/dishes/[dishId]", () => {
         return { from } as never;
       }
       if (callCount === 2) {
-        // Call 2: dish ownership — terminal: limit
-        const limit = vi.fn().mockResolvedValue([mockDish]);
+        // Call 2: dish ownership + stats — terminal: limit
+        const limit = vi.fn().mockResolvedValue([
+          {
+            dish: mockDish,
+            listingCount: 0,
+            totalOrders: 0,
+            totalQty: 0,
+          },
+        ]);
         const where = vi.fn(() => ({ limit }));
         const from = vi.fn(() => ({ where }));
         return { from } as never;
@@ -153,6 +161,7 @@ describe("GET /api/business/listings/dishes/[dishId]", () => {
     expect(body.data).toHaveProperty("ingredients");
     expect(body.data).toHaveProperty("nutrition");
     expect(body.data).toHaveProperty("tags");
+    expect(body.data).toHaveProperty("stats");
   });
 
   it("returns 500 when dish ownership query throws", async () => {
