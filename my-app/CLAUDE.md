@@ -53,6 +53,50 @@ database before calling the task complete. `drizzle.config.ts` requires
 - **Tailwind CSS v4** plus CSS Modules for component/page-specific styling.
 - **pnpm** as the package manager.
 
+## Frontend-Backend Flow Testing (MANDATORY)
+
+After implementing any API endpoint AND wiring it to the frontend, you MUST test the complete flow using `agent-browser` before reporting the task complete.
+
+### When this applies
+- You implement a new API route (e.g., `app/api/...`) AND update frontend code to call it
+- You change an existing endpoint's request/response shape AND update frontend consumers
+- You integrate new data from the backend into a UI component
+
+### How to test
+
+1. Start the dev server if not running (port 3000 by default for Next.js)
+2. Use agent-browser to navigate the relevant UI flow:
+
+```bash
+agent-browser open http://localhost:3000
+agent-browser snapshot -i
+# Navigate to the relevant page/feature
+# Interact with the UI that triggers the endpoint
+# Verify the data appears correctly in the UI
+agent-browser close
+```
+
+3. Check for:
+   - The endpoint returns data (no 500 errors, no empty states)
+   - The frontend renders the data correctly
+   - No console errors visible in the page
+
+### Quick reference
+
+```bash
+# Load full usage guide before running commands
+agent-browser skills get core
+
+# React app introspection
+agent-browser open --enable react-devtools http://localhost:3000
+agent-browser react tree
+agent-browser vitals http://localhost:3000
+
+# Screenshot for verification
+agent-browser screenshot verify.png
+agent-browser close
+```
+
 ## Database Notes
 
 - `db/index.ts` creates the Drizzle client with `neon(DATABASE_URL)` and the

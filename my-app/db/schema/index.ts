@@ -6,6 +6,7 @@ export * from "./dishes";
 export * from "./enums";
 export * from "./listings";
 export * from "./messaging";
+export * from "./notifications";
 export * from "./orders";
 export * from "./payments";
 export * from "./subscriptions";
