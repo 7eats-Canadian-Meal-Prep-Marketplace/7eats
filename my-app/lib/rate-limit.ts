@@ -14,8 +14,6 @@ export async function logAndCheckRateLimit(
   const windowMinutes = opts?.windowMinutes ?? DEFAULT_WINDOW_MINUTES;
   const maxAttempts = opts?.maxAttempts ?? DEFAULT_MAX_ATTEMPTS;
 
-  await db.insert(rateLimitLog).values({ ipHash: key });
-
   const windowStart = new Date(Date.now() - windowMinutes * 60 * 1000);
 
   const result = await db
@@ -28,5 +26,10 @@ export async function logAndCheckRateLimit(
       ),
     );
 
-  return result[0].count <= maxAttempts;
+  if (result[0].count >= maxAttempts) {
+    return false;
+  }
+
+  await db.insert(rateLimitLog).values({ ipHash: key });
+  return true;
 }
