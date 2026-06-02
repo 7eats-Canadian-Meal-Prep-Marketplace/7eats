@@ -20,9 +20,11 @@ export async function POST(req: NextRequest) {
   const rawBody = await req.arrayBuffer();
   const buf = Buffer.from(rawBody);
 
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-  if (!webhookSecret) {
-    console.error("[webhook/stripe] STRIPE_WEBHOOK_SECRET not configured");
+  const platformSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  const connectSecret = process.env.STRIPE_CONNECT_WEBHOOK_SECRET;
+
+  if (!platformSecret && !connectSecret) {
+    console.error("[webhook/stripe] No webhook secrets configured");
     return NextResponse.json(
       { error: "Webhook is not configured." },
       { status: 500 },
@@ -38,10 +40,19 @@ export async function POST(req: NextRequest) {
   }
 
   const stripe = getStripe();
-  let event: Stripe.Event;
-  try {
-    event = stripe.webhooks.constructEvent(buf, sig, webhookSecret);
-  } catch {
+  let event: Stripe.Event | null = null;
+
+  for (const secret of [platformSecret, connectSecret]) {
+    if (!secret) continue;
+    try {
+      event = stripe.webhooks.constructEvent(buf, sig, secret);
+      break;
+    } catch {
+      // try next secret
+    }
+  }
+
+  if (!event) {
     return NextResponse.json(
       { error: "Webhook signature verification failed." },
       { status: 400 },
