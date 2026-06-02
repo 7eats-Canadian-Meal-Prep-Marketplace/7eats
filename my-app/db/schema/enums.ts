@@ -96,3 +96,9 @@ export const notificationEntityTypeEnum = pgEnum("notification_entity_type", [
   "order_cancelled",
   "review",
 ]);
+
+export const paymentTypeEnum = pgEnum("payment_type", [
+  "full",
+  "deposit",
+  "balance",
+]);
