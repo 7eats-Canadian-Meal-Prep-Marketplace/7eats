@@ -195,18 +195,38 @@ export async function POST(req: NextRequest) {
               ? rawPaymentIntent
               : rawPaymentIntent.id;
 
+        // Retrieve charge ID from the PI so we can store it for dispute/refund webhooks
+        let stripeChargeId: string | null = null;
+        if (paymentIntentId) {
+          try {
+            const stripe = getStripe();
+            const pi = await stripe.paymentIntents.retrieve(paymentIntentId, {
+              expand: ["latest_charge"],
+            });
+            const latestCharge = pi.latest_charge;
+            if (latestCharge && typeof latestCharge === "object") {
+              stripeChargeId = latestCharge.id;
+            }
+          } catch {
+            // non-fatal — chargeId is best-effort
+          }
+        }
+
         await db.insert(orderPayments).values({
           orderId: order.id,
           cookId: sub.cookId,
           clientId: sub.clientId,
-          status: "authorized",
+          type: "full",
+          status: "held",
           totalAmount: totalPrice,
           platformFeePct: cook.platformFeePct,
           platformFeeAmount,
           cookPayoutAmount,
           currency: "CAD",
           stripePaymentIntentId: paymentIntentId,
+          stripeChargeId,
           authorizedAt: new Date(),
+          heldAt: new Date(),
         });
 
         // Sync subscription period dates
