@@ -62,17 +62,10 @@ export async function createStripePrice(
   }
 }
 
-export async function archiveStripePrice(
-  connectedAccountId: string,
-  priceId: string,
-): Promise<void> {
+export async function archiveStripePrice(priceId: string): Promise<void> {
   try {
     const stripe = getStripe();
-    await stripe.prices.update(
-      priceId,
-      { active: false },
-      { stripeAccount: connectedAccountId },
-    );
+    await stripe.prices.update(priceId, { active: false });
   } catch (err) {
     throw new Error(
       `Stripe archiveStripePrice failed: ${err instanceof Error ? err.message : String(err)}`,
