@@ -1,5 +1,6 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { sendMail } from "@/lib/email";
+import { htmlEmail, paragraph } from "@/lib/emails/base";
 
 export function verifyInternalKey(provided: string): boolean {
   const expected = process.env.INTERNAL_API_KEY ?? "";
@@ -27,18 +28,33 @@ export async function sendSetupEmail(
     console.log(`[issue-link] sending setup link to ${to}`);
   }
 
+  const subject = `Complete your 7eats setup, ${kitchenName}`;
+  const html = htmlEmail({
+    title: subject,
+    preheader:
+      "Your application has been approved. Finish setting up your kitchen.",
+    bodyHtml:
+      paragraph("Hi,") +
+      paragraph(
+        "Your application has been approved. Click below to create your password and complete your kitchen setup. The link expires in 3 days.",
+      ),
+    ctaLabel: "Complete setup",
+    ctaUrl: link,
+  });
+
   await sendMail({
     to,
-    subject: `${kitchenName} - complete your 7eats setup`,
+    subject,
     text: [
       "Hi,",
       "",
-      "Your application has been approved. Use the link below to create your password and complete your setup.",
+      "Your application has been approved. Use the link below to create your password and complete your kitchen setup.",
       "This link expires in 3 days.",
       "",
       link,
       "",
       "The 7eats team",
     ].join("\n"),
+    html,
   });
 }

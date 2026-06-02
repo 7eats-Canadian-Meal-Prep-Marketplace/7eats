@@ -14,6 +14,7 @@ import {
   orders,
 } from "@/db/schema";
 import { auth } from "@/lib/auth";
+import { sendOrderPlacedEmailToCook } from "@/lib/emails/order-events";
 import {
   cancelPaymentIntent,
   createFullPaymentIntent,
@@ -200,6 +201,7 @@ export async function POST(req: NextRequest) {
       .select({
         id: listings.id,
         cookId: listings.cookId,
+        title: listings.title,
         type: listings.type,
         status: listings.status,
         basePrice: listings.basePrice,
@@ -563,6 +565,31 @@ export async function POST(req: NextRequest) {
       await Promise.allSettled(cancels);
       throw dbErr;
     }
+
+    // Fire and forget — non-blocking
+    db.select({ email: authUser.email, firstName: authUser.firstName })
+      .from(cookProfiles)
+      .innerJoin(authUser, eq(cookProfiles.userId, authUser.id))
+      .where(eq(cookProfiles.id, listing.cookId))
+      .limit(1)
+      .then(([cookUser]) => {
+        if (!cookUser) return;
+        const customerName =
+          [session.user.name ?? ""].filter(Boolean).join(" ") || "A customer";
+        return sendOrderPlacedEmailToCook(
+          { email: cookUser.email, firstName: cookUser.firstName },
+          { name: customerName },
+          {
+            id: orderId,
+            listingTitle: listing.title,
+            quantity,
+            totalPrice: totalPrice.toFixed(2),
+            currency: "CAD",
+            pickupAt: new Date(pickupAt),
+          },
+        );
+      })
+      .catch((err) => console.error("[orders/POST] email", err));
 
     return NextResponse.json(
       { success: true, data: { orderId } },
