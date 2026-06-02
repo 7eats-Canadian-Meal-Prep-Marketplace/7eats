@@ -575,7 +575,11 @@ export async function POST(req: NextRequest) {
       .then(([cookUser]) => {
         if (!cookUser) return;
         const customerName =
-          [session.user.name ?? ""].filter(Boolean).join(" ") || "A customer";
+          session.user.name ||
+          [session.user.firstName, session.user.lastName]
+            .filter(Boolean)
+            .join(" ") ||
+          "A customer";
         return sendOrderPlacedEmailToCook(
           { email: cookUser.email, firstName: cookUser.firstName },
           { name: customerName },

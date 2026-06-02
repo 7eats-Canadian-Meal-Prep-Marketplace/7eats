@@ -23,9 +23,9 @@ export async function sendSetupEmail(
   const link = `${baseUrl}/business-auth/setup/create-password?token=${rawToken}`;
 
   if (process.env.NODE_ENV !== "production") {
-    console.log(`[issue-link] magic link for ${to}:\n${link}`);
+    console.error(`[issue-link] magic link for ${to}:\n${link}`);
   } else {
-    console.log(`[issue-link] sending setup link to ${to}`);
+    console.error(`[issue-link] sending setup link to ${to}`);
   }
 
   const subject = `Complete your 7eats setup, ${kitchenName}`;
