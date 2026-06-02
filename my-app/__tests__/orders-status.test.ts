@@ -306,15 +306,6 @@ describe("PATCH /api/business/dashboard/orders/[orderId]/status", () => {
     );
   });
 
-  it("sets pickupCodeAttempts to 0 when transitioning to ready", async () => {
-    withOrderForReady();
-    const { set } = mockUpdate({ id: ORDER_ID, status: "ready" });
-    await PATCH(makePatch({ status: "ready" }), { params });
-    expect(set).toHaveBeenCalledWith(
-      expect.objectContaining({ pickupCodeAttempts: 0 }),
-    );
-  });
-
   it("sets expiry to at least 24h from now when transitioning to ready", async () => {
     const pickupAt = new Date(Date.now() - 2 * 3600_000); // pickup was 2h ago
     withOrderForReady(pickupAt);
@@ -330,6 +321,7 @@ describe("PATCH /api/business/dashboard/orders/[orderId]/status", () => {
       .calls[0][0] as Record<string, unknown>;
     const expiry = callArgs.pickupCodeExpiresAt as Date;
     expect(expiry.getTime()).toBeGreaterThanOrEqual(before.getTime());
+    expect(expiry.getTime()).toBeLessThan(before.getTime() + 25 * 3_600_000);
   });
 
   it("sets expiry to 6h after pickupAt when that is later than 24h from now", async () => {

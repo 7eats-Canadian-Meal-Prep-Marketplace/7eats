@@ -219,7 +219,11 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       .update(orders)
       .set(updateFields)
       .where(and(eq(orders.id, orderId), eq(orders.cookId, cookId)))
-      .returning();
+      .returning({
+        id: orders.id,
+        status: orders.status,
+        updatedAt: orders.updatedAt,
+      });
 
     return NextResponse.json({ success: true, data: updated });
   } catch (err) {
