@@ -6,12 +6,13 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
 import { authUser } from "./auth";
 import { cookProfiles } from "./cooks";
-import { paymentStatus, payoutStatus } from "./enums";
+import { paymentStatus, paymentTypeEnum, payoutStatus } from "./enums";
 import { orders } from "./orders";
 
 const isAdmin = sql`auth.role() = 'admin'`;
@@ -81,8 +82,8 @@ export const orderPayments = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     orderId: uuid("order_id")
       .notNull()
-      .unique()
       .references(() => orders.id, { onDelete: "cascade" }),
+    type: paymentTypeEnum("type").notNull().default("full"),
     cookId: uuid("cook_id")
       .notNull()
       .references(() => cookProfiles.id, { onDelete: "restrict" }),
@@ -126,6 +127,7 @@ export const orderPayments = pgTable(
       "order_payments_fee_pct_valid",
       sql`${t.platformFeePct} > 0 AND ${t.platformFeePct} <= 100`,
     ),
+    uniqueIndex("order_payments_order_type_uidx").on(t.orderId, t.type),
     pgPolicy("order_payments_select_client", {
       for: "select",
       to: "public",
