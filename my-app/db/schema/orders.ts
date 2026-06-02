@@ -77,6 +77,10 @@ export const orders = pgTable(
       precision: 10,
       scale: 2,
     }),
+    depositEnabled: boolean("deposit_enabled").notNull().default(false),
+    depositType: lateCancelFeeTypeEnum("deposit_type"),
+    depositValue: numeric("deposit_value", { precision: 10, scale: 2 }),
+    depositAmount: numeric("deposit_amount", { precision: 10, scale: 2 }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at")
       .notNull()
