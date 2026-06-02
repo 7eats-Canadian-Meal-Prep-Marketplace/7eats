@@ -222,26 +222,48 @@ Add to `app/api/webhooks/stripe/route.ts`:
 
 ---
 
-## 10. Stripe Dashboard Configuration
+## 10. Local Dev Setup (No Mocks — Real Test Credentials)
 
-### Webhook endpoint (test mode)
-Register at `https://<production-domain>/api/webhooks/stripe` with events:
-- `invoice.payment_succeeded`
-- `invoice.payment_failed`
-- `customer.subscription.deleted`
-- `customer.subscription.updated`
-- `payout.created` / `payout.paid` / `payout.failed` / `payout.canceled`
+All mock guards are removed. Local dev uses real Stripe test-mode API calls with test cards and test Connect accounts. No `NODE_ENV` branching in any payment route.
+
+### Remove these mock paths
+- `app/api/setup/stripe-connect/route.ts` — remove 501 production guard and `mock_acct_` path; implement real Express account creation unconditionally
+- `app/api/business/dashboard/stripe/status/route.ts` — remove `isDevMode` block that returns fake `chargesEnabled: true`
+- `app/api/business/dashboard/stripe/onboarding-link/route.ts` — remove mock URL block
+- `app/api/business/dashboard/stripe/dashboard-link/route.ts` — remove mock URL block
+- `app/api/webhooks/stripe/route.ts` — remove `STRIPE_WEBHOOK_INSECURE_DEV` bypass entirely
+
+### Local webhook forwarding (Stripe CLI)
+```bash
+stripe listen --forward-to localhost:3000/api/webhooks/stripe
+```
+The CLI prints a signing secret (`whsec_...`). Add it to `.env.local`:
+```
+STRIPE_WEBHOOK_SECRET=whsec_...
+```
+The webhook handler already verifies signatures — this just gives it a real secret to verify against.
+
+### Test cards
+| Scenario | Card number |
+|---|---|
+| Successful payment | 4242 4242 4242 4242 |
+| 3DS required | 4000 0000 0000 3220 |
+| Always declines | 4000 0000 0000 9995 |
+| Insufficient funds | 4000 0000 0000 9995 |
+
+Expiry: any future date. CVC: any 3 digits. Postal: any.
+
+### Test Connect accounts
+`stripe.accounts.create({ type: 'express', ... })` works in test mode. Complete the Express onboarding at the returned URL using Stripe's pre-filled test data flow.
+
+### Stripe Dashboard — production webhook endpoint
+When deploying, register `https://<production-domain>/api/webhooks/stripe` in Stripe Dashboard → Developers → Webhooks with these events:
+- `invoice.payment_succeeded`, `invoice.payment_failed`
+- `customer.subscription.deleted`, `customer.subscription.updated`
+- `payout.created`, `payout.paid`, `payout.failed`, `payout.canceled`
 - `payment_intent.payment_failed`
-- `charge.dispute.created`
-- `charge.refunded`
+- `charge.dispute.created`, `charge.refunded`
 - `account.updated`
-
-For local dev: use `stripe listen --forward-to localhost:3000/api/webhooks/stripe` (Stripe CLI).
-
-### Environment variables to add
-```
-STRIPE_WEBHOOK_SECRET=whsec_...   # from webhook endpoint signing secret
-```
 
 ### Stripe Connect settings
 - Enable Express accounts in Stripe Dashboard → Connect Settings
