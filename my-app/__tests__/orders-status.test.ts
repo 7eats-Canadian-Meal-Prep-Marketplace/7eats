@@ -9,20 +9,33 @@ vi.mock("@/db", () => ({
 vi.mock("@/db/schema", () => ({
   orders: {},
   cookProfiles: {},
+  orderPayments: {},
 }));
 vi.mock("drizzle-orm", () => ({
   eq: vi.fn(),
   and: vi.fn(),
+}));
+vi.mock("@/lib/stripe-payments", () => ({
+  capturePaymentIntent: vi.fn().mockResolvedValue(undefined),
+  cancelPaymentIntent: vi.fn().mockResolvedValue(undefined),
+  partialCapturePaymentIntent: vi.fn().mockResolvedValue(undefined),
+  refundPaymentIntent: vi.fn().mockResolvedValue("re_test123"),
 }));
 
 import { NextRequest } from "next/server";
 import { PATCH } from "@/app/api/business/dashboard/orders/[orderId]/status/route";
 import { db } from "@/db";
 import { auth } from "@/lib/auth";
+import {
+  cancelPaymentIntent,
+  capturePaymentIntent,
+  refundPaymentIntent,
+} from "@/lib/stripe-payments";
 
 const COOK_ID = "cook-uuid";
 const USER_ID = "user-uuid";
 const ORDER_ID = "11111111-1111-4111-8111-111111111111";
+const COOK_USER_ID = "cook-user-uuid";
 
 const params = Promise.resolve({ orderId: ORDER_ID });
 
@@ -59,6 +72,56 @@ function orderChain(status: string) {
   return { from } as never;
 }
 
+function orderChainEmpty() {
+  const limit = vi.fn().mockResolvedValue([]);
+  const where = vi.fn(() => ({ limit }));
+  const from = vi.fn(() => ({ where }));
+  return { from } as never;
+}
+
+/** Returns a select chain that resolves to an empty deposit payment list. */
+function noDepositPayment() {
+  const limit = vi.fn().mockResolvedValue([]);
+  const where = vi.fn(() => ({ limit }));
+  const from = vi.fn(() => ({ where }));
+  return { from } as never;
+}
+
+/** Returns a select chain that resolves with a deposit payment. */
+function depositPaymentChain(piId = "pi_deposit_123") {
+  const limit = vi
+    .fn()
+    .mockResolvedValue([{ id: "pay-uuid", stripePaymentIntentId: piId }]);
+  const where = vi.fn(() => ({ limit }));
+  const from = vi.fn(() => ({ where }));
+  return { from } as never;
+}
+
+/** Returns a select chain for all-payments query (no limit, just where). */
+function allPaymentsChain(
+  payments: Array<{
+    id: string;
+    type: string;
+    status: string;
+    stripePaymentIntentId: string | null;
+    totalAmount: string;
+    cookPayoutAmount: string | null;
+    platformFeePct: string;
+  }>,
+) {
+  const where = vi.fn().mockResolvedValue(payments);
+  const from = vi.fn(() => ({ where }));
+  return { from } as never;
+}
+
+/** Returns a select chain for the cookProfiles userId lookup on cancel. */
+function cookUserChain(userId: string | null = COOK_USER_ID) {
+  const limit = vi.fn().mockResolvedValue(userId ? [{ userId }] : []);
+  const where = vi.fn(() => ({ limit }));
+  const from = vi.fn(() => ({ where }));
+  return { from } as never;
+}
+
 function mockUpdate(row: object) {
   const returning = vi.fn().mockResolvedValue([row]);
   const where = vi.fn(() => ({ returning }));
@@ -67,6 +130,47 @@ function mockUpdate(row: object) {
   return { set };
 }
 
+/**
+ * Sequences db.select calls for a "confirm" path:
+ * 1. cook lookup
+ * 2. order fetch
+ * 3. deposit payment lookup
+ */
+function withOrderForConfirm(orderStatus: string, hasDeposit = false) {
+  let call = 0;
+  vi.mocked(db.select).mockImplementation(() => {
+    call++;
+    if (call === 1) return mockCook(true);
+    if (call === 2) return orderChain(orderStatus);
+    return hasDeposit ? depositPaymentChain() : noDepositPayment();
+  });
+}
+
+/**
+ * Sequences db.select calls for a "cancel" path:
+ * 1. cook lookup
+ * 2. order fetch
+ * 3. all-payments fetch
+ * 4. cookProfiles userId lookup
+ */
+function withOrderForCancel(
+  orderStatus: string,
+  payments: Parameters<typeof allPaymentsChain>[0] = [],
+) {
+  let call = 0;
+  vi.mocked(db.select).mockImplementation(() => {
+    call++;
+    if (call === 1) return mockCook(true);
+    if (call === 2) return orderChain(orderStatus);
+    if (call === 3) return allPaymentsChain(payments);
+    return cookUserChain();
+  });
+}
+
+/**
+ * Simple helper for tests that don't care about the payment side (e.g. invalid
+ * transition, not-found). Only needs cook + order calls.
+ */
 function withOrder(status: string) {
   let call = 0;
   vi.mocked(db.select).mockImplementation(() => {
@@ -80,6 +184,8 @@ describe("PATCH /api/business/dashboard/orders/[orderId]/status", () => {
     vi.clearAllMocks();
     mockSession(USER_ID);
   });
+
+  // ─── Auth / input validation ───────────────────────────────────────────────
 
   it("returns 401 when there is no cook profile", async () => {
     mockSession(null);
@@ -117,6 +223,8 @@ describe("PATCH /api/business/dashboard/orders/[orderId]/status", () => {
     expect(res.status).toBe(404);
   });
 
+  // ─── Transition guard ──────────────────────────────────────────────────────
+
   it("rejects an invalid transition (pending -> ready)", async () => {
     withOrder("pending");
     const res = await PATCH(makePatch({ status: "ready" }), { params });
@@ -131,18 +239,41 @@ describe("PATCH /api/business/dashboard/orders/[orderId]/status", () => {
     expect(res.status).toBe(400);
   });
 
-  it("allows pending -> confirmed", async () => {
-    withOrder("pending");
+  // ─── Confirm: deposit capture ──────────────────────────────────────────────
+
+  it("allows pending -> confirmed and skips deposit capture when no deposit PI", async () => {
+    withOrderForConfirm("pending", false);
     mockUpdate({ id: ORDER_ID, status: "confirmed" });
     const res = await PATCH(makePatch({ status: "confirmed" }), { params });
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.success).toBe(true);
     expect(body.data.status).toBe("confirmed");
+    expect(capturePaymentIntent).not.toHaveBeenCalled();
   });
 
+  it("captures the deposit PI on confirm when one exists", async () => {
+    withOrderForConfirm("pending", true);
+    // mockUpdate needs to handle both the deposit update and the order update
+    const returning = vi
+      .fn()
+      .mockResolvedValue([{ id: ORDER_ID, status: "confirmed" }]);
+    const where = vi.fn(() => ({ returning }));
+    const set = vi.fn(() => ({ where }));
+    vi.mocked(db.update).mockReturnValue({ set } as never);
+
+    const res = await PATCH(makePatch({ status: "confirmed" }), { params });
+    expect(res.status).toBe(200);
+    expect(capturePaymentIntent).toHaveBeenCalledWith(
+      "pi_deposit_123",
+      `deposit-release-${ORDER_ID}`,
+    );
+  });
+
+  // ─── Cancel: cook voluntary cancellation ──────────────────────────────────
+
   it("sets cancelledAt when cancelling", async () => {
-    withOrder("pending");
+    withOrderForCancel("pending", []);
     const { set } = mockUpdate({ id: ORDER_ID, status: "cancelled" });
     const res = await PATCH(makePatch({ status: "cancelled" }), { params });
     expect(res.status).toBe(200);
@@ -153,6 +284,101 @@ describe("PATCH /api/business/dashboard/orders/[orderId]/status", () => {
       }),
     );
   });
+
+  it("cancels an authorized payment PI on voluntary cook cancel", async () => {
+    const payments = [
+      {
+        id: "pay-uuid",
+        type: "deposit",
+        status: "authorized",
+        stripePaymentIntentId: "pi_dep_abc",
+        totalAmount: "50.00",
+        cookPayoutAmount: null,
+        platformFeePct: "10.00",
+      },
+    ];
+    withOrderForCancel("pending", payments);
+    const returning = vi
+      .fn()
+      .mockResolvedValue([{ id: ORDER_ID, status: "cancelled" }]);
+    const where = vi.fn(() => ({ returning }));
+    const set = vi.fn(() => ({ where }));
+    vi.mocked(db.update).mockReturnValue({ set } as never);
+
+    const res = await PATCH(makePatch({ status: "cancelled" }), { params });
+    expect(res.status).toBe(200);
+    expect(cancelPaymentIntent).toHaveBeenCalledWith(
+      "pi_dep_abc",
+      `cook-cancel-${ORDER_ID}-deposit`,
+    );
+  });
+
+  it("refunds a released deposit when cook cancels after confirmation", async () => {
+    const payments = [
+      {
+        id: "pay-uuid",
+        type: "deposit",
+        status: "released",
+        stripePaymentIntentId: "pi_dep_released",
+        totalAmount: "50.00",
+        cookPayoutAmount: null,
+        platformFeePct: "10.00",
+      },
+    ];
+    withOrderForCancel("confirmed", payments);
+    const returning = vi
+      .fn()
+      .mockResolvedValue([{ id: ORDER_ID, status: "cancelled" }]);
+    const where = vi.fn(() => ({ returning }));
+    const set = vi.fn(() => ({ where }));
+    vi.mocked(db.update).mockReturnValue({ set } as never);
+
+    const res = await PATCH(makePatch({ status: "cancelled" }), { params });
+    expect(res.status).toBe(200);
+    expect(refundPaymentIntent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        paymentIntentId: "pi_dep_released",
+        reverseTransfer: true,
+        idempotencyKey: `cook-cancel-deposit-refund-${ORDER_ID}`,
+      }),
+    );
+  });
+
+  // ─── Cancel: client no-show ────────────────────────────────────────────────
+
+  it("captures authorized payments on client no-show", async () => {
+    const payments = [
+      {
+        id: "pay-balance",
+        type: "balance",
+        status: "authorized",
+        stripePaymentIntentId: "pi_bal_xyz",
+        totalAmount: "100.00",
+        cookPayoutAmount: null,
+        platformFeePct: "10.00",
+      },
+    ];
+    withOrderForCancel("confirmed", payments);
+    const returning = vi
+      .fn()
+      .mockResolvedValue([{ id: ORDER_ID, status: "cancelled" }]);
+    const where = vi.fn(() => ({ returning }));
+    const set = vi.fn(() => ({ where }));
+    vi.mocked(db.update).mockReturnValue({ set } as never);
+
+    const res = await PATCH(
+      makePatch({ status: "cancelled", reason: "client_no_show" }),
+      { params },
+    );
+    expect(res.status).toBe(200);
+    expect(capturePaymentIntent).toHaveBeenCalledWith(
+      "pi_bal_xyz",
+      `noshow-capture-${ORDER_ID}-balance`,
+    );
+    expect(cancelPaymentIntent).not.toHaveBeenCalled();
+  });
+
+  // ─── Error handling ────────────────────────────────────────────────────────
 
   it("returns 500 on a db error", async () => {
     let call = 0;
@@ -168,10 +394,3 @@ describe("PATCH /api/business/dashboard/orders/[orderId]/status", () => {
     expect(res.status).toBe(500);
   });
 });
-
-function orderChainEmpty() {
-  const limit = vi.fn().mockResolvedValue([]);
-  const where = vi.fn(() => ({ limit }));
-  const from = vi.fn(() => ({ where }));
-  return { from } as never;
-}

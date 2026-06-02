@@ -32,11 +32,14 @@ import { NextRequest } from "next/server";
 import { POST } from "@/app/api/webhooks/stripe/route";
 import { db } from "@/db";
 
-function makeRequest(event: unknown, signature?: string): NextRequest {
+function makeRequest(
+  event: unknown,
+  signature: string | null = "sig_test",
+): NextRequest {
   const headers: Record<string, string> = {
     "content-type": "application/json",
   };
-  if (signature !== undefined) headers["stripe-signature"] = signature;
+  if (signature !== null) headers["stripe-signature"] = signature;
   return new NextRequest("http://localhost/api/webhooks/stripe", {
     method: "POST",
     body: JSON.stringify(event),
@@ -114,9 +117,13 @@ function paymentSucceededEvent() {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.stubEnv("STRIPE_WEBHOOK_SECRET", "");
-  vi.stubEnv("STRIPE_SECRET_KEY", "");
-  vi.stubEnv("STRIPE_WEBHOOK_INSECURE_DEV", "1");
+  vi.stubEnv("STRIPE_WEBHOOK_SECRET", "whsec_test");
+  vi.stubEnv("STRIPE_SECRET_KEY", "sk_test");
+  constructEventMock.mockImplementation(
+    (_buf: unknown, _sig: unknown, _secret: unknown) => {
+      return JSON.parse(Buffer.from(_buf as ArrayBuffer).toString());
+    },
+  );
   mockUpdate();
   mockDelete();
 });
@@ -127,10 +134,7 @@ afterEach(() => {
 
 describe("Stripe webhook signature verification", () => {
   it("returns 400 when a signing secret is configured but the signature header is missing", async () => {
-    vi.stubEnv("STRIPE_WEBHOOK_SECRET", "whsec_test");
-    vi.stubEnv("STRIPE_SECRET_KEY", "sk_test");
-
-    const res = await POST(makeRequest(paymentSucceededEvent()));
+    const res = await POST(makeRequest(paymentSucceededEvent(), null));
 
     expect(res.status).toBe(400);
     expect(constructEventMock).not.toHaveBeenCalled();
@@ -148,10 +152,8 @@ describe("Stripe webhook signature verification", () => {
     expect(res.status).toBe(400);
   });
 
-  it("fails closed with 500 when no secret is set and the dev bypass is off", async () => {
+  it("returns 500 when STRIPE_WEBHOOK_SECRET is not configured", async () => {
     vi.stubEnv("STRIPE_WEBHOOK_SECRET", "");
-    vi.stubEnv("STRIPE_SECRET_KEY", "");
-    vi.stubEnv("STRIPE_WEBHOOK_INSECURE_DEV", "");
 
     const res = await POST(makeRequest(paymentSucceededEvent()));
 
@@ -399,10 +401,51 @@ describe("payout events", () => {
   });
 });
 
+describe("one-time payment event handlers", () => {
+  it("payment_intent.payment_failed sets status to pending", async () => {
+    const res = await POST(
+      makeRequest({
+        type: "payment_intent.payment_failed",
+        data: { object: { id: "pi_1" } },
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(updateSet).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "pending" }),
+    );
+  });
+
+  it("charge.dispute.created sets status to disputed", async () => {
+    const res = await POST(
+      makeRequest({
+        type: "charge.dispute.created",
+        data: { object: { charge: "ch_1" } },
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(updateSet).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "disputed" }),
+    );
+  });
+
+  it("charge.refunded sets status to refunded", async () => {
+    const res = await POST(
+      makeRequest({
+        type: "charge.refunded",
+        data: { object: { id: "ch_1" } },
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(updateSet).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "refunded" }),
+    );
+  });
+});
+
 describe("misc", () => {
   it("acknowledges unknown event types with 200", async () => {
     const res = await POST(
-      makeRequest({ type: "charge.refunded", data: { object: {} } }),
+      makeRequest({ type: "account.updated", data: { object: {} } }),
     );
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -419,10 +462,17 @@ describe("misc", () => {
 });
 
 // Connect events carry an `account` field at the top level of the event.
-function makeRequestWithAccount(event: Record<string, unknown>): NextRequest {
+function makeRequestWithAccount(
+  event: Record<string, unknown>,
+  signature: string | null = "sig_test",
+): NextRequest {
+  const headers: Record<string, string> = {
+    "content-type": "application/json",
+  };
+  if (signature !== null) headers["stripe-signature"] = signature;
   return new NextRequest("http://localhost/api/webhooks/stripe", {
     method: "POST",
     body: JSON.stringify({ ...event, account: "acct_123" }),
-    headers: { "content-type": "application/json" },
+    headers,
   });
 }
