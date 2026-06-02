@@ -17,7 +17,6 @@ import { auth } from "@/lib/auth";
 import {
   cancelPaymentIntent,
   createFullPaymentIntent,
-  createSplitPaymentIntents,
 } from "@/lib/stripe-payments";
 import { getOrCreateStripeCustomer } from "@/lib/stripe-subscriptions";
 
@@ -240,35 +239,67 @@ export async function POST(req: NextRequest) {
     let depositPiId: string | null = null;
     let balancePiId: string | null = null;
 
-    if (depositAmountCents === 0) {
-      const result = await createFullPaymentIntent({
-        totalAmountCents: totalPriceCents,
-        platformFeeCents: totalPlatformFeeCents,
-        stripeCustomerId,
-        paymentMethodId,
-        connectedAccountId: cook.stripeAccountId,
-        idempotencyKey: `full-${orderId}`,
-      });
-      fullPiId = result.piId;
-    } else {
-      const balanceAmountCents = totalPriceCents - depositAmountCents;
-      const depositPlatformFeeCents = Math.round(
-        (totalPlatformFeeCents * depositAmountCents) / totalPriceCents,
+    try {
+      if (depositAmountCents === 0) {
+        const result = await createFullPaymentIntent({
+          totalAmountCents: totalPriceCents,
+          platformFeeCents: totalPlatformFeeCents,
+          stripeCustomerId,
+          paymentMethodId,
+          connectedAccountId: cook.stripeAccountId,
+          idempotencyKey: `full-${orderId}`,
+        });
+        fullPiId = result.piId;
+      } else {
+        const balanceAmountCents = totalPriceCents - depositAmountCents;
+        const depositPlatformFeeCents = Math.round(
+          (totalPlatformFeeCents * depositAmountCents) / totalPriceCents,
+        );
+        const balancePlatformFeeCents =
+          totalPlatformFeeCents - depositPlatformFeeCents;
+        // Create deposit PI first so its ID is available for cleanup on failure
+        const depositResult = await createFullPaymentIntent({
+          totalAmountCents: depositAmountCents,
+          platformFeeCents: depositPlatformFeeCents,
+          stripeCustomerId,
+          paymentMethodId,
+          connectedAccountId: cook.stripeAccountId,
+          idempotencyKey: `deposit-${orderId}`,
+        });
+        depositPiId = depositResult.piId;
+        // Only create balance PI after deposit succeeds
+        try {
+          const balanceResult = await createFullPaymentIntent({
+            totalAmountCents: balanceAmountCents,
+            platformFeeCents: balancePlatformFeeCents,
+            stripeCustomerId,
+            paymentMethodId,
+            connectedAccountId: cook.stripeAccountId,
+            idempotencyKey: `balance-${orderId}`,
+          });
+          balancePiId = balanceResult.piId;
+        } catch (balanceErr) {
+          // Balance PI failed — cancel the already-authorized deposit PI before re-throwing
+          await cancelPaymentIntent(
+            depositPiId,
+            `cancel-deposit-on-balance-fail-${orderId}`,
+          ).catch(() => {});
+          throw balanceErr;
+        }
+      }
+    } catch (stripeErr) {
+      // Any Stripe PI creation failure — clean up any authorized PIs
+      const toCancel = [fullPiId, depositPiId, balancePiId].filter(
+        (id): id is string => id !== null,
       );
-      const balancePlatformFeeCents =
-        totalPlatformFeeCents - depositPlatformFeeCents;
-      const result = await createSplitPaymentIntents({
-        depositAmountCents,
-        balanceAmountCents,
-        depositPlatformFeeCents,
-        balancePlatformFeeCents,
-        stripeCustomerId,
-        paymentMethodId,
-        connectedAccountId: cook.stripeAccountId,
-        orderId,
-      });
-      depositPiId = result.deposit.piId;
-      balancePiId = result.balance.piId;
+      await Promise.allSettled(
+        toCancel.map((id) =>
+          cancelPaymentIntent(id, `cancel-stripe-err-${orderId}-${id}`).catch(
+            () => {},
+          ),
+        ),
+      );
+      throw stripeErr;
     }
 
     // DB transaction

@@ -41,7 +41,6 @@ vi.mock("drizzle-orm", () => ({ eq: vi.fn(), and: vi.fn() }));
 
 vi.mock("@/lib/stripe-payments", () => ({
   createFullPaymentIntent: createPiMock,
-  createSplitPaymentIntents: vi.fn(),
   cancelPaymentIntent: cancelPiMock,
 }));
 
@@ -226,5 +225,45 @@ describe("POST /api/orders", () => {
     const res = await POST(makeRequest(VALID_BODY));
     expect(res.status).toBe(500);
     expect(cancelPiMock).toHaveBeenCalledWith("pi_test", expect.any(String));
+  });
+
+  it("cancels the deposit PI when balance PI creation fails (prevents money leak)", async () => {
+    const DEPOSIT_LISTING = {
+      ...ACTIVE_LISTING,
+      depositEnabled: true,
+      depositType: "percentage",
+      depositValue: "30",
+    };
+
+    let call = 0;
+    vi.mocked(db.select).mockImplementation(() => {
+      call++;
+      if (call === 1) return limitChain([DEPOSIT_LISTING]);
+      if (call === 2) return limitChain([COOK]);
+      if (call === 3)
+        return limitChain([
+          { stripeCustomerId: "cus_existing", email: "c@t.com" },
+        ]);
+      return limitChain([]);
+    });
+
+    // First call (deposit PI) succeeds; second call (balance PI) fails
+    createPiMock
+      .mockResolvedValueOnce({
+        piId: "pi_deposit",
+        status: "requires_capture",
+        clientSecret: null,
+      })
+      .mockRejectedValueOnce(new Error("stripe balance PI failed"));
+
+    cancelPiMock.mockResolvedValue(undefined);
+
+    const res = await POST(makeRequest(VALID_BODY));
+    expect(res.status).toBe(500);
+    // Deposit PI must be cancelled to release the hold on the customer's funds
+    expect(cancelPiMock).toHaveBeenCalledWith(
+      "pi_deposit",
+      expect.stringContaining("cancel-deposit-on-balance-fail"),
+    );
   });
 });
