@@ -401,10 +401,51 @@ describe("payout events", () => {
   });
 });
 
+describe("one-time payment event handlers", () => {
+  it("payment_intent.payment_failed sets status to pending", async () => {
+    const res = await POST(
+      makeRequest({
+        type: "payment_intent.payment_failed",
+        data: { object: { id: "pi_1" } },
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(updateSet).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "pending" }),
+    );
+  });
+
+  it("charge.dispute.created sets status to disputed", async () => {
+    const res = await POST(
+      makeRequest({
+        type: "charge.dispute.created",
+        data: { object: { charge: "ch_1" } },
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(updateSet).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "disputed" }),
+    );
+  });
+
+  it("charge.refunded sets status to refunded", async () => {
+    const res = await POST(
+      makeRequest({
+        type: "charge.refunded",
+        data: { object: { id: "ch_1" } },
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(updateSet).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "refunded" }),
+    );
+  });
+});
+
 describe("misc", () => {
   it("acknowledges unknown event types with 200", async () => {
     const res = await POST(
-      makeRequest({ type: "charge.refunded", data: { object: {} } }),
+      makeRequest({ type: "account.updated", data: { object: {} } }),
     );
     expect(res.status).toBe(200);
     const body = await res.json();

@@ -360,6 +360,37 @@ export async function POST(req: NextRequest) {
         break;
       }
 
+      case "payment_intent.payment_failed": {
+        const pi = event.data.object as Stripe.PaymentIntent;
+        await db
+          .update(orderPayments)
+          .set({ status: "pending" })
+          .where(eq(orderPayments.stripePaymentIntentId, pi.id));
+        break;
+      }
+
+      case "charge.dispute.created": {
+        const dispute = event.data.object as Stripe.Dispute;
+        const chargeId =
+          typeof dispute.charge === "string"
+            ? dispute.charge
+            : dispute.charge.id;
+        await db
+          .update(orderPayments)
+          .set({ status: "disputed" })
+          .where(eq(orderPayments.stripeChargeId, chargeId));
+        break;
+      }
+
+      case "charge.refunded": {
+        const charge = event.data.object as Stripe.Charge;
+        await db
+          .update(orderPayments)
+          .set({ status: "refunded", refundedAt: new Date() })
+          .where(eq(orderPayments.stripeChargeId, charge.id));
+        break;
+      }
+
       case "account.updated":
         break;
 
