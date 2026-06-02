@@ -1,3 +1,4 @@
+import { createHash, randomInt } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -189,6 +190,20 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     const updateFields: Partial<typeof orders.$inferInsert> = {
       status: newStatus,
     };
+    if (newStatus === "ready") {
+      const rawCode = randomInt(100000, 1000000).toString().padStart(6, "0");
+      const hash = createHash("sha256").update(rawCode).digest("hex");
+      const minExpiry = new Date(Date.now() + 24 * 3600_000);
+      const pickupBasedExpiry = new Date(
+        order.pickupAt.getTime() + 6 * 3600_000,
+      );
+      const expiry =
+        pickupBasedExpiry > minExpiry ? pickupBasedExpiry : minExpiry;
+      updateFields.pickupCode = rawCode;
+      updateFields.pickupCodeHash = hash;
+      updateFields.pickupCodeExpiresAt = expiry;
+      updateFields.pickupCodeAttempts = 0;
+    }
     if (newStatus === "cancelled") {
       updateFields.cancelledAt = new Date();
       updateFields.cancelledBy = (

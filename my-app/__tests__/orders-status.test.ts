@@ -63,10 +63,15 @@ function mockCook(found: boolean) {
   return { from } as never;
 }
 
-function orderChain(status: string) {
-  const limit = vi
-    .fn()
-    .mockResolvedValue([{ id: ORDER_ID, cookId: COOK_ID, status }]);
+function orderChain(status: string, pickupAt?: Date) {
+  const limit = vi.fn().mockResolvedValue([
+    {
+      id: ORDER_ID,
+      cookId: COOK_ID,
+      status,
+      pickupAt: pickupAt ?? new Date(Date.now() + 2 * 3600_000),
+    },
+  ]);
   const where = vi.fn(() => ({ limit }));
   const from = vi.fn(() => ({ where }));
   return { from } as never;
@@ -128,6 +133,19 @@ function mockUpdate(row: object) {
   const set = vi.fn(() => ({ where }));
   vi.mocked(db.update).mockReturnValue({ set } as never);
   return { set };
+}
+
+/**
+ * Sequences db.select calls for a "ready" path:
+ * 1. cook lookup
+ * 2. order fetch (no payment queries needed)
+ */
+function withOrderForReady(pickupAt?: Date) {
+  let call = 0;
+  vi.mocked(db.select).mockImplementation(() => {
+    call++;
+    return call === 1 ? mockCook(true) : orderChain("confirmed", pickupAt);
+  });
 }
 
 /**
@@ -268,6 +286,67 @@ describe("PATCH /api/business/dashboard/orders/[orderId]/status", () => {
       "pi_deposit_123",
       `deposit-release-${ORDER_ID}`,
     );
+  });
+
+  // ─── Ready: pickup code generation ────────────────────────────────────────
+
+  it("generates a pickup code when transitioning to ready", async () => {
+    withOrderForReady();
+    const { set } = mockUpdate({ id: ORDER_ID, status: "ready" });
+    const res = await PATCH(makePatch({ status: "ready" }), { params });
+    expect(res.status).toBe(200);
+    expect(set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: "ready",
+        pickupCode: expect.stringMatching(/^\d{6}$/),
+        pickupCodeHash: expect.stringMatching(/^[a-f0-9]{64}$/),
+        pickupCodeExpiresAt: expect.any(Date),
+        pickupCodeAttempts: 0,
+      }),
+    );
+  });
+
+  it("sets pickupCodeAttempts to 0 when transitioning to ready", async () => {
+    withOrderForReady();
+    const { set } = mockUpdate({ id: ORDER_ID, status: "ready" });
+    await PATCH(makePatch({ status: "ready" }), { params });
+    expect(set).toHaveBeenCalledWith(
+      expect.objectContaining({ pickupCodeAttempts: 0 }),
+    );
+  });
+
+  it("sets expiry to at least 24h from now when transitioning to ready", async () => {
+    const pickupAt = new Date(Date.now() - 2 * 3600_000); // pickup was 2h ago
+    withOrderForReady(pickupAt);
+    const { set } = mockUpdate({ id: ORDER_ID, status: "ready" });
+    const before = new Date(Date.now() + 24 * 3600_000 - 1000);
+    await PATCH(makePatch({ status: "ready" }), { params });
+    expect(set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        pickupCodeExpiresAt: expect.any(Date),
+      }),
+    );
+    const callArgs = (set as ReturnType<typeof vi.fn>).mock
+      .calls[0][0] as Record<string, unknown>;
+    const expiry = callArgs.pickupCodeExpiresAt as Date;
+    expect(expiry.getTime()).toBeGreaterThanOrEqual(before.getTime());
+  });
+
+  it("sets expiry to 6h after pickupAt when that is later than 24h from now", async () => {
+    const pickupAt = new Date(Date.now() + 30 * 3600_000); // pickup 30h from now
+    withOrderForReady(pickupAt);
+    const { set } = mockUpdate({ id: ORDER_ID, status: "ready" });
+    await PATCH(makePatch({ status: "ready" }), { params });
+    expect(set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        pickupCodeExpiresAt: expect.any(Date),
+      }),
+    );
+    const callArgs = (set as ReturnType<typeof vi.fn>).mock
+      .calls[0][0] as Record<string, unknown>;
+    const expiry = callArgs.pickupCodeExpiresAt as Date;
+    const expectedExpiry = new Date(pickupAt.getTime() + 6 * 3600_000);
+    expect(expiry.getTime()).toBeCloseTo(expectedExpiry.getTime(), -3);
   });
 
   // ─── Cancel: cook voluntary cancellation ──────────────────────────────────
