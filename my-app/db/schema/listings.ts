@@ -15,7 +15,12 @@ import {
 import { authUser } from "./auth";
 import { cookProfiles } from "./cooks";
 import { dishes } from "./dishes";
-import { listingStatus, listingType, promotionType } from "./enums";
+import {
+  lateCancelFeeTypeEnum,
+  listingStatus,
+  listingType,
+  promotionType,
+} from "./enums";
 
 const isAdmin = sql`auth.role() = 'admin'`;
 
@@ -47,6 +52,9 @@ export const listings = pgTable(
     // How many days before the next billing period a client must cancel/pause.
     // null = no restriction.
     cancellationNoticeDays: integer("cancellation_notice_days"),
+    depositEnabled: boolean("deposit_enabled").notNull().default(false),
+    depositType: lateCancelFeeTypeEnum("deposit_type"),
+    depositValue: numeric("deposit_value", { precision: 10, scale: 2 }),
     reviewedAt: timestamp("reviewed_at"),
     reviewedBy: text("reviewed_by").references(() => authUser.id, {
       onDelete: "set null",
@@ -68,6 +76,10 @@ export const listings = pgTable(
     check(
       "listings_cancellation_notice_days_non_negative",
       sql`${t.cancellationNoticeDays} IS NULL OR ${t.cancellationNoticeDays} >= 0`,
+    ),
+    check(
+      "listings_deposit_value_positive",
+      sql`${t.depositValue} IS NULL OR ${t.depositValue} > 0`,
     ),
     pgPolicy("listings_select_active", {
       for: "select",
