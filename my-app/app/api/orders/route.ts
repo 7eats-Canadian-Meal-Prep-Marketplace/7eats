@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db, dbPool } from "@/db";
@@ -377,6 +377,14 @@ export async function POST(req: NextRequest) {
               authorizedAt: new Date(),
             },
           ]);
+        }
+
+        // Increment promotion usage count atomically
+        if (validatedPromotionId) {
+          await tx
+            .update(listingPromotions)
+            .set({ usesCount: sql`${listingPromotions.usesCount} + 1` })
+            .where(eq(listingPromotions.id, validatedPromotionId));
         }
       });
     } catch (dbErr) {
