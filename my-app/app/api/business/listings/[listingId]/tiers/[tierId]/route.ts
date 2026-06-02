@@ -111,7 +111,6 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       }
 
       const newPriceId = await createStripePrice(
-        cook.stripeAccountId,
         listing.stripeProductId,
         tier.interval,
         Math.round(parsed.data.price * 100),

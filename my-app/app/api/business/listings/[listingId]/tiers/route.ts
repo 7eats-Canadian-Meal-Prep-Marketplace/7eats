@@ -132,7 +132,6 @@ export async function POST(req: NextRequest, { params }: Params) {
     let stripeProductId = listing.stripeProductId;
     if (!stripeProductId) {
       stripeProductId = await getOrCreateStripeProduct(
-        cook.stripeAccountId,
         listingId,
         listing.title,
       );
@@ -144,7 +143,6 @@ export async function POST(req: NextRequest, { params }: Params) {
 
     const priceInCents = Math.round(price * 100);
     const stripePriceId = await createStripePrice(
-      cook.stripeAccountId,
       stripeProductId,
       interval,
       priceInCents,
