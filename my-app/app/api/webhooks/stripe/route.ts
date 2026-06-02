@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
-import Stripe from "stripe";
+import type Stripe from "stripe";
 import { db } from "@/db";
 import {
   clientSubscriptions,
@@ -14,53 +14,37 @@ import {
   orders,
   stripeWebhookEvents,
 } from "@/db/schema";
-
-function getStripe(): Stripe | null {
-  const key = process.env.STRIPE_SECRET_KEY;
-  if (!key) return null;
-  return new Stripe(key, { apiVersion: "2026-05-27.dahlia" });
-}
+import { getStripe } from "@/lib/stripe";
 
 export async function POST(req: NextRequest) {
   const rawBody = await req.arrayBuffer();
   const buf = Buffer.from(rawBody);
 
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-  const stripe = getStripe();
-
-  let event: Stripe.Event;
-
-  if (webhookSecret && stripe) {
-    const sig = req.headers.get("stripe-signature");
-    if (!sig) {
-      return NextResponse.json(
-        { error: "Webhook signature verification failed." },
-        { status: 400 },
-      );
-    }
-    try {
-      event = stripe.webhooks.constructEvent(buf, sig, webhookSecret);
-    } catch {
-      return NextResponse.json(
-        { error: "Webhook signature verification failed." },
-        { status: 400 },
-      );
-    }
-  } else if (
-    process.env.NODE_ENV !== "production" &&
-    process.env.STRIPE_WEBHOOK_INSECURE_DEV === "1"
-  ) {
-    console.warn(
-      "[webhook/stripe] STRIPE_WEBHOOK_INSECURE_DEV=1 — parsing unsigned webhook body (dev only)",
-    );
-    event = JSON.parse(buf.toString()) as Stripe.Event;
-  } else {
-    console.error(
-      "[webhook/stripe] missing STRIPE_WEBHOOK_SECRET or STRIPE_SECRET_KEY — refusing to process webhook",
-    );
+  if (!webhookSecret) {
+    console.error("[webhook/stripe] STRIPE_WEBHOOK_SECRET not configured");
     return NextResponse.json(
       { error: "Webhook is not configured." },
       { status: 500 },
+    );
+  }
+
+  const sig = req.headers.get("stripe-signature");
+  if (!sig) {
+    return NextResponse.json(
+      { error: "Webhook signature verification failed." },
+      { status: 400 },
+    );
+  }
+
+  const stripe = getStripe();
+  let event: Stripe.Event;
+  try {
+    event = stripe.webhooks.constructEvent(buf, sig, webhookSecret);
+  } catch {
+    return NextResponse.json(
+      { error: "Webhook signature verification failed." },
+      { status: 400 },
     );
   }
 
