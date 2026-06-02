@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/db", () => ({
   db: { select: vi.fn(), insert: vi.fn(), update: vi.fn() },
@@ -109,8 +109,6 @@ beforeEach(() => {
   } as never);
 });
 
-afterEach(() => vi.unstubAllEnvs());
-
 describe("GET /api/orders", () => {
   it("returns 401 when no session", async () => {
     vi.mocked(auth.api.getSession).mockResolvedValue(null);
@@ -205,7 +203,7 @@ describe("GET /api/orders", () => {
 
   it("filters by status when ?status=fulfilled", async () => {
     let call = 0;
-    const { and: andMock } = await import("drizzle-orm");
+    const { and: andMock, eq: eqMock } = await import("drizzle-orm");
 
     vi.mocked(db.select).mockImplementation(() => {
       call++;
@@ -218,8 +216,17 @@ describe("GET /api/orders", () => {
       makeRequest("http://localhost/api/orders?status=fulfilled"),
     );
     expect(res.status).toBe(200);
-    // and() is called when a status filter is applied
-    expect(andMock).toHaveBeenCalled();
+    // and() is called once when a status filter is applied (whereClause is built once,
+    // then reused for both the count and data queries)
+    expect(andMock).toHaveBeenCalledTimes(1);
+    // and() receives two arguments: the clientId eq result and the status eq result
+    expect(vi.mocked(andMock).mock.calls[0]).toHaveLength(2);
+    // eq() must have been called with the status value "fulfilled" as its second argument.
+    // Schema fields are mocked as {} so property accesses (orders.status etc.) resolve to
+    // undefined; we match on the literal "fulfilled" which is always a concrete string.
+    const eqCalls = vi.mocked(eqMock).mock.calls;
+    const statusEqCall = eqCalls.find((args) => args[1] === "fulfilled");
+    expect(statusEqCall).toBeDefined();
   });
 
   it("returns pickupCode for ready orders, null for other statuses", async () => {

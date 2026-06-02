@@ -29,6 +29,13 @@ const VALID_ORDER_STATUSES = [
 ] as const;
 type OrderStatusValue = (typeof VALID_ORDER_STATUSES)[number];
 
+type DishEntry = {
+  id: string;
+  dishName: string;
+  quantity: number;
+  sortOrder: number;
+};
+
 export async function GET(req: NextRequest) {
   const session = await auth.api.getSession({ headers: req.headers });
   if (!session) {
@@ -103,12 +110,8 @@ export async function GET(req: NextRequest) {
             .where(inArray(orderDishes.orderId, orderIds))
         : [];
 
-    type DishEntry = {
-      id: string;
-      dishName: string;
-      quantity: number;
-      sortOrder: number;
-    };
+    // Biome's noAccumulatingSpread rule disallows spread inside reduce accumulators,
+    // so we use a for-of loop with mutation scoped to a local variable instead.
     const dishesByOrderId: Record<string, DishEntry[]> = {};
     for (const d of dishRows) {
       if (!dishesByOrderId[d.orderId]) {
