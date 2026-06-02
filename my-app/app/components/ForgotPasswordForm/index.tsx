@@ -9,8 +9,10 @@ type Stage = "email" | "sent";
 
 export default function ForgotPasswordForm({
   expiredLink = false,
+  audience = "business",
 }: {
   expiredLink?: boolean;
+  audience?: "client" | "business";
 }) {
   const [stage, setStage] = useState<Stage>("email");
   const [email, setEmail] = useState("");
@@ -21,6 +23,10 @@ export default function ForgotPasswordForm({
   );
   const [isPending, startTransition] = useTransition();
 
+  const logoHref = audience === "client" ? "/app/browse" : "/business/home";
+  const loginHref =
+    audience === "client" ? "/app-auth/login" : "/business-auth/login";
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -28,7 +34,7 @@ export default function ForgotPasswordForm({
       const res = await fetch("/api/auth/forgot-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, audience }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -41,7 +47,7 @@ export default function ForgotPasswordForm({
 
   return (
     <div className={styles.wrap}>
-      <Link href="/business/home" className={styles.logoLink}>
+      <Link href={logoHref} className={styles.logoLink}>
         <Image
           src="/7eats-logo.svg"
           alt="7eats"
@@ -91,7 +97,7 @@ export default function ForgotPasswordForm({
             </form>
 
             <div className={styles.footer}>
-              <Link href="/business-auth/login" className={styles.backLink}>
+              <Link href={loginHref} className={styles.backLink}>
                 ← Back to sign in
               </Link>
             </div>
@@ -104,7 +110,7 @@ export default function ForgotPasswordForm({
               receive a reset link shortly. Check your spam folder if it doesn't
               arrive.
             </p>
-            <Link href="/business-auth/login" className={styles.backLink}>
+            <Link href={loginHref} className={styles.backLink}>
               ← Back to sign in
             </Link>
           </div>

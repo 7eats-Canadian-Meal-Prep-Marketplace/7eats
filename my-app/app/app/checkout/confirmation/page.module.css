@@ -1,0 +1,104 @@
+.page {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 48px 20px 80px;
+}
+
+.card {
+  text-align: center;
+}
+
+.iconWrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: #ecfdf3;
+  color: #16a34a;
+  margin-bottom: 20px;
+}
+
+.eyebrow {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--grey-500);
+  margin-bottom: 8px;
+}
+
+.title {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+  margin-bottom: 12px;
+}
+
+.desc {
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--grey-700);
+  margin-bottom: 24px;
+}
+
+.orderRef {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 20px;
+  background: var(--grey-100);
+  border-radius: var(--radius-md);
+  margin-bottom: 28px;
+}
+
+.orderLabel {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--grey-500);
+}
+
+.orderId {
+  font-size: 18px;
+  font-weight: 800;
+  font-family: monospace;
+  color: var(--ink);
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.primaryBtn {
+  display: block;
+  padding: 14px 20px;
+  background: var(--red);
+  color: var(--white);
+  font-size: 15px;
+  font-weight: 800;
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  text-align: center;
+}
+
+.secondaryBtn {
+  display: block;
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--grey-700);
+  text-decoration: none;
+  text-align: center;
+}
+
+.hint {
+  font-size: 13px;
+  color: var(--grey-500);
+  margin: -4px 0 4px;
+}

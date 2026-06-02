@@ -7,7 +7,8 @@ import { hashIp } from "@/lib/hash";
 import { logAndCheckRateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: Request) {
-  const { email, password } = await req.json();
+  const body = await req.json();
+  const { email, password } = body;
   if (!email || !password) {
     return NextResponse.json(
       { error: "Email and password are required." },
@@ -32,6 +33,9 @@ export async function POST(req: Request) {
   }
 
   const normalizedEmail = (email as string).toLowerCase().trim();
+  const rawAudience = body?.audience;
+  const audience =
+    rawAudience === "client" || rawAudience === "business" ? rawAudience : null;
 
   const [account] = await db
     .select({ role: authUser.role, emailVerified: authUser.emailVerified })
@@ -44,6 +48,29 @@ export async function POST(req: Request) {
       {
         error:
           "Please confirm your email before signing in. Check your inbox for the link.",
+      },
+      { status: 403 },
+    );
+  }
+
+  const isCookOrAdmin = account?.role === "cook" || account?.role === "admin";
+  const isClient = account?.role === "client";
+
+  if (audience === "client" && isCookOrAdmin) {
+    return NextResponse.json(
+      {
+        error:
+          "This account is registered as a cook. Sign in at the business portal instead.",
+      },
+      { status: 403 },
+    );
+  }
+
+  if (audience === "business" && isClient) {
+    return NextResponse.json(
+      {
+        error:
+          "This account is a customer account. Sign in on the 7eats app instead.",
       },
       { status: 403 },
     );
@@ -62,10 +89,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const redirect =
-    account?.role === "cook" || account?.role === "admin"
-      ? "/business/dashboard"
-      : "/app/browse";
+  const redirect = isCookOrAdmin ? "/business/dashboard" : "/app/browse";
 
   const res = NextResponse.json({ redirect });
   for (const cookie of (

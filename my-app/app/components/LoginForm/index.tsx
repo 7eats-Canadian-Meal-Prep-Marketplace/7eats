@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
 import styles from "./LoginForm.module.css";
 
@@ -12,15 +12,23 @@ import styles from "./LoginForm.module.css";
 export default function LoginForm({
   logoHref = "/business/home",
   signupHref,
+  audience = "business",
 }: {
   logoHref?: string;
   signupHref?: string;
+  audience?: "client" | "business";
 } = {}) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isPending, startTransition] = useTransition();
+
+  const forgotPasswordHref =
+    audience === "client"
+      ? "/app-auth/forgot-password"
+      : "/business-auth/forgot-password";
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,14 +37,27 @@ export default function LoginForm({
       const res = await fetch("/api/auth/sign-in", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, audience }),
       });
       const data = await res.json();
       if (!res.ok) {
         setError(data.error ?? "Something went wrong.");
         return;
       }
-      router.push(data.redirect);
+      const next = searchParams.get("next");
+      const safeNext =
+        next?.startsWith("/app/") && !next.startsWith("//") ? next : null;
+      const fallback =
+        audience === "client" ? "/app/browse" : "/business/dashboard";
+      const destination = safeNext ?? data.redirect ?? fallback;
+      if (
+        (audience === "client" && destination.startsWith("/business")) ||
+        (audience === "business" && destination.startsWith("/app"))
+      ) {
+        setError(data.error ?? "This account cannot sign in here.");
+        return;
+      }
+      router.push(destination);
     });
   };
 
@@ -89,10 +110,7 @@ export default function LoginForm({
               required
             />
             <div className={styles.forgotRow}>
-              <Link
-                href="/business-auth/forgot-password"
-                className={styles.forgotLink}
-              >
+              <Link href={forgotPasswordHref} className={styles.forgotLink}>
                 Forgot password?
               </Link>
             </div>

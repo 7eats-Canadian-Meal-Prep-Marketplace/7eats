@@ -158,7 +158,7 @@ export default function CartPage() {
           </Link>
 
           <p className={styles.secureNote}>
-            🔒 Secure checkout · No surprise fees
+            Guest checkout available — sign in anytime for faster reordering.
           </p>
 
           <Link href="/app/browse" className={styles.continueLink}>

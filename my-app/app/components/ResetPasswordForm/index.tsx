@@ -5,11 +5,21 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import styles from "./ResetPasswordForm.module.css";
 
-export default function ResetPasswordForm({ token }: { token: string }) {
+export default function ResetPasswordForm({
+  token,
+  audience = "business",
+}: {
+  token: string;
+  audience?: "client" | "business";
+}) {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
   const [isPending, startTransition] = useTransition();
+
+  const logoHref = audience === "client" ? "/app/browse" : "/business/home";
+  const loginHref =
+    audience === "client" ? "/app-auth/login" : "/business-auth/login";
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,7 +36,7 @@ export default function ResetPasswordForm({ token }: { token: string }) {
       const res = await fetch("/api/auth/reset-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, newPassword: password }),
+        body: JSON.stringify({ token, newPassword: password, audience }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -39,7 +49,7 @@ export default function ResetPasswordForm({ token }: { token: string }) {
 
   return (
     <div className={styles.wrap}>
-      <Link href="/business/home" className={styles.logoLink}>
+      <Link href={logoHref} className={styles.logoLink}>
         <Image
           src="/7eats-logo.svg"
           alt="7eats"
@@ -105,7 +115,7 @@ export default function ResetPasswordForm({ token }: { token: string }) {
         </form>
 
         <div className={styles.footer}>
-          <Link href="/business-auth/login" className={styles.backLink}>
+          <Link href={loginHref} className={styles.backLink}>
             ← Back to sign in
           </Link>
         </div>

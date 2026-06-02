@@ -4,6 +4,45 @@ import { db } from "@/db";
 import { authUser, cookProfiles } from "@/db/schema";
 import { auth } from "@/lib/auth";
 
+/** Consumer routes anyone can view (no session required). */
+const CLIENT_PUBLIC_EXACT = new Set([
+  "/app/browse",
+  "/app/search",
+  "/app/cart",
+  "/app/checkout",
+]);
+const CLIENT_PUBLIC_PREFIXES = [
+  "/app/listings/",
+  "/app/cooks/",
+  "/app/checkout/",
+];
+
+/** Consumer routes that require a verified client account. */
+const CLIENT_PROTECTED_EXACT = new Set([
+  "/app/inbox",
+  "/app/saved",
+  "/app/settings",
+]);
+const CLIENT_PROTECTED_PREFIXES = ["/app/orders"];
+
+function isClientPublicRoute(pathname: string): boolean {
+  if (CLIENT_PUBLIC_EXACT.has(pathname)) return true;
+  return CLIENT_PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+}
+
+function isClientProtectedRoute(pathname: string): boolean {
+  if (CLIENT_PROTECTED_EXACT.has(pathname)) return true;
+  return CLIENT_PROTECTED_PREFIXES.some((prefix) =>
+    pathname.startsWith(prefix),
+  );
+}
+
+function redirectToClientLogin(req: NextRequest, nextPath?: string) {
+  const login = new URL("/app-auth/login", req.url);
+  if (nextPath) login.searchParams.set("next", nextPath);
+  return NextResponse.redirect(login);
+}
+
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
@@ -12,37 +51,48 @@ export async function proxy(req: NextRequest) {
   if (pathname === "/app-auth/account") {
     const session = await getSession(req);
     if (!session) {
-      return NextResponse.redirect(new URL("/app-auth/login", req.url));
+      return redirectToClientLogin(req);
+    }
+    if (session.user.role !== "client") {
+      return NextResponse.redirect(new URL("/app/browse", req.url));
     }
     return NextResponse.next();
   }
 
-  // Client login / signup are public, but a signed-in user shouldn't see them —
-  // send them to the home for their role.
+  // Client login / signup are public, but a signed-in client shouldn't see them.
   if (pathname === "/app-auth/login" || pathname === "/app-auth/signup") {
     const session = await getSession(req);
     if (session) {
-      return NextResponse.redirect(
-        new URL(await homeForUser(session.user.id), req.url),
-      );
+      const role = session.user.role;
+      if (role === "client") {
+        const next = req.nextUrl.searchParams.get("next");
+        const dest =
+          next?.startsWith("/app/") && !next.startsWith("//")
+            ? next
+            : "/app/browse";
+        return NextResponse.redirect(new URL(dest, req.url));
+      }
+      // Cook/admin may need to switch accounts for a protected consumer route.
+      const next = req.nextUrl.searchParams.get("next");
+      if (pathname === "/app-auth/login" && next?.startsWith("/app/")) {
+        return NextResponse.next();
+      }
+      return NextResponse.redirect(new URL("/app/browse", req.url));
     }
     return NextResponse.next();
   }
 
   // ── Client (consumer) app routes ──────────────────────────────────────
-  // Browse is public — anyone can explore listings without signing in.
-  if (pathname === "/app/browse") {
+  // Browse, search, listings, and cook profiles are public.
+  if (isClientPublicRoute(pathname)) {
     return NextResponse.next();
   }
 
-  // All other /app/* routes require a verified client session.
-  if (pathname.startsWith("/app/")) {
+  // Checkout, orders, inbox, etc. require a client session.
+  if (isClientProtectedRoute(pathname)) {
     const session = await getSession(req);
-    if (!session) {
-      return NextResponse.redirect(new URL("/app-auth/login", req.url));
-    }
-    if (session.user.role !== "client") {
-      return NextResponse.redirect(new URL("/business/dashboard", req.url));
+    if (!session || session.user.role !== "client") {
+      return redirectToClientLogin(req, pathname);
     }
     return NextResponse.next();
   }
@@ -64,10 +114,13 @@ export async function proxy(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // login: public, but bounce to dashboard if already logged in
+  // login: public, but bounce to dashboard if already logged in as cook/admin
   if (pathname === "/business-auth/login") {
     const session = await getSession(req);
     if (session) {
+      if (session.user.role === "client") {
+        return NextResponse.redirect(new URL("/business/home", req.url));
+      }
       return NextResponse.redirect(new URL("/business/dashboard", req.url));
     }
     return NextResponse.next();
@@ -94,6 +147,9 @@ export async function proxy(req: NextRequest) {
 
   // All /business/* dashboard routes require steps 1 & 2 complete (step >= 3)
   if (pathname.startsWith("/business/")) {
+    if (session.user.role === "client") {
+      return NextResponse.redirect(new URL("/business-auth/login", req.url));
+    }
     const state = await getCookState(userId);
     if (!state) {
       return NextResponse.redirect(new URL("/business-auth/login", req.url));
@@ -142,17 +198,6 @@ async function getSession(req: NextRequest) {
   }
 }
 
-async function homeForUser(userId: string): Promise<string> {
-  const [row] = await db
-    .select({ role: authUser.role })
-    .from(authUser)
-    .where(eq(authUser.id, userId))
-    .limit(1);
-  return row?.role === "cook" || row?.role === "admin"
-    ? "/business/dashboard"
-    : "/app/browse";
-}
-
 async function getCookState(userId: string) {
   const [row] = await db
     .select({
@@ -179,15 +224,15 @@ export const config = {
     "/app-auth/account",
     "/app-auth/login",
     "/app-auth/signup",
-    // Client (consumer) app — only known routes, so unknown paths 404 naturally
+    // Client (consumer) app
     "/app/browse",
+    "/app/search",
+    "/app/cooks/:path*",
+    "/app/listings/:path*",
     "/app/cart",
-    "/app/checkout",
-    "/app/cooks/:id",
+    "/app/checkout/:path*",
     "/app/inbox",
-    "/app/listings/:id",
-    "/app/orders",
-    "/app/orders/:id",
+    "/app/orders/:path*",
     "/app/saved",
     "/app/settings",
   ],

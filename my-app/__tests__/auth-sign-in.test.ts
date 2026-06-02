@@ -64,14 +64,14 @@ describe("POST /api/auth/sign-in", () => {
     expect(res.headers.getSetCookie()).toEqual([]);
   });
 
-  it("signs in a verified client and redirects to /account", async () => {
+  it("signs in a verified client and redirects to browse", async () => {
     setAccount({ role: "client", emailVerified: true });
 
     const res = await POST(makeRequest(creds));
     const body = await res.json();
 
     expect(res.status).toBe(200);
-    expect(body).toEqual({ redirect: "/app-auth/account" });
+    expect(body).toEqual({ redirect: "/app/browse" });
     expect(res.headers.getSetCookie()).toContain("sess=1; Path=/");
   });
 
@@ -84,6 +84,24 @@ describe("POST /api/auth/sign-in", () => {
     expect(res.status).toBe(200);
     expect(body).toEqual({ redirect: "/business/dashboard" });
     expect(vi.mocked(auth.api.signInEmail)).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects a cook signing in on the client portal", async () => {
+    setAccount({ role: "cook", emailVerified: true });
+
+    const res = await POST(makeRequest({ ...creds, audience: "client" }));
+
+    expect(res.status).toBe(403);
+    expect(vi.mocked(auth.api.signInEmail)).not.toHaveBeenCalled();
+  });
+
+  it("rejects a client signing in on the business portal", async () => {
+    setAccount({ role: "client", emailVerified: true });
+
+    const res = await POST(makeRequest({ ...creds, audience: "business" }));
+
+    expect(res.status).toBe(403);
+    expect(vi.mocked(auth.api.signInEmail)).not.toHaveBeenCalled();
   });
 
   it("returns 401 on wrong credentials", async () => {

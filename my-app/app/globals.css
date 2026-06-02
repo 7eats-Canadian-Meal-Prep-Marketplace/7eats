@@ -13,12 +13,13 @@
   --grey-200: #ececec;
   --grey-100: #f4f4f4;
   --white: #ffffff;
-  --font: "Plus Jakarta Sans", "Helvetica Neue", Helvetica, sans-serif;
+  --font: var(--font-plus-jakarta), "Helvetica Neue", Helvetica, sans-serif;
   --radius-sm: 8px;
   --radius-md: 16px;
   --radius-lg: 24px;
   --radius-pill: 999px;
   --maxw: 1240px;
+  --app-maxw: 1600px;
   --pad-x: 24px;
   --shadow-md:
     0 4px 14px rgba(15, 15, 15, 0.04), 0 12px 32px rgba(15, 15, 15, 0.05);

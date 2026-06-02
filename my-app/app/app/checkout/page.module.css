@@ -55,6 +55,186 @@
   color: var(--grey-500);
 }
 
+/* ─── Stepper ───────────────────────────────────────────────────────────────── */
+.stepper {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 28px;
+}
+
+.step {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--grey-100);
+  color: var(--grey-500);
+}
+
+.stepActive {
+  background: #fef2f2;
+  color: var(--red);
+}
+
+.stepDone {
+  color: var(--ink);
+}
+
+.stepNum {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  background: var(--white);
+  flex-shrink: 0;
+}
+
+.stepActive .stepNum {
+  background: var(--red);
+  color: var(--white);
+}
+
+.stepLabel {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.sectionLead {
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--grey-500);
+  margin: -8px 0 16px;
+}
+
+.fieldError {
+  font-size: 12px;
+  color: var(--red);
+  margin-top: 2px;
+}
+
+.primaryBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px 20px;
+  background: var(--red);
+  color: var(--white);
+  font-size: 15px;
+  font-weight: 800;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity 0.15s;
+}
+
+.primaryBtn:hover {
+  opacity: 0.88;
+}
+
+.textBtn {
+  margin-top: 12px;
+  padding: 8px 0;
+  background: none;
+  border: none;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--grey-700);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.textBtn:hover {
+  color: var(--ink);
+}
+
+.choiceCard {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 16px;
+  margin-bottom: 10px;
+  border: 1.5px solid var(--grey-200);
+  border-radius: var(--radius-md);
+  background: var(--white);
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+  transition:
+    border-color 0.12s,
+    background 0.12s;
+}
+
+.choiceCard:hover {
+  border-color: var(--grey-700);
+}
+
+.choiceCardActive {
+  border-color: var(--red);
+  background: #fef2f2;
+}
+
+.choiceIcon {
+  display: inline-flex;
+  margin-bottom: 8px;
+  color: var(--grey-700);
+}
+
+.choiceTitle {
+  display: block;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+
+.choiceDesc {
+  display: block;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--grey-500);
+}
+
+.guestBanner {
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  background: var(--grey-100);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--grey-700);
+}
+
+.inlineLink {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 700;
+  color: var(--red);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.stepActions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+@media (max-width: 767px) {
+  .stepper {
+    flex-direction: column;
+  }
+}
+
 /* ─── Layout ────────────────────────────────────────────────────────────────── */
 .inner {
   display: flex;
@@ -296,6 +476,10 @@
 .placeOrderBtn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.stepActions .placeOrderBtn {
+  margin-bottom: 0;
 }
 
 .terms {

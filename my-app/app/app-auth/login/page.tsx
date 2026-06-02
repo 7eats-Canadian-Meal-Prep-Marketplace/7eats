@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import LoginForm from "@/app/components/LoginForm";
 import styles from "./page.module.css";
 
@@ -19,7 +20,13 @@ export default async function LoginPage({
         {verified ? (
           <p className={styles.notice}>Email confirmed — please sign in.</p>
         ) : null}
-        <LoginForm logoHref="/" signupHref="/app-auth/signup" />
+        <Suspense fallback={null}>
+          <LoginForm
+            logoHref="/app/browse"
+            signupHref="/app-auth/signup"
+            audience="client"
+          />
+        </Suspense>
       </div>
     </main>
   );

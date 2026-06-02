@@ -94,7 +94,7 @@ export default function SignupForm() {
 
   return (
     <div className={styles.wrap}>
-      <Link href="/" className={styles.logoLink}>
+      <Link href="/app/browse" className={styles.logoLink}>
         <Image
           src="/7eats-logo.svg"
           alt="7eats"
