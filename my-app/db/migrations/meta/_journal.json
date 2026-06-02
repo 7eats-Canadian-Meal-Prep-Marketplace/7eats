@@ -57,6 +57,13 @@
       "when": 1780203245067,
       "tag": "0007_shiny_ultimo",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1780378921595,
+      "tag": "0008_salty_professor_monster",
+      "breakpoints": true
     }
   ]
 }
