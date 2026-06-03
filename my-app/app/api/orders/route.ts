@@ -1,4 +1,4 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, count, desc, eq, inArray, sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db, dbPool } from "@/db";
@@ -14,11 +14,148 @@ import {
   orders,
 } from "@/db/schema";
 import { auth } from "@/lib/auth";
+import { sendOrderPlacedEmailToCook } from "@/lib/emails/order-events";
 import {
   cancelPaymentIntent,
   createFullPaymentIntent,
 } from "@/lib/stripe-payments";
 import { getOrCreateStripeCustomer } from "@/lib/stripe-subscriptions";
+
+const VALID_ORDER_STATUSES = [
+  "pending",
+  "confirmed",
+  "ready",
+  "fulfilled",
+  "cancelled",
+] as const;
+type OrderStatusValue = (typeof VALID_ORDER_STATUSES)[number];
+
+type DishEntry = {
+  id: string;
+  dishName: string;
+  quantity: number;
+  sortOrder: number;
+};
+
+export async function GET(req: NextRequest) {
+  const session = await auth.api.getSession({ headers: req.headers });
+  if (!session) {
+    return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
+  }
+  if (session.user.role !== "client") {
+    return NextResponse.json({ error: "Access denied." }, { status: 403 });
+  }
+
+  const params = new URL(req.url).searchParams;
+
+  const rawStatus = params.get("status");
+  const statusFilter: OrderStatusValue | undefined =
+    rawStatus && VALID_ORDER_STATUSES.includes(rawStatus as OrderStatusValue)
+      ? (rawStatus as OrderStatusValue)
+      : undefined;
+
+  const rawLimit = Number.parseInt(params.get("limit") ?? "20", 10);
+  const limit = Number.isNaN(rawLimit)
+    ? 20
+    : Math.min(100, Math.max(1, rawLimit));
+
+  const rawOffset = Number.parseInt(params.get("offset") ?? "0", 10);
+  const offset = Number.isNaN(rawOffset) ? 0 : Math.max(0, rawOffset);
+
+  try {
+    const whereClause = statusFilter
+      ? and(
+          eq(orders.clientId, session.user.id),
+          eq(orders.status, statusFilter),
+        )
+      : eq(orders.clientId, session.user.id);
+
+    const [{ total }] = await db
+      .select({ total: count() })
+      .from(orders)
+      .where(whereClause);
+
+    const rows = await db
+      .select({
+        id: orders.id,
+        status: orders.status,
+        listingTitle: listings.title,
+        quantity: orders.quantity,
+        unitPrice: orders.unitPrice,
+        totalPrice: orders.totalPrice,
+        currency: orders.currency,
+        pickupAt: orders.pickupAt,
+        notes: orders.notes,
+        createdAt: orders.createdAt,
+        pickupCode: orders.pickupCode,
+      })
+      .from(orders)
+      .leftJoin(listings, eq(orders.listingId, listings.id))
+      .where(whereClause)
+      .orderBy(desc(orders.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    const orderIds = rows.map((r) => r.id);
+    const dishRows =
+      orderIds.length > 0
+        ? await db
+            .select({
+              orderId: orderDishes.orderId,
+              id: orderDishes.id,
+              dishName: orderDishes.dishName,
+              quantity: orderDishes.quantity,
+              sortOrder: orderDishes.sortOrder,
+            })
+            .from(orderDishes)
+            .where(inArray(orderDishes.orderId, orderIds))
+        : [];
+
+    // Biome's noAccumulatingSpread rule disallows spread inside reduce accumulators,
+    // so we use a for-of loop with mutation scoped to a local variable instead.
+    const dishesByOrderId: Record<string, DishEntry[]> = {};
+    for (const d of dishRows) {
+      if (!dishesByOrderId[d.orderId]) {
+        dishesByOrderId[d.orderId] = [];
+      }
+      dishesByOrderId[d.orderId].push({
+        id: d.id,
+        dishName: d.dishName,
+        quantity: d.quantity,
+        sortOrder: d.sortOrder,
+      });
+    }
+
+    const data = rows.map((r) => ({
+      id: r.id,
+      status: r.status,
+      listingTitle: r.listingTitle ?? null,
+      quantity: r.quantity,
+      unitPrice: r.unitPrice,
+      totalPrice: r.totalPrice,
+      currency: r.currency,
+      pickupAt:
+        r.pickupAt instanceof Date ? r.pickupAt.toISOString() : r.pickupAt,
+      notes: r.notes ?? null,
+      createdAt:
+        r.createdAt instanceof Date ? r.createdAt.toISOString() : r.createdAt,
+      pickupCode: r.status === "ready" ? (r.pickupCode ?? null) : null,
+      dishes: dishesByOrderId[r.id] ?? [],
+    }));
+
+    return NextResponse.json({
+      success: true,
+      data,
+      meta: { total, limit, offset },
+    });
+  } catch (err) {
+    console.error("[orders/GET]", err);
+    return NextResponse.json(
+      { error: "Failed to fetch orders." },
+      { status: 500 },
+    );
+  }
+}
 
 const createOrderSchema = z.object({
   listingId: z.string().uuid(),
@@ -64,6 +201,7 @@ export async function POST(req: NextRequest) {
       .select({
         id: listings.id,
         cookId: listings.cookId,
+        title: listings.title,
         type: listings.type,
         status: listings.status,
         basePrice: listings.basePrice,
@@ -427,6 +565,35 @@ export async function POST(req: NextRequest) {
       await Promise.allSettled(cancels);
       throw dbErr;
     }
+
+    // Fire and forget — non-blocking
+    db.select({ email: authUser.email, firstName: authUser.firstName })
+      .from(cookProfiles)
+      .innerJoin(authUser, eq(cookProfiles.userId, authUser.id))
+      .where(eq(cookProfiles.id, listing.cookId))
+      .limit(1)
+      .then(([cookUser]) => {
+        if (!cookUser) return;
+        const customerName =
+          session.user.name ||
+          [session.user.firstName, session.user.lastName]
+            .filter(Boolean)
+            .join(" ") ||
+          "A customer";
+        return sendOrderPlacedEmailToCook(
+          { email: cookUser.email, firstName: cookUser.firstName },
+          { name: customerName },
+          {
+            id: orderId,
+            listingTitle: listing.title,
+            quantity,
+            totalPrice: totalPrice.toFixed(2),
+            currency: "CAD",
+            pickupAt: new Date(pickupAt),
+          },
+        );
+      })
+      .catch((err) => console.error("[orders/POST] email", err));
 
     return NextResponse.json(
       { success: true, data: { orderId } },

@@ -64,6 +64,7 @@ export const orders = pgTable(
     pickupCodeExpiresAt: timestamp("pickup_code_expires_at"),
     pickupCodeVerifiedAt: timestamp("pickup_code_verified_at"),
     pickupCodeAttempts: integer("pickup_code_attempts").notNull().default(0),
+    pickupCode: text("pickup_code"),
     lateCancelFeeEnabled: boolean("late_cancel_fee_enabled")
       .notNull()
       .default(false),

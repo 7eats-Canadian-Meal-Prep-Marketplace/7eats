@@ -56,10 +56,15 @@ vi.mock("@/lib/auth", () => ({
   },
 }));
 
+vi.mock("@/lib/emails/order-events", () => ({
+  sendOrderPlacedEmailToCook: vi.fn().mockResolvedValue(undefined),
+}));
+
 import { NextRequest } from "next/server";
 import { POST } from "@/app/api/orders/route";
 import { db } from "@/db";
 import { auth } from "@/lib/auth";
+import { sendOrderPlacedEmailToCook } from "@/lib/emails/order-events";
 
 function makeRequest(body: unknown) {
   return new NextRequest("http://localhost/api/orders", {
@@ -73,6 +78,15 @@ function limitChain(rows: unknown[]) {
   const limit = vi.fn().mockResolvedValue(rows);
   const where = vi.fn(() => ({ limit }));
   const from = vi.fn(() => ({ where }));
+  return { from } as never;
+}
+
+/** Chain supporting an innerJoin (used by the fire-and-forget email lookup). */
+function joinLimitChain(rows: unknown[]) {
+  const limit = vi.fn().mockResolvedValue(rows);
+  const where = vi.fn(() => ({ limit }));
+  const innerJoin = vi.fn(() => ({ where }));
+  const from = vi.fn(() => ({ innerJoin }));
   return { from } as never;
 }
 
@@ -187,7 +201,8 @@ describe("POST /api/orders", () => {
             lastName: "B",
           },
         ]);
-      return limitChain([]);
+      // Fire-and-forget cook email lookup (uses innerJoin)
+      return joinLimitChain([{ email: "cook@t.com", firstName: "Cook" }]);
     });
     vi.mocked(db.insert).mockReturnValue({
       values: vi.fn().mockResolvedValue([]),
@@ -203,6 +218,42 @@ describe("POST /api/orders", () => {
         totalAmountCents: 2000,
         platformFeeCents: 150,
         connectedAccountId: "acct_test",
+      }),
+    );
+  });
+
+  it("sends the order-placed email to the cook on successful creation", async () => {
+    let call = 0;
+    vi.mocked(db.select).mockImplementation(() => {
+      call++;
+      if (call === 1) return limitChain([ACTIVE_LISTING]);
+      if (call === 2) return limitChain([COOK]);
+      if (call === 3)
+        return limitChain([
+          {
+            stripeCustomerId: "cus_existing",
+            email: "c@t.com",
+            firstName: "A",
+            lastName: "B",
+          },
+        ]);
+      return joinLimitChain([{ email: "cook@t.com", firstName: "Cook" }]);
+    });
+    vi.mocked(db.insert).mockReturnValue({
+      values: vi.fn().mockResolvedValue([]),
+    } as never);
+
+    const res = await POST(makeRequest(VALID_BODY));
+    expect(res.status).toBe(201);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(sendOrderPlacedEmailToCook).toHaveBeenCalledWith(
+      { email: "cook@t.com", firstName: "Cook" },
+      expect.objectContaining({ name: expect.any(String) }),
+      expect.objectContaining({
+        listingTitle: "Test Listing",
+        quantity: 1,
+        currency: "CAD",
       }),
     );
   });

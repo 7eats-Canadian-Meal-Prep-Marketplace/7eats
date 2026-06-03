@@ -2,8 +2,15 @@ import { and, eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/db";
-import { orderPayments, orders } from "@/db/schema";
+import {
+  authUser,
+  cookProfiles,
+  listings,
+  orderPayments,
+  orders,
+} from "@/db/schema";
 import { auth } from "@/lib/auth";
+import { sendOrderCancelledByClientEmailToCook } from "@/lib/emails/order-events";
 import {
   cancelPaymentIntent,
   capturePaymentIntent,
@@ -33,8 +40,12 @@ export async function DELETE(req: NextRequest, { params }: Params) {
       .select({
         id: orders.id,
         clientId: orders.clientId,
+        cookId: orders.cookId,
+        listingId: orders.listingId,
         status: orders.status,
+        quantity: orders.quantity,
         totalPrice: orders.totalPrice,
+        currency: orders.currency,
         pickupAt: orders.pickupAt,
         lateCancelFeeEnabled: orders.lateCancelFeeEnabled,
         lateCancelFeeType: orders.lateCancelFeeType,
@@ -196,6 +207,40 @@ export async function DELETE(req: NextRequest, { params }: Params) {
           : {}),
       })
       .where(and(eq(orders.id, orderId), eq(orders.clientId, session.user.id)));
+
+    // Fire and forget — non-blocking
+    db.select({
+      cookEmail: authUser.email,
+      cookFirstName: authUser.firstName,
+      listingTitle: listings.title,
+    })
+      .from(cookProfiles)
+      .innerJoin(authUser, eq(cookProfiles.userId, authUser.id))
+      .innerJoin(listings, eq(listings.id, order.listingId))
+      .where(eq(cookProfiles.id, order.cookId))
+      .limit(1)
+      .then(([row]) => {
+        if (!row) return;
+        const customerName =
+          session.user.name ||
+          [session.user.firstName, session.user.lastName]
+            .filter(Boolean)
+            .join(" ") ||
+          "A customer";
+        return sendOrderCancelledByClientEmailToCook(
+          { email: row.cookEmail, firstName: row.cookFirstName },
+          { name: customerName },
+          {
+            id: order.id,
+            listingTitle: row.listingTitle,
+            quantity: order.quantity,
+            totalPrice: order.totalPrice,
+            currency: order.currency,
+            pickupAt: order.pickupAt,
+          },
+        );
+      })
+      .catch((err) => console.error("[orders/DELETE] email", err));
 
     return NextResponse.json({ success: true });
   } catch (err) {
