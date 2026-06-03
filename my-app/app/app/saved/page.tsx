@@ -90,11 +90,7 @@ export default function SavedPage() {
                         <div
                           className={styles.cardCover}
                           style={{ background: listing.gradient }}
-                        >
-                          <span className={styles.cardEmoji}>
-                            {listing.emoji}
-                          </span>
-                        </div>
+                        />
                         <div className={styles.cardBody}>
                           <div className={styles.cardCook}>
                             <div

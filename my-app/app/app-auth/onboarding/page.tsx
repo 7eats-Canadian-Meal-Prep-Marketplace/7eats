@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Check } from "lucide-react";
+import { ArrowRight, Check, CheckCircle2 } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -208,7 +208,11 @@ export default function OnboardingPage() {
         {/* Step 3: Done */}
         {step === 3 && (
           <div className={`${styles.stepContent} ${styles.doneStep}`}>
-            <div className={styles.doneEmoji}>🎉</div>
+            <CheckCircle2
+              size={64}
+              strokeWidth={1.5}
+              className={styles.doneIcon}
+            />
             <h1 className={styles.stepHeading}>
               You&apos;re all set,{" "}
               <span className={styles.accent}>

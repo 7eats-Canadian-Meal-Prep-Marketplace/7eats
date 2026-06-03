@@ -52,7 +52,14 @@ export default function OrderDetailPage({
           className={styles.heroCard}
           style={{ background: order.listingGradient }}
         >
-          <span className={styles.heroEmoji}>{order.listingEmoji}</span>
+          <div className={styles.heroInitials}>
+            {order.cookName
+              .split(" ")
+              .map((n: string) => n[0])
+              .join("")
+              .slice(0, 2)
+              .toUpperCase()}
+          </div>
           <div className={styles.heroInfo}>
             <div className={styles.heroCook}>{order.cookName}</div>
             <div className={styles.heroTitle}>{order.listingTitle}</div>

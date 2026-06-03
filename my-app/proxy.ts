@@ -72,6 +72,10 @@ export async function proxy(req: NextRequest) {
             : "/app/browse";
         return NextResponse.redirect(new URL(dest, req.url));
       }
+      // Cook/admin visiting signup can create a separate client account — let them through.
+      if (pathname === "/app-auth/signup") {
+        return NextResponse.next();
+      }
       // Cook/admin may need to switch accounts for a protected consumer route.
       const next = req.nextUrl.searchParams.get("next");
       if (pathname === "/app-auth/login" && next?.startsWith("/app/")) {

@@ -7,20 +7,24 @@
 .inner {
   max-width: 600px;
   margin: 0 auto;
-  padding: 24px 20px 80px;
+  padding: 32px 20px 80px;
 }
 
 /* ─── Profile card ──────────────────────────────────────────────────────────── */
 .profileCard {
   display: flex;
   align-items: center;
-  gap: 16px;
-  margin-bottom: 24px;
+  gap: 18px;
+  padding: 24px;
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-md);
+  margin-bottom: 28px;
+  box-shadow: var(--shadow-md);
 }
 
 .avatarLg {
-  width: 56px;
-  height: 56px;
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
   background: var(--ink);
   color: var(--white);
@@ -30,18 +34,21 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-}
-
-.profileName {
-  font-size: 18px;
-  font-weight: 800;
-  color: var(--ink);
   letter-spacing: -0.02em;
 }
 
+.profileName {
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+}
+
 .profileEmail {
-  font-size: 13px;
+  font-size: 13.5px;
   color: var(--grey-500);
+  margin-top: 3px;
 }
 
 /* ─── Tabs ──────────────────────────────────────────────────────────────────── */
@@ -52,7 +59,7 @@
 }
 
 .tab {
-  padding: 10px 0;
+  padding: 12px 0;
   margin-right: 28px;
   font-size: 14px;
   font-weight: 600;
@@ -80,7 +87,7 @@
 .tabContent {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
 }
 
 /* ─── Card ──────────────────────────────────────────────────────────────────── */
@@ -88,72 +95,83 @@
   border: 1px solid var(--grey-200);
   border-radius: var(--radius-md);
   overflow: hidden;
+  box-shadow: var(--shadow-md);
 }
 
 .cardTitle {
-  padding: 16px 18px 14px;
-  font-size: 14px;
+  padding: 18px 20px 16px;
+  font-size: 15px;
   font-weight: 800;
   color: var(--ink);
   border-bottom: 1px solid var(--grey-200);
-  letter-spacing: -0.005em;
+  letter-spacing: -0.01em;
 }
 
 .formGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  padding: 16px 18px 0;
+  gap: 14px;
+  padding: 20px 20px 0;
 }
 
 .formGroup {
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  padding: 0 18px;
-  margin-bottom: 12px;
+  gap: 6px;
+  padding: 0 20px;
+  margin-bottom: 14px;
 }
 
 .formGrid .formGroup {
   padding: 0;
 }
 
+.formGroup:last-child {
+  margin-bottom: 0;
+}
+
 .label {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--grey-700);
 }
 
 .input {
-  padding: 9px 12px;
+  padding: 11px 14px;
   border: 1.5px solid var(--grey-200);
   border-radius: var(--radius-sm);
-  font-size: 14px;
+  font-size: 15px;
   font-family: inherit;
   color: var(--ink);
   background: var(--white);
   outline: none;
-  transition: border-color 0.12s;
+  transition: border-color 0.15s;
+}
+
+.input::placeholder {
+  color: var(--grey-500);
 }
 
 .input:focus {
-  border-color: var(--grey-700);
+  border-color: var(--ink);
 }
 
 .cardFooter {
-  padding: 12px 18px;
+  padding: 14px 20px;
   border-top: 1px solid var(--grey-200);
-  background: #fafafa;
+  background: var(--grey-100);
 }
 
 .saveBtn {
-  padding: 9px 20px;
+  display: inline-flex;
+  align-items: center;
+  padding: 10px 22px;
   background: var(--ink);
   color: var(--white);
   font-size: 13.5px;
   font-weight: 700;
   border: none;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-pill);
   cursor: pointer;
   font-family: inherit;
   transition: opacity 0.12s;
@@ -165,7 +183,7 @@
 
 /* ─── Danger ────────────────────────────────────────────────────────────────── */
 .dangerCard {
-  border-color: rgba(214, 64, 69, 0.25);
+  border-color: rgba(214, 64, 69, 0.2);
 }
 
 .dangerRow {
@@ -173,111 +191,125 @@
   align-items: center;
   justify-content: space-between;
   gap: 20px;
-  padding: 18px;
+  padding: 20px;
 }
 
 .dangerTitle {
-  font-size: 14px;
+  font-size: 14.5px;
   font-weight: 700;
   color: var(--ink);
-  margin-bottom: 3px;
+  margin-bottom: 4px;
+  letter-spacing: -0.01em;
 }
 
 .dangerDesc {
   font-size: 13px;
   color: var(--grey-500);
-  line-height: 1.5;
+  line-height: 1.55;
   max-width: 360px;
 }
 
 .deleteBtn {
-  padding: 9px 18px;
+  display: inline-flex;
+  align-items: center;
+  padding: 10px 18px;
   background: none;
   color: var(--red);
   font-size: 13px;
   font-weight: 700;
-  border: 1.5px solid var(--red);
-  border-radius: var(--radius-sm);
+  border: 1.5px solid rgba(214, 64, 69, 0.4);
+  border-radius: var(--radius-pill);
   cursor: pointer;
   font-family: inherit;
   flex-shrink: 0;
   transition:
-    background 0.12s,
-    color 0.12s;
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s;
 }
 
 .deleteBtn:hover {
   background: var(--red);
   color: var(--white);
+  border-color: var(--red);
 }
 
 /* ─── Preferences ───────────────────────────────────────────────────────────── */
 .prefIntro {
-  font-size: 14px;
+  font-size: 14.5px;
   color: var(--grey-700);
-  line-height: 1.6;
+  line-height: 1.65;
   margin-bottom: 4px;
 }
 
 .prefCard {
   border: 1px solid var(--grey-200);
   border-radius: var(--radius-md);
-  padding: 16px;
+  padding: 18px 20px;
+  box-shadow: var(--shadow-md);
 }
 
 .prefHeader {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 .prefQuestion {
-  font-size: 14px;
+  font-size: 14.5px;
   font-weight: 700;
   color: var(--ink);
   line-height: 1.4;
+  letter-spacing: -0.01em;
 }
 
 .editPrefBtn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 5px 12px;
-  border: 1px solid var(--grey-200);
+  padding: 6px 14px;
+  border: 1.5px solid var(--grey-200);
   border-radius: var(--radius-pill);
   font-size: 12.5px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--ink);
   background: none;
   cursor: pointer;
   font-family: inherit;
   flex-shrink: 0;
-  transition: border-color 0.12s;
+  white-space: nowrap;
+  transition:
+    border-color 0.12s,
+    background 0.12s;
 }
 
 .editPrefBtn:hover {
-  border-color: var(--grey-700);
+  border-color: var(--ink);
+  background: var(--grey-100);
 }
 
 .prefAnswers {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
 }
 
 .answerTag {
-  padding: 4px 12px;
-  background: var(--red);
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 14px;
+  background: var(--ink);
   color: var(--white);
   border-radius: var(--radius-pill);
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 .unanswered {
-  font-size: 13px;
+  font-size: 13.5px;
   color: var(--grey-500);
   font-style: italic;
 }
@@ -289,11 +321,13 @@
 }
 
 .optionChip {
-  padding: 6px 14px;
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 16px;
   border: 1.5px solid var(--grey-200);
   border-radius: var(--radius-pill);
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--ink);
   background: var(--white);
   cursor: pointer;
@@ -306,6 +340,7 @@
 
 .optionChip:hover {
   border-color: var(--grey-700);
+  background: var(--grey-100);
 }
 
 .optionChipSelected {
@@ -319,9 +354,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  padding: 14px 18px;
-  border-bottom: 1px solid #f4f4f4;
+  gap: 20px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--grey-200);
 }
 
 .notifRow:last-child {
@@ -331,25 +366,26 @@
 .notifInfo {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
   min-width: 0;
 }
 
 .notifLabel {
-  font-size: 14px;
+  font-size: 14.5px;
   font-weight: 600;
   color: var(--ink);
+  letter-spacing: -0.01em;
 }
 
 .notifDesc {
-  font-size: 12.5px;
+  font-size: 13px;
   color: var(--grey-500);
-  line-height: 1.4;
+  line-height: 1.5;
 }
 
 .toggle {
-  width: 38px;
-  height: 22px;
+  width: 40px;
+  height: 24px;
   border-radius: var(--radius-pill);
   background: var(--grey-300);
   border: none;
@@ -366,13 +402,14 @@
 
 .toggleKnob {
   position: absolute;
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   background: var(--white);
   top: 3px;
   left: 3px;
-  transition: transform 0.18s;
+  transition: transform 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 3px rgba(15, 15, 15, 0.2);
 }
 
 .toggleOn .toggleKnob {

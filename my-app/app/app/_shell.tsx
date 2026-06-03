@@ -267,6 +267,8 @@ function ShellInner({
 
   const isOnboarding = pathname.startsWith("/app-auth/onboarding");
   const isCheckout = pathname.startsWith("/app/checkout");
+  const isDetailPage =
+    pathname.startsWith("/app/listings/") || pathname.startsWith("/app/cooks/");
   const hideBottomNav = isOnboarding || isCheckout;
 
   const visibleBottomNav = isLoggedIn
@@ -288,7 +290,9 @@ function ShellInner({
               />
             </Link>
 
-            <FulfillmentToggle className={styles.headerSegmented} />
+            {!isDetailPage && (
+              <FulfillmentToggle className={styles.headerSegmented} />
+            )}
 
             <Suspense
               fallback={<div className={styles.headerSearchFallback} />}

@@ -8,10 +8,9 @@
 /* ─── Cover ─────────────────────────────────────────────────────────────────── */
 .cover {
   position: relative;
-  height: 200px;
+  height: 220px;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  align-items: flex-end;
 }
 
 .backBtn {
@@ -25,68 +24,68 @@
   height: 36px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.88);
-  backdrop-filter: blur(6px);
+  backdrop-filter: blur(8px);
   color: var(--ink);
   transition: background 0.12s;
+  text-decoration: none;
 }
 
 .backBtn:hover {
   background: rgba(255, 255, 255, 1);
 }
 
-.coverEmoji {
-  font-size: 64px;
-  filter: drop-shadow(0 4px 16px rgba(0, 0, 0, 0.3));
-  line-height: 1;
-}
-
 /* ─── Profile header ────────────────────────────────────────────────────────── */
 .profileHeader {
   display: flex;
   align-items: flex-end;
-  gap: 16px;
-  padding: 0 20px 20px;
+  gap: 18px;
+  padding: 0 var(--pad-x) 24px;
   border-bottom: 1px solid var(--grey-200);
-  margin-top: -36px;
+  margin-top: -40px;
+  max-width: 740px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .avatar {
-  width: 72px;
-  height: 72px;
+  width: 80px;
+  height: 80px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 800;
   color: var(--white);
   box-shadow:
     0 0 0 4px var(--white),
-    0 4px 16px rgba(0, 0, 0, 0.15);
+    0 4px 20px rgba(0, 0, 0, 0.18);
   flex-shrink: 0;
+  letter-spacing: -0.02em;
 }
 
 .headerInfo {
   flex: 1;
   padding-bottom: 4px;
+  min-width: 0;
 }
 
 .nameRow {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-bottom: 4px;
+  gap: 8px;
+  margin-bottom: 6px;
 }
 
 .name {
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 800;
   color: var(--ink);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.025em;
 }
 
 .verifiedIcon {
-  color: #22c55e;
+  color: var(--ink);
   flex-shrink: 0;
 }
 
@@ -94,7 +93,7 @@
   display: flex;
   align-items: center;
   gap: 5px;
-  margin-bottom: 3px;
+  margin-bottom: 4px;
 }
 
 .metaIcon {
@@ -103,12 +102,12 @@
 }
 
 .starIcon {
-  color: #f59e0b;
+  color: var(--grey-700);
   flex-shrink: 0;
 }
 
 .metaText {
-  font-size: 13px;
+  font-size: 13.5px;
   color: var(--grey-700);
 }
 
@@ -119,9 +118,9 @@
 
 /* ─── Body ──────────────────────────────────────────────────────────────────── */
 .body {
-  max-width: 680px;
+  max-width: 740px;
   margin: 0 auto;
-  padding: 24px 20px;
+  padding: 28px var(--pad-x);
 }
 
 /* ─── Badges ────────────────────────────────────────────────────────────────── */
@@ -129,22 +128,28 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .badge {
-  padding: 4px 12px;
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 13px;
   border-radius: var(--radius-pill);
-  background: rgba(214, 64, 69, 0.08);
-  color: var(--red-deep);
+  background: var(--grey-100);
+  border: 1px solid var(--grey-200);
+  color: var(--ink);
   font-size: 12.5px;
   font-weight: 600;
 }
 
 .cuisineBadge {
-  padding: 4px 12px;
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 13px;
   border-radius: var(--radius-pill);
-  background: var(--grey-100);
+  background: transparent;
+  border: 1.5px solid var(--grey-300);
   color: var(--grey-700);
   font-size: 12.5px;
   font-weight: 600;
@@ -152,54 +157,55 @@
 
 /* ─── Section ───────────────────────────────────────────────────────────────── */
 .section {
-  margin-bottom: 36px;
+  margin-bottom: 40px;
 }
 
 .sectionTitle {
-  font-size: 17px;
+  font-size: 18px;
   font-weight: 800;
   color: var(--ink);
-  letter-spacing: -0.015em;
-  margin-bottom: 14px;
+  letter-spacing: -0.02em;
+  margin-bottom: 16px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .listingCount {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   background: var(--red);
   color: var(--white);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 800;
 }
 
 .ratingPill {
-  padding: 3px 10px;
-  background: #fef3c7;
-  color: #92400e;
+  padding: 4px 12px;
+  background: var(--grey-100);
+  border: 1px solid var(--grey-200);
+  color: var(--ink);
   border-radius: var(--radius-pill);
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 700;
 }
 
 /* ─── Bio ───────────────────────────────────────────────────────────────────── */
 .bio {
-  font-size: 15px;
+  font-size: 15.5px;
   color: var(--grey-700);
   line-height: 1.7;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 .leadTime {
-  font-size: 13px;
+  font-size: 13.5px;
   color: var(--grey-500);
-  font-weight: 500;
+  font-weight: 600;
 }
 
 /* ─── Listing list ──────────────────────────────────────────────────────────── */
@@ -217,34 +223,32 @@
 .listingCard {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 16px;
   border: 1px solid var(--grey-200);
   border-radius: var(--radius-md);
-  padding: 12px;
+  padding: 16px;
   text-decoration: none;
+  box-shadow: var(--shadow-md);
   transition:
-    border-color 0.12s,
-    box-shadow 0.12s;
+    border-color 0.15s,
+    box-shadow 0.15s,
+    transform 0.15s;
 }
 
 .listingCard:hover {
   border-color: var(--grey-500);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+  box-shadow:
+    0 8px 24px rgba(15, 15, 15, 0.08),
+    0 2px 6px rgba(15, 15, 15, 0.04);
+  transform: translateY(-1px);
 }
 
+/* Color strip replaces emoji cover */
 .listingCover {
-  width: 60px;
-  height: 60px;
+  width: 48px;
+  height: 48px;
   border-radius: var(--radius-sm);
-  display: flex;
-  align-items: center;
-  justify-content: center;
   flex-shrink: 0;
-}
-
-.listingEmoji {
-  font-size: 28px;
-  line-height: 1;
 }
 
 .listingInfo {
@@ -253,22 +257,25 @@
 }
 
 .listingTitle {
-  font-size: 14.5px;
+  font-size: 15px;
   font-weight: 700;
   color: var(--ink);
-  margin-bottom: 3px;
+  margin-bottom: 4px;
   letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .listingMeta {
-  font-size: 12px;
+  font-size: 12.5px;
   color: var(--grey-500);
   margin-bottom: 2px;
 }
 
 .listingPrice {
-  font-size: 12.5px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 700;
   color: var(--ink);
 }
 
@@ -277,9 +284,10 @@
 }
 
 .listingArrow {
-  font-size: 16px;
+  font-size: 18px;
   color: var(--grey-300);
   flex-shrink: 0;
+  font-style: normal;
 }
 
 /* ─── Reviews ───────────────────────────────────────────────────────────────── */
@@ -292,19 +300,20 @@
 .reviewCard {
   border: 1px solid var(--grey-200);
   border-radius: var(--radius-md);
-  padding: 16px;
+  padding: 20px;
+  box-shadow: var(--shadow-md);
 }
 
 .reviewTop {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 10px;
+  gap: 12px;
+  margin-bottom: 12px;
 }
 
 .reviewerAvatar {
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   background: var(--grey-200);
   color: var(--ink);
@@ -320,17 +329,17 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 2px;
 }
 
 .reviewerName {
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 700;
   color: var(--ink);
 }
 
 .reviewDate {
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--grey-500);
 }
 
@@ -340,7 +349,7 @@
 }
 
 .starFilled {
-  color: #f59e0b;
+  color: var(--grey-700);
 }
 
 .starEmpty {
@@ -348,18 +357,29 @@
 }
 
 .reviewComment {
-  font-size: 14px;
+  font-size: 14.5px;
   color: var(--grey-700);
-  line-height: 1.6;
-  margin-bottom: 10px;
+  line-height: 1.65;
+  margin-bottom: 12px;
 }
 
 .reviewDish {
   display: inline-block;
-  padding: 3px 10px;
+  padding: 4px 12px;
   background: var(--grey-100);
+  border: 1px solid var(--grey-200);
   border-radius: var(--radius-pill);
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--grey-700);
-  font-weight: 500;
+  font-weight: 600;
+}
+
+@media (max-width: 768px) {
+  .profileHeader {
+    padding: 0 20px 20px;
+  }
+
+  .body {
+    padding: 24px 20px;
+  }
 }

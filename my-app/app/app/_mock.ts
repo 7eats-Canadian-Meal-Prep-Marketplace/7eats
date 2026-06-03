@@ -86,6 +86,12 @@ export type MockListing = {
   isSpotlight: boolean;
   isHighProtein: boolean;
   niches: NicheCategory[];
+  /** Minimum total portions across all dishes in this order */
+  minUnits?: number;
+  /** Maximum total portions across all dishes in this order */
+  maxUnits?: number;
+  /** Volume discount tiers applied to the total order */
+  priceTiers?: Array<{ minUnits: number; savingsLabel: string }>;
 };
 
 export type CartItem = {
@@ -337,6 +343,12 @@ export const MOCK_LISTINGS: MockListing[] = [
     isSpotlight: true,
     isHighProtein: true,
     niches: ["high_protein", "comfort_food"],
+    minUnits: 2,
+    maxUnits: 6,
+    priceTiers: [
+      { minUnits: 2, savingsLabel: "Save $3" },
+      { minUnits: 4, savingsLabel: "Save $8" },
+    ],
     dishes: [
       {
         id: "dish-1-1",
@@ -395,6 +407,10 @@ export const MOCK_LISTINGS: MockListing[] = [
     isSpotlight: true,
     isHighProtein: false,
     niches: ["comfort_food", "balanced"],
+    priceTiers: [
+      { minUnits: 2, savingsLabel: "$4 off total" },
+      { minUnits: 4, savingsLabel: "$10 off total" },
+    ],
     dishes: [
       {
         id: "dish-2-1",
@@ -515,6 +531,8 @@ export const MOCK_LISTINGS: MockListing[] = [
     isSpotlight: false,
     isHighProtein: false,
     niches: ["comfort_food"],
+    minUnits: 2,
+    maxUnits: 8,
     dishes: [
       {
         id: "dish-4-1",
@@ -731,6 +749,10 @@ export const MOCK_LISTINGS: MockListing[] = [
     isSpotlight: true,
     isHighProtein: false,
     niches: ["balanced", "heart_health"],
+    priceTiers: [
+      { minUnits: 2, savingsLabel: "5% off total" },
+      { minUnits: 4, savingsLabel: "10% off total" },
+    ],
     dishes: [
       {
         id: "dish-8-1",
@@ -830,6 +852,12 @@ export const MOCK_LISTINGS: MockListing[] = [
     isSpotlight: false,
     isHighProtein: false,
     niches: ["comfort_food"],
+    minUnits: 2,
+    maxUnits: 4,
+    priceTiers: [
+      { minUnits: 2, savingsLabel: "10% off total" },
+      { minUnits: 4, savingsLabel: "Save $12 on the family box" },
+    ],
     dishes: [
       {
         id: "dish-10-1",
@@ -2014,6 +2042,361 @@ export const MOCK_REVIEWS: Record<string, MockReview[]> = {
         "Galbi was perfectly tender. Easily the best home-cooked Korean food I've had in Toronto.",
       date: "May 18",
       orderedDish: "Galbi (Short Ribs)",
+    },
+  ],
+};
+
+// ─── Per-listing reviews ──────────────────────────────────────────────────────
+// Each listing has its own reviews. Cook profile compounds all of theirs.
+export const MOCK_LISTING_REVIEWS: Record<string, MockReview[]> = {
+  "listing-1": [
+    {
+      id: "rl1-1",
+      clientName: "Marcus R.",
+      clientInitials: "MR",
+      rating: 5,
+      comment:
+        "The jollof rice was smoky, perfectly spiced, and generous. I've had it at Nigerian restaurants around the city — this beats all of them.",
+      date: "May 28",
+      orderedDish: "Jollof Rice (Party Style)",
+    },
+    {
+      id: "rl1-2",
+      clientName: "Zara T.",
+      clientInitials: "ZT",
+      rating: 5,
+      comment:
+        "Suya skewers had the right amount of heat and the yaji crust was incredible. Amara was super communicative about pickup. Will be a regular.",
+      date: "May 21",
+      orderedDish: "Suya Skewers (6 pcs)",
+    },
+    {
+      id: "rl1-3",
+      clientName: "Daniel K.",
+      clientInitials: "DK",
+      rating: 4,
+      comment:
+        "Egusi stew was excellent — rich, deep flavour, great with the fufu. Slightly more salt than I'd like but still a solid 4/5.",
+      date: "May 14",
+      orderedDish: "Egusi Stew + Fufu",
+    },
+  ],
+  "listing-2": [
+    {
+      id: "rl2-1",
+      clientName: "Hana S.",
+      clientInitials: "HS",
+      rating: 5,
+      comment:
+        "Ji-won's banchan tastes exactly like my mom's. The kimchi is perfectly fermented and the japchae is not too sweet. This is real home cooking.",
+      date: "May 25",
+      orderedDish: "Banchan Box (5 sides)",
+    },
+    {
+      id: "rl2-2",
+      clientName: "Tom W.",
+      clientInitials: "TW",
+      rating: 5,
+      comment:
+        "Galbi was fall-off-the-bone tender. The marinade is perfectly balanced — not overly sweet. Best Korean food I've had outside a home kitchen.",
+      date: "May 18",
+      orderedDish: "Galbi (Short Ribs)",
+    },
+  ],
+  "listing-3": [
+    {
+      id: "rl3-1",
+      clientName: "Priya N.",
+      clientInitials: "PN",
+      rating: 5,
+      comment:
+        "The mezze platter was restaurant quality. Baba ganoush had a real smokiness to it and the hummus was silky. Pita came warm and fresh.",
+      date: "May 26",
+      orderedDish: "Mezze Platter",
+    },
+    {
+      id: "rl3-2",
+      clientName: "Chris A.",
+      clientInitials: "CA",
+      rating: 5,
+      comment:
+        "Chicken musakhan is one of my favourite dishes and Yusuf nailed it. The sumac-caramelized onions on top were the highlight.",
+      date: "May 19",
+      orderedDish: "Chicken Musakhan",
+    },
+    {
+      id: "rl3-3",
+      clientName: "Leila F.",
+      clientInitials: "LF",
+      rating: 4,
+      comment:
+        "Grape leaves were beautifully made — tight rolls, herby filling, and a nice lemon tang. Could use more of the sauce next time.",
+      date: "May 11",
+      orderedDish: "Stuffed Grape Leaves (12 pcs)",
+    },
+  ],
+  "listing-4": [
+    {
+      id: "rl4-1",
+      clientName: "Sofia M.",
+      clientInitials: "SM",
+      rating: 5,
+      comment:
+        "Grew up in São Paulo and this feijoada made me genuinely emotional. The farofa ratio was perfect and the smoked sausage was the real deal.",
+      date: "May 24",
+      orderedDish: "Feijoada",
+    },
+    {
+      id: "rl4-2",
+      clientName: "Jake T.",
+      clientInitials: "JT",
+      rating: 4,
+      comment:
+        "Coxinha were crispy on the outside, creamy on the inside. Ate all six before I even got home. The brigadeiros were a great bonus.",
+      date: "May 17",
+      orderedDish: "Coxinha (6 pcs)",
+    },
+  ],
+  "listing-5": [
+    {
+      id: "rl5-1",
+      clientName: "Ana L.",
+      clientInitials: "AL",
+      rating: 5,
+      comment:
+        "The tagliatelle was hand-rolled and you can tell. Six-hour ragù — the depth of flavour is something you just can't get from a jar. Extraordinary.",
+      date: "May 30",
+      orderedDish: "Handmade Tagliatelle + Ragù",
+    },
+    {
+      id: "rl5-2",
+      clientName: "Michael B.",
+      clientInitials: "MB",
+      rating: 5,
+      comment:
+        "Risotto Milanese was perfectly al dente with that beautiful golden saffron colour. Parmigiano on top was generous. Genuinely impressive.",
+      date: "May 22",
+      orderedDish: "Risotto Milanese",
+    },
+  ],
+  "listing-6": [
+    {
+      id: "rl6-1",
+      clientName: "Kwame A.",
+      clientInitials: "KA",
+      rating: 5,
+      comment:
+        "Best suya I've had outside of Lagos. The yaji crust has the right texture and the beef quality is excellent. Fast delivery too.",
+      date: "May 29",
+      orderedDish: "Suya Skewers (6 pcs)",
+    },
+    {
+      id: "rl6-2",
+      clientName: "Rachel T.",
+      clientInitials: "RT",
+      rating: 5,
+      comment:
+        "The suya wrap is an amazing lunch. Strips are perfectly spiced, the peppers and onions add great freshness. Became my weekly order.",
+      date: "May 23",
+      orderedDish: "Suya Wrap",
+    },
+  ],
+  "listing-7": [
+    {
+      id: "rl7-1",
+      clientName: "Jason K.",
+      clientInitials: "JK",
+      rating: 5,
+      comment:
+        "Korean BBQ night at home hit differently with this pack. All four marinades were distinct and tasted like they'd been marinating for days. The dipping sauces were the cherry on top.",
+      date: "May 27",
+      orderedDish: "BBQ Pack (4 proteins)",
+    },
+    {
+      id: "rl7-2",
+      clientName: "Lisa P.",
+      clientInitials: "LP",
+      rating: 5,
+      comment:
+        "The banchan set complemented the BBQ perfectly. Love that Ji-won thinks about the whole meal, not just the proteins.",
+      date: "May 20",
+      orderedDish: "Banchan Set",
+    },
+  ],
+  "listing-8": [
+    {
+      id: "rl8-1",
+      clientName: "Omar F.",
+      clientInitials: "OF",
+      rating: 5,
+      comment:
+        "Shawarma chicken was beautifully marinated, moist inside and slightly charred outside. The weekly rotation keeps things interesting.",
+      date: "May 26",
+      orderedDish: "Weekly Protein (choice)",
+    },
+    {
+      id: "rl8-2",
+      clientName: "Yasmin H.",
+      clientInitials: "YH",
+      rating: 5,
+      comment:
+        "The hummus is the best I've ever had. Silky, nutty, just the right amount of lemon. The fattoush is crunchy and fresh. This box is a staple.",
+      date: "May 19",
+      orderedDish: "Sides + Dips",
+    },
+  ],
+  "listing-9": [
+    {
+      id: "rl9-1",
+      clientName: "Dev M.",
+      clientInitials: "DM",
+      rating: 5,
+      comment:
+        "Priya's thali is the most comforting meal I've had in Toronto. Dal tadka was spot on — tempered perfectly. The roti were soft and fresh.",
+      date: "May 28",
+      orderedDish: "Thali (full)",
+    },
+    {
+      id: "rl9-2",
+      clientName: "Aisha K.",
+      clientInitials: "AK",
+      rating: 5,
+      comment:
+        "Butter chicken was creamy, rich, and not overly sweet like most restaurants. The dal on the side pushed it over the top. 10/10.",
+      date: "May 21",
+      orderedDish: "Thali (protein)",
+    },
+  ],
+  "listing-10": [
+    {
+      id: "rl10-1",
+      clientName: "Raj P.",
+      clientInitials: "RP",
+      rating: 5,
+      comment:
+        "Priya's dum biryani is the real thing. You can smell the whole spices the moment you open the container. Crispy fried onions on top sealed it.",
+      date: "May 23",
+      orderedDish: "Chicken Dum Biryani",
+    },
+    {
+      id: "rl10-2",
+      clientName: "Nina S.",
+      clientInitials: "NS",
+      rating: 4,
+      comment:
+        "Veg biryani was fragrant and the cashews added a great texture. I'd love a bit more saffron, but it's still a solid 4-star plate.",
+      date: "May 16",
+      orderedDish: "Veg Biryani",
+    },
+  ],
+  "listing-11": [
+    {
+      id: "rl11-1",
+      clientName: "James L.",
+      clientInitials: "JL",
+      rating: 5,
+      comment:
+        "The tonkotsu broth was so rich and complex. Warmed it up at home, assembled the toppings, and it was better than most ramen shops I've been to.",
+      date: "May 25",
+      orderedDish: "Tonkotsu Kit (2 servings)",
+    },
+    {
+      id: "rl11-2",
+      clientName: "Sarah H.",
+      clientInitials: "SH",
+      rating: 5,
+      comment:
+        "The shoyu kit is lighter but still incredibly flavourful. The chicken chashu was beautifully tender. Kenji included clear assembly instructions which helped.",
+      date: "May 18",
+      orderedDish: "Shoyu Kit (2 servings)",
+    },
+  ],
+  "listing-12": [
+    {
+      id: "rl12-1",
+      clientName: "Emily W.",
+      clientInitials: "EW",
+      rating: 5,
+      comment:
+        "Salmon bento is my Monday ritual now. The teriyaki glaze is not too sweet, the tamagoyaki is perfectly layered. Arrives fresh and beautifully packed.",
+      date: "May 27",
+      orderedDish: "Salmon Bento",
+    },
+    {
+      id: "rl12-2",
+      clientName: "Kevin T.",
+      clientInitials: "KT",
+      rating: 4,
+      comment:
+        "Karaage was super crispy — held up even after the commute home. Loved the pickled ginger on the side. A bit on the small side for my appetite though.",
+      date: "May 20",
+      orderedDish: "Chicken Karaage Bento",
+    },
+  ],
+  "listing-13": [
+    {
+      id: "rl13-1",
+      clientName: "Marcus P.",
+      clientInitials: "MP",
+      rating: 5,
+      comment:
+        "Yolanda's jerk chicken is legendary for a reason. The marinade goes all the way through — this isn't surface-level jerk. Rice and peas were perfect.",
+      date: "May 26",
+      orderedDish: "Jerk Chicken Half",
+    },
+    {
+      id: "rl13-2",
+      clientName: "Tanya B.",
+      clientInitials: "TB",
+      rating: 5,
+      comment:
+        "Got the whole bird for a family dinner. Everyone was silent for the first five minutes — that's how good it was. The festival dumplings are a must.",
+      date: "May 19",
+      orderedDish: "Jerk Chicken Whole",
+    },
+  ],
+  "listing-14": [
+    {
+      id: "rl14-1",
+      clientName: "Dennis A.",
+      clientInitials: "DA",
+      rating: 5,
+      comment:
+        "Curry goat was fall-apart tender with the right Scotch bonnet heat. This is exactly what my grandmother used to make. Yolanda is special.",
+      date: "May 24",
+      orderedDish: "Curry Goat",
+    },
+    {
+      id: "rl14-2",
+      clientName: "Monique R.",
+      clientInitials: "MR",
+      rating: 5,
+      comment:
+        "Oxtail stew was outrageously good. Braised until the collagen broke down and the butter beans soaked up everything. Ordered twice in one month.",
+      date: "May 17",
+      orderedDish: "Oxtail Stew",
+    },
+  ],
+  "listing-15": [
+    {
+      id: "rl15-1",
+      clientName: "Isabella R.",
+      clientInitials: "IR",
+      rating: 5,
+      comment:
+        "Pasta alla Norma is a simple dish that's easy to get wrong. Nadia gets it exactly right — the eggplant is properly salted and not greasy, and the ricotta salata is generously applied.",
+      date: "May 29",
+      orderedDish: "Pasta Alla Norma (2 portions)",
+    },
+    {
+      id: "rl15-2",
+      clientName: "Thomas C.",
+      clientInitials: "TC",
+      rating: 4,
+      comment:
+        "Arancini were beautifully golden with a gooey mozzarella centre. Saffron flavour came through clearly. Four isn't quite enough — get two portions.",
+      date: "May 22",
+      orderedDish: "Arancini (4 pcs)",
     },
   ],
 };

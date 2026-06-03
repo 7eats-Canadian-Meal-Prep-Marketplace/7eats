@@ -64,7 +64,6 @@ export default function CartPage() {
                 <div className={styles.itemList}>
                   {cookItems.map((item) => (
                     <div key={item.dishId} className={styles.item}>
-                      <div className={styles.itemEmoji}>{item.dishEmoji}</div>
                       <div className={styles.itemInfo}>
                         <span className={styles.itemName}>{item.dishName}</span>
                         <span className={styles.itemPrice}>
@@ -106,7 +105,7 @@ export default function CartPage() {
                 </div>
 
                 <div className={styles.cookPickup}>
-                  <span>📅 Pickup: {cookItems[0].listingTitle}</span>
+                  <span>Pickup: {cookItems[0].listingTitle}</span>
                   <Link
                     href={`/app/listings/${cookItems[0].listingId}`}
                     className={styles.addMoreLink}

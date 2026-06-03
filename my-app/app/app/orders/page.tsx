@@ -55,7 +55,8 @@ function OrdersContent() {
     <div className={styles.page}>
       {success && (
         <div className={styles.successBanner}>
-          🎉 Your order has been placed! You'll hear from your cook soon.
+          Your order has been placed. Your cook will confirm pickup details
+          shortly.
         </div>
       )}
 
@@ -77,11 +78,7 @@ function OrdersContent() {
                     <div
                       className={styles.orderCover}
                       style={{ background: order.listingGradient }}
-                    >
-                      <span className={styles.orderEmoji}>
-                        {order.listingEmoji}
-                      </span>
-                    </div>
+                    />
                     <div className={styles.orderBody}>
                       <div className={styles.orderTop}>
                         <span className={styles.cookName}>
@@ -96,7 +93,7 @@ function OrdersContent() {
                         {order.listingTitle}
                       </h3>
                       <p className={styles.orderMeta}>
-                        📅 {order.pickupDate} · {order.pickupWindow}
+                        {order.pickupDate} · {order.pickupWindow}
                       </p>
                       <div className={styles.orderFooter}>
                         <span className={styles.orderTotal}>
@@ -135,11 +132,7 @@ function OrdersContent() {
                         background: order.listingGradient,
                         opacity: 0.7,
                       }}
-                    >
-                      <span className={styles.orderEmoji}>
-                        {order.listingEmoji}
-                      </span>
-                    </div>
+                    />
                     <div className={styles.orderBody}>
                       <div className={styles.orderTop}>
                         <span className={styles.cookName}>
@@ -153,7 +146,7 @@ function OrdersContent() {
                       <h3 className={styles.orderTitle}>
                         {order.listingTitle}
                       </h3>
-                      <p className={styles.orderMeta}>📅 {order.pickupDate}</p>
+                      <p className={styles.orderMeta}>{order.pickupDate}</p>
                       <div className={styles.orderFooter}>
                         <span className={styles.orderTotal}>
                           ${order.total}.00

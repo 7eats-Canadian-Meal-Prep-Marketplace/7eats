@@ -13,13 +13,13 @@ import styles from "./page.module.css";
 
 function badgeLabel(badge: DietaryBadge): string {
   const map: Record<DietaryBadge, string> = {
-    halal: "🌙 Halal",
-    vegan: "🌿 Vegan",
-    vegetarian: "🥦 Vegetarian",
-    "gluten-free": "🌾 Gluten-free",
-    "dairy-free": "🥛 Dairy-free",
-    "nut-free": "🥜 Nut-free",
-    kosher: "✡ Kosher",
+    halal: "Halal",
+    vegan: "Vegan",
+    vegetarian: "Vegetarian",
+    "gluten-free": "Gluten-free",
+    "dairy-free": "Dairy-free",
+    "nut-free": "Nut-free",
+    kosher: "Kosher",
   };
   return map[badge];
 }
@@ -41,7 +41,6 @@ export default function CookProfilePage({
         <Link href="/app/browse" className={styles.backBtn}>
           <ArrowLeft size={20} />
         </Link>
-        <div className={styles.coverEmoji}>{cook.emoji}</div>
       </div>
 
       {/* Profile header */}
@@ -95,7 +94,7 @@ export default function CookProfilePage({
         {/* Bio */}
         <section className={styles.section}>
           <p className={styles.bio}>{cook.bio}</p>
-          <p className={styles.leadTime}>⏱ {cook.leadTime}</p>
+          <p className={styles.leadTime}>{cook.leadTime}</p>
         </section>
 
         {/* Active listings */}
@@ -119,9 +118,7 @@ export default function CookProfilePage({
                   <div
                     className={styles.listingCover}
                     style={{ background: listing.gradient }}
-                  >
-                    <span className={styles.listingEmoji}>{listing.emoji}</span>
-                  </div>
+                  />
                   <div className={styles.listingInfo}>
                     <h3 className={styles.listingTitle}>{listing.title}</h3>
                     <p className={styles.listingMeta}>

@@ -7,7 +7,7 @@
 .inner {
   max-width: 560px;
   margin: 0 auto;
-  padding: 20px 20px 80px;
+  padding: 28px 20px 80px;
 }
 
 /* ─── Back row ──────────────────────────────────────────────────────────────── */
@@ -16,11 +16,11 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .backBtn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
   font-size: 13.5px;
@@ -35,27 +35,38 @@
 }
 
 .orderId {
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--grey-500);
   font-family: monospace;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 /* ─── Hero card ─────────────────────────────────────────────────────────────── */
 .heroCard {
   border-radius: var(--radius-md);
-  padding: 20px 20px 20px 24px;
+  padding: 28px 24px;
   display: flex;
   align-items: center;
-  gap: 16px;
-  margin-bottom: 14px;
+  gap: 20px;
+  margin-bottom: 16px;
 }
 
-.heroEmoji {
-  font-size: 48px;
-  line-height: 1;
-  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.3));
+.heroInitials {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.22);
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--white);
+  flex-shrink: 0;
+  letter-spacing: -0.02em;
 }
 
 .heroInfo {
@@ -64,17 +75,19 @@
 }
 
 .heroCook {
-  font-size: 13px;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.75);
-  margin-bottom: 3px;
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.72);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 4px;
 }
 
 .heroTitle {
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 800;
   color: var(--white);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.025em;
   line-height: 1.2;
 }
 
@@ -82,44 +95,48 @@
 .codeCard {
   border: 2px dashed var(--grey-300);
   border-radius: var(--radius-md);
-  padding: 24px;
+  padding: 28px 24px;
   text-align: center;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
+  background: var(--white);
 }
 
 .codeLabel {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--grey-500);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  margin-bottom: 10px;
+  letter-spacing: 0.12em;
+  margin-bottom: 12px;
 }
 
 .codeDisplay {
-  font-size: 40px;
+  font-size: 44px;
   font-weight: 900;
   color: var(--ink);
-  letter-spacing: 0.1em;
+  letter-spacing: 0.12em;
   font-family: monospace;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
   line-height: 1;
 }
 
 .codeDesc {
-  font-size: 13px;
+  font-size: 13.5px;
   color: var(--grey-500);
-  margin-bottom: 14px;
+  margin-bottom: 18px;
+  line-height: 1.5;
 }
 
 .copyBtn {
-  padding: 8px 24px;
+  display: inline-flex;
+  align-items: center;
+  padding: 10px 28px;
   background: var(--ink);
   color: var(--white);
   font-size: 13px;
   font-weight: 700;
   border: none;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-pill);
   cursor: pointer;
   font-family: inherit;
   transition: opacity 0.12s;
@@ -135,16 +152,18 @@
 .itemsCard {
   border: 1px solid var(--grey-200);
   border-radius: var(--radius-md);
-  padding: 18px;
-  margin-bottom: 14px;
+  padding: 22px 24px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow-md);
 }
 
 .sectionTitle {
-  font-size: 13.5px;
-  font-weight: 800;
-  color: var(--ink);
-  letter-spacing: -0.005em;
-  margin-bottom: 16px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--grey-500);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  margin-bottom: 20px;
 }
 
 /* ─── Status tracker ────────────────────────────────────────────────────────── */
@@ -157,7 +176,7 @@
 .step {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
+  gap: 14px;
 }
 
 .stepLeft {
@@ -178,11 +197,15 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  transition:
+    border-color 0.15s,
+    background 0.15s,
+    color 0.15s;
 }
 
 .stepDotDone {
-  border-color: var(--red);
-  background: var(--red);
+  border-color: var(--ink);
+  background: var(--ink);
   color: var(--white);
 }
 
@@ -191,10 +214,11 @@
   height: 24px;
   background: var(--grey-200);
   margin: 2px 0;
+  transition: background 0.15s;
 }
 
 .stepLineDone {
-  background: var(--red);
+  background: var(--ink);
 }
 
 .stepLabel {
@@ -202,6 +226,7 @@
   font-weight: 500;
   color: var(--grey-500);
   padding: 5px 0;
+  line-height: 1.4;
 }
 
 .stepLabelDone {
@@ -213,12 +238,18 @@
 .detailRow {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
-  margin-bottom: 14px;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--grey-100);
+}
+
+.detailRow:first-child {
+  padding-top: 0;
 }
 
 .detailRow:last-child {
-  margin-bottom: 0;
+  border-bottom: none;
+  padding-bottom: 0;
 }
 
 .detailIcon {
@@ -232,22 +263,32 @@
   font-weight: 700;
   color: var(--grey-500);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  margin-bottom: 2px;
+  letter-spacing: 0.08em;
+  margin-bottom: 3px;
 }
 
 .detailVal {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--ink);
+  letter-spacing: -0.01em;
 }
 
 /* ─── Dish rows ─────────────────────────────────────────────────────────────── */
 .dishRow {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 8px;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--grey-100);
+}
+
+.dishRow:first-child {
+  padding-top: 0;
+}
+
+.dishRow:last-child {
+  border-bottom: none;
 }
 
 .dishQty {
@@ -255,7 +296,7 @@
   color: var(--grey-500);
   width: 24px;
   flex-shrink: 0;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .dishName {
@@ -267,7 +308,7 @@
 
 .dishPrice {
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--ink);
   flex-shrink: 0;
 }
@@ -275,35 +316,36 @@
 .totalDivider {
   border: none;
   border-top: 1px solid var(--grey-200);
-  margin: 10px 0;
+  margin: 4px 0;
 }
 
 .summaryLabel {
   flex: 1;
-  font-size: 13px;
+  font-size: 13.5px;
   color: var(--grey-500);
 }
 
 .summaryVal {
-  font-size: 13px;
+  font-size: 13.5px;
   color: var(--grey-700);
-  font-weight: 500;
+  font-weight: 600;
   flex-shrink: 0;
 }
 
 .totalRow {
-  margin-top: 4px;
+  margin-top: 2px;
 }
 
 .totalLabel {
   flex: 1;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 800;
   color: var(--ink);
+  letter-spacing: -0.015em;
 }
 
 .totalVal {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 800;
   color: var(--ink);
   flex-shrink: 0;
@@ -313,16 +355,17 @@
 .actions {
   display: flex;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
 .messageBtn,
 .rateBtn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 7px;
-  padding: 11px 20px;
-  border: 1.5px solid var(--grey-200);
-  border-radius: var(--radius-sm);
+  padding: 12px 22px;
+  border: 1.5px solid var(--grey-300);
+  border-radius: var(--radius-pill);
   font-size: 14px;
   font-weight: 600;
   color: var(--ink);
@@ -331,12 +374,12 @@
   cursor: pointer;
   font-family: inherit;
   transition:
-    border-color 0.12s,
-    background 0.12s;
+    border-color 0.15s,
+    background 0.15s,
+    box-shadow 0.15s;
 }
 
-.messageBtn:hover,
-.rateBtn:hover {
+.messageBtn:hover {
   border-color: var(--ink);
   background: var(--grey-100);
 }
@@ -350,4 +393,5 @@
 .rateBtn:hover {
   background: var(--red-deep);
   border-color: var(--red-deep);
+  box-shadow: 0 6px 20px rgba(214, 64, 69, 0.3);
 }

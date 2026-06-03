@@ -76,6 +76,12 @@ function CheckoutInner() {
     }
   }, [isLoggedIn]);
 
+  useEffect(() => {
+    if (items.length === 0 && !placing) {
+      router.replace("/app/cart");
+    }
+  }, [items.length, placing, router]);
+
   const steps = useMemo(() => {
     if (isLoggedIn) {
       return [
@@ -142,14 +148,7 @@ function CheckoutInner() {
   }
 
   if (items.length === 0) {
-    return (
-      <div className={styles.emptyPage}>
-        <p>Your cart is empty.</p>
-        <Link href="/app/browse" className={styles.browseBtn}>
-          Browse listings
-        </Link>
-      </div>
-    );
+    return null;
   }
 
   return (
@@ -504,7 +503,6 @@ function OrderSummary({
 
       {items.map((item) => (
         <div key={item.dishId} className={styles.summaryItem}>
-          <span className={styles.summaryItemEmoji}>{item.dishEmoji}</span>
           <span className={styles.summaryItemName}>
             {item.quantity}× {item.dishName}
           </span>
