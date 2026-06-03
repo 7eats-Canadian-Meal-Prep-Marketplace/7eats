@@ -443,7 +443,7 @@ export default function ListingPage({
               <span
                 className={`${styles.spotsText} ${spotsLow ? styles.urgent : ""}`}
               >
-                {spotsLeft} order{spotsLeft !== 1 ? "s" : ""} remaining
+                {spotsLeft} left
               </span>
               <div className={styles.spotsTrack}>
                 <div

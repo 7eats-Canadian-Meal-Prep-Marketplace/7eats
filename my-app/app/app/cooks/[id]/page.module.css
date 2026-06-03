@@ -1,163 +1,297 @@
-/* ─── Page ──────────────────────────────────────────────────────────────────── */
+/* ─── Page ───────────────────────────────────────────────────────────────────── */
 .page {
   background: var(--white);
   min-height: 100%;
-  padding-bottom: 60px;
+  padding-bottom: 80px;
 }
 
-/* ─── Cover ─────────────────────────────────────────────────────────────────── */
-.cover {
-  position: relative;
-  height: 220px;
-  display: flex;
-  align-items: flex-end;
-}
-
-.backBtn {
-  position: absolute;
-  top: 16px;
-  left: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.88);
-  backdrop-filter: blur(8px);
-  color: var(--ink);
-  transition: background 0.12s;
-  text-decoration: none;
-}
-
-.backBtn:hover {
-  background: rgba(255, 255, 255, 1);
-}
-
-/* ─── Profile header ────────────────────────────────────────────────────────── */
-.profileHeader {
-  display: flex;
-  align-items: flex-end;
-  gap: 18px;
-  padding: 0 var(--pad-x) 24px;
-  border-bottom: 1px solid var(--grey-200);
-  margin-top: -40px;
+/* ─── Breadcrumb ─────────────────────────────────────────────────────────────── */
+.breadcrumb {
   max-width: 740px;
-  margin-left: auto;
-  margin-right: auto;
+  margin: 0 auto;
+  padding: 18px var(--pad-x) 0;
 }
 
-.avatar {
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--grey-700);
+  text-decoration: none;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  cursor: pointer;
+  transition: color 0.12s;
+}
+
+.backLink:hover {
+  color: var(--ink);
+}
+
+/* ─── Header ─────────────────────────────────────────────────────────────────── */
+.headerCard {
+  max-width: 740px;
+  margin: 0 auto;
+  padding: 24px var(--pad-x) 28px;
+  border-bottom: 1px solid var(--grey-200);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Top row: avatar · name · follow */
+.headerTop {
   display: flex;
   align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  font-weight: 800;
-  color: var(--white);
-  box-shadow:
-    0 0 0 4px var(--white),
-    0 4px 20px rgba(0, 0, 0, 0.18);
-  flex-shrink: 0;
-  letter-spacing: -0.02em;
+  gap: 14px;
+  margin-bottom: 20px;
 }
 
-.headerInfo {
+.avatarWrap {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  border: 2px solid var(--grey-200);
+  box-shadow: 0 2px 8px rgba(15, 15, 15, 0.1);
+}
+
+.avatarImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.nameBlock {
+  display: flex;
+  align-items: center;
+  gap: 7px;
   flex: 1;
-  padding-bottom: 4px;
   min-width: 0;
 }
 
-.nameRow {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
-}
-
 .name {
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 800;
   color: var(--ink);
-  letter-spacing: -0.025em;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
 }
 
 .verifiedIcon {
-  color: var(--ink);
+  color: var(--red);
   flex-shrink: 0;
+  stroke-width: 2.25;
 }
 
-.metaRow {
+/* Follow button */
+.followBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 18px;
+  border: 1.5px solid var(--grey-300);
+  border-radius: var(--radius-pill);
+  background: var(--white);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition:
+    border-color 0.15s,
+    background 0.15s,
+    color 0.15s;
+}
+
+.followBtn:hover {
+  border-color: var(--ink);
+  background: var(--grey-100);
+}
+
+.followBtnActive {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--white);
+}
+
+/* Cuisine + experience — full width subtitle */
+.cuisineLine {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+  margin-bottom: 10px;
+  width: 100%;
+}
+
+/* Rating row — full width, prominent */
+.ratingRow {
   display: flex;
   align-items: center;
-  gap: 5px;
-  margin-bottom: 4px;
+  gap: 6px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  width: 100%;
 }
 
-.metaIcon {
-  color: var(--grey-500);
+.ratingStar {
+  color: var(--red);
   flex-shrink: 0;
 }
 
-.starIcon {
-  color: var(--grey-700);
+.ratingBig {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--red);
+  letter-spacing: -0.025em;
+}
+
+.ratingCount {
+  font-size: 14px;
+  font-weight: 500;
+  color: #3f3f46;
+}
+
+.ratingDot {
+  color: #d4d4d8;
+  font-size: 14px;
+}
+
+.ratingLocIcon {
+  color: #52525b;
   flex-shrink: 0;
 }
 
-.metaText {
-  font-size: 13.5px;
-  color: var(--grey-700);
+.ratingLoc {
+  font-size: 14px;
+  font-weight: 500;
+  color: #3f3f46;
 }
 
-.reviewCount {
-  color: var(--grey-500);
-  font-weight: 400;
+/* Stat strip — 3 equal columns, full width */
+.statsStrip {
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  border: 1px solid var(--grey-200);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 16px;
 }
 
-/* ─── Body ──────────────────────────────────────────────────────────────────── */
+.statItem {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 14px 12px;
+  gap: 3px;
+  border-right: 1px solid var(--grey-200);
+}
+
+.statItem:last-child {
+  border-right: none;
+}
+
+.statNum {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--red);
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.statLabel {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.statSep {
+  display: none;
+}
+
+/* Schedule — full-width day grid */
+.availabilityBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  margin-bottom: 16px;
+  padding: 14px;
+  border: 1px solid var(--grey-200);
+  border-radius: 8px;
+}
+
+.availRow {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.availLabel {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #52525b;
+}
+
+.dayChips {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+  width: 100%;
+}
+
+.dayChip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  width: 100%;
+  padding: 8px 4px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  text-align: center;
+}
+
+.dayChipOn {
+  background: var(--red);
+  border: 1.5px solid var(--red);
+  color: var(--white);
+}
+
+.dayChipOff {
+  background: var(--white);
+  border: 1.5px solid var(--grey-300);
+  color: #71717a;
+}
+
+/* ─── Body ───────────────────────────────────────────────────────────────────── */
 .body {
   max-width: 740px;
   margin: 0 auto;
-  padding: 28px var(--pad-x);
+  padding: 24px var(--pad-x);
 }
 
-/* ─── Badges ────────────────────────────────────────────────────────────────── */
-.badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 24px;
-}
+/* ─── Badges — removed from profile (dietary tags live on listings) ─────────── */
 
-.badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 5px 13px;
-  border-radius: var(--radius-pill);
-  background: var(--grey-100);
-  border: 1px solid var(--grey-200);
-  color: var(--ink);
-  font-size: 12.5px;
-  font-weight: 600;
-}
-
-.cuisineBadge {
-  display: inline-flex;
-  align-items: center;
-  padding: 5px 13px;
-  border-radius: var(--radius-pill);
-  background: transparent;
-  border: 1.5px solid var(--grey-300);
-  color: var(--grey-700);
-  font-size: 12.5px;
-  font-weight: 600;
-}
-
-/* ─── Section ───────────────────────────────────────────────────────────────── */
+/* ─── Section ────────────────────────────────────────────────────────────────── */
 .section {
-  margin-bottom: 40px;
+  margin-bottom: 36px;
 }
 
 .sectionTitle {
@@ -175,122 +309,266 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   background: var(--red);
   color: var(--white);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 800;
 }
 
-.ratingPill {
-  padding: 4px 12px;
-  background: var(--grey-100);
-  border: 1px solid var(--grey-200);
-  color: var(--ink);
-  border-radius: var(--radius-pill);
-  font-size: 13px;
-  font-weight: 700;
+.sectionRating {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--red);
+  letter-spacing: -0.02em;
 }
 
-/* ─── Bio ───────────────────────────────────────────────────────────────────── */
+.sectionRating svg {
+  color: var(--red);
+}
+
+/* ─── Bio ────────────────────────────────────────────────────────────────────── */
 .bio {
-  font-size: 15.5px;
-  color: var(--grey-700);
+  font-size: 15px;
+  color: #3f3f46;
   line-height: 1.7;
   margin-bottom: 12px;
+  width: 100%;
 }
 
-.leadTime {
-  font-size: 13.5px;
-  color: var(--grey-500);
+.leadTimeWrap {
+  width: 100%;
+}
+
+.leadTimeBadge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 12px 16px;
+  background: var(--ink);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
   font-weight: 600;
+  color: var(--white);
+  box-sizing: border-box;
 }
 
-/* ─── Listing list ──────────────────────────────────────────────────────────── */
+/* ─── Listing cards ──────────────────────────────────────────────────────────── */
 .noListings {
   font-size: 14px;
-  color: var(--grey-500);
+  color: #52525b;
 }
 
 .listingList {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 14px;
+  background: #f9fafb;
+  border-radius: 16px;
+  padding: 16px;
 }
 
 .listingCard {
   display: flex;
-  align-items: center;
-  gap: 16px;
-  border: 1px solid var(--grey-200);
-  border-radius: var(--radius-md);
-  padding: 16px;
+  flex-direction: row;
+  border-radius: 12px;
+  overflow: hidden;
   text-decoration: none;
-  box-shadow: var(--shadow-md);
+  background: var(--white);
+  box-shadow:
+    0 2px 12px rgba(0, 0, 0, 0.05),
+    0 1px 3px rgba(0, 0, 0, 0.03);
   transition:
-    border-color 0.15s,
-    box-shadow 0.15s,
-    transform 0.15s;
+    transform 0.28s cubic-bezier(0.34, 1.3, 0.64, 1),
+    box-shadow 0.28s ease;
 }
 
 .listingCard:hover {
-  border-color: var(--grey-500);
+  transform: translateY(-3px);
   box-shadow:
-    0 8px 24px rgba(15, 15, 15, 0.08),
-    0 2px 6px rgba(15, 15, 15, 0.04);
-  transform: translateY(-1px);
+    0 14px 36px rgba(0, 0, 0, 0.1),
+    0 4px 10px rgba(0, 0, 0, 0.05);
 }
 
-/* Color strip replaces emoji cover */
+/* ─── Left image — fixed width ──────────────────────────────────────────────── */
 .listingCover {
-  width: 48px;
-  height: 48px;
-  border-radius: var(--radius-sm);
+  width: 200px;
+  height: 140px;
   flex-shrink: 0;
+  overflow: hidden;
+  background: var(--grey-100);
 }
 
-.listingInfo {
+.listingCoverImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.listingCard:hover .listingCoverImg {
+  transform: scale(1.06);
+}
+
+/* ─── Right content column ──────────────────────────────────────────────────── */
+.listingMain {
   flex: 1;
   min-width: 0;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+/* Row 1: title + price */
+.listingHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
 }
 
 .listingTitle {
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 700;
-  color: var(--ink);
-  margin-bottom: 4px;
-  letter-spacing: -0.01em;
+  color: #111111;
+  letter-spacing: -0.025em;
+  line-height: 1.3;
+  margin: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.listingMeta {
-  font-size: 12.5px;
-  color: var(--grey-500);
-  margin-bottom: 2px;
-}
-
 .listingPrice {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--ink);
-}
-
-.spotLow {
-  color: var(--red);
-}
-
-.listingArrow {
-  font-size: 18px;
-  color: var(--grey-300);
+  font-size: 16px;
+  font-weight: 800;
+  color: #000000;
+  letter-spacing: -0.02em;
   flex-shrink: 0;
-  font-style: normal;
+  white-space: nowrap;
 }
 
-/* ─── Reviews ───────────────────────────────────────────────────────────────── */
+/* Row 2: description */
+.listingSummary {
+  font-size: 13.5px;
+  color: #4b5563;
+  line-height: 1.5;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Row 3: tags left, spots right */
+.listingFooter {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: auto;
+  flex-wrap: wrap;
+}
+
+.listingMeta {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+/* dietary / niche tags — dark outlined */
+.listingMetaLabel {
+  display: inline-flex;
+  padding: 4px 10px;
+  background: transparent;
+  border: 1.5px solid #1a1a1a;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #1a1a1a;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+}
+
+/* deal pill — white bg, red outlined */
+.listingMetaDeal {
+  display: inline-flex;
+  padding: 4px 10px;
+  background: var(--white);
+  border: 1.5px solid var(--red);
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--red);
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+}
+
+.listingSpots {
+  font-size: 12px;
+  font-weight: 500;
+  color: #9ca3af;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.listingSpotsLow {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--red);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.listingSpotsOut {
+  font-size: 12px;
+  font-weight: 600;
+  color: #9ca3af;
+  text-decoration: line-through;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ─── Narrow screens: stack image above content ─────────────────────────────── */
+@media (max-width: 480px) {
+  .listingCard {
+    flex-direction: column;
+  }
+
+  .listingCover {
+    width: 100%;
+    height: 160px;
+  }
+
+  .listingMain {
+    padding: 14px 16px;
+  }
+
+  .listingTitle {
+    font-size: 15px;
+    white-space: normal;
+  }
+
+  .listingFooter {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}
+
+/* ─── Reviews — single column stack ─────────────────────────────────────────── */
 .reviewList {
   display: flex;
   flex-direction: column;
@@ -299,23 +577,24 @@
 
 .reviewCard {
   border: 1px solid var(--grey-200);
-  border-radius: var(--radius-md);
-  padding: 20px;
+  border-radius: 8px;
+  padding: 18px 20px;
   box-shadow: var(--shadow-md);
 }
 
 .reviewTop {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 12px;
+  gap: 10px;
+  margin-bottom: 10px;
 }
 
 .reviewerAvatar {
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
-  background: var(--grey-200);
+  background: var(--white);
+  border: 1px solid var(--grey-200);
   color: var(--ink);
   font-size: 11px;
   font-weight: 800;
@@ -329,7 +608,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
 }
 
 .reviewerName {
@@ -340,7 +619,7 @@
 
 .reviewDate {
   font-size: 12px;
-  color: var(--grey-500);
+  color: #71717a;
 }
 
 .stars {
@@ -349,37 +628,27 @@
 }
 
 .starFilled {
-  color: var(--grey-700);
+  color: var(--red);
 }
 
 .starEmpty {
-  color: var(--grey-300);
+  color: var(--grey-200);
 }
 
 .reviewComment {
-  font-size: 14.5px;
-  color: var(--grey-700);
+  font-size: 14px;
+  color: #3f3f46;
   line-height: 1.65;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .reviewDish {
   display: inline-block;
-  padding: 4px 12px;
-  background: var(--grey-100);
+  padding: 3px 10px;
+  background: var(--white);
   border: 1px solid var(--grey-200);
   border-radius: var(--radius-pill);
   font-size: 12px;
-  color: var(--grey-700);
+  color: #3f3f46;
   font-weight: 600;
-}
-
-@media (max-width: 768px) {
-  .profileHeader {
-    padding: 0 20px 20px;
-  }
-
-  .body {
-    padding: 24px 20px;
-  }
 }

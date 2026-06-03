@@ -47,6 +47,12 @@ export type MockCook = {
   verified: boolean;
   emoji: string;
   listingIds: string[];
+  ordersCompleted: number;
+  memberSince: string;
+  yearsExperience: number;
+  fulfillment: "pickup" | "delivery" | "both";
+  pickupDays?: string[];
+  deliveryDays?: string[];
 };
 
 export type MockDish = {
@@ -78,7 +84,7 @@ export type MockListing = {
   dishes: MockDish[];
   cuisineTypes: CuisineType[];
   priceFrom: number;
-  orderType: "one-time" | "subscription" | "both";
+  orderType: "one-time" | "subscription";
   fulfillment: "pickup" | "delivery" | "both";
   deal: { badge: string; label: string } | null;
   distanceKm: number;
@@ -184,6 +190,12 @@ export const MOCK_COOKS: MockCook[] = [
     verified: true,
     emoji: "🥘",
     listingIds: ["listing-1", "listing-6", "listing-17", "listing-21"],
+    ordersCompleted: 342,
+    memberSince: "Mar 2024",
+    yearsExperience: 8,
+    fulfillment: "both",
+    pickupDays: ["Sat", "Sun"],
+    deliveryDays: ["Fri", "Sat", "Sun"],
   },
   {
     id: "cook-2",
@@ -201,6 +213,12 @@ export const MOCK_COOKS: MockCook[] = [
     verified: true,
     emoji: "🍲",
     listingIds: ["listing-2", "listing-7", "listing-20", "listing-24"],
+    ordersCompleted: 218,
+    memberSince: "Jan 2024",
+    yearsExperience: 12,
+    fulfillment: "both",
+    pickupDays: ["Fri", "Sat"],
+    deliveryDays: ["Sat"],
   },
   {
     id: "cook-3",
@@ -218,6 +236,11 @@ export const MOCK_COOKS: MockCook[] = [
     verified: false,
     emoji: "🍖",
     listingIds: ["listing-4", "listing-16", "listing-28"],
+    ordersCompleted: 156,
+    memberSince: "Jun 2024",
+    yearsExperience: 6,
+    fulfillment: "pickup",
+    pickupDays: ["Fri", "Sat"],
   },
   {
     id: "cook-4",
@@ -241,6 +264,12 @@ export const MOCK_COOKS: MockCook[] = [
       "listing-22",
       "listing-23",
     ],
+    ordersCompleted: 287,
+    memberSince: "Sep 2023",
+    yearsExperience: 15,
+    fulfillment: "both",
+    pickupDays: ["Sat", "Sun"],
+    deliveryDays: ["Fri", "Sat"],
   },
   {
     id: "cook-5",
@@ -258,6 +287,12 @@ export const MOCK_COOKS: MockCook[] = [
     verified: false,
     emoji: "🍝",
     listingIds: ["listing-5", "listing-15", "listing-27"],
+    ordersCompleted: 94,
+    memberSince: "Aug 2024",
+    yearsExperience: 5,
+    fulfillment: "both",
+    pickupDays: ["Sun"],
+    deliveryDays: ["Sat", "Sun"],
   },
   {
     id: "cook-6",
@@ -275,6 +310,12 @@ export const MOCK_COOKS: MockCook[] = [
     verified: true,
     emoji: "🍛",
     listingIds: ["listing-9", "listing-10", "listing-19", "listing-25"],
+    ordersCompleted: 412,
+    memberSince: "Oct 2023",
+    yearsExperience: 20,
+    fulfillment: "both",
+    pickupDays: ["Sat"],
+    deliveryDays: ["Fri", "Sat"],
   },
   {
     id: "cook-7",
@@ -292,6 +333,12 @@ export const MOCK_COOKS: MockCook[] = [
     verified: false,
     emoji: "🍜",
     listingIds: ["listing-11", "listing-12", "listing-26"],
+    ordersCompleted: 178,
+    memberSince: "Apr 2024",
+    yearsExperience: 10,
+    fulfillment: "both",
+    pickupDays: ["Wed", "Sat"],
+    deliveryDays: ["Fri", "Sat"],
   },
   {
     id: "cook-8",
@@ -309,6 +356,11 @@ export const MOCK_COOKS: MockCook[] = [
     verified: true,
     emoji: "🌶️",
     listingIds: ["listing-13", "listing-14", "listing-29"],
+    ordersCompleted: 261,
+    memberSince: "Dec 2023",
+    yearsExperience: 18,
+    fulfillment: "pickup",
+    pickupDays: ["Sat", "Sun"],
   },
 ];
 
@@ -335,7 +387,7 @@ export const MOCK_LISTINGS: MockListing[] = [
     ordersLeft: 3,
     cuisineTypes: ["West African"],
     priceFrom: 18,
-    orderType: "both",
+    orderType: "subscription",
     fulfillment: "pickup",
     deal: null,
     distanceKm: 1.2,
@@ -520,7 +572,7 @@ export const MOCK_LISTINGS: MockListing[] = [
     ordersLeft: 5,
     cuisineTypes: ["Brazilian"],
     priceFrom: 14,
-    orderType: "both",
+    orderType: "one-time",
     fulfillment: "pickup",
     deal: {
       badge: "Buy 1 Get 1 Free",
@@ -741,7 +793,7 @@ export const MOCK_LISTINGS: MockListing[] = [
     ordersLeft: 9,
     cuisineTypes: ["Middle Eastern"],
     priceFrom: 22,
-    orderType: "both",
+    orderType: "subscription",
     fulfillment: "delivery",
     deal: { badge: "10% OFF", label: "10% off your first box" },
     distanceKm: 5.8,
@@ -1002,7 +1054,7 @@ export const MOCK_LISTINGS: MockListing[] = [
     ordersLeft: 9,
     cuisineTypes: ["Caribbean"],
     priceFrom: 22,
-    orderType: "both",
+    orderType: "one-time",
     fulfillment: "pickup",
     deal: { badge: "20% OFF", label: "20% off this weekend" },
     distanceKm: 3.7,
@@ -1355,7 +1407,7 @@ export const MOCK_LISTINGS: MockListing[] = [
     ordersLeft: 15,
     cuisineTypes: ["Korean"],
     priceFrom: 28,
-    orderType: "both",
+    orderType: "one-time",
     fulfillment: "pickup",
     deal: { badge: "$8 OFF", label: "$8 off your first batch kit" },
     distanceKm: 2.4,
@@ -1682,7 +1734,7 @@ export const MOCK_LISTINGS: MockListing[] = [
     ordersLeft: 5,
     cuisineTypes: ["Italian"],
     priceFrom: 32,
-    orderType: "both",
+    orderType: "subscription",
     fulfillment: "both",
     deal: { badge: "15% OFF", label: "15% off this weekend" },
     distanceKm: 3.1,
@@ -1781,7 +1833,7 @@ export const MOCK_LISTINGS: MockListing[] = [
     ordersLeft: 12,
     cuisineTypes: ["Caribbean"],
     priceFrom: 16,
-    orderType: "both",
+    orderType: "one-time",
     fulfillment: "both",
     deal: { badge: "$8 OFF", label: "Save $8 on curry goat tacos" },
     distanceKm: 3.7,

@@ -98,12 +98,7 @@ function applyFilters(
     if (f.niche.size > 0) {
       if (![...f.niche].every((n) => l.niches.includes(n))) return false;
     }
-    if (
-      f.orderType !== "all" &&
-      l.orderType !== f.orderType &&
-      l.orderType !== "both"
-    )
-      return false;
+    if (f.orderType !== "all" && l.orderType !== f.orderType) return false;
     if (f.distanceKm < 25 && l.distanceKm > f.distanceKm) return false;
     return true;
   });
