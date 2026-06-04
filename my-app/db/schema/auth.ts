@@ -30,6 +30,7 @@ export const authUser = pgTable(
     phone: varchar("phone", { length: 20 }),
     phoneVerified: boolean("phone_verified").notNull().default(false),
     stripeCustomerId: text("stripe_customer_id"),
+    onboardingCompletedAt: timestamp("onboarding_completed_at"),
   },
   () => [
     // Public read required: other tables' RLS policies JOIN this table to check

@@ -38,7 +38,11 @@ export async function POST(req: Request) {
     rawAudience === "client" || rawAudience === "business" ? rawAudience : null;
 
   const [account] = await db
-    .select({ role: authUser.role, emailVerified: authUser.emailVerified })
+    .select({
+      role: authUser.role,
+      emailVerified: authUser.emailVerified,
+      onboardingCompletedAt: authUser.onboardingCompletedAt,
+    })
     .from(authUser)
     .where(eq(authUser.email, normalizedEmail))
     .limit(1);
@@ -97,5 +101,15 @@ export async function POST(req: Request) {
   ).getSetCookie?.() ?? []) {
     res.headers.append("Set-Cookie", cookie);
   }
+
+  // Re-issue onboarding cookie from DB so it survives new devices/cleared browsers.
+  if (isClient && account?.onboardingCompletedAt != null) {
+    const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
+    res.headers.append(
+      "Set-Cookie",
+      `7eats-onboarded=1; Path=/; HttpOnly; SameSite=Lax; Max-Age=31536000${secure}`,
+    );
+  }
+
   return res;
 }

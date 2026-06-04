@@ -110,6 +110,22 @@ agent-browser close
 - Prefer explicit `onDelete` behavior on foreign keys so Drizzle push output is
   intentional and reviewable.
 
+## Routing — use `proxy.ts` only (not `middleware.ts`)
+
+Next.js 16 deprecated `middleware.ts` in favor of **`my-app/proxy.ts`**. Having
+both files breaks dev and build.
+
+- **Do not** create, restore, or re-export from `middleware.ts`.
+- **Do** put all request routing, auth gates, and redirects in `proxy.ts`.
+- Keep **client** logic (`/app`, `/app-auth`) and **business** logic
+  (`/business`, `/business-auth`) in clearly separated sections — do not mix
+  consumer redirects with cook/admin setup flows.
+- `/` → `/app` for guests and clients; `/business/dashboard` only when a
+  cook/admin session is present.
+
+If proxy changes act weird after deleting `middleware.ts`, stop dev and remove
+`my-app/.next` (stale Turbopack cache can still reference the old file).
+
 ## Key Conventions
 
 - **Server vs. client:** Keep components server-side unless client behavior is

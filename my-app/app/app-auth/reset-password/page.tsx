@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { ClientAuthLayout } from "@/app/components/ClientAuthLayout";
 import ResetPasswordForm from "@/app/components/ResetPasswordForm";
-import styles from "./page.module.css";
 
 export const metadata: Metadata = {
   title: "Reset password — 7eats",
@@ -18,8 +18,8 @@ export default async function ResetPasswordPage({
   }
 
   return (
-    <main className={styles.page}>
+    <ClientAuthLayout>
       <ResetPasswordForm token={token} audience="client" />
-    </main>
+    </ClientAuthLayout>
   );
 }

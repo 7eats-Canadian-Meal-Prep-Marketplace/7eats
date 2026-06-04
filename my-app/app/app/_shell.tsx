@@ -3,7 +3,6 @@
 import {
   Crosshair,
   Heart,
-  LayoutGrid,
   LogOut,
   MapPin,
   MessageSquare,
@@ -142,14 +141,22 @@ function AddressModal({
 }
 
 const MENU_LINKS = [
-  { href: "/app/browse", label: "Browse", Icon: LayoutGrid },
+  { href: "/app/search", label: "Search", Icon: Search },
   { href: "/app/saved", label: "Saved", Icon: Heart },
   { href: "/app/orders", label: "Orders", Icon: Package },
   { href: "/app/inbox", label: "Inbox", Icon: MessageSquare },
   { href: "/app/settings", label: "Account", Icon: Settings },
 ];
 
-function ProfileMenu() {
+function ProfileMenu({
+  initials,
+  name,
+  email,
+}: {
+  initials: string;
+  name: string;
+  email: string;
+}) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -195,15 +202,15 @@ function ProfileMenu() {
         aria-expanded={open}
         aria-label="Account menu"
       >
-        JD
+        {initials}
       </button>
       {open && (
         <div className={styles.menu} role="menu">
           <div className={styles.menuHead}>
-            <div className={styles.menuAvatar}>JD</div>
+            <div className={styles.menuAvatar}>{initials}</div>
             <div className={styles.menuIdentity}>
-              <span className={styles.menuName}>Jordan Doe</span>
-              <span className={styles.menuEmail}>jordan@example.com</span>
+              <span className={styles.menuName}>{name || "Your account"}</span>
+              <span className={styles.menuEmail}>{email}</span>
             </div>
           </div>
           <div className={styles.menuDivider} />
@@ -238,9 +245,9 @@ function ProfileMenu() {
 
 const BOTTOM_NAV = [
   {
-    href: "/app/browse",
-    label: "Browse",
-    Icon: LayoutGrid,
+    href: "/app/search",
+    label: "Search",
+    Icon: Search,
     requiresAuth: false,
   },
   { href: "/app/orders", label: "Orders", Icon: Package, requiresAuth: true },
@@ -256,9 +263,15 @@ const BOTTOM_NAV = [
 function ShellInner({
   children,
   isLoggedIn,
+  userInitials,
+  userName,
+  userEmail,
 }: {
   children: React.ReactNode;
   isLoggedIn: boolean;
+  userInitials: string;
+  userName: string;
+  userEmail: string;
 }) {
   const pathname = usePathname();
   const { itemCount } = useCart();
@@ -322,7 +335,11 @@ function ShellInner({
               </Link>
 
               {isLoggedIn ? (
-                <ProfileMenu />
+                <ProfileMenu
+                  initials={userInitials}
+                  name={userName}
+                  email={userEmail}
+                />
               ) : (
                 <div className={styles.guestActions}>
                   <Link href="/app-auth/login" className={styles.loginBtn}>
@@ -386,14 +403,27 @@ function ShellInner({
 export default function AppShell({
   children,
   isLoggedIn,
+  userInitials = "",
+  userName = "",
+  userEmail = "",
 }: {
   children: React.ReactNode;
   isLoggedIn: boolean;
+  userInitials?: string;
+  userName?: string;
+  userEmail?: string;
 }) {
   return (
     <AppProvider isLoggedIn={isLoggedIn}>
       <CartProvider>
-        <ShellInner isLoggedIn={isLoggedIn}>{children}</ShellInner>
+        <ShellInner
+          isLoggedIn={isLoggedIn}
+          userInitials={userInitials}
+          userName={userName}
+          userEmail={userEmail}
+        >
+          {children}
+        </ShellInner>
       </CartProvider>
     </AppProvider>
   );

@@ -1,61 +1,30 @@
 .wrap {
   width: 100%;
-  max-width: 460px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 32px;
+  max-width: 400px;
 }
 
-/* ── Logo ──────────────────────────────────────────────────── */
-.logoLink {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0.9;
-  transition: opacity 0.15s;
-}
-
-.logoLink:hover {
-  opacity: 1;
-}
-
-/* ── Card ──────────────────────────────────────────────────── */
-.card {
-  width: 100%;
-  background: #ffffff;
-  border: 1px solid var(--grey-200);
-  border-radius: 4px;
-  padding: 40px 40px 44px;
-  box-shadow: 0 2px 12px rgba(15, 15, 15, 0.06);
-}
-
-@media (max-width: 480px) {
-  .card {
-    padding: 32px 24px 36px;
-  }
-}
-
-/* ── Head ──────────────────────────────────────────────────── */
+/* ── Head ──────────────────────────────────────────────────────────────────── */
 .head {
-  margin-bottom: 32px;
+  margin-bottom: 36px;
 }
 
 .title {
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: -0.025em;
+  font-size: 30px;
+  font-weight: 900;
+  letter-spacing: -0.04em;
   color: var(--ink);
-  line-height: 1.2;
+  line-height: 1.1;
+  margin: 0 0 8px;
 }
 
 .sub {
-  margin-top: 8px;
   font-size: 14px;
   color: var(--grey-700);
+  margin: 0;
+  line-height: 1.5;
 }
 
-/* ── Form ──────────────────────────────────────────────────── */
+/* ── Form ──────────────────────────────────────────────────────────────────── */
 .form {
   display: flex;
   flex-direction: column;
@@ -78,13 +47,13 @@
 .field {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .label {
   font-size: 10.5px;
   font-weight: 700;
-  letter-spacing: 0.11em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--grey-700);
 }
@@ -101,7 +70,7 @@
   border: none;
   border-bottom: 1.5px solid var(--grey-300);
   border-radius: 0;
-  padding: 9px 0;
+  padding: 10px 0;
   font-family: var(--font);
   font-size: 15px;
   color: var(--ink);
@@ -117,7 +86,38 @@
   border-color: var(--ink);
 }
 
-/* ── Errors ────────────────────────────────────────────────── */
+/* ── Password visibility toggle ────────────────────────────────────────────── */
+.inputWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.inputWrap .input {
+  padding-right: 32px;
+}
+
+.eyeBtn {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  color: var(--grey-500);
+  display: flex;
+  align-items: center;
+  line-height: 1;
+  transition: color 0.15s;
+}
+
+.eyeBtn:hover {
+  color: var(--ink);
+}
+
+/* ── Errors ─────────────────────────────────────────────────────────────────── */
 .fieldError {
   font-size: 12px;
   color: var(--red);
@@ -130,25 +130,54 @@
   margin: 0;
 }
 
-/* ── Submit ────────────────────────────────────────────────── */
+/* ── Submit ─────────────────────────────────────────────────────────────────── */
 .submit {
   width: 100%;
   margin-top: 4px;
 }
 
-/* ── Alt action ────────────────────────────────────────────── */
+/* ── Alt action ─────────────────────────────────────────────────────────────── */
 .altAction {
   font-size: 13.5px;
   color: var(--grey-700);
-  margin: 0;
+  margin: 28px 0 0;
+  text-align: center;
 }
 
 .altAction a {
   color: var(--red);
-  font-weight: 600;
+  font-weight: 700;
   text-decoration: none;
 }
 
 .altAction a:hover {
   text-decoration: underline;
+}
+
+/* Legacy standalone card wrapper */
+.logoLink {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.9;
+  transition: opacity 0.15s;
+}
+
+.logoLink:hover {
+  opacity: 1;
+}
+
+.card {
+  width: 100%;
+  background: #ffffff;
+  border: 1px solid var(--grey-200);
+  border-radius: 4px;
+  padding: 40px 40px 44px;
+  box-shadow: 0 2px 12px rgba(15, 15, 15, 0.06);
+}
+
+@media (max-width: 480px) {
+  .card {
+    padding: 32px 24px 36px;
+  }
 }

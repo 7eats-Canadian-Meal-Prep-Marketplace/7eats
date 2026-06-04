@@ -35,7 +35,13 @@ function authResponse(
 
 // Wires up the db.select(...).from(...).where(...).limit(1) chain to resolve to
 // the given account row (or an empty result when null).
-function setAccount(account: { role: string; emailVerified: boolean } | null) {
+function setAccount(
+  account: {
+    role: string;
+    emailVerified: boolean;
+    onboardingCompletedAt?: Date | null;
+  } | null,
+) {
   const limit = vi.fn().mockResolvedValue(account ? [account] : []);
   const where = vi.fn(() => ({ limit }));
   const from = vi.fn(() => ({ where }));
@@ -127,5 +133,29 @@ describe("POST /api/auth/sign-in", () => {
   it("returns 400 when email or password is missing", async () => {
     const res = await POST(makeRequest({ email: "a@b.com" }));
     expect(res.status).toBe(400);
+  });
+
+  it("sets 7eats-onboarded cookie when client has completed onboarding", async () => {
+    setAccount({
+      role: "client",
+      emailVerified: true,
+      onboardingCompletedAt: new Date(),
+    });
+    const res = await POST(makeRequest({ ...creds, audience: "client" }));
+    expect(res.status).toBe(200);
+    const cookies = res.headers.getSetCookie().join(";");
+    expect(cookies).toContain("7eats-onboarded=1");
+  });
+
+  it("does not set 7eats-onboarded cookie when onboarding is incomplete", async () => {
+    setAccount({
+      role: "client",
+      emailVerified: true,
+      onboardingCompletedAt: null,
+    });
+    const res = await POST(makeRequest({ ...creds, audience: "client" }));
+    expect(res.status).toBe(200);
+    const cookies = res.headers.getSetCookie().join(";");
+    expect(cookies).not.toContain("7eats-onboarded=1");
   });
 });

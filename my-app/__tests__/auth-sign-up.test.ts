@@ -5,13 +5,29 @@ vi.mock("@/lib/rate-limit", () => ({ logAndCheckRateLimit: vi.fn() }));
 vi.mock("@/lib/auth", () => ({
   auth: { api: { signUpEmail: vi.fn(), sendVerificationEmail: vi.fn() } },
 }));
-vi.mock("@/db", () => ({ db: { update: vi.fn() } }));
-vi.mock("@/db/schema", () => ({ authUser: { id: "id", role: "role" } }));
+vi.mock("drizzle-orm", () => ({ eq: vi.fn() }));
+vi.mock("@/db", () => ({ db: { select: vi.fn(), update: vi.fn() } }));
+vi.mock("@/db/schema", () => ({
+  authUser: {
+    id: "id",
+    role: "role",
+    email: "email",
+    emailVerified: "email_verified",
+  },
+}));
 
 import { POST } from "@/app/api/auth/sign-up/route";
 import { db } from "@/db";
 import { auth } from "@/lib/auth";
 import { logAndCheckRateLimit } from "@/lib/rate-limit";
+
+// Wires db.select().from().where().limit() to return the given row (or []).
+function setExistingAccount(account: { emailVerified: boolean } | null) {
+  const limit = vi.fn().mockResolvedValue(account ? [account] : []);
+  const where = vi.fn(() => ({ limit }));
+  const from = vi.fn(() => ({ where }));
+  vi.mocked(db.select).mockReturnValue({ from } as never);
+}
 
 function makeRequest(
   body: unknown,
@@ -53,6 +69,8 @@ describe("POST /api/auth/sign-up", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(logAndCheckRateLimit).mockResolvedValue(true);
+    // Default: no existing account for this email.
+    setExistingAccount(null);
     whereSpy = vi.fn().mockResolvedValue(undefined);
     setSpy = vi.fn(() => ({ where: whereSpy }));
     vi.mocked(db.update).mockReturnValue({ set: setSpy } as never);
@@ -88,7 +106,7 @@ describe("POST /api/auth/sign-up", () => {
     expect(vi.mocked(auth.api.sendVerificationEmail)).toHaveBeenCalledWith({
       body: {
         email: "ada@example.com",
-        callbackURL: "/app-auth/login?verified=1",
+        callbackURL: "/app-auth/onboarding",
       },
     });
 
@@ -108,7 +126,7 @@ describe("POST /api/auth/sign-up", () => {
     );
   });
 
-  it("rate-limits on a hashed IP and never calls Better Auth when limited", async () => {
+  it("rate-limits on a hashed IP and skips all DB and Better Auth calls", async () => {
     vi.mocked(logAndCheckRateLimit).mockResolvedValue(false);
 
     const res = await POST(makeRequest(validBody));
@@ -118,18 +136,44 @@ describe("POST /api/auth/sign-up", () => {
       "signup:hashed-ip",
       expect.anything(),
     );
+    expect(vi.mocked(db.select)).not.toHaveBeenCalled();
     expect(vi.mocked(auth.api.signUpEmail)).not.toHaveBeenCalled();
   });
 
-  it("maps a Better Auth 422 (duplicate email) to a 409", async () => {
+  it("resends verification and redirects to check-email for unverified duplicate", async () => {
+    setExistingAccount({ emailVerified: false });
+
+    const res = await POST(makeRequest(validBody));
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.redirect).toContain("/signup/check-email");
+    // Resent with the right callback
+    expect(vi.mocked(auth.api.sendVerificationEmail)).toHaveBeenCalledWith({
+      body: { email: "ada@example.com", callbackURL: "/app-auth/onboarding" },
+    });
+    // Never attempted to create a new account
+    expect(vi.mocked(auth.api.signUpEmail)).not.toHaveBeenCalled();
+  });
+
+  it("returns 409 for a verified duplicate email", async () => {
+    setExistingAccount({ emailVerified: true });
+
+    const res = await POST(makeRequest(validBody));
+
+    expect(res.status).toBe(409);
+    expect(vi.mocked(auth.api.signUpEmail)).not.toHaveBeenCalled();
+    expect(vi.mocked(auth.api.sendVerificationEmail)).not.toHaveBeenCalled();
+  });
+
+  it("returns 500 when Better Auth signup fails for an unexpected reason", async () => {
     vi.mocked(auth.api.signUpEmail).mockResolvedValue(
-      authResponse(false, 422, { message: "exists" }),
+      authResponse(false, 500, { message: "db error" }),
     );
 
     const res = await POST(makeRequest(validBody));
-    expect(res.status).toBe(409);
+    expect(res.status).toBe(500);
     expect(setSpy).not.toHaveBeenCalled();
-    expect(vi.mocked(auth.api.sendVerificationEmail)).not.toHaveBeenCalled();
   });
 
   it("returns 400 for an invalid email and skips signup", async () => {

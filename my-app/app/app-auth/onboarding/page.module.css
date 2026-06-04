@@ -1,67 +1,65 @@
-/* ─── Page ──────────────────────────────────────────────────────────────────── */
+/* ─── Page ───────────────────────────────────────────────────────────────────── */
 .page {
   min-height: 100svh;
-  background: var(--white);
+  background: #fafaf8;
   display: flex;
   flex-direction: column;
 }
 
-/* ─── Top bar ───────────────────────────────────────────────────────────────── */
+/* ─── Top bar ────────────────────────────────────────────────────────────────── */
 .topBar {
   display: flex;
   align-items: center;
-  padding: 18px 24px;
+  padding: 20px 28px;
+  background: #ffffff;
   border-bottom: 1px solid var(--grey-200);
   flex-shrink: 0;
 }
 
-/* ─── Progress bar ──────────────────────────────────────────────────────────── */
+/* ─── Progress bar ───────────────────────────────────────────────────────────── */
 .progressBar {
-  height: 3px;
+  height: 2px;
   background: var(--grey-200);
   flex-shrink: 0;
-  position: relative;
-  overflow: hidden;
 }
 
 .progressFill {
   height: 100%;
   background: var(--red);
-  transition: width 0.4s ease;
-  border-radius: 0 2px 2px 0;
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* ─── Content ───────────────────────────────────────────────────────────────── */
+/* ─── Content ────────────────────────────────────────────────────────────────── */
 .content {
   flex: 1;
   overflow-y: auto;
   display: flex;
   justify-content: center;
-  padding: 0 20px 60px;
+  padding: 0 24px 80px;
 }
 
 .stepContent {
   width: 100%;
-  max-width: 520px;
-  padding-top: 40px;
+  max-width: 540px;
+  padding-top: 52px;
 }
 
-/* ─── Step header ───────────────────────────────────────────────────────────── */
+/* ─── Step header ────────────────────────────────────────────────────────────── */
 .stepTag {
-  font-size: 12px;
+  font-size: 10.5px;
   font-weight: 700;
   color: var(--red);
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  margin-bottom: 14px;
+  letter-spacing: 0.12em;
+  margin-bottom: 16px;
 }
 
 .stepHeading {
-  font-size: clamp(28px, 5vw, 38px);
+  font-size: clamp(30px, 5vw, 42px);
   font-weight: 900;
   color: var(--ink);
-  letter-spacing: -0.035em;
-  line-height: 1.1;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
   margin-bottom: 12px;
 }
 
@@ -73,57 +71,254 @@
   font-size: 15px;
   color: var(--grey-700);
   line-height: 1.65;
+  margin-bottom: 36px;
+}
+
+/* ─── Phone step ─────────────────────────────────────────────────────────────── */
+.phoneBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   margin-bottom: 32px;
 }
 
-/* ─── Form ──────────────────────────────────────────────────────────────────── */
-.formGrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.formGroup {
+.phoneRow {
   display: flex;
-  flex-direction: column;
-  gap: 5px;
-  margin-bottom: 16px;
+  gap: 10px;
+  align-items: stretch;
 }
 
-.label {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--ink);
-}
-
-.optional {
-  font-weight: 400;
-  color: var(--grey-500);
-}
-
-.input {
-  padding: 12px 15px;
+.phoneInput {
+  flex: 1;
+  padding: 13px 16px;
   border: 1.5px solid var(--grey-200);
   border-radius: var(--radius-sm);
+  background: #ffffff;
   font-size: 15px;
-  font-family: inherit;
+  font-family: var(--font);
   color: var(--ink);
-  background: var(--white);
   outline: none;
-  transition: border-color 0.15s;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
 }
 
-.input:focus {
-  border-color: var(--red);
+.phoneInput:focus {
+  border-color: var(--ink);
+  box-shadow: 0 0 0 3px rgba(15, 15, 15, 0.06);
 }
 
-.inputNote {
-  font-size: 12px;
-  color: var(--grey-500);
+.phoneInputVerified {
+  border-color: #16a34a;
+  background: #f0fdf4;
+  color: #15803d;
 }
 
-/* ─── Buttons ───────────────────────────────────────────────────────────────── */
+.sendBtn {
+  padding: 13px 20px;
+  background: var(--ink);
+  color: var(--white);
+  font-size: 13.5px;
+  font-weight: 700;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-family: var(--font);
+  white-space: nowrap;
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+}
+
+.sendBtn:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+.sendBtn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.verifiedBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 16px;
+  background: #f0fdf4;
+  border: 1.5px solid #86efac;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 700;
+  color: #16a34a;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.codeRow {
+  display: flex;
+  gap: 10px;
+}
+
+.codeInput {
+  flex: 1;
+  padding: 13px 16px;
+  border: 1.5px solid var(--grey-200);
+  border-radius: var(--radius-sm);
+  background: #ffffff;
+  font-size: 22px;
+  font-family: var(--font);
+  letter-spacing: 0.3em;
+  color: var(--ink);
+  outline: none;
+  text-align: center;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+
+.codeInput:focus {
+  border-color: var(--ink);
+  box-shadow: 0 0 0 3px rgba(15, 15, 15, 0.06);
+}
+
+.verifyBtn {
+  padding: 13px 22px;
+  background: var(--red);
+  color: var(--white);
+  font-size: 13.5px;
+  font-weight: 700;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-family: var(--font);
+  white-space: nowrap;
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+}
+
+.verifyBtn:hover:not(:disabled) {
+  opacity: 0.88;
+}
+
+.verifyBtn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.codeError {
+  font-size: 12.5px;
+  color: var(--red);
+  margin: 0;
+}
+
+/* ─── Preference sections ────────────────────────────────────────────────────── */
+.prefSections {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  margin-bottom: 36px;
+}
+
+.prefSection {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.prefLabel {
+  font-size: 10.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--grey-700);
+  margin: 0;
+}
+
+/* ─── Chips ──────────────────────────────────────────────────────────────────── */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 16px;
+  border: 1.5px solid var(--grey-200);
+  border-radius: var(--radius-pill);
+  background: #ffffff;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--ink);
+  cursor: pointer;
+  font-family: var(--font);
+  transition:
+    border-color 0.12s,
+    background 0.12s,
+    color 0.12s;
+}
+
+.chip:hover {
+  border-color: var(--grey-700);
+}
+
+.chipSelected {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--white);
+  font-weight: 700;
+}
+
+.chipCheck {
+  flex-shrink: 0;
+}
+
+/* ─── Why meal prep grid ─────────────────────────────────────────────────────── */
+.whyGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+@media (max-width: 480px) {
+  .whyGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.whyOption {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 13px 16px;
+  border: 1.5px solid var(--grey-200);
+  border-radius: var(--radius-sm);
+  background: #ffffff;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--ink);
+  cursor: pointer;
+  font-family: var(--font);
+  text-align: left;
+  transition:
+    border-color 0.12s,
+    background 0.12s,
+    color 0.12s;
+}
+
+.whyOption:hover {
+  border-color: var(--grey-700);
+}
+
+.whyOptionSelected {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--white);
+  font-weight: 700;
+}
+
+/* ─── Buttons ────────────────────────────────────────────────────────────────── */
 .nextBtn {
   display: flex;
   align-items: center;
@@ -138,7 +333,7 @@
   border: none;
   border-radius: var(--radius-sm);
   cursor: pointer;
-  font-family: inherit;
+  font-family: var(--font);
   transition: opacity 0.15s;
   margin-top: 8px;
 }
@@ -148,203 +343,6 @@
 }
 
 .nextBtn:disabled {
-  opacity: 0.45;
+  opacity: 0.4;
   cursor: not-allowed;
-}
-
-.btnRow {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  margin-top: 8px;
-}
-
-.skipBtn {
-  padding: 15px 20px;
-  background: none;
-  color: var(--grey-500);
-  font-size: 14px;
-  font-weight: 600;
-  border: 1.5px solid var(--grey-200);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  font-family: inherit;
-  white-space: nowrap;
-  transition:
-    color 0.12s,
-    border-color 0.12s;
-}
-
-.skipBtn:hover {
-  color: var(--ink);
-  border-color: var(--grey-500);
-}
-
-.btnRow .nextBtn {
-  flex: 1;
-  margin-top: 0;
-}
-
-/* ─── Preference list ───────────────────────────────────────────────────────── */
-.prefList {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  margin-bottom: 32px;
-}
-
-.prefCard {
-  border: 1px solid var(--grey-200);
-  border-radius: var(--radius-md);
-  padding: 18px;
-}
-
-.prefQuestion {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--ink);
-  margin-bottom: 4px;
-  letter-spacing: -0.01em;
-}
-
-.multiHint {
-  font-size: 12px;
-  color: var(--grey-500);
-  margin-bottom: 12px;
-}
-
-.optionGrid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.optionBtn {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 7px 15px;
-  border: 1.5px solid var(--grey-200);
-  border-radius: var(--radius-pill);
-  font-size: 13.5px;
-  font-weight: 500;
-  color: var(--ink);
-  background: var(--white);
-  cursor: pointer;
-  font-family: inherit;
-  transition:
-    border-color 0.12s,
-    background 0.12s,
-    color 0.12s;
-}
-
-.optionBtn:hover {
-  border-color: var(--grey-700);
-}
-
-.optionBtnSelected {
-  background: var(--red);
-  border-color: var(--red);
-  color: var(--white);
-  font-weight: 700;
-}
-
-.checkIcon {
-  flex-shrink: 0;
-}
-
-/* ─── Done step ─────────────────────────────────────────────────────────────── */
-.doneStep {
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.doneIcon {
-  width: 64px;
-  height: 64px;
-  color: var(--red);
-  margin-bottom: 20px;
-  animation: bounce 0.6s ease;
-  flex-shrink: 0;
-}
-
-@keyframes bounce {
-  0% {
-    transform: scale(0.5);
-    opacity: 0;
-  }
-  60% {
-    transform: scale(1.15);
-    opacity: 1;
-  }
-  100% {
-    transform: scale(1);
-  }
-}
-
-.doneStep .stepHeading,
-.doneStep .stepDesc {
-  max-width: 400px;
-}
-
-/* ─── Social proof ──────────────────────────────────────────────────────────── */
-.socialProof {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 32px;
-  padding: 20px;
-  background: var(--grey-100);
-  border-radius: var(--radius-md);
-  width: 100%;
-  max-width: 360px;
-}
-
-.proofAvatars {
-  display: flex;
-}
-
-.proofAvatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: var(--ink);
-  color: var(--white);
-  font-size: 10.5px;
-  font-weight: 800;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid var(--white);
-  margin-right: -8px;
-}
-
-.proofAvatar:nth-child(2) {
-  background: #c0392b;
-}
-
-.proofAvatar:nth-child(3) {
-  background: #b8712a;
-}
-
-.proofAvatar:nth-child(4) {
-  background: #1a7a4a;
-}
-
-.proofAvatar:nth-child(5) {
-  background: #9a4a28;
-}
-
-.proofText {
-  font-size: 13.5px;
-  color: var(--grey-700);
-  text-align: center;
-  line-height: 1.5;
-}
-
-.doneStep .nextBtn {
-  max-width: 360px;
 }

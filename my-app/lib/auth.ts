@@ -26,11 +26,17 @@ export const auth = betterAuth({
     // create-account; clients must confirm their email first (see below).
     autoSignIn: false,
     requireEmailVerification: true,
-    sendResetPassword: async ({ user, token }) => {
-      const baseUrl =
-        process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-      const resetUrl = `${baseUrl}/business-auth/reset-password?token=${token}`;
-      const resend = new Resend(process.env.RESEND_API_KEY);
+    sendResetPassword: async ({ user, url }) => {
+      // `url` is the full reset link already including the token and the
+      // redirectTo we passed in requestPasswordReset — use it directly so both
+      // client (/app-auth/reset-password) and business (/business-auth/reset-password)
+      // resets land on the right page.
+      if (process.env.NODE_ENV !== "production") {
+        console.log(`[reset-password] reset link for ${user.email}:\n${url}`);
+      }
+      const apiKey = process.env.RESEND_API_KEY;
+      if (!apiKey) return;
+      const resend = new Resend(apiKey);
       const { error } = await resend.emails.send({
         from: process.env.RESEND_FROM_EMAIL ?? "noreply@7eats.ca",
         to: user.email,
@@ -41,11 +47,11 @@ export const auth = betterAuth({
           "We received a request to reset your 7eats password.",
           "Use the link below to set a new one. It expires in 1 hour.",
           "",
-          resetUrl,
+          url,
           "",
           "If you didn't request this, you can safely ignore this email.",
           "",
-          "The 7eats team",
+          "— The 7eats team",
         ].join("\n"),
       });
       if (error) throw new Error(error.message);
@@ -53,7 +59,8 @@ export const auth = betterAuth({
   },
   emailVerification: {
     expiresIn: 60 * 60 * 24, // 24 hours
-    autoSignInAfterVerification: false,
+    sendOnSignUp: false, // we call sendVerificationEmail manually so we control callbackURL
+    autoSignInAfterVerification: true,
     sendVerificationEmail: async ({ user, url }) => {
       if (process.env.NODE_ENV !== "production") {
         console.log(
@@ -88,6 +95,7 @@ export const auth = betterAuth({
       lastName: { type: "string", required: false },
       phone: { type: "string", required: false },
       phoneVerified: { type: "boolean", defaultValue: false, required: false },
+      onboardingCompletedAt: { type: "string", required: false },
     },
   },
   rateLimit: {

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
+import { ClientAuthLayout } from "@/app/components/ClientAuthLayout";
 import ForgotPasswordForm from "@/app/components/ForgotPasswordForm";
-import styles from "./page.module.css";
 
 export const metadata: Metadata = {
   title: "Forgot password — 7eats",
@@ -14,8 +14,8 @@ export default async function ForgotPasswordPage({
   const { error } = await searchParams;
 
   return (
-    <main className={styles.page}>
+    <ClientAuthLayout>
       <ForgotPasswordForm expiredLink={error === "expired"} audience="client" />
-    </main>
+    </ClientAuthLayout>
   );
 }

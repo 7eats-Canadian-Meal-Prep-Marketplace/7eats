@@ -1,46 +1,429 @@
 "use client";
 
-import { ArrowRight, Check, CheckCircle2 } from "lucide-react";
+import { Check } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { PREFERENCE_QUESTIONS } from "../../../app/app/_mock";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import styles from "./page.module.css";
 
-type Step = 1 | 2 | 3;
-type PrefAnswers = Record<string, string[]>;
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const DIETARY_OPTIONS = [
+  "Halal",
+  "Vegan",
+  "Vegetarian",
+  "Gluten-free",
+  "Dairy-free",
+  "Nut-free",
+  "Kosher",
+];
+
+const ALLERGY_OPTIONS = [
+  "Tree nuts",
+  "Peanuts",
+  "Dairy",
+  "Gluten",
+  "Shellfish",
+  "Eggs",
+  "Soy",
+  "None",
+];
+
+const GOAL_OPTIONS = [
+  "High protein",
+  "Weight loss",
+  "Low carb",
+  "Muscle gain",
+  "Heart health",
+  "Comfort food",
+  "Family-friendly",
+  "Balanced",
+];
+
+const WHY_OPTIONS = [
+  "Save time cooking",
+  "Eat healthier",
+  "Budget-friendly eating",
+  "Discover new cuisines",
+  "Support local home cooks",
+  "Convenient for my schedule",
+];
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type Step = 1 | 2;
+type PhonePhase = "idle" | "code_sent" | "verified";
+
+type Prefs = {
+  dietary: string[];
+  allergies: string[];
+  goals: string[];
+  whyMealPrep: string[];
+};
+
+// ─── Chip ─────────────────────────────────────────────────────────────────────
+
+function Chip({
+  label,
+  selected,
+  onToggle,
+}: {
+  label: string;
+  selected: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className={`${styles.chip} ${selected ? styles.chipSelected : ""}`}
+      onClick={onToggle}
+    >
+      {selected && (
+        <Check size={11} strokeWidth={3} className={styles.chipCheck} />
+      )}
+      {label}
+    </button>
+  );
+}
+
+// ─── Step 1: Phone ────────────────────────────────────────────────────────────
+
+function PhoneStep({ onComplete }: { onComplete: (phone: string) => void }) {
+  const [phone, setPhone] = useState("");
+  const [phase, setPhase] = useState<PhonePhase>("idle");
+  const [code, setCode] = useState("");
+  const [sending, setSending] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [sendError, setSendError] = useState("");
+  const [codeError, setCodeError] = useState("");
+
+  const canSend = phone.replace(/\D/g, "").length >= 10;
+  const isVerified = phase === "verified";
+
+  async function handleSend() {
+    setSending(true);
+    setSendError("");
+    try {
+      const res = await fetch("/api/auth/client/send-otp", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ phone }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setSendError(data.error ?? "Could not send code.");
+        return;
+      }
+      setPhase("code_sent");
+      setCode("");
+      setCodeError("");
+      toast.success("Code sent!");
+    } catch {
+      setSendError("Network error. Please try again.");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function handleVerify() {
+    setVerifying(true);
+    setCodeError("");
+    try {
+      const res = await fetch("/api/auth/client/verify-otp", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ code }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setCodeError(data.error ?? "Incorrect code.");
+        return;
+      }
+      setPhase("verified");
+      toast.success("Phone verified!");
+    } catch {
+      setCodeError("Network error. Please try again.");
+    } finally {
+      setVerifying(false);
+    }
+  }
+
+  return (
+    <div className={styles.stepContent}>
+      <div className={styles.stepTag}>Step 1 of 2</div>
+      <h1 className={styles.stepHeading}>
+        What's your <span className={styles.accent}>phone number?</span>
+      </h1>
+      <p className={styles.stepDesc}>
+        For order updates and messages from your cooks. We'll send a quick
+        verification code.
+      </p>
+
+      <div className={styles.phoneBlock}>
+        <div className={styles.phoneRow}>
+          <input
+            type="tel"
+            autoComplete="tel"
+            className={`${styles.phoneInput} ${isVerified ? styles.phoneInputVerified : ""}`}
+            placeholder="+1 (416) 555-0123"
+            value={phone}
+            onChange={(e) => {
+              setPhone(e.target.value);
+              if (phase !== "idle") {
+                setPhase("idle");
+                setCode("");
+                setSendError("");
+              }
+            }}
+            disabled={isVerified}
+          />
+          {!isVerified ? (
+            <button
+              type="button"
+              className={styles.sendBtn}
+              onClick={handleSend}
+              disabled={!canSend || sending}
+            >
+              {sending
+                ? "Sending…"
+                : phase === "code_sent"
+                  ? "Resend"
+                  : "Send code"}
+            </button>
+          ) : (
+            <span className={styles.verifiedBadge}>
+              <Check size={13} strokeWidth={2.5} />
+              Verified
+            </span>
+          )}
+        </div>
+
+        {sendError && <p className={styles.codeError}>{sendError}</p>}
+
+        {phase === "code_sent" && (
+          <div className={styles.codeRow}>
+            <input
+              type="text"
+              inputMode="numeric"
+              maxLength={6}
+              className={styles.codeInput}
+              placeholder="6-digit code"
+              value={code}
+              onChange={(e) => {
+                setCode(e.target.value.replace(/\D/g, ""));
+                setCodeError("");
+              }}
+            />
+            <button
+              type="button"
+              className={styles.verifyBtn}
+              onClick={handleVerify}
+              disabled={code.length !== 6 || verifying}
+            >
+              {verifying ? "Verifying…" : "Verify"}
+            </button>
+          </div>
+        )}
+        {codeError && <p className={styles.codeError}>{codeError}</p>}
+      </div>
+
+      <button
+        type="button"
+        className={styles.nextBtn}
+        disabled={!isVerified}
+        onClick={() => onComplete(phone)}
+      >
+        Continue
+      </button>
+    </div>
+  );
+}
+
+// ─── Step 2: Preferences ──────────────────────────────────────────────────────
+
+function PrefsStep({ onComplete }: { onComplete: () => void }) {
+  const [prefs, setPrefs] = useState<Prefs>({
+    dietary: [],
+    allergies: [],
+    goals: [],
+    whyMealPrep: [],
+  });
+  const [isPending, setIsPending] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+
+  function toggle(
+    key: "dietary" | "allergies" | "goals" | "whyMealPrep",
+    val: string,
+  ) {
+    setPrefs((p) => {
+      if (key === "allergies") {
+        const arr = p.allergies;
+        if (val === "None") {
+          return { ...p, allergies: arr.includes("None") ? [] : ["None"] };
+        }
+        const withoutNone = arr.filter((v) => v !== "None");
+        return {
+          ...p,
+          allergies: withoutNone.includes(val)
+            ? withoutNone.filter((v) => v !== val)
+            : [...withoutNone, val],
+        };
+      }
+      const arr = p[key];
+      return {
+        ...p,
+        [key]: arr.includes(val) ? arr.filter((v) => v !== val) : [...arr, val],
+      };
+    });
+  }
+
+  async function handleSubmit() {
+    setIsPending(true);
+    setSubmitError("");
+    try {
+      const res = await fetch("/api/auth/complete-onboarding", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(prefs),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setSubmitError(data.error ?? "Something went wrong.");
+        return;
+      }
+      onComplete();
+    } catch {
+      setSubmitError("Network error. Please try again.");
+    } finally {
+      setIsPending(false);
+    }
+  }
+
+  return (
+    <div className={styles.stepContent}>
+      <div className={styles.stepTag}>Step 2 of 2</div>
+      <h1 className={styles.stepHeading}>
+        Personalize your <span className={styles.accent}>experience.</span>
+      </h1>
+      <p className={styles.stepDesc}>
+        Help us show you the right cooks and meals. All optional — you can
+        update this anytime in settings.
+      </p>
+
+      <div className={styles.prefSections}>
+        <div className={styles.prefSection}>
+          <p className={styles.prefLabel}>Dietary needs</p>
+          <div className={styles.chips}>
+            {DIETARY_OPTIONS.map((o) => (
+              <Chip
+                key={o}
+                label={o}
+                selected={prefs.dietary.includes(o)}
+                onToggle={() => toggle("dietary", o)}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div className={styles.prefSection}>
+          <p className={styles.prefLabel}>Allergies</p>
+          <div className={styles.chips}>
+            {ALLERGY_OPTIONS.map((o) => (
+              <Chip
+                key={o}
+                label={o}
+                selected={prefs.allergies.includes(o)}
+                onToggle={() => toggle("allergies", o)}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div className={styles.prefSection}>
+          <p className={styles.prefLabel}>Goals & preferences</p>
+          <div className={styles.chips}>
+            {GOAL_OPTIONS.map((o) => (
+              <Chip
+                key={o}
+                label={o}
+                selected={prefs.goals.includes(o)}
+                onToggle={() => toggle("goals", o)}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div className={styles.prefSection}>
+          <p className={styles.prefLabel}>Why do you order meal prep?</p>
+          <div className={styles.whyGrid}>
+            {WHY_OPTIONS.map((o) => (
+              <button
+                key={o}
+                type="button"
+                className={`${styles.whyOption} ${prefs.whyMealPrep.includes(o) ? styles.whyOptionSelected : ""}`}
+                onClick={() => toggle("whyMealPrep", o)}
+              >
+                {prefs.whyMealPrep.includes(o) && (
+                  <Check
+                    size={13}
+                    strokeWidth={2.5}
+                    className={styles.chipCheck}
+                  />
+                )}
+                {o}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {submitError && <p className={styles.codeError}>{submitError}</p>}
+
+      <button
+        type="button"
+        className={styles.nextBtn}
+        onClick={handleSubmit}
+        disabled={isPending}
+      >
+        {isPending ? "Saving…" : "Let's eat →"}
+      </button>
+    </div>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const [step, setStep] = useState<Step>(1);
-  const [form, setForm] = useState({
-    firstName: "",
-    lastName: "",
-    neighborhood: "",
-  });
-  const [prefAnswers, setPrefAnswers] = useState<PrefAnswers>({});
+  const [step, setStep] = useState<Step | null>(null);
 
-  const totalSteps = 3;
-  const progress = ((step - 1) / (totalSteps - 1)) * 100;
+  // Restore step from session — phoneVerified=true means phone step done.
+  useEffect(() => {
+    fetch("/api/auth/get-session")
+      .then((r) => r.json())
+      .then((data) => {
+        const phoneVerified = data?.user?.phoneVerified ?? false;
+        setStep(phoneVerified ? 2 : 1);
+      })
+      .catch(() => setStep(1));
+  }, []);
 
-  const toggleAnswer = (qid: string, option: string, multi: boolean) => {
-    setPrefAnswers((prev) => {
-      const current = prev[qid] ?? [];
-      if (multi) {
-        if (current.includes(option)) {
-          return { ...prev, [qid]: current.filter((o) => o !== option) };
-        }
-        return { ...prev, [qid]: [...current, option] };
-      }
-      return { ...prev, [qid]: [option] };
-    });
-  };
+  function handlePhoneComplete(_phone: string) {
+    setStep(2);
+  }
 
-  const canAdvanceStep1 = form.firstName.trim() && form.lastName.trim();
+  function handlePrefsComplete() {
+    router.push("/app/browse");
+  }
+
+  // Avoid hydration mismatch — step determined client-side from session.
+  if (step === null) return null;
+
+  const progress = step === 1 ? 0 : 50;
 
   return (
     <div className={styles.page}>
-      {/* Logo */}
       <div className={styles.topBar}>
         <Image
           src="/7eats-logo.svg"
@@ -51,7 +434,6 @@ export default function OnboardingPage() {
         />
       </div>
 
-      {/* Progress bar */}
       <div className={styles.progressBar}>
         <div
           className={styles.progressFill}
@@ -59,194 +441,9 @@ export default function OnboardingPage() {
         />
       </div>
 
-      {/* Steps */}
       <div className={styles.content}>
-        {/* Step 1: Name + location */}
-        {step === 1 && (
-          <div className={styles.stepContent}>
-            <div className={styles.stepTag}>Step 1 of {totalSteps}</div>
-            <h1 className={styles.stepHeading}>
-              Welcome to 7eats. <br />
-              <span className={styles.accent}>Tell us about yourself.</span>
-            </h1>
-            <p className={styles.stepDesc}>
-              This helps your cooks prepare your orders and greet you by name.
-            </p>
-
-            <div className={styles.formGrid}>
-              <div className={styles.formGroup}>
-                <label className={styles.label} htmlFor="firstName">
-                  First name
-                </label>
-                <input
-                  id="firstName"
-                  type="text"
-                  placeholder="Jane"
-                  className={styles.input}
-                  value={form.firstName}
-                  onChange={(e) =>
-                    setForm((p) => ({ ...p, firstName: e.target.value }))
-                  }
-                />
-              </div>
-              <div className={styles.formGroup}>
-                <label className={styles.label} htmlFor="lastName">
-                  Last name
-                </label>
-                <input
-                  id="lastName"
-                  type="text"
-                  placeholder="Doe"
-                  className={styles.input}
-                  value={form.lastName}
-                  onChange={(e) =>
-                    setForm((p) => ({ ...p, lastName: e.target.value }))
-                  }
-                />
-              </div>
-            </div>
-
-            <div className={styles.formGroup}>
-              <label className={styles.label} htmlFor="neighborhood">
-                Your neighbourhood{" "}
-                <span className={styles.optional}>(optional)</span>
-              </label>
-              <input
-                id="neighborhood"
-                type="text"
-                placeholder="e.g. Roncesvalles, Kensington"
-                className={styles.input}
-                value={form.neighborhood}
-                onChange={(e) =>
-                  setForm((p) => ({ ...p, neighborhood: e.target.value }))
-                }
-              />
-              <span className={styles.inputNote}>
-                Helps us surface cooks closest to you.
-              </span>
-            </div>
-
-            <button
-              type="button"
-              className={styles.nextBtn}
-              onClick={() => setStep(2)}
-              disabled={!canAdvanceStep1}
-            >
-              Continue
-              <ArrowRight size={17} />
-            </button>
-          </div>
-        )}
-
-        {/* Step 2: Preference sheet */}
-        {step === 2 && (
-          <div className={styles.stepContent}>
-            <div className={styles.stepTag}>Step 2 of {totalSteps}</div>
-            <h1 className={styles.stepHeading}>
-              Your <span className={styles.accent}>preference sheet.</span>
-            </h1>
-            <p className={styles.stepDesc}>
-              Cooks can see your answers before you even message them — no more
-              explaining your diet every time you order. You can edit this
-              anytime in settings.
-            </p>
-
-            <div className={styles.prefList}>
-              {PREFERENCE_QUESTIONS.map((q) => {
-                const answers = prefAnswers[q.id] ?? [];
-                return (
-                  <div key={q.id} className={styles.prefCard}>
-                    <h3 className={styles.prefQuestion}>{q.question}</h3>
-                    {q.multiSelect && (
-                      <p className={styles.multiHint}>Select all that apply</p>
-                    )}
-                    <div className={styles.optionGrid}>
-                      {q.options.map((opt) => {
-                        const selected = answers.includes(opt);
-                        return (
-                          <button
-                            key={opt}
-                            type="button"
-                            className={`${styles.optionBtn} ${selected ? styles.optionBtnSelected : ""}`}
-                            onClick={() =>
-                              toggleAnswer(q.id, opt, q.multiSelect)
-                            }
-                          >
-                            {selected && (
-                              <Check size={13} className={styles.checkIcon} />
-                            )}
-                            {opt}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className={styles.btnRow}>
-              <button
-                type="button"
-                className={styles.skipBtn}
-                onClick={() => setStep(3)}
-              >
-                Skip for now
-              </button>
-              <button
-                type="button"
-                className={styles.nextBtn}
-                onClick={() => setStep(3)}
-              >
-                Save & continue
-                <ArrowRight size={17} />
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Step 3: Done */}
-        {step === 3 && (
-          <div className={`${styles.stepContent} ${styles.doneStep}`}>
-            <CheckCircle2
-              size={64}
-              strokeWidth={1.5}
-              className={styles.doneIcon}
-            />
-            <h1 className={styles.stepHeading}>
-              You&apos;re all set,{" "}
-              <span className={styles.accent}>
-                {form.firstName || "foodie"}!
-              </span>
-            </h1>
-            <p className={styles.stepDesc}>
-              Your account is ready. Start exploring home cooks near you — real
-              food, made by real people.
-            </p>
-
-            <div className={styles.socialProof}>
-              <div className={styles.proofAvatars}>
-                {["AD", "JP", "FA", "MS", "NR"].map((init) => (
-                  <div key={init} className={styles.proofAvatar}>
-                    {init}
-                  </div>
-                ))}
-              </div>
-              <p className={styles.proofText}>
-                Join <strong>2,000+</strong> food lovers discovering home cooks
-                in Toronto
-              </p>
-            </div>
-
-            <button
-              type="button"
-              className={styles.nextBtn}
-              onClick={() => router.push("/app/browse")}
-            >
-              Browse listings →
-            </button>
-          </div>
-        )}
+        {step === 1 && <PhoneStep onComplete={handlePhoneComplete} />}
+        {step === 2 && <PrefsStep onComplete={handlePrefsComplete} />}
       </div>
     </div>
   );

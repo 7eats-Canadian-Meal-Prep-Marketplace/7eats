@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
+import { ClientAuthLayout } from "@/app/components/ClientAuthLayout";
 import SignupForm from "@/app/components/SignupForm";
-import styles from "./page.module.css";
 
 export const metadata: Metadata = {
   title: "Create your account — 7eats",
@@ -8,8 +8,8 @@ export const metadata: Metadata = {
 
 export default function SignupPage() {
   return (
-    <main className={styles.page}>
+    <ClientAuthLayout>
       <SignupForm />
-    </main>
+    </ClientAuthLayout>
   );
 }
