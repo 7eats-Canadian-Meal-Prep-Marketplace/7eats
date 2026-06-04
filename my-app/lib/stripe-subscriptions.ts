@@ -1,4 +1,5 @@
-import Stripe from "stripe";
+import type Stripe from "stripe";
+import { getStripe } from "@/lib/stripe";
 
 export type SubscriptionInterval = "weekly" | "biweekly" | "monthly";
 
@@ -16,32 +17,21 @@ export const INTERVAL_MAP: Record<
 
 const PLATFORM_CURRENCY = "cad" as const;
 
-let _stripe: Stripe | null = null;
-function getStripe(): Stripe {
-  if (!_stripe) {
-    const key = process.env.STRIPE_SECRET_KEY;
-    if (!key) throw new Error("STRIPE_SECRET_KEY not configured");
-    _stripe = new Stripe(key, { apiVersion: "2026-05-27.dahlia" });
-  }
-  return _stripe;
-}
-
 export async function getOrCreateStripeProduct(
-  connectedAccountId: string,
   listingId: string,
   title: string,
 ): Promise<string> {
   try {
     const stripe = getStripe();
-    const results = await stripe.products.search(
-      { query: `metadata['listing_id']:'${listingId}'`, limit: 1 },
-      { stripeAccount: connectedAccountId },
-    );
+    const results = await stripe.products.search({
+      query: `metadata['listing_id']:'${listingId}'`,
+      limit: 1,
+    });
     if (results.data.length > 0) return results.data[0].id;
-    const product = await stripe.products.create(
-      { name: title, metadata: { listing_id: listingId } },
-      { stripeAccount: connectedAccountId },
-    );
+    const product = await stripe.products.create({
+      name: title,
+      metadata: { listing_id: listingId },
+    });
     return product.id;
   } catch (err) {
     throw new Error(
@@ -51,7 +41,6 @@ export async function getOrCreateStripeProduct(
 }
 
 export async function createStripePrice(
-  connectedAccountId: string,
   productId: string,
   interval: SubscriptionInterval,
   priceInCents: number,
@@ -59,15 +48,12 @@ export async function createStripePrice(
   try {
     const stripe = getStripe();
     const { interval: stripeInterval, interval_count } = INTERVAL_MAP[interval];
-    const price = await stripe.prices.create(
-      {
-        product: productId,
-        unit_amount: priceInCents,
-        currency: PLATFORM_CURRENCY,
-        recurring: { interval: stripeInterval, interval_count },
-      },
-      { stripeAccount: connectedAccountId },
-    );
+    const price = await stripe.prices.create({
+      product: productId,
+      unit_amount: priceInCents,
+      currency: PLATFORM_CURRENCY,
+      recurring: { interval: stripeInterval, interval_count },
+    });
     return price.id;
   } catch (err) {
     throw new Error(
@@ -76,17 +62,10 @@ export async function createStripePrice(
   }
 }
 
-export async function archiveStripePrice(
-  connectedAccountId: string,
-  priceId: string,
-): Promise<void> {
+export async function archiveStripePrice(priceId: string): Promise<void> {
   try {
     const stripe = getStripe();
-    await stripe.prices.update(
-      priceId,
-      { active: false },
-      { stripeAccount: connectedAccountId },
-    );
+    await stripe.prices.update(priceId, { active: false });
   } catch (err) {
     throw new Error(
       `Stripe archiveStripePrice failed: ${err instanceof Error ? err.message : String(err)}`,
@@ -125,13 +104,8 @@ export async function createStripeSubscription(params: {
       items: [{ price: params.priceId }],
       default_payment_method: params.paymentMethodId,
       application_fee_percent: params.applicationFeePct,
-      transfer_data: { destination: params.connectedAccountId },
+      on_behalf_of: params.connectedAccountId,
       payment_settings: {
-        payment_method_options: {
-          card: {
-            capture_method: "manual",
-          } as Stripe.SubscriptionCreateParams.PaymentSettings.PaymentMethodOptions.Card,
-        },
         save_default_payment_method: "on_subscription",
       },
     });

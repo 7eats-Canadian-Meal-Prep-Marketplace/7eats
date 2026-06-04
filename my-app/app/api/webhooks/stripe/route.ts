@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
-import Stripe from "stripe";
+import type Stripe from "stripe";
 import { db } from "@/db";
 import {
   clientSubscriptions,
@@ -14,53 +14,48 @@ import {
   orders,
   stripeWebhookEvents,
 } from "@/db/schema";
-
-function getStripe(): Stripe | null {
-  const key = process.env.STRIPE_SECRET_KEY;
-  if (!key) return null;
-  return new Stripe(key, { apiVersion: "2026-05-27.dahlia" });
-}
+import { getStripe } from "@/lib/stripe";
 
 export async function POST(req: NextRequest) {
   const rawBody = await req.arrayBuffer();
   const buf = Buffer.from(rawBody);
 
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-  const stripe = getStripe();
+  const platformSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  const connectSecret = process.env.STRIPE_CONNECT_WEBHOOK_SECRET;
 
-  let event: Stripe.Event;
-
-  if (webhookSecret && stripe) {
-    const sig = req.headers.get("stripe-signature");
-    if (!sig) {
-      return NextResponse.json(
-        { error: "Webhook signature verification failed." },
-        { status: 400 },
-      );
-    }
-    try {
-      event = stripe.webhooks.constructEvent(buf, sig, webhookSecret);
-    } catch {
-      return NextResponse.json(
-        { error: "Webhook signature verification failed." },
-        { status: 400 },
-      );
-    }
-  } else if (
-    process.env.NODE_ENV !== "production" &&
-    process.env.STRIPE_WEBHOOK_INSECURE_DEV === "1"
-  ) {
-    console.warn(
-      "[webhook/stripe] STRIPE_WEBHOOK_INSECURE_DEV=1 — parsing unsigned webhook body (dev only)",
-    );
-    event = JSON.parse(buf.toString()) as Stripe.Event;
-  } else {
-    console.error(
-      "[webhook/stripe] missing STRIPE_WEBHOOK_SECRET or STRIPE_SECRET_KEY — refusing to process webhook",
-    );
+  if (!platformSecret && !connectSecret) {
+    console.error("[webhook/stripe] No webhook secrets configured");
     return NextResponse.json(
       { error: "Webhook is not configured." },
       { status: 500 },
+    );
+  }
+
+  const sig = req.headers.get("stripe-signature");
+  if (!sig) {
+    return NextResponse.json(
+      { error: "Webhook signature verification failed." },
+      { status: 400 },
+    );
+  }
+
+  const stripe = getStripe();
+  let event: Stripe.Event | null = null;
+
+  for (const secret of [platformSecret, connectSecret]) {
+    if (!secret) continue;
+    try {
+      event = stripe.webhooks.constructEvent(buf, sig, secret);
+      break;
+    } catch {
+      // try next secret
+    }
+  }
+
+  if (!event) {
+    return NextResponse.json(
+      { error: "Webhook signature verification failed." },
+      { status: 400 },
     );
   }
 
@@ -211,18 +206,38 @@ export async function POST(req: NextRequest) {
               ? rawPaymentIntent
               : rawPaymentIntent.id;
 
+        // Retrieve charge ID from the PI so we can store it for dispute/refund webhooks
+        let stripeChargeId: string | null = null;
+        if (paymentIntentId) {
+          try {
+            const stripe = getStripe();
+            const pi = await stripe.paymentIntents.retrieve(paymentIntentId, {
+              expand: ["latest_charge"],
+            });
+            const latestCharge = pi.latest_charge;
+            if (latestCharge && typeof latestCharge === "object") {
+              stripeChargeId = latestCharge.id;
+            }
+          } catch {
+            // non-fatal — chargeId is best-effort
+          }
+        }
+
         await db.insert(orderPayments).values({
           orderId: order.id,
           cookId: sub.cookId,
           clientId: sub.clientId,
-          status: "authorized",
+          type: "full",
+          status: "held",
           totalAmount: totalPrice,
           platformFeePct: cook.platformFeePct,
           platformFeeAmount,
           cookPayoutAmount,
           currency: "CAD",
           stripePaymentIntentId: paymentIntentId,
+          stripeChargeId,
           authorizedAt: new Date(),
+          heldAt: new Date(),
         });
 
         // Sync subscription period dates
@@ -353,6 +368,37 @@ export async function POST(req: NextRequest) {
           .update(cookPayouts)
           .set({ status: "cancelled" })
           .where(eq(cookPayouts.stripePayoutId, payout.id));
+        break;
+      }
+
+      case "payment_intent.payment_failed": {
+        const pi = event.data.object as Stripe.PaymentIntent;
+        await db
+          .update(orderPayments)
+          .set({ status: "pending" })
+          .where(eq(orderPayments.stripePaymentIntentId, pi.id));
+        break;
+      }
+
+      case "charge.dispute.created": {
+        const dispute = event.data.object as Stripe.Dispute;
+        const chargeId =
+          typeof dispute.charge === "string"
+            ? dispute.charge
+            : dispute.charge.id;
+        await db
+          .update(orderPayments)
+          .set({ status: "disputed" })
+          .where(eq(orderPayments.stripeChargeId, chargeId));
+        break;
+      }
+
+      case "charge.refunded": {
+        const charge = event.data.object as Stripe.Charge;
+        await db
+          .update(orderPayments)
+          .set({ status: "refunded", refundedAt: new Date() })
+          .where(eq(orderPayments.stripeChargeId, charge.id));
         break;
       }
 

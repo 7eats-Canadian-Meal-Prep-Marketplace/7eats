@@ -3,28 +3,49 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { cookProfiles } from "@/db/schema";
 import { auth } from "@/lib/auth";
+import { getStripe } from "@/lib/stripe";
 
 export async function POST(req: Request) {
-  if (process.env.NODE_ENV === "production") {
-    return NextResponse.json(
-      { error: "Real Stripe Connect integration required in production." },
-      { status: 501 },
-    );
-  }
-
   const session = await auth.api.getSession({ headers: req.headers });
   if (!session) {
     return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
   }
-
   if (session.user.role !== "cook") {
     return NextResponse.json({ error: "Forbidden." }, { status: 403 });
   }
 
-  await db
-    .update(cookProfiles)
-    .set({ stripeAccountId: `mock_acct_${session.user.id.slice(0, 8)}` })
-    .where(eq(cookProfiles.userId, session.user.id));
+  const [cook] = await db
+    .select({ stripeAccountId: cookProfiles.stripeAccountId })
+    .from(cookProfiles)
+    .where(eq(cookProfiles.userId, session.user.id))
+    .limit(1);
 
-  return NextResponse.json({ success: true });
+  if (cook?.stripeAccountId) {
+    return NextResponse.json({ success: true });
+  }
+
+  try {
+    const stripe = getStripe();
+    const account = await stripe.accounts.create({
+      type: "express",
+      country: "CA",
+      capabilities: {
+        card_payments: { requested: true },
+        transfers: { requested: true },
+      },
+    });
+
+    await db
+      .update(cookProfiles)
+      .set({ stripeAccountId: account.id })
+      .where(eq(cookProfiles.userId, session.user.id));
+
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error("[setup/stripe-connect]", err);
+    return NextResponse.json(
+      { error: "Failed to create Stripe account." },
+      { status: 500 },
+    );
+  }
 }

@@ -64,6 +64,7 @@ export const orders = pgTable(
     pickupCodeExpiresAt: timestamp("pickup_code_expires_at"),
     pickupCodeVerifiedAt: timestamp("pickup_code_verified_at"),
     pickupCodeAttempts: integer("pickup_code_attempts").notNull().default(0),
+    pickupCode: text("pickup_code"),
     lateCancelFeeEnabled: boolean("late_cancel_fee_enabled")
       .notNull()
       .default(false),
@@ -77,6 +78,10 @@ export const orders = pgTable(
       precision: 10,
       scale: 2,
     }),
+    depositEnabled: boolean("deposit_enabled").notNull().default(false),
+    depositType: lateCancelFeeTypeEnum("deposit_type"),
+    depositValue: numeric("deposit_value", { precision: 10, scale: 2 }),
+    depositAmount: numeric("deposit_amount", { precision: 10, scale: 2 }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at")
       .notNull()

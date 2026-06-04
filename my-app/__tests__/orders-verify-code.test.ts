@@ -19,10 +19,9 @@ vi.mock("drizzle-orm", () => ({
   and: vi.fn(),
   sql: vi.fn(),
 }));
-vi.mock("stripe", () => ({
-  default: class {
-    paymentIntents = { capture: captureMock };
-  },
+vi.mock("@/lib/stripe-payments", () => ({
+  capturePaymentIntent: captureMock,
+  createSubscriptionTransfer: vi.fn().mockResolvedValue("tr_test"),
 }));
 
 import { NextRequest } from "next/server";
@@ -66,6 +65,13 @@ function mockCook(found: boolean) {
 function selectChain(rows: unknown[]) {
   const limit = vi.fn().mockResolvedValue(rows);
   const where = vi.fn(() => ({ limit }));
+  const from = vi.fn(() => ({ where }));
+  return { from } as never;
+}
+
+// For queries that end at .where() with no .limit() (e.g. orderPayments list)
+function selectChainNoLimit(rows: unknown[]) {
+  const where = vi.fn().mockResolvedValue(rows);
   const from = vi.fn(() => ({ where }));
   return { from } as never;
 }
@@ -193,15 +199,24 @@ describe("POST /api/business/dashboard/orders/[orderId]/verify-code", () => {
   });
 
   it("fulfils the order, captures payment, and releases funds on the correct code", async () => {
-    vi.stubEnv("STRIPE_SECRET_KEY", "sk_test_123");
     let call = 0;
     vi.mocked(db.select).mockImplementation(() => {
       call++;
       if (call === 1) return mockCook(true);
       if (call === 2) return selectChain([readyOrder]);
-      return selectChain([
-        { stripePaymentIntentId: "pi_123", status: "authorized" },
-      ]);
+      // call 3: orderPayments list (no .limit())
+      if (call === 3)
+        return selectChainNoLimit([
+          {
+            id: "pay-1",
+            type: "full",
+            stripePaymentIntentId: "pi_123",
+            status: "authorized",
+            cookPayoutAmount: null,
+          },
+        ]);
+      // call 4: cookProfiles stripeAccountId lookup
+      return selectChain([{ stripeAccountId: "acct_test" }]);
     });
     mockUpdate([{ id: ORDER_ID, fulfilledAt: new Date() }]);
 
@@ -213,15 +228,11 @@ describe("POST /api/business/dashboard/orders/[orderId]/verify-code", () => {
     expect(body.data.orderId).toBe(ORDER_ID);
     expect(captureMock).toHaveBeenCalledWith(
       "pi_123",
-      {},
-      { idempotencyKey: `capture-${ORDER_ID}` },
+      `capture-${ORDER_ID}-full`,
     );
-
-    vi.unstubAllEnvs();
   });
 
   it("returns 409 and does not capture when the ready->fulfilled update loses the race", async () => {
-    vi.stubEnv("STRIPE_SECRET_KEY", "sk_test_123");
     let call = 0;
     vi.mocked(db.select).mockImplementation(() => {
       call++;
@@ -233,20 +244,27 @@ describe("POST /api/business/dashboard/orders/[orderId]/verify-code", () => {
 
     expect(res.status).toBe(409);
     expect(captureMock).not.toHaveBeenCalled();
-
-    vi.unstubAllEnvs();
   });
 
   it("does not capture when the payment is no longer authorized", async () => {
-    vi.stubEnv("STRIPE_SECRET_KEY", "sk_test_123");
     let call = 0;
     vi.mocked(db.select).mockImplementation(() => {
       call++;
       if (call === 1) return mockCook(true);
       if (call === 2) return selectChain([readyOrder]);
-      return selectChain([
-        { stripePaymentIntentId: "pi_123", status: "released" },
-      ]);
+      // call 3: orderPayments with status "released" — should not trigger capture
+      if (call === 3)
+        return selectChainNoLimit([
+          {
+            id: "pay-1",
+            type: "full",
+            stripePaymentIntentId: "pi_123",
+            status: "released",
+            cookPayoutAmount: null,
+          },
+        ]);
+      // call 4: cookProfiles lookup
+      return selectChain([{ stripeAccountId: "acct_test" }]);
     });
     mockUpdate([{ id: ORDER_ID, fulfilledAt: new Date() }]);
 
@@ -254,8 +272,6 @@ describe("POST /api/business/dashboard/orders/[orderId]/verify-code", () => {
 
     expect(res.status).toBe(200);
     expect(captureMock).not.toHaveBeenCalled();
-
-    vi.unstubAllEnvs();
   });
 
   it("returns 500 on a db error", async () => {

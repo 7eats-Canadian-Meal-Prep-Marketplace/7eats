@@ -107,11 +107,10 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       }
 
       if (tier.stripePriceId) {
-        await archiveStripePrice(cook.stripeAccountId, tier.stripePriceId);
+        await archiveStripePrice(tier.stripePriceId);
       }
 
       const newPriceId = await createStripePrice(
-        cook.stripeAccountId,
         listing.stripeProductId,
         tier.interval,
         Math.round(parsed.data.price * 100),
@@ -208,8 +207,8 @@ export async function DELETE(req: NextRequest, { params }: Params) {
       .where(eq(cookProfiles.id, cookId))
       .limit(1);
 
-    if (cook?.stripeAccountId && tier.stripePriceId) {
-      await archiveStripePrice(cook.stripeAccountId, tier.stripePriceId);
+    if (tier.stripePriceId) {
+      await archiveStripePrice(tier.stripePriceId);
     }
 
     await db

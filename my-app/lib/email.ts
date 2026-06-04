@@ -4,6 +4,7 @@ export interface MailMessage {
   to: string;
   subject: string;
   text: string;
+  html?: string;
 }
 
 /**
@@ -18,6 +19,7 @@ export async function sendMail({
   to,
   subject,
   text,
+  html,
 }: MailMessage): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) return;
@@ -28,6 +30,7 @@ export async function sendMail({
     to,
     subject,
     text,
+    ...(html ? { html } : {}),
   });
 
   if (error) throw new Error(error.message);
