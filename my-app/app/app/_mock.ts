@@ -65,6 +65,17 @@ export type MockDish = {
   badges: DietaryBadge[];
 };
 
+/** Client-facing deal on a listing (mirrors promotion caps: expiry and/or max uses). */
+export type MockListingDeal = {
+  badge: string;
+  /** ISO date — deal stops after this day */
+  validUntil?: string | null;
+  /** Total redemptions allowed */
+  maxUses?: number | null;
+  /** Redemptions already taken (for "X left" copy) */
+  usesCount?: number;
+};
+
 export type MockListing = {
   id: string;
   cookId: string;
@@ -85,8 +96,10 @@ export type MockListing = {
   cuisineTypes: CuisineType[];
   priceFrom: number;
   orderType: "one-time" | "subscription";
+  /** When true, customers can choose to subscribe and be charged weekly */
+  subscriptionEnabled: boolean;
   fulfillment: "pickup" | "delivery" | "both";
-  deal: { badge: string; label: string } | null;
+  deal: MockListingDeal | null;
   distanceKm: number;
   isNew: boolean;
   isSpotlight: boolean;
@@ -106,6 +119,10 @@ export type CartItem = {
   dishEmoji: string;
   listingId: string;
   listingTitle: string;
+  /** Drives payment flow: one-time PaymentIntent vs subscription SetupIntent */
+  orderType: "one-time" | "subscription";
+  /** Resolved fulfillment mode for this cart line (never "both") */
+  fulfillmentMode: "pickup" | "delivery";
   cookId: string;
   cookName: string;
   cookInitials: string;
@@ -387,7 +404,8 @@ export const MOCK_LISTINGS: MockListing[] = [
     ordersLeft: 3,
     cuisineTypes: ["West African"],
     priceFrom: 18,
-    orderType: "subscription",
+    orderType: "one-time",
+    subscriptionEnabled: true,
     fulfillment: "pickup",
     deal: null,
     distanceKm: 1.2,
@@ -451,7 +469,8 @@ export const MOCK_LISTINGS: MockListing[] = [
     ordersLeft: 8,
     cuisineTypes: ["Korean"],
     priceFrom: 16,
-    orderType: "subscription",
+    orderType: "one-time",
+    subscriptionEnabled: true,
     fulfillment: "both",
     deal: null,
     distanceKm: 2.4,
@@ -514,6 +533,7 @@ export const MOCK_LISTINGS: MockListing[] = [
     cuisineTypes: ["Middle Eastern"],
     priceFrom: 14,
     orderType: "one-time",
+    subscriptionEnabled: false,
     fulfillment: "pickup",
     deal: null,
     distanceKm: 5.8,
@@ -573,10 +593,12 @@ export const MOCK_LISTINGS: MockListing[] = [
     cuisineTypes: ["Brazilian"],
     priceFrom: 14,
     orderType: "one-time",
+    subscriptionEnabled: false,
     fulfillment: "pickup",
     deal: {
       badge: "Buy 1 Get 1 Free",
-      label: "Buy one main, get a second free",
+      maxUses: 24,
+      usesCount: 9,
     },
     distanceKm: 0.8,
     isNew: false,
@@ -635,7 +657,8 @@ export const MOCK_LISTINGS: MockListing[] = [
     ordersLeft: 7,
     cuisineTypes: ["Italian"],
     priceFrom: 16,
-    orderType: "subscription",
+    orderType: "one-time",
+    subscriptionEnabled: true,
     fulfillment: "delivery",
     deal: null,
     distanceKm: 3.1,
@@ -694,8 +717,9 @@ export const MOCK_LISTINGS: MockListing[] = [
     cuisineTypes: ["West African"],
     priceFrom: 20,
     orderType: "one-time",
+    subscriptionEnabled: false,
     fulfillment: "delivery",
-    deal: { badge: "$5 OFF", label: "Save $5 on suya delivery today" },
+    deal: { badge: "$5 OFF", validUntil: "2026-06-15" },
     distanceKm: 1.2,
     isNew: true,
     isSpotlight: false,
@@ -744,6 +768,7 @@ export const MOCK_LISTINGS: MockListing[] = [
     cuisineTypes: ["Korean"],
     priceFrom: 28,
     orderType: "one-time",
+    subscriptionEnabled: false,
     fulfillment: "both",
     deal: null,
     distanceKm: 2.4,
@@ -793,9 +818,10 @@ export const MOCK_LISTINGS: MockListing[] = [
     ordersLeft: 9,
     cuisineTypes: ["Middle Eastern"],
     priceFrom: 22,
-    orderType: "subscription",
+    orderType: "one-time",
+    subscriptionEnabled: true,
     fulfillment: "delivery",
-    deal: { badge: "10% OFF", label: "10% off your first box" },
+    deal: { badge: "10% OFF", maxUses: 40, usesCount: 28 },
     distanceKm: 5.8,
     isNew: false,
     isSpotlight: true,
@@ -847,7 +873,8 @@ export const MOCK_LISTINGS: MockListing[] = [
     ordersLeft: 11,
     cuisineTypes: ["South Asian"],
     priceFrom: 19,
-    orderType: "subscription",
+    orderType: "one-time",
+    subscriptionEnabled: true,
     fulfillment: "both",
     deal: null,
     distanceKm: 0.5,
@@ -897,8 +924,14 @@ export const MOCK_LISTINGS: MockListing[] = [
     cuisineTypes: ["South Asian"],
     priceFrom: 22,
     orderType: "one-time",
+    subscriptionEnabled: false,
     fulfillment: "pickup",
-    deal: { badge: "$12 OFF", label: "Save $12 on the family box" },
+    deal: {
+      badge: "$12 OFF",
+      validUntil: "2026-06-20",
+      maxUses: 30,
+      usesCount: 11,
+    },
     distanceKm: 0.5,
     isNew: false,
     isSpotlight: false,
@@ -953,6 +986,7 @@ export const MOCK_LISTINGS: MockListing[] = [
     cuisineTypes: ["Japanese"],
     priceFrom: 24,
     orderType: "one-time",
+    subscriptionEnabled: false,
     fulfillment: "both",
     deal: null,
     distanceKm: 1.8,
@@ -1003,7 +1037,8 @@ export const MOCK_LISTINGS: MockListing[] = [
     ordersLeft: 7,
     cuisineTypes: ["Japanese"],
     priceFrom: 16,
-    orderType: "subscription",
+    orderType: "one-time",
+    subscriptionEnabled: true,
     fulfillment: "delivery",
     deal: null,
     distanceKm: 1.8,
@@ -1055,8 +1090,9 @@ export const MOCK_LISTINGS: MockListing[] = [
     cuisineTypes: ["Caribbean"],
     priceFrom: 22,
     orderType: "one-time",
+    subscriptionEnabled: false,
     fulfillment: "pickup",
-    deal: { badge: "20% OFF", label: "20% off this weekend" },
+    deal: { badge: "20% OFF", validUntil: "2026-06-07" },
     distanceKm: 3.7,
     isNew: true,
     isSpotlight: false,
@@ -1104,7 +1140,8 @@ export const MOCK_LISTINGS: MockListing[] = [
     ordersLeft: 6,
     cuisineTypes: ["Caribbean"],
     priceFrom: 24,
-    orderType: "subscription",
+    orderType: "one-time",
+    subscriptionEnabled: true,
     fulfillment: "both",
     deal: null,
     distanceKm: 3.7,
@@ -1156,6 +1193,7 @@ export const MOCK_LISTINGS: MockListing[] = [
     cuisineTypes: ["Italian"],
     priceFrom: 20,
     orderType: "one-time",
+    subscriptionEnabled: false,
     fulfillment: "both",
     deal: null,
     distanceKm: 3.1,
@@ -1206,8 +1244,9 @@ export const MOCK_LISTINGS: MockListing[] = [
     cuisineTypes: ["Brazilian"],
     priceFrom: 12,
     orderType: "one-time",
+    subscriptionEnabled: false,
     fulfillment: "delivery",
-    deal: { badge: "$10 OFF", label: "Save $10 when you order 2 bowls" },
+    deal: { badge: "$10 OFF", maxUses: 15, usesCount: 4 },
     distanceKm: 0.8,
     isNew: false,
     isSpotlight: false,
@@ -1255,6 +1294,7 @@ export const MOCK_LISTINGS: MockListing[] = [
     cuisineTypes: ["West African"],
     priceFrom: 20,
     orderType: "one-time",
+    subscriptionEnabled: false,
     fulfillment: "both",
     deal: null,
     distanceKm: 1.2,
@@ -1306,8 +1346,9 @@ export const MOCK_LISTINGS: MockListing[] = [
     cuisineTypes: ["Middle Eastern"],
     priceFrom: 16,
     orderType: "one-time",
+    subscriptionEnabled: false,
     fulfillment: "both",
-    deal: { badge: "20% OFF", label: "20% off shawarma wraps" },
+    deal: { badge: "20% OFF", validUntil: "2026-06-14" },
     distanceKm: 5.8,
     isNew: false,
     isSpotlight: false,
@@ -1356,7 +1397,8 @@ export const MOCK_LISTINGS: MockListing[] = [
     ordersLeft: 10,
     cuisineTypes: ["South Asian"],
     priceFrom: 22,
-    orderType: "subscription",
+    orderType: "one-time",
+    subscriptionEnabled: true,
     fulfillment: "both",
     deal: null,
     distanceKm: 0.5,
@@ -1408,8 +1450,9 @@ export const MOCK_LISTINGS: MockListing[] = [
     cuisineTypes: ["Korean"],
     priceFrom: 28,
     orderType: "one-time",
+    subscriptionEnabled: false,
     fulfillment: "pickup",
-    deal: { badge: "$8 OFF", label: "$8 off your first batch kit" },
+    deal: { badge: "$8 OFF", maxUses: 20, usesCount: 17 },
     distanceKm: 2.4,
     isNew: true,
     isSpotlight: false,
@@ -1457,6 +1500,7 @@ export const MOCK_LISTINGS: MockListing[] = [
     cuisineTypes: ["West African"],
     priceFrom: 22,
     orderType: "one-time",
+    subscriptionEnabled: false,
     fulfillment: "both",
     deal: null,
     distanceKm: 1.2,
@@ -1506,6 +1550,7 @@ export const MOCK_LISTINGS: MockListing[] = [
     cuisineTypes: ["Middle Eastern"],
     priceFrom: 16,
     orderType: "one-time",
+    subscriptionEnabled: false,
     fulfillment: "both",
     deal: null,
     distanceKm: 5.8,
@@ -1555,6 +1600,7 @@ export const MOCK_LISTINGS: MockListing[] = [
     cuisineTypes: ["Middle Eastern"],
     priceFrom: 45,
     orderType: "one-time",
+    subscriptionEnabled: false,
     fulfillment: "pickup",
     deal: null,
     distanceKm: 5.8,
@@ -1595,7 +1641,8 @@ export const MOCK_LISTINGS: MockListing[] = [
     ordersLeft: 9,
     cuisineTypes: ["Korean"],
     priceFrom: 20,
-    orderType: "subscription",
+    orderType: "one-time",
+    subscriptionEnabled: true,
     fulfillment: "both",
     deal: null,
     distanceKm: 2.4,
@@ -1644,7 +1691,8 @@ export const MOCK_LISTINGS: MockListing[] = [
     ordersLeft: 10,
     cuisineTypes: ["South Asian"],
     priceFrom: 16,
-    orderType: "subscription",
+    orderType: "one-time",
+    subscriptionEnabled: true,
     fulfillment: "delivery",
     deal: null,
     distanceKm: 0.5,
@@ -1695,8 +1743,14 @@ export const MOCK_LISTINGS: MockListing[] = [
     cuisineTypes: ["Japanese"],
     priceFrom: 18,
     orderType: "one-time",
+    subscriptionEnabled: false,
     fulfillment: "pickup",
-    deal: { badge: "$6 OFF", label: "$6 off the lunch bundle" },
+    deal: {
+      badge: "$6 OFF",
+      validUntil: "2026-06-30",
+      maxUses: 50,
+      usesCount: 42,
+    },
     distanceKm: 1.8,
     isNew: true,
     isSpotlight: false,
@@ -1734,9 +1788,10 @@ export const MOCK_LISTINGS: MockListing[] = [
     ordersLeft: 5,
     cuisineTypes: ["Italian"],
     priceFrom: 32,
-    orderType: "subscription",
+    orderType: "one-time",
+    subscriptionEnabled: true,
     fulfillment: "both",
-    deal: { badge: "15% OFF", label: "15% off this weekend" },
+    deal: { badge: "15% OFF", validUntil: "2026-06-08" },
     distanceKm: 3.1,
     isNew: false,
     isSpotlight: true,
@@ -1785,6 +1840,7 @@ export const MOCK_LISTINGS: MockListing[] = [
     cuisineTypes: ["Brazilian"],
     priceFrom: 12,
     orderType: "one-time",
+    subscriptionEnabled: false,
     fulfillment: "both",
     deal: null,
     distanceKm: 0.8,
@@ -1834,8 +1890,9 @@ export const MOCK_LISTINGS: MockListing[] = [
     cuisineTypes: ["Caribbean"],
     priceFrom: 16,
     orderType: "one-time",
+    subscriptionEnabled: false,
     fulfillment: "both",
-    deal: { badge: "$8 OFF", label: "Save $8 on curry goat tacos" },
+    deal: { badge: "$8 OFF", maxUses: 12, usesCount: 3 },
     distanceKm: 3.7,
     isNew: true,
     isSpotlight: true,

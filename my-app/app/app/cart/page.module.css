@@ -5,21 +5,16 @@
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 80px var(--pad-x);
-  min-height: 60vh;
+  padding: 48px var(--pad-x);
+  min-height: calc(100svh - 140px);
+  width: 100%;
+  max-width: var(--maxw);
+  margin: 0 auto;
 }
 
 .emptyIcon {
-  width: 72px;
-  height: 72px;
-  border-radius: 50%;
-  background: var(--grey-100);
-  border: 1px solid var(--grey-200);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--grey-500);
-  margin-bottom: 24px;
+  color: var(--grey-400);
+  margin-bottom: 20px;
 }
 
 .emptyTitle {
@@ -27,15 +22,7 @@
   font-weight: 800;
   color: var(--ink);
   letter-spacing: -0.025em;
-  margin-bottom: 10px;
-}
-
-.emptyDesc {
-  font-size: 15px;
-  color: var(--grey-500);
-  margin-bottom: 28px;
-  max-width: 32ch;
-  line-height: 1.6;
+  margin-bottom: 24px;
 }
 
 .browseBtn {
@@ -46,7 +33,7 @@
   color: var(--white);
   font-size: 15px;
   font-weight: 700;
-  border-radius: var(--radius-pill);
+  border-radius: 8px;
   text-decoration: none;
   transition:
     background 0.15s,
@@ -60,20 +47,23 @@
 
 /* ─── Page ──────────────────────────────────────────────────────────────────── */
 .page {
+  display: flex;
+  justify-content: center;
   padding: 32px var(--pad-x) 80px;
-  max-width: var(--maxw);
-  margin: 0 auto;
+  width: 100%;
 }
 
 .inner {
-  display: flex;
-  gap: 48px;
-  align-items: flex-start;
+  width: 100%;
+  max-width: 960px;
 }
 
-.left {
-  flex: 1;
+.mainCol {
   min-width: 0;
+}
+
+.pageHeader {
+  margin-bottom: 24px;
 }
 
 .heading {
@@ -81,186 +71,262 @@
   font-weight: 800;
   color: var(--ink);
   letter-spacing: -0.03em;
-  margin-bottom: 28px;
+  margin-bottom: 6px;
 }
 
-/* ─── Cook section ──────────────────────────────────────────────────────────── */
-.cookSection {
+.subheading {
+  font-size: 14px;
+  color: var(--grey-500);
+  margin: 0;
+}
+
+.bodyRow {
+  display: flex;
+  gap: 40px;
+  align-items: flex-start;
+}
+
+.listingsCol {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ─── Listing group ─────────────────────────────────────────────────────────── */
+.listingSection {
   border: 1px solid var(--grey-200);
-  border-radius: var(--radius-md);
+  border-radius: 8px;
   overflow: hidden;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
   box-shadow: var(--shadow-md);
+  background: var(--white);
 }
 
-.cookHeader {
+.listingHeader {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 16px 20px;
+  gap: 10px;
+  padding: 16px 16px 16px 20px;
   border-bottom: 1px solid var(--grey-200);
   background: var(--white);
 }
 
-.cookAvatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
+.listingHeaderMain {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 1;
+  min-width: 0;
+  text-decoration: none;
+  color: inherit;
+  transition: opacity 0.12s;
+}
+
+.listingHeaderMain:hover {
+  opacity: 0.85;
+}
+
+.removeListingBtn {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
-  font-weight: 800;
-  color: var(--white);
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--grey-200);
+  border-radius: 6px;
+  background: var(--white);
+  color: var(--grey-500);
+  cursor: pointer;
   flex-shrink: 0;
+  transition:
+    background 0.12s,
+    color 0.12s,
+    border-color 0.12s;
+}
+
+.removeListingBtn:hover {
+  background: var(--grey-100);
+  color: var(--ink);
+  border-color: var(--grey-300);
+}
+
+.listingThumb {
+  width: 56px;
+  height: 56px;
+  border-radius: 6px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: var(--grey-100);
+}
+
+.listingThumbImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.listingHeaderText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.listingTitle {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
 }
 
 .cookName {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--ink);
-  letter-spacing: -0.01em;
-}
-
-.listingName {
-  font-size: 12.5px;
+  font-size: 13px;
+  font-weight: 500;
   color: var(--grey-500);
-  margin-top: 1px;
+  line-height: 1.3;
 }
 
-/* ─── Item list ─────────────────────────────────────────────────────────────── */
+.fulfillmentTag {
+  font-weight: 600;
+  color: var(--ink);
+}
+
 .itemList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   background: var(--white);
 }
 
 .item {
   display: flex;
-  align-items: center;
+  align-items: baseline;
+  justify-content: space-between;
   gap: 16px;
-  padding: 16px 20px;
+  padding: 14px 20px;
   border-bottom: 1px solid var(--grey-100);
-  transition: background 0.1s;
 }
 
 .item:last-child {
   border-bottom: none;
 }
 
-.item:hover {
-  background: var(--grey-100);
-}
-
-.itemInfo {
-  flex: 1;
-  min-width: 0;
-}
-
 .itemName {
-  display: block;
   font-size: 15px;
   font-weight: 600;
   color: var(--ink);
   letter-spacing: -0.01em;
-  margin-bottom: 3px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.itemPrice {
-  font-size: 13px;
-  color: var(--grey-500);
-}
-
-.itemControls {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  flex-shrink: 0;
-}
-
-.qtyControl {
-  display: inline-flex;
-  align-items: center;
-  border: 1.5px solid var(--grey-200);
-  border-radius: var(--radius-pill);
-  overflow: hidden;
-}
-
-.qtyBtn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border: none;
-  background: none;
-  color: var(--ink);
-  cursor: pointer;
-  transition: background 0.12s;
-  flex-shrink: 0;
-}
-
-.qtyBtn:hover {
-  background: var(--grey-100);
-}
-
-.qtyNum {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--ink);
-  min-width: 24px;
-  text-align: center;
-  line-height: 1;
-  padding: 0 4px;
+  flex: 1;
+  min-width: 0;
 }
 
 .itemTotal {
   font-size: 15px;
   font-weight: 700;
   color: var(--ink);
-  min-width: 44px;
-  text-align: right;
+  flex-shrink: 0;
 }
 
-/* Pickup note */
-.cookPickup {
+.subscriptionNotice {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 20px;
-  border-top: 1px solid var(--grey-100);
+  gap: 7px;
+  padding: 10px 20px;
   background: var(--grey-100);
+  border-top: 1px solid var(--grey-200);
   font-size: 12.5px;
-  color: var(--grey-500);
+  font-weight: 600;
+  color: var(--ink);
 }
 
-.addMoreLink {
-  font-size: 12.5px;
+.subscriptionNotice svg {
+  flex-shrink: 0;
+  color: var(--grey-700);
+}
+
+.listingSubtotal {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--grey-700);
+  background: var(--white);
+  border-top: 1px solid var(--grey-200);
+}
+
+.listingFooter {
+  display: flex;
+  justify-content: center;
+  padding: 12px 20px 16px;
+  border-top: 1px solid var(--grey-200);
+  background: var(--white);
+}
+
+.menuLink {
+  font-size: 13px;
   font-weight: 700;
   color: var(--red);
   text-decoration: none;
-  white-space: nowrap;
   transition: color 0.12s;
 }
 
-.addMoreLink:hover {
+.menuLink:hover {
   color: var(--red-deep);
 }
 
-/* ─── Promo ─────────────────────────────────────────────────────────────────── */
-.promoSection {
+/* ─── Checkout column (summary + promo, sticky together) ─────────────────── */
+.summaryCol {
+  width: 300px;
+  flex-shrink: 0;
+  align-self: flex-start;
+  position: sticky;
+  top: 20px;
   display: flex;
-  gap: 10px;
-  margin-top: 20px;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.summary {
+  padding: 20px;
+  border: 1px solid var(--grey-200);
+  border-radius: 8px;
+  background: var(--white);
+  box-shadow: var(--shadow-md);
+}
+
+.promoSection {
+  padding: 16px;
+  border: 1px solid var(--grey-200);
+  border-radius: 8px;
+  background: var(--white);
+  box-shadow: var(--shadow-md);
+}
+
+.promoLabel {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--grey-500);
+  margin-bottom: 10px;
+}
+
+.promoRow {
+  display: flex;
+  gap: 8px;
 }
 
 .promoInput {
   flex: 1;
-  padding: 12px 16px;
+  min-width: 0;
+  padding: 11px 12px;
   border: 1.5px solid var(--grey-200);
-  border-radius: var(--radius-pill);
+  border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
   color: var(--ink);
@@ -277,19 +343,20 @@
 }
 
 .promoBtn {
-  padding: 12px 22px;
-  background: transparent;
+  padding: 11px 16px;
+  background: var(--white);
   color: var(--ink);
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 700;
-  border: 1.5px solid var(--grey-300);
-  border-radius: var(--radius-pill);
+  border: 1.5px solid var(--grey-200);
+  border-radius: 8px;
   cursor: pointer;
   font-family: inherit;
   transition:
     background 0.12s,
     border-color 0.12s;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .promoBtn:hover {
@@ -297,68 +364,83 @@
   border-color: var(--grey-500);
 }
 
-/* ─── Summary sidebar ───────────────────────────────────────────────────────── */
-.summary {
-  width: 320px;
-  flex-shrink: 0;
-  border: 1px solid var(--grey-200);
-  border-radius: var(--radius-lg);
-  padding: 24px;
-  position: sticky;
-  top: 96px;
-  box-shadow: var(--shadow-md);
-}
-
-@media (max-width: 767px) {
-  .inner {
-    flex-direction: column;
-    gap: 24px;
-  }
-
-  .summary {
-    width: 100%;
-    position: static;
-  }
+.summaryEyebrow {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--grey-500);
+  margin: 0 0 6px;
 }
 
 .summaryTitle {
-  font-size: 17px;
+  font-size: 18px;
   font-weight: 800;
   color: var(--ink);
-  letter-spacing: -0.02em;
-  margin-bottom: 20px;
+  letter-spacing: -0.025em;
+  margin: 0 0 18px;
+  line-height: 1.15;
 }
 
-.summaryRows {
+.summarySheet {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
+  padding-bottom: 16px;
   margin-bottom: 16px;
+  border-bottom: 1px solid var(--grey-200);
 }
 
 .summaryRow {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.summaryRowLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   font-size: 14px;
+  font-weight: 500;
   color: var(--grey-700);
 }
 
-.summaryDivider {
-  border: none;
-  border-top: 1px solid var(--grey-200);
-  margin-bottom: 16px;
+.taxNote {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--grey-500);
+  letter-spacing: 0.02em;
+}
+
+.summaryRowVal {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  flex-shrink: 0;
+  letter-spacing: -0.01em;
 }
 
 .summaryTotal {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  font-size: 20px;
-  font-weight: 800;
+  align-items: baseline;
+  margin-bottom: 18px;
+}
+
+.summaryTotal span:first-child {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--grey-700);
+}
+
+.summaryTotal span:last-child {
+  font-size: 16px;
+  font-weight: 700;
   color: var(--ink);
-  letter-spacing: -0.025em;
-  margin-bottom: 20px;
+  letter-spacing: -0.02em;
 }
 
 .checkoutBtn {
@@ -366,50 +448,38 @@
   align-items: center;
   justify-content: center;
   width: 100%;
-  padding: 15px 24px;
+  padding: 14px 20px;
   background: var(--red);
   color: var(--white);
   font-size: 15px;
   font-weight: 700;
-  border-radius: var(--radius-pill);
+  border-radius: 8px;
   text-align: center;
   text-decoration: none;
   transition:
     background 0.15s,
     box-shadow 0.15s;
-  margin-bottom: 12px;
 }
 
 .checkoutBtn:hover {
   background: var(--red-deep);
-  box-shadow: 0 6px 20px rgba(214, 64, 69, 0.3);
+  box-shadow: 0 4px 14px rgba(214, 64, 69, 0.28);
 }
 
-.secureNote {
-  font-size: 12px;
-  color: var(--grey-500);
-  text-align: center;
-  margin-bottom: 14px;
-  line-height: 1.55;
-}
-
-.continueLink {
-  display: block;
-  text-align: center;
-  font-size: 13.5px;
-  font-weight: 600;
-  color: var(--grey-700);
-  text-decoration: none;
-  transition: color 0.12s;
-}
-
-.continueLink:hover {
-  color: var(--ink);
-}
-
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   .page {
     padding: 24px 20px 80px;
+  }
+
+  .bodyRow {
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .summaryCol {
+    width: 100%;
+    position: static;
+    top: auto;
   }
 
   .heading {

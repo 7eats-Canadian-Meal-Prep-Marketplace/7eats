@@ -4,6 +4,7 @@ import {
   Check,
   ChevronDown,
   Heart,
+  RefreshCw,
   SlidersHorizontal,
   Star,
   X,
@@ -464,6 +465,12 @@ function ListingCard({
         <p className={styles.metaLine}>
           {cook.displayName.split(" ")[0]} · {formatDist(listing.distanceKm)} ·{" "}
           <span className={styles.metaPrice}>From ${listing.priceFrom}</span>
+          {listing.subscriptionEnabled && (
+            <span className={styles.subHint}>
+              <RefreshCw size={10} />
+              Subscribe
+            </span>
+          )}
         </p>
 
         <p className={styles.scheduleLine}>

@@ -70,14 +70,17 @@
   top: 18px;
   right: 18px;
   z-index: 2;
-  padding: 6px 14px;
-  background: var(--red);
-  color: var(--white);
-  font-size: 12px;
-  font-weight: 700;
-  border-radius: var(--radius-pill);
-  letter-spacing: 0.01em;
-  box-shadow: 0 2px 8px rgba(214, 64, 69, 0.4);
+  padding: 7px 12px;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(10px);
+  color: var(--red);
+  font-size: 11px;
+  font-weight: 800;
+  border: 1.5px solid var(--red);
+  border-radius: 8px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  box-shadow: 0 2px 12px rgba(15, 15, 15, 0.1);
 }
 
 .heroUrgency {
@@ -180,6 +183,134 @@
   font-size: 15.5px;
   color: var(--grey-700);
   line-height: 1.7;
+}
+
+/* ─── Subscription info banner ───────────────────────────────────────────────── */
+.subscriptionInfo {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  margin: 16px 0 0;
+  background: var(--grey-100);
+  border: 1px solid var(--grey-200);
+  border-radius: 10px;
+}
+
+.subscriptionIcon {
+  color: var(--ink);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.subscriptionTitle {
+  display: block;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+  margin-bottom: 2px;
+}
+
+.subscriptionDetail {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--grey-700);
+}
+
+/* ─── Listing-level fulfillment selector ─────────────────────────────────────── */
+.fulfillmentToggle {
+  display: flex;
+  border-bottom: 1px solid var(--grey-200);
+}
+
+.fulfillmentBtn {
+  flex: 1;
+  padding: 11px 12px;
+  border: none;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--grey-500);
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    color 0.12s,
+    box-shadow 0.12s;
+  position: relative;
+}
+
+.fulfillmentBtn:disabled {
+  cursor: default;
+}
+
+.fulfillmentBtn:hover:not(:disabled) {
+  color: var(--ink);
+}
+
+.fulfillmentBtnActive {
+  color: var(--ink);
+  box-shadow: inset 0 -2px 0 var(--ink);
+}
+
+/* ─── Order mode toggle (once vs subscribe weekly) ───────────────────────────── */
+.orderModeToggle {
+  display: flex;
+  width: 100%;
+  background: var(--grey-100);
+  border: 1px solid var(--grey-200);
+  border-radius: 10px;
+  padding: 3px;
+  gap: 3px;
+  margin-bottom: 10px;
+}
+
+.orderModeBtn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 7px 8px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--grey-600, #6b6b6b);
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    box-shadow 0.15s;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.orderModeBtn:hover {
+  color: var(--ink);
+}
+
+.orderModeBtnActive {
+  background: var(--white);
+  color: var(--ink);
+  box-shadow:
+    0 1px 3px rgba(15, 15, 15, 0.1),
+    0 1px 2px rgba(15, 15, 15, 0.06);
+}
+
+/* ─── Weekly note (inline, muted) ────────────────────────────────────────────── */
+.weeklyNote {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--grey-500);
+  margin: 0 0 12px;
+  line-height: 1;
 }
 
 /* ─── Divider ────────────────────────────────────────────────────────────────── */
@@ -361,20 +492,10 @@
   border-bottom: none;
 }
 
-.policyRowDeal {
-  background: rgba(214, 64, 69, 0.06);
-}
-
 .policyIcon {
   flex-shrink: 0;
   margin-top: 2px;
   color: var(--grey-500);
-}
-
-.policyIconDeal {
-  flex-shrink: 0;
-  margin-top: 2px;
-  color: var(--red);
 }
 
 .policyBody {
@@ -389,10 +510,6 @@
   font-weight: 700;
   color: var(--ink);
   letter-spacing: -0.01em;
-}
-
-.policyRowDeal .policyTitle {
-  color: var(--red);
 }
 
 .policyDesc {
@@ -858,9 +975,11 @@
   margin-top: 8px;
 }
 
-/* CTA wrapper — gives the button proper inset and breathing room */
+/* CTA wrapper — padded zone containing toggle + note + button */
 .ctaWrap {
-  padding: 16px 20px 20px;
+  padding: 14px 20px 20px;
+  display: flex;
+  flex-direction: column;
 }
 
 /* CTA — single element, transitions between states */
@@ -896,6 +1015,103 @@
 .ctaBtnActive:hover {
   background: var(--red-deep);
   box-shadow: 0 4px 14px rgba(214, 64, 69, 0.28);
+}
+
+.inCartBanner {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+}
+
+.inCartBannerHead {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--ink);
+}
+
+.inCartBannerTitle {
+  font-size: 15px;
+  font-weight: 800;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.inCartBannerActions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.inCartModifyBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 13px 16px;
+  background: var(--white);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 700;
+  border: 1.5px solid var(--grey-200);
+  border-radius: 8px;
+  font-family: inherit;
+  cursor: pointer;
+  transition:
+    border-color 0.12s,
+    background 0.12s;
+}
+
+.inCartModifyBtn:hover {
+  border-color: var(--grey-500);
+  background: var(--grey-100);
+}
+
+.inCartViewLink {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 13px 16px;
+  background: var(--red);
+  color: var(--white);
+  font-size: 14px;
+  font-weight: 700;
+  border-radius: 8px;
+  text-decoration: none;
+  transition:
+    background 0.15s,
+    box-shadow 0.15s;
+}
+
+.inCartViewLink:hover {
+  background: var(--red-deep);
+  box-shadow: 0 4px 14px rgba(214, 64, 69, 0.28);
+}
+
+.cancelModifyBtn {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px;
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--grey-500);
+  cursor: pointer;
+  text-align: center;
+  transition: color 0.12s;
+}
+
+.cancelModifyBtn:hover {
+  color: var(--ink);
 }
 
 /* ── Card 2: Cook ─────────────────────────────────────────────────────────── */
@@ -977,40 +1193,14 @@
 
 /* ── Card 3: Policy / deals ───────────────────────────────────────────────── */
 .policyCard {
-  padding: 18px 20px;
+  padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-}
-
-/* ── Policy card: receipt-style spec sheet ──────────────────────────────────── */
-.pcDeal {
-  padding: 14px 16px;
-  background: rgba(214, 64, 69, 0.04);
-  border-bottom: 1px solid rgba(214, 64, 69, 0.1);
-}
-
-.pcDealBadge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 11.5px;
-  font-weight: 800;
-  color: var(--red);
-  letter-spacing: 0.01em;
-  margin-bottom: 4px;
-  text-transform: uppercase;
-}
-
-.pcDealDesc {
-  font-size: 13px;
-  color: var(--grey-700);
-  line-height: 1.5;
-  margin: 0;
+  gap: 0;
 }
 
 .pcSection {
-  padding: 14px 16px;
+  padding: 16px 20px;
   border-bottom: 1px solid var(--grey-100);
 }
 
@@ -1112,6 +1302,48 @@
   transition: background 0.15s;
 }
 
-.mobileBarBtn:hover {
+.mobileBarBtn:hover:not(:disabled) {
   background: var(--red-deep);
+}
+
+.mobileBarBtn:disabled,
+.mobileBarBtnDisabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.mobileBarBtn {
+  border: none;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.mobileBarActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.mobileBarBtnOutline {
+  display: inline-flex;
+  align-items: center;
+  padding: 10px 14px;
+  background: transparent;
+  color: var(--white);
+  font-size: 13px;
+  font-weight: 700;
+  border: 1.5px solid rgba(255, 255, 255, 0.45);
+  border-radius: var(--radius-pill);
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+
+.mobileBarBtnOutline:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.7);
 }

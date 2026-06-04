@@ -160,7 +160,7 @@ function PhoneStep({ onComplete }: { onComplete: (phone: string) => void }) {
         verification code.
       </p>
 
-      <div className={styles.phoneBlock}>
+      <div className={`${styles.panel} ${styles.phoneBlock}`}>
         <div className={styles.phoneRow}>
           <input
             type="tel"
@@ -420,7 +420,7 @@ export default function OnboardingPage() {
   // Avoid hydration mismatch — step determined client-side from session.
   if (step === null) return null;
 
-  const progress = step === 1 ? 0 : 50;
+  const progress = step === 1 ? 50 : 100;
 
   return (
     <div className={styles.page}>
@@ -432,6 +432,19 @@ export default function OnboardingPage() {
           height={38}
           priority
         />
+        <nav className={styles.stepIndicator} aria-label={`Step ${step} of 2`}>
+          <span
+            className={step === 1 ? styles.stepDotActive : styles.stepDotDone}
+          >
+            1
+          </span>
+          <span
+            className={`${styles.stepLine} ${step === 2 ? styles.stepLineDone : ""}`}
+          />
+          <span className={step === 2 ? styles.stepDotActive : styles.stepDot}>
+            2
+          </span>
+        </nav>
       </div>
 
       <div className={styles.progressBar}>

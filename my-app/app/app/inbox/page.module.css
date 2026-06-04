@@ -1,25 +1,43 @@
 /* ─── Page ──────────────────────────────────────────────────────────────────── */
 .page {
   display: flex;
-  height: calc(100vh - 60px);
+  height: calc(100vh - 72px);
   overflow: hidden;
+  background: var(--white);
 }
 
 /* ─── Thread list ───────────────────────────────────────────────────────────── */
 .threadList {
   width: 100%;
+  background: var(--white);
   border-right: 1px solid var(--grey-200);
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  overflow-x: hidden;
   flex-shrink: 0;
+  /* Custom scrollbar — thin and subtle */
+  scrollbar-width: thin;
+  scrollbar-color: var(--grey-200) transparent;
+}
+
+.threadList::-webkit-scrollbar {
+  width: 4px;
+}
+.threadList::-webkit-scrollbar-track {
+  background: transparent;
+}
+.threadList::-webkit-scrollbar-thumb {
+  background: var(--grey-200);
+  border-radius: var(--radius-pill);
 }
 
 @media (min-width: 768px) {
   .threadList {
-    width: 340px;
+    width: 320px;
   }
 
+  /* On desktop, threadListHidden stays visible — only hidden on mobile */
   .threadListHidden {
     display: flex;
   }
@@ -31,97 +49,118 @@
   }
 }
 
+/* ─── List header ───────────────────────────────────────────────────────────── */
 .listHeader {
-  padding: 24px 22px 18px;
+  padding: 20px 16px;
   border-bottom: 1px solid var(--grey-200);
   flex-shrink: 0;
+  background: var(--white);
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 
 .heading {
-  font-size: 24px;
-  font-weight: 800;
+  font-size: 22px;
+  font-weight: 900;
   color: var(--ink);
-  letter-spacing: -0.025em;
+  letter-spacing: -0.03em;
+  line-height: 1;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .unreadBadge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 24px;
-  height: 24px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
   border-radius: var(--radius-pill);
   background: var(--red);
   color: var(--white);
   font-size: 11px;
   font-weight: 800;
-  padding: 0 6px;
+  letter-spacing: 0;
+  line-height: 1;
 }
 
-/* Thread items */
+/* ─── Thread items ──────────────────────────────────────────────────────────── */
 .threadItem {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 16px 22px;
-  border: none;
+  gap: 12px;
+  padding: 14px 16px;
   background: none;
+  border: none;
+  border-bottom: 1px solid var(--grey-200);
   text-align: left;
   cursor: pointer;
-  border-bottom: 1px solid var(--grey-100);
-  transition: background 0.12s;
   font-family: inherit;
   width: 100%;
+  transition: background 0.1s ease;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .threadItem:hover {
   background: var(--grey-100);
 }
 
+.threadItem:active {
+  background: var(--grey-200);
+}
+
+/* Unread: bold text, slightly darker preview — no background fill */
 .threadUnread {
-  background: var(--grey-100);
+  /* compound selectors placed after base classes */
 }
 
 .threadAvatar {
-  width: 46px;
-  height: 46px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 14px;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--white);
   flex-shrink: 0;
+  letter-spacing: 0.02em;
 }
 
 .threadInfo {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
 }
 
 .threadTop {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
   gap: 8px;
-  margin-bottom: 4px;
 }
 
 .threadName {
-  font-size: 14.5px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--ink);
   letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .threadTime {
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--grey-500);
   flex-shrink: 0;
+  font-weight: 400;
 }
 
 .threadPreview {
@@ -131,34 +170,50 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1.4;
+}
+
+.threadUnread .threadName {
+  font-weight: 800;
+}
+
+.threadUnread .threadPreview {
+  color: var(--grey-700);
 }
 
 .unreadDot {
-  width: 9px;
-  height: 9px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: var(--red);
   flex-shrink: 0;
+  align-self: center;
 }
 
-/* ─── Empty ─────────────────────────────────────────────────────────────────── */
+/* ─── Empty state ───────────────────────────────────────────────────────────── */
 .empty {
-  padding: 48px 22px;
+  padding: 48px 16px;
   text-align: center;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 .emptyText {
   font-size: 15px;
   font-weight: 700;
   color: var(--ink);
-  margin-bottom: 8px;
   letter-spacing: -0.01em;
+  margin-bottom: 8px;
 }
 
 .emptyDesc {
   font-size: 13.5px;
   color: var(--grey-500);
   line-height: 1.6;
+  max-width: 24ch;
 }
 
 /* ─── Chat panel ────────────────────────────────────────────────────────────── */
@@ -167,27 +222,26 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  overflow: hidden;
   background: var(--white);
-  z-index: 10;
 }
 
-@media (min-width: 768px) {
+/* On mobile, chatPanel overlays full screen when a thread is selected */
+@media (max-width: 767px) {
   .chatPanel {
-    position: static;
-    z-index: auto;
+    position: fixed;
+    inset: 72px 0 0 0;
+    z-index: 20;
+    background: var(--white);
   }
 }
 
+/* ─── Chat header ───────────────────────────────────────────────────────────── */
 .chatHeader {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 16px 22px;
+  gap: 12px;
+  padding: 16px;
   border-bottom: 1px solid var(--grey-200);
   flex-shrink: 0;
   background: var(--white);
@@ -197,21 +251,23 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   border: none;
   background: none;
   color: var(--ink);
   cursor: pointer;
-  transition: background 0.12s;
+  transition: background 0.1s ease;
   flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .chatBack:hover {
   background: var(--grey-100);
 }
 
+/* Hide back button on desktop — there's always a thread list visible */
 @media (min-width: 768px) {
   .chatBack {
     display: none;
@@ -219,22 +275,25 @@
 }
 
 .chatAvatar {
-  width: 38px;
-  height: 38px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
-  font-weight: 800;
+  font-size: 13px;
+  font-weight: 700;
   color: var(--white);
   flex-shrink: 0;
+  letter-spacing: 0.02em;
 }
 
 .chatHeaderInfo {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
 }
 
 .chatName {
@@ -242,107 +301,140 @@
   font-weight: 700;
   color: var(--ink);
   letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .chatStatus {
   font-size: 12px;
   color: var(--grey-500);
+  font-weight: 400;
 }
 
-/* Messages */
+/* ─── Messages ──────────────────────────────────────────────────────────────── */
 .messages {
   flex: 1;
   overflow-y: auto;
-  padding: 20px 22px;
+  padding: 20px 16px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
   background: var(--grey-100);
+  /* Subtle scrollbar */
+  scrollbar-width: thin;
+  scrollbar-color: var(--grey-300) transparent;
+}
+
+.messages::-webkit-scrollbar {
+  width: 4px;
+}
+.messages::-webkit-scrollbar-track {
+  background: transparent;
+}
+.messages::-webkit-scrollbar-thumb {
+  background: var(--grey-300);
+  border-radius: var(--radius-pill);
 }
 
 .msgRow {
   display: flex;
   align-items: flex-end;
-  gap: 8px;
-}
-
-.msgRowClient {
-  flex-direction: row-reverse;
+  gap: 10px;
 }
 
 .msgRowCook {
+  align-self: flex-start;
   flex-direction: row;
 }
 
+.msgRowClient {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+}
+
 .msgAvatar {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 9px;
-  font-weight: 800;
+  font-size: 10px;
+  font-weight: 700;
   color: var(--white);
   flex-shrink: 0;
+  letter-spacing: 0.02em;
 }
 
 .bubble {
   max-width: 72%;
-  padding: 12px 16px;
-  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  border-radius: 16px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
 }
 
+/* Cook bubble: standard light grey — expected chat UI pattern */
+.bubbleCook {
+  background: var(--white);
+  color: var(--ink);
+  border-bottom-left-radius: 4px;
+  box-shadow: 0 1px 2px rgba(15, 15, 15, 0.07);
+}
+
+/* Client bubble: brand dark — feels like iMessage "sent" */
 .bubbleClient {
   background: var(--ink);
   color: var(--white);
   border-bottom-right-radius: 4px;
 }
 
-.bubbleCook {
-  background: var(--white);
-  color: var(--ink);
-  border-bottom-left-radius: 4px;
-  box-shadow: 0 1px 3px rgba(15, 15, 15, 0.06);
-}
-
 .bubbleText {
-  font-size: 14.5px;
-  line-height: 1.55;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 .bubbleTime {
-  font-size: 10.5px;
-  opacity: 0.6;
-  align-self: flex-end;
+  display: block;
+  font-size: 10px;
+  margin-top: 3px;
+  text-align: right;
 }
 
-/* Composer */
+.bubbleCook .bubbleTime {
+  color: var(--grey-500);
+}
+
+.bubbleClient .bubbleTime {
+  color: rgba(255, 255, 255, 0.65);
+}
+
+/* ─── Composer ──────────────────────────────────────────────────────────────── */
 .composer {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 14px 18px;
+  gap: 8px;
+  padding: 12px 16px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
   border-top: 1px solid var(--grey-200);
   background: var(--white);
   flex-shrink: 0;
-  padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
 }
 
 .composerInput {
   flex: 1;
-  padding: 11px 16px;
-  border: 1.5px solid var(--grey-200);
-  border-radius: var(--radius-pill);
+  min-width: 0;
+  padding: 10px 16px;
+  border: 1px solid var(--grey-200);
+  border-radius: 22px;
   font-size: 14px;
   font-family: inherit;
   color: var(--ink);
   background: var(--white);
   outline: none;
-  transition: border-color 0.15s;
+  transition: border-color 0.15s ease;
+  line-height: 1.45;
 }
 
 .composerInput::placeholder {
@@ -350,15 +442,15 @@
 }
 
 .composerInput:focus {
-  border-color: var(--ink);
+  border-color: var(--grey-700);
 }
 
 .sendBtn {
-  width: 42px;
-  height: 42px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   border: none;
-  background: var(--red);
+  background: var(--ink);
   color: var(--white);
   display: flex;
   align-items: center;
@@ -366,22 +458,29 @@
   cursor: pointer;
   flex-shrink: 0;
   transition:
-    background 0.15s,
-    box-shadow 0.15s;
+    background 0.15s ease,
+    opacity 0.15s ease,
+    transform 0.1s ease;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .sendBtn:hover:not(:disabled) {
-  background: var(--red-deep);
-  box-shadow: 0 4px 14px rgba(214, 64, 69, 0.35);
+  background: var(--grey-900, #2a2a2a);
+  transform: scale(1.04);
+}
+
+.sendBtn:active:not(:disabled) {
+  transform: scale(0.96);
 }
 
 .sendBtn:disabled {
-  background: var(--grey-200);
-  color: var(--grey-500);
+  opacity: 0.4;
   cursor: not-allowed;
+  transform: none;
 }
 
-/* ─── Desktop placeholder ───────────────────────────────────────────────────── */
+/* ─── Desktop empty / placeholder ──────────────────────────────────────────── */
+/* Hidden on mobile entirely — only visible on desktop when no thread selected */
 .chatPlaceholder {
   display: none;
 }
@@ -390,14 +489,17 @@
   .chatPlaceholder {
     flex: 1;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     background: var(--grey-100);
+    gap: 8px;
   }
 }
 
 .placeholderText {
   font-size: 14px;
-  color: var(--grey-500);
+  color: var(--grey-300);
   font-weight: 500;
+  letter-spacing: -0.005em;
 }

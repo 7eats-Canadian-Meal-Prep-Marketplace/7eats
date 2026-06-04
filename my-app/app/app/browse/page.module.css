@@ -399,6 +399,17 @@
   color: #111111;
 }
 
+.subHint {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--grey-500);
+  vertical-align: middle;
+}
+
 .scheduleLine {
   margin: 0;
   font-size: 12.5px;
@@ -450,10 +461,6 @@
   cursor: pointer;
 }
 
-.cookCard:hover .cookAvatarLg {
-  transform: scale(1.04);
-}
-
 .cookAvatarLg {
   width: 64px;
   height: 64px;
@@ -466,6 +473,10 @@
   color: var(--white);
   margin-bottom: 8px;
   transition: transform 0.2s ease;
+}
+
+.cookCard:hover .cookAvatarLg {
+  transform: scale(1.04);
 }
 
 .cookCardName {

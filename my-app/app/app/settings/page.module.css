@@ -1,30 +1,26 @@
-/* ─── Page ──────────────────────────────────────────────────────────────────── */
+/* ─── Page layout ────────────────────────────────────────────────────────── */
 .page {
   background: var(--white);
   min-height: 100%;
 }
 
 .inner {
-  max-width: 600px;
+  max-width: 680px;
   margin: 0 auto;
   padding: 32px 20px 80px;
 }
 
-/* ─── Profile card ──────────────────────────────────────────────────────────── */
+/* ─── Profile header ─────────────────────────────────────────────────────── */
 .profileCard {
   display: flex;
   align-items: center;
-  gap: 18px;
-  padding: 24px;
-  border: 1px solid var(--grey-200);
-  border-radius: var(--radius-md);
+  gap: 16px;
   margin-bottom: 28px;
-  box-shadow: var(--shadow-md);
 }
 
 .avatarLg {
-  width: 60px;
-  height: 60px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   background: var(--ink);
   color: var(--white);
@@ -38,40 +34,45 @@
 }
 
 .profileName {
-  font-size: 19px;
+  font-size: 18px;
   font-weight: 800;
   color: var(--ink);
-  letter-spacing: -0.025em;
-  line-height: 1.2;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
 }
 
 .profileEmail {
-  font-size: 13.5px;
+  font-size: 13px;
   color: var(--grey-500);
   margin-top: 3px;
+  line-height: 1.4;
 }
 
-/* ─── Tabs ──────────────────────────────────────────────────────────────────── */
+/* ─── Tabs ───────────────────────────────────────────────────────────────── */
 .tabs {
   display: flex;
   border-bottom: 1px solid var(--grey-200);
-  margin-bottom: 24px;
+  margin-bottom: 0;
+  gap: 0;
 }
 
 .tab {
-  padding: 12px 0;
+  padding: 10px 0;
   margin-right: 28px;
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 600;
   color: var(--grey-500);
-  border: none;
-  border-bottom: 2.5px solid transparent;
   background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
   cursor: pointer;
   font-family: inherit;
+  line-height: 1;
   transition:
     color 0.12s,
     border-color 0.12s;
+  white-space: nowrap;
 }
 
 .tab:hover {
@@ -80,110 +81,118 @@
 
 .tabActive {
   color: var(--ink);
-  border-bottom-color: var(--red);
+  border-bottom-color: var(--ink);
 }
 
-/* ─── Tab content ───────────────────────────────────────────────────────────── */
+/* ─── Tab content ────────────────────────────────────────────────────────── */
 .tabContent {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
+  padding-top: 24px;
 }
 
-/* ─── Card ──────────────────────────────────────────────────────────────────── */
+/* ─── Card ───────────────────────────────────────────────────────────────── */
 .card {
+  background: var(--white);
   border: 1px solid var(--grey-200);
-  border-radius: var(--radius-md);
+  border-radius: 12px;
   overflow: hidden;
-  box-shadow: var(--shadow-md);
 }
 
 .cardTitle {
-  padding: 18px 20px 16px;
-  font-size: 15px;
-  font-weight: 800;
+  padding: 18px 22px 16px;
+  font-size: 14px;
+  font-weight: 700;
   color: var(--ink);
-  border-bottom: 1px solid var(--grey-200);
   letter-spacing: -0.01em;
+  border-bottom: 1px solid var(--grey-200);
 }
 
+/* ─── Form ───────────────────────────────────────────────────────────────── */
 .formGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 14px;
-  padding: 20px 20px 0;
+  gap: 0 20px;
+  padding: 20px 22px 0;
 }
 
 .formGroup {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 0 20px;
-  margin-bottom: 14px;
+  padding: 16px 22px 0;
 }
 
+/* Remove double top padding when formGroup is inside formGrid */
 .formGrid .formGroup {
   padding: 0;
-}
-
-.formGroup:last-child {
-  margin-bottom: 0;
+  margin-bottom: 16px;
 }
 
 .label {
-  font-size: 13px;
+  font-size: 10.5px;
   font-weight: 600;
   color: var(--grey-700);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
 
 .input {
-  padding: 11px 14px;
-  border: 1.5px solid var(--grey-200);
-  border-radius: var(--radius-sm);
-  font-size: 15px;
+  background: transparent;
+  border: none;
+  border-bottom: 1.5px solid var(--grey-200);
+  border-radius: 0;
+  padding: 10px 0;
+  font-size: 14.5px;
   font-family: inherit;
   color: var(--ink);
-  background: var(--white);
   outline: none;
   transition: border-color 0.15s;
+  width: 100%;
 }
 
 .input::placeholder {
-  color: var(--grey-500);
+  color: var(--grey-300);
 }
 
 .input:focus {
-  border-color: var(--ink);
+  border-bottom-color: var(--ink);
 }
 
 .cardFooter {
-  padding: 14px 20px;
+  padding: 18px 22px;
+  margin-top: 20px;
   border-top: 1px solid var(--grey-200);
-  background: var(--grey-100);
 }
 
 .saveBtn {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  padding: 10px 22px;
+  justify-content: center;
+  width: 100%;
+  padding: 13px 22px;
   background: var(--ink);
   color: var(--white);
-  font-size: 13.5px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 800;
   border: none;
   border-radius: var(--radius-pill);
   cursor: pointer;
   font-family: inherit;
+  letter-spacing: -0.01em;
   transition: opacity 0.12s;
 }
 
 .saveBtn:hover {
-  opacity: 0.85;
+  opacity: 0.82;
 }
 
-/* ─── Danger ────────────────────────────────────────────────────────────────── */
+/* ─── Danger card ────────────────────────────────────────────────────────── */
 .dangerCard {
-  border-color: rgba(214, 64, 69, 0.2);
+  border-color: var(--grey-200);
+  border-left: 3px solid var(--red);
+  border-radius: 12px;
 }
 
 .dangerRow {
@@ -191,11 +200,11 @@
   align-items: center;
   justify-content: space-between;
   gap: 20px;
-  padding: 20px;
+  padding: 18px 22px;
 }
 
 .dangerTitle {
-  font-size: 14.5px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--ink);
   margin-bottom: 4px;
@@ -203,50 +212,49 @@
 }
 
 .dangerDesc {
-  font-size: 13px;
+  font-size: 12.5px;
   color: var(--grey-500);
   line-height: 1.55;
-  max-width: 360px;
 }
 
 .deleteBtn {
   display: inline-flex;
   align-items: center;
-  padding: 10px 18px;
+  justify-content: center;
+  padding: 8px 16px;
   background: none;
   color: var(--red);
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 700;
-  border: 1.5px solid rgba(214, 64, 69, 0.4);
+  border: 1.5px solid var(--red);
   border-radius: var(--radius-pill);
   cursor: pointer;
   font-family: inherit;
   flex-shrink: 0;
+  white-space: nowrap;
   transition:
     background 0.15s,
-    color 0.15s,
-    border-color 0.15s;
+    color 0.15s;
 }
 
 .deleteBtn:hover {
   background: var(--red);
   color: var(--white);
-  border-color: var(--red);
 }
 
-/* ─── Preferences ───────────────────────────────────────────────────────────── */
+/* ─── Preferences ────────────────────────────────────────────────────────── */
 .prefIntro {
-  font-size: 14.5px;
+  font-size: 13.5px;
   color: var(--grey-700);
   line-height: 1.65;
   margin-bottom: 4px;
 }
 
 .prefCard {
+  background: var(--white);
   border: 1px solid var(--grey-200);
-  border-radius: var(--radius-md);
-  padding: 18px 20px;
-  box-shadow: var(--shadow-md);
+  border-radius: 12px;
+  padding: 16px 20px;
 }
 
 .prefHeader {
@@ -254,11 +262,11 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .prefQuestion {
-  font-size: 14.5px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--ink);
   line-height: 1.4;
@@ -268,94 +276,94 @@
 .editPrefBtn {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 6px 14px;
-  border: 1.5px solid var(--grey-200);
+  justify-content: center;
+  padding: 5px 12px;
+  border: 1px solid var(--grey-200);
   border-radius: var(--radius-pill);
-  font-size: 12.5px;
-  font-weight: 700;
-  color: var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--grey-500);
   background: none;
   cursor: pointer;
   font-family: inherit;
   flex-shrink: 0;
   white-space: nowrap;
   transition:
-    border-color 0.12s,
-    background 0.12s;
+    color 0.12s,
+    border-color 0.12s;
 }
 
 .editPrefBtn:hover {
-  border-color: var(--ink);
-  background: var(--grey-100);
+  color: var(--ink);
+  border-color: var(--grey-700);
 }
 
 .prefAnswers {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 7px;
 }
 
 .answerTag {
   display: inline-flex;
   align-items: center;
-  padding: 5px 14px;
-  background: var(--ink);
-  color: var(--white);
+  padding: 4px 12px;
+  border: 1px solid var(--grey-300);
   border-radius: var(--radius-pill);
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 600;
+  color: var(--ink);
+  background: transparent;
   letter-spacing: -0.01em;
 }
 
 .unanswered {
-  font-size: 13.5px;
-  color: var(--grey-500);
+  font-size: 13px;
+  color: var(--grey-300);
   font-style: italic;
 }
 
 .prefOptions {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 7px;
 }
 
 .optionChip {
   display: inline-flex;
   align-items: center;
-  padding: 7px 16px;
-  border: 1.5px solid var(--grey-200);
+  padding: 6px 14px;
+  border: 1px solid var(--grey-200);
   border-radius: var(--radius-pill);
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 600;
   color: var(--ink);
   background: var(--white);
   cursor: pointer;
   font-family: inherit;
   transition:
-    border-color 0.12s,
-    background 0.12s,
-    color 0.12s;
+    border-color 0.1s,
+    background 0.1s,
+    color 0.1s;
 }
 
 .optionChip:hover {
-  border-color: var(--grey-700);
-  background: var(--grey-100);
+  border-color: var(--grey-500);
 }
 
 .optionChipSelected {
-  background: var(--red);
-  border-color: var(--red);
+  background: var(--ink);
+  border-color: var(--ink);
   color: var(--white);
 }
 
-/* ─── Notifications ─────────────────────────────────────────────────────────── */
+/* ─── Notifications ──────────────────────────────────────────────────────── */
 .notifRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 20px;
-  padding: 16px 20px;
+  padding: 16px 22px;
   border-bottom: 1px solid var(--grey-200);
 }
 
@@ -366,52 +374,53 @@
 .notifInfo {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
   min-width: 0;
 }
 
 .notifLabel {
-  font-size: 14.5px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--ink);
   letter-spacing: -0.01em;
 }
 
 .notifDesc {
-  font-size: 13px;
+  font-size: 12.5px;
   color: var(--grey-500);
   line-height: 1.5;
 }
 
+/* ─── Toggle ─────────────────────────────────────────────────────────────── */
 .toggle {
+  position: relative;
   width: 40px;
-  height: 24px;
+  height: 22px;
   border-radius: var(--radius-pill);
   background: var(--grey-300);
   border: none;
   padding: 0;
   cursor: pointer;
-  position: relative;
-  transition: background 0.2s;
   flex-shrink: 0;
+  transition: background 0.2s;
 }
 
 .toggleOn {
-  background: var(--red);
+  background: var(--ink);
 }
 
 .toggleKnob {
   position: absolute;
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
   background: var(--white);
   top: 3px;
   left: 3px;
   transition: transform 0.18s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 1px 3px rgba(15, 15, 15, 0.2);
+  box-shadow: 0 1px 3px rgba(15, 15, 15, 0.18);
 }
 
 .toggleOn .toggleKnob {
-  transform: translateX(16px);
+  transform: translateX(18px);
 }

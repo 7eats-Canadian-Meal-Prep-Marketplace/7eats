@@ -1,14 +1,23 @@
 "use client";
 
-import { Bookmark, Heart, Star } from "lucide-react";
+import { Bookmark, Heart, RefreshCw, Star } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
+import { useApp } from "../_app-context";
+import { scheduleLine } from "../_listing-card-utils";
+
+function formatDist(km: number): string {
+  return km < 1 ? `${Math.round(km * 1000)}m` : `${km.toFixed(1)} km`;
+}
+
 import { MOCK_COOKS, MOCK_LISTINGS } from "../_mock";
 import styles from "./page.module.css";
 
 type Tab = "listings" | "cooks";
 
 export default function SavedPage() {
+  const { fulfillment } = useApp();
   const [tab, setTab] = useState<Tab>("listings");
   const [savedListings, setSavedListings] = useState<Set<string>>(
     new Set(["listing-1", "listing-3"]),
@@ -37,7 +46,7 @@ export default function SavedPage() {
   return (
     <div className={styles.page}>
       <div className={styles.inner}>
-        <h1 className={styles.heading}>Saved</h1>
+        <h1 className={styles.heading}>Favourites</h1>
 
         <div className={styles.tabs}>
           <button
@@ -67,7 +76,7 @@ export default function SavedPage() {
             {listings.length === 0 ? (
               <div className={styles.empty}>
                 <Heart size={40} className={styles.emptyIcon} />
-                <h2 className={styles.emptyTitle}>No saved listings</h2>
+                <h2 className={styles.emptyTitle}>No favourite listings</h2>
                 <p className={styles.emptyDesc}>
                   Tap the heart on any listing to save it here.
                 </p>
@@ -81,41 +90,116 @@ export default function SavedPage() {
                   const cook =
                     MOCK_COOKS.find((c) => c.id === listing.cookId) ??
                     MOCK_COOKS[0];
+                  const spotsLow =
+                    listing.ordersLeft > 0 && listing.ordersLeft <= 5;
+                  const spotsOut = listing.ordersLeft === 0;
+                  const schedule = scheduleLine(listing, fulfillment);
+
                   return (
-                    <div key={listing.id} className={styles.card}>
-                      <Link
-                        href={`/app/listings/${listing.id}`}
-                        className={styles.cardLink}
-                      >
-                        <div
-                          className={styles.cardCover}
-                          style={{ background: listing.gradient }}
+                    /* Same card structure as search/browse */
+                    <Link
+                      key={listing.id}
+                      href={`/app/listings/${listing.id}`}
+                      className={styles.card}
+                    >
+                      <div className={styles.cardCover}>
+                        {listing.deal && (
+                          <span className={styles.dealBadge}>
+                            {listing.deal.badge}
+                          </span>
+                        )}
+                        <Image
+                          src={listing.image}
+                          alt={listing.title}
+                          fill
+                          className={styles.cardImage}
+                          sizes="(max-width: 560px) 100vw, (max-width: 860px) 50vw, 33vw"
                         />
-                        <div className={styles.cardBody}>
-                          <div className={styles.cardCook}>
-                            <div
-                              className={styles.cookDot}
-                              style={{ background: cook.gradient }}
-                            >
-                              {cook.initials}
-                            </div>
-                            {cook.displayName}
-                          </div>
+                        {/* Heart always active (it's saved) */}
+                        <button
+                          type="button"
+                          className={`${styles.heartBtn} ${styles.heartBtnActive}`}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            unsaveListing(listing.id);
+                          }}
+                          aria-label="Remove from saved"
+                        >
+                          <Heart
+                            size={16}
+                            strokeWidth={2}
+                            fill="currentColor"
+                          />
+                        </button>
+                        {spotsOut ? (
+                          <span
+                            className={`${styles.stockPill} ${styles.stockOut}`}
+                          >
+                            Sold out
+                          </span>
+                        ) : spotsLow ? (
+                          <span
+                            className={`${styles.stockPill} ${styles.stockLow}`}
+                          >
+                            {listing.ordersLeft} left
+                          </span>
+                        ) : null}
+                        {listing.fulfillment !== "both" && (
+                          <span className={styles.fulfillmentPill}>
+                            {listing.fulfillment === "pickup"
+                              ? "Pickup only"
+                              : "Delivery only"}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className={styles.cardBody}>
+                        <div className={styles.titleRow}>
                           <h3 className={styles.cardTitle}>{listing.title}</h3>
-                          <p className={styles.cardMeta}>
-                            📅 {listing.pickupDate} · From ${listing.priceFrom}
-                          </p>
+                          <span className={styles.rating}>
+                            <Star
+                              size={12}
+                              fill="currentColor"
+                              className={styles.star}
+                            />
+                            <span className={styles.ratingValue}>
+                              {cook.rating.toFixed(1)}
+                            </span>
+                          </span>
                         </div>
-                      </Link>
-                      <button
-                        type="button"
-                        className={styles.unsaveBtn}
-                        onClick={() => unsaveListing(listing.id)}
-                        aria-label="Remove from saved"
-                      >
-                        <Heart size={16} fill="currentColor" />
-                      </button>
-                    </div>
+
+                        <p className={styles.metaLine}>
+                          {cook.displayName.split(" ")[0]} ·{" "}
+                          {formatDist(listing.distanceKm)} ·{" "}
+                          <span className={styles.metaPrice}>
+                            From ${listing.priceFrom}
+                          </span>
+                          {listing.subscriptionEnabled && (
+                            <span className={styles.subHint}>
+                              <RefreshCw size={10} />
+                              Subscribe
+                            </span>
+                          )}
+                        </p>
+
+                        <p className={styles.scheduleLine}>
+                          <span
+                            className={
+                              schedule.urgency !== "normal"
+                                ? styles.scheduleUrgent
+                                : styles.scheduleMuted
+                            }
+                          >
+                            {schedule.orderBy}
+                          </span>
+                          <span className={styles.scheduleSep}> · </span>
+                          <span className={styles.scheduleMuted}>
+                            {schedule.receiveOn}
+                          </span>
+                        </p>
+                      </div>
+                    </Link>
                   );
                 })}
               </div>
@@ -128,9 +212,9 @@ export default function SavedPage() {
             {cooks.length === 0 ? (
               <div className={styles.empty}>
                 <Bookmark size={40} className={styles.emptyIcon} />
-                <h2 className={styles.emptyTitle}>No saved cooks</h2>
+                <h2 className={styles.emptyTitle}>No followed cooks</h2>
                 <p className={styles.emptyDesc}>
-                  Follow your favourite cooks to get notified when they post new
+                  Follow your favourite cooks to keep up when they post new
                   listings.
                 </p>
                 <Link href="/app/browse" className={styles.browseBtn}>
@@ -156,7 +240,7 @@ export default function SavedPage() {
                           {cook.displayName}
                         </span>
                         <span className={styles.cookMeta}>
-                          {cook.cuisineTypes[0]} · {cook.neighborhood}
+                          {cook.cuisineTypes[0]} cuisine · {cook.neighborhood}
                         </span>
                         <span className={styles.cookRating}>
                           <Star

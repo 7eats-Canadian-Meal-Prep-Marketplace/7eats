@@ -388,6 +388,15 @@
   background: var(--white);
 }
 
+.lockedNote {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--grey-500);
+  text-align: center;
+  line-height: 1.45;
+}
+
 .addBtn {
   display: flex;
   align-items: center;

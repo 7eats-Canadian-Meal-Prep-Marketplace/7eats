@@ -142,7 +142,7 @@ function AddressModal({
 
 const MENU_LINKS = [
   { href: "/app/search", label: "Search", Icon: Search },
-  { href: "/app/saved", label: "Saved", Icon: Heart },
+  { href: "/app/saved", label: "Favourites", Icon: Heart },
   { href: "/app/orders", label: "Orders", Icon: Package },
   { href: "/app/inbox", label: "Inbox", Icon: MessageSquare },
   { href: "/app/settings", label: "Account", Icon: Settings },
@@ -274,14 +274,14 @@ function ShellInner({
   userEmail: string;
 }) {
   const pathname = usePathname();
-  const { itemCount } = useCart();
+  const { listingCount } = useCart();
   const [address, setAddress] = useState("123 King St W, Toronto");
   const [showAddress, setShowAddress] = useState(false);
 
   const isOnboarding = pathname.startsWith("/app-auth/onboarding");
   const isCheckout = pathname.startsWith("/app/checkout");
-  const isDetailPage =
-    pathname.startsWith("/app/listings/") || pathname.startsWith("/app/cooks/");
+  const showFulfillmentToggle =
+    pathname === "/app/browse" || pathname === "/app/search";
   const hideBottomNav = isOnboarding || isCheckout;
 
   const visibleBottomNav = isLoggedIn
@@ -303,7 +303,7 @@ function ShellInner({
               />
             </Link>
 
-            {!isDetailPage && (
+            {showFulfillmentToggle && (
               <FulfillmentToggle className={styles.headerSegmented} />
             )}
 
@@ -328,10 +328,10 @@ function ShellInner({
               <Link
                 href="/app/cart"
                 className={styles.cartPill}
-                aria-label={`Cart, ${itemCount} item${itemCount === 1 ? "" : "s"}`}
+                aria-label={`Cart, ${listingCount} listing${listingCount === 1 ? "" : "s"}`}
               >
                 <ShoppingCart size={18} strokeWidth={2} />
-                <span className={styles.cartCount}>{itemCount}</span>
+                <span className={styles.cartCount}>{listingCount}</span>
               </Link>
 
               {isLoggedIn ? (

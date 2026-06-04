@@ -26,6 +26,7 @@ const updateListingSchema = z
     minOrderQty: z.number().int().min(1),
     maxOrderQty: z.number().int().nullable(),
     cancellationNoticeDays: z.number().int().min(0).nullable(),
+    subscriptionEnabled: z.boolean(),
   })
   .partial();
 

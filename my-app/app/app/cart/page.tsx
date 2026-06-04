@@ -1,169 +1,208 @@
 "use client";
 
-import { Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
+import { RefreshCw, ShoppingCart, X } from "lucide-react";
 import Link from "next/link";
+import { useMemo } from "react";
 import { useCart } from "../_cart-context";
+import { type CartItem, MOCK_LISTINGS } from "../_mock";
+import { WEEKLY_CHARGE_DISCLAIMER } from "../_subscription-utils";
+import {
+  calcOntarioHst,
+  formatCartMoney,
+  ONTARIO_HST_LABEL,
+} from "./_cart-tax";
 import styles from "./page.module.css";
 
-const SERVICE_FEE = 2;
-
 export default function CartPage() {
-  const { items, updateQuantity, total } = useCart();
+  const { items, removeListing, total } = useCart();
+
+  const { tax, grandTotal } = useMemo(() => {
+    const taxAmount = calcOntarioHst(total);
+    return {
+      tax: taxAmount,
+      grandTotal: Math.round((total + taxAmount) * 100) / 100,
+    };
+  }, [total]);
 
   if (items.length === 0) {
     return (
       <div className={styles.emptyPage}>
-        <div className={styles.emptyIcon}>
-          <ShoppingBag size={48} />
-        </div>
+        <ShoppingCart
+          size={48}
+          strokeWidth={1.5}
+          className={styles.emptyIcon}
+          aria-hidden
+        />
         <h1 className={styles.emptyTitle}>Your cart is empty</h1>
-        <p className={styles.emptyDesc}>
-          Discover home cooks near you and start building your order.
-        </p>
         <Link href="/app/browse" className={styles.browseBtn}>
-          Browse listings →
+          Browse listings
         </Link>
       </div>
     );
   }
 
-  // Group items by cook
-  const grouped = items.reduce<Record<string, typeof items>>((acc, item) => {
-    if (!acc[item.cookId]) acc[item.cookId] = [];
-    acc[item.cookId].push(item);
+  const grouped = items.reduce<Record<string, CartItem[]>>((acc, item) => {
+    if (!acc[item.listingId]) acc[item.listingId] = [];
+    acc[item.listingId].push(item);
     return acc;
   }, {});
-
-  const grandTotal = total + SERVICE_FEE;
 
   return (
     <div className={styles.page}>
       <div className={styles.inner}>
-        <div className={styles.left}>
-          <h1 className={styles.heading}>Your cart</h1>
+        <div className={styles.mainCol}>
+          <header className={styles.pageHeader}>
+            <h1 className={styles.heading}>Your cart</h1>
+            <p className={styles.subheading}>
+              Review your orders before checkout
+            </p>
+          </header>
 
-          {Object.entries(grouped).map(([cookId, cookItems]) => {
-            const first = cookItems[0];
-            return (
-              <div key={cookId} className={styles.cookSection}>
-                <div className={styles.cookHeader}>
-                  <div
-                    className={styles.cookAvatar}
-                    style={{ background: first.cookGradient }}
-                  >
-                    {first.cookInitials}
-                  </div>
-                  <div>
-                    <div className={styles.cookName}>{first.cookName}</div>
-                    <div className={styles.listingName}>
-                      {first.listingTitle}
-                    </div>
-                  </div>
-                </div>
+          <div className={styles.bodyRow}>
+            <div className={styles.listingsCol}>
+              {Object.entries(grouped).map(([listingId, listingItems]) => {
+                const first = listingItems[0];
+                const listing = MOCK_LISTINGS.find((l) => l.id === listingId);
+                const listingSubtotal = listingItems.reduce(
+                  (sum, i) => sum + i.price * i.quantity,
+                  0,
+                );
 
-                <div className={styles.itemList}>
-                  {cookItems.map((item) => (
-                    <div key={item.dishId} className={styles.item}>
-                      <div className={styles.itemInfo}>
-                        <span className={styles.itemName}>{item.dishName}</span>
-                        <span className={styles.itemPrice}>
-                          ${item.price} ea.
-                        </span>
-                      </div>
-                      <div className={styles.itemControls}>
-                        <div className={styles.qtyControl}>
-                          <button
-                            type="button"
-                            className={styles.qtyBtn}
-                            onClick={() =>
-                              updateQuantity(item.dishId, item.quantity - 1)
-                            }
-                          >
-                            {item.quantity === 1 ? (
-                              <Trash2 size={13} />
-                            ) : (
-                              <Minus size={13} />
-                            )}
-                          </button>
-                          <span className={styles.qtyNum}>{item.quantity}</span>
-                          <button
-                            type="button"
-                            className={styles.qtyBtn}
-                            onClick={() =>
-                              updateQuantity(item.dishId, item.quantity + 1)
-                            }
-                          >
-                            <Plus size={13} />
-                          </button>
+                return (
+                  <section key={listingId} className={styles.listingSection}>
+                    <div className={styles.listingHeader}>
+                      <Link
+                        href={`/app/listings/${listingId}`}
+                        className={styles.listingHeaderMain}
+                      >
+                        <div className={styles.listingThumb}>
+                          {/* biome-ignore lint/performance/noImgElement: mock listing cover */}
+                          <img
+                            src={listing?.image ?? "/placeholder.jpg"}
+                            alt=""
+                            className={styles.listingThumbImg}
+                            width={56}
+                            height={56}
+                          />
                         </div>
-                        <span className={styles.itemTotal}>
-                          ${item.price * item.quantity}
+                        <div className={styles.listingHeaderText}>
+                          <span className={styles.listingTitle}>
+                            {first.listingTitle}
+                          </span>
+                          <span className={styles.cookName}>
+                            {first.cookName} ·{" "}
+                            <span className={styles.fulfillmentTag}>
+                              {first.fulfillmentMode === "delivery"
+                                ? "Delivery"
+                                : "Pickup"}
+                            </span>
+                          </span>
+                        </div>
+                      </Link>
+                      <button
+                        type="button"
+                        className={styles.removeListingBtn}
+                        onClick={() => removeListing(listingId)}
+                        aria-label={`Remove ${first.listingTitle} from cart`}
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+
+                    <ul className={styles.itemList}>
+                      {listingItems.map((item) => (
+                        <li key={item.dishId} className={styles.item}>
+                          <span className={styles.itemName}>
+                            {item.quantity}× {item.dishName}
+                          </span>
+                          <span className={styles.itemTotal}>
+                            ${item.price * item.quantity}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+
+                    {/* Weekly subscription notice */}
+                    {first.orderType === "subscription" && (
+                      <div className={styles.subscriptionNotice}>
+                        <RefreshCw size={12} />
+                        <span>
+                          <strong>Weekly subscription</strong> ·{" "}
+                          {WEEKLY_CHARGE_DISCLAIMER}
                         </span>
                       </div>
+                    )}
+
+                    <div className={styles.listingSubtotal}>
+                      <span>Listing subtotal</span>
+                      <span>${listingSubtotal}.00</span>
                     </div>
-                  ))}
+
+                    <div className={styles.listingFooter}>
+                      <Link
+                        href={`/app/listings/${listingId}`}
+                        className={styles.menuLink}
+                      >
+                        Back to menu
+                      </Link>
+                    </div>
+                  </section>
+                );
+              })}
+            </div>
+
+            <aside className={styles.summaryCol}>
+              <div className={styles.summary}>
+                <p className={styles.summaryEyebrow}>Checkout</p>
+                <h2 className={styles.summaryTitle}>Order summary</h2>
+
+                <div className={styles.summarySheet}>
+                  <div className={styles.summaryRow}>
+                    <span className={styles.summaryRowLabel}>Subtotal</span>
+                    <span className={styles.summaryRowVal}>
+                      ${formatCartMoney(total)}
+                    </span>
+                  </div>
+                  <div className={styles.summaryRow}>
+                    <span className={styles.summaryRowLabel}>
+                      {ONTARIO_HST_LABEL}
+                      <span className={styles.taxNote}>Ontario</span>
+                    </span>
+                    <span className={styles.summaryRowVal}>
+                      ${formatCartMoney(tax)}
+                    </span>
+                  </div>
                 </div>
 
-                <div className={styles.cookPickup}>
-                  <span>Pickup: {cookItems[0].listingTitle}</span>
-                  <Link
-                    href={`/app/listings/${cookItems[0].listingId}`}
-                    className={styles.addMoreLink}
-                  >
-                    Add more dishes
-                  </Link>
+                <div className={styles.summaryTotal}>
+                  <span>Total</span>
+                  <span>${formatCartMoney(grandTotal)}</span>
+                </div>
+
+                <Link href="/app/checkout" className={styles.checkoutBtn}>
+                  Proceed to checkout
+                </Link>
+              </div>
+
+              <div className={styles.promoSection}>
+                <label htmlFor="cart-promo" className={styles.promoLabel}>
+                  Promo code
+                </label>
+                <div className={styles.promoRow}>
+                  <input
+                    id="cart-promo"
+                    type="text"
+                    placeholder="Enter code"
+                    className={styles.promoInput}
+                  />
+                  <button type="button" className={styles.promoBtn}>
+                    Apply
+                  </button>
                 </div>
               </div>
-            );
-          })}
-
-          {/* Promo code */}
-          <div className={styles.promoSection}>
-            <input
-              type="text"
-              placeholder="Promo code"
-              className={styles.promoInput}
-            />
-            <button type="button" className={styles.promoBtn}>
-              Apply
-            </button>
+            </aside>
           </div>
         </div>
-
-        {/* Order summary */}
-        <aside className={styles.summary}>
-          <h2 className={styles.summaryTitle}>Order summary</h2>
-
-          <div className={styles.summaryRows}>
-            <div className={styles.summaryRow}>
-              <span>Subtotal</span>
-              <span>${total}.00</span>
-            </div>
-            <div className={styles.summaryRow}>
-              <span>Service fee</span>
-              <span>${SERVICE_FEE}.00</span>
-            </div>
-          </div>
-
-          <div className={styles.summaryDivider} />
-
-          <div className={styles.summaryTotal}>
-            <span>Total</span>
-            <span>${grandTotal}.00</span>
-          </div>
-
-          <Link href="/app/checkout" className={styles.checkoutBtn}>
-            Proceed to checkout →
-          </Link>
-
-          <p className={styles.secureNote}>
-            Guest checkout available — sign in anytime for faster reordering.
-          </p>
-
-          <Link href="/app/browse" className={styles.continueLink}>
-            Continue browsing
-          </Link>
-        </aside>
       </div>
     </div>
   );

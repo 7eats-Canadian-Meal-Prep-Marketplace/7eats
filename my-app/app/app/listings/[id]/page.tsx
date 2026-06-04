@@ -2,20 +2,21 @@
 
 import {
   ArrowLeft,
+  Check,
   CheckCircle,
   Clock,
   Info,
   MapPin,
   Minus,
   Plus,
+  RefreshCw,
   ShoppingBag,
   Star,
-  Tag,
   TrendingDown,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { use, useState } from "react";
+import { use, useEffect, useMemo, useRef, useState } from "react";
 import { useCart } from "../../_cart-context";
 import {
   type DietaryBadge,
@@ -24,6 +25,7 @@ import {
   MOCK_LISTINGS,
   type MockDish,
 } from "../../_mock";
+import { DealCallout } from "./_DealCallout";
 import DishModal from "./_DishModal";
 import styles from "./page.module.css";
 
@@ -49,41 +51,127 @@ export default function ListingPage({
   const listing = MOCK_LISTINGS.find((l) => l.id === id) ?? MOCK_LISTINGS[0];
   const cook = MOCK_COOKS.find((c) => c.id === listing.cookId) ?? MOCK_COOKS[0];
   const reviews = MOCK_LISTING_REVIEWS[listing.id] ?? [];
-  const { addItem, updateQuantity, items } = useCart();
+  const { setListingItems, items } = useCart();
+  // Subscribe mode: only available when listing has subscriptionEnabled
+  const [subscribeMode, setSubscribeMode] = useState(false);
+  // Local fulfillment mode — only used when listing supports both pickup + delivery.
+  // Initialized from the cart item if already added, otherwise defaults to pickup.
+  const [localFulfillment, setLocalFulfillment] = useState<
+    "pickup" | "delivery"
+  >("pickup");
   const router = useRouter();
+  const wasInCartRef = useRef(false);
 
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [selectedDish, setSelectedDish] = useState<MockDish | null>(null);
+  const [isModifying, setIsModifying] = useState(false);
+
+  const isInCart = useMemo(
+    () => items.some((i) => i.listingId === listing.id),
+    [items, listing.id],
+  );
+  const orderLocked = isInCart && !isModifying;
 
   const getQty = (dishId: string) => quantities[dishId] ?? 0;
 
-  const handleAdd = (dish: MockDish) => {
-    const currentTotal = items
-      .filter((i) => i.listingId === listing.id)
-      .reduce((s, i) => s + i.quantity, 0);
-    if (listing.maxUnits !== undefined && currentTotal >= listing.maxUnits)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: listing.id is an intentional trigger dep — effect resets state when the listing changes
+  useEffect(() => {
+    wasInCartRef.current = false;
+    setQuantities({});
+    setSelectedDish(null);
+    setIsModifying(false);
+  }, [listing.id]);
+
+  // Sync read-only view when this listing is already in the cart
+  useEffect(() => {
+    const fromCart = items.filter((i) => i.listingId === listing.id);
+    if (fromCart.length > 0) {
+      const next: Record<string, number> = {};
+      for (const line of fromCart) next[line.dishId] = line.quantity;
+      setQuantities(next);
+      // Restore modes from the existing cart item
+      setSubscribeMode(fromCart[0].orderType === "subscription");
+      if (listing.fulfillment === "both") {
+        setLocalFulfillment(fromCart[0].fulfillmentMode);
+      }
+      wasInCartRef.current = true;
       return;
-    const newQty = getQty(dish.id) + 1;
-    setQuantities((prev) => ({ ...prev, [dish.id]: newQty }));
-    addItem({
-      dishId: dish.id,
-      dishName: dish.name,
-      dishEmoji: dish.emoji,
-      listingId: listing.id,
-      listingTitle: listing.title,
-      cookId: cook.id,
-      cookName: cook.displayName,
-      cookInitials: cook.initials,
-      cookGradient: cook.gradient,
-      price: dish.price,
+    }
+    if (wasInCartRef.current) {
+      setQuantities({});
+      setSubscribeMode(false);
+      setLocalFulfillment("pickup");
+      wasInCartRef.current = false;
+      setIsModifying(false);
+    }
+  }, [listing.id, listing.fulfillment, items]);
+
+  const restoreFromCart = () => {
+    const fromCart = items.filter((i) => i.listingId === listing.id);
+    const next: Record<string, number> = {};
+    for (const line of fromCart) next[line.dishId] = line.quantity;
+    // Restore modes so toggles reflect the current cart state
+    if (fromCart.length > 0) {
+      setSubscribeMode(fromCart[0].orderType === "subscription");
+      if (listing.fulfillment === "both")
+        setLocalFulfillment(fromCart[0].fulfillmentMode);
+    }
+    setQuantities(next);
+  };
+
+  const selectionCount = useMemo(
+    () => Object.values(quantities).reduce((sum, q) => sum + q, 0),
+    [quantities],
+  );
+
+  const handleAdd = (dish: MockDish) => {
+    if (orderLocked) return;
+    setQuantities((prev) => {
+      const current = Object.values(prev).reduce((s, q) => s + q, 0);
+      if (listing.maxUnits !== undefined && current >= listing.maxUnits)
+        return prev;
+      const newQty = (prev[dish.id] ?? 0) + 1;
+      return { ...prev, [dish.id]: newQty };
     });
   };
 
   const handleDecrement = (dish: MockDish) => {
-    const newQty = Math.max(0, getQty(dish.id) - 1);
-    setQuantities((prev) => ({ ...prev, [dish.id]: newQty }));
-    updateQuantity(dish.id, newQty);
+    if (orderLocked) return;
+    setQuantities((prev) => {
+      const newQty = Math.max(0, (prev[dish.id] ?? 0) - 1);
+      if (newQty === 0) {
+        const { [dish.id]: _, ...rest } = prev;
+        return rest;
+      }
+      return { ...prev, [dish.id]: newQty };
+    });
   };
+
+  // Resolve fulfillmentMode: "both" listings use the explicit local selector;
+  // fixed listings are always pickup or always delivery.
+  const resolvedFulfillmentMode =
+    listing.fulfillment === "both" ? localFulfillment : listing.fulfillment;
+
+  const buildCartLines = () =>
+    listing.dishes
+      .filter((dish) => getQty(dish.id) > 0)
+      .map((dish) => ({
+        dishId: dish.id,
+        dishName: dish.name,
+        dishEmoji: dish.emoji,
+        listingId: listing.id,
+        listingTitle: listing.title,
+        orderType: (subscribeMode ? "subscription" : "one-time") as
+          | "one-time"
+          | "subscription",
+        fulfillmentMode: resolvedFulfillmentMode,
+        cookId: cook.id,
+        cookName: cook.displayName,
+        cookInitials: cook.initials,
+        cookGradient: cook.gradient,
+        price: dish.price,
+        quantity: getQty(dish.id),
+      }));
 
   const spotsLeft = listing.ordersLeft;
   const spotsLow = spotsLeft <= 3;
@@ -91,16 +179,17 @@ export default function ListingPage({
     ((listing.maxOrders - spotsLeft) / listing.maxOrders) * 100,
   );
 
-  const hasItems = items.some((i) => i.listingId === listing.id);
-  const cartItems = items.filter((i) => i.listingId === listing.id);
-  const listingTotal = cartItems.reduce((s, i) => s + i.price * i.quantity, 0);
-  const listingCount = cartItems.reduce((s, i) => s + i.quantity, 0);
-  const meetsMinUnits = !listing.minUnits || listingCount >= listing.minUnits;
+  const hasSelection = selectionCount > 0;
+  const selectionTotal = listing.dishes.reduce(
+    (sum, dish) => sum + dish.price * getQty(dish.id),
+    0,
+  );
+  const meetsMinUnits = !listing.minUnits || selectionCount >= listing.minUnits;
   const atMaxUnits =
-    listing.maxUnits !== undefined && listingCount >= listing.maxUnits;
-  const canCheckout = hasItems && meetsMinUnits;
+    listing.maxUnits !== undefined && selectionCount >= listing.maxUnits;
+  const canAddToCart = hasSelection && meetsMinUnits;
   const unitsNeeded = listing.minUnits
-    ? Math.max(0, listing.minUnits - listingCount)
+    ? Math.max(0, listing.minUnits - selectionCount)
     : 0;
 
   const hasPolicy =
@@ -109,8 +198,22 @@ export default function ListingPage({
     listing.minUnits ||
     listing.maxUnits;
 
-  const handleCtaClick = () => {
-    if (canCheckout) router.push("/app/cart");
+  const handleAddToCart = () => {
+    if (!canAddToCart) return;
+    if (isInCart && !isModifying) return;
+    setListingItems(listing.id, buildCartLines());
+    setIsModifying(false);
+    router.push("/app/cart");
+  };
+
+  const startModifying = () => {
+    restoreFromCart();
+    setIsModifying(true);
+  };
+
+  const cancelModifying = () => {
+    restoreFromCart();
+    setIsModifying(false);
   };
 
   // Reusable cook bar markup used in both mobile inline and sidebar
@@ -147,9 +250,17 @@ export default function ListingPage({
           className={styles.heroImg}
         />
         <div className={styles.heroOverlay} />
-        <Link href="/app/browse" className={styles.backBtn} aria-label="Back">
+        <button
+          type="button"
+          className={styles.backBtn}
+          aria-label="Back"
+          onClick={() => {
+            if (window.history.length > 1) router.back();
+            else router.replace("/app/browse");
+          }}
+        >
           <ArrowLeft size={20} />
-        </Link>
+        </button>
         {listing.deal && (
           <div className={styles.heroDeal}>{listing.deal.badge}</div>
         )}
@@ -175,6 +286,22 @@ export default function ListingPage({
             </div>
           )}
           <p className={styles.desc}>{listing.description}</p>
+
+          {/* Subscription availability banner */}
+          {listing.subscriptionEnabled && (
+            <div className={styles.subscriptionInfo}>
+              <RefreshCw size={14} className={styles.subscriptionIcon} />
+              <div>
+                <span className={styles.subscriptionTitle}>
+                  Weekly subscriptions available
+                </span>
+                <span className={styles.subscriptionDetail}>
+                  Subscribe and get this automatically every week. Cancel any
+                  time.
+                </span>
+              </div>
+            </div>
+          )}
 
           {/* Mobile-only: cook + pickup + policy (sidebar handles these on desktop) */}
           <div className={styles.mobileInfo}>
@@ -217,18 +344,10 @@ export default function ListingPage({
                 <hr className={styles.rule} />
                 <div className={styles.policySection}>
                   {listing.deal && (
-                    <div
-                      className={`${styles.policyRow} ${styles.policyRowDeal}`}
-                    >
-                      <Tag size={15} className={styles.policyIconDeal} />
-                      <div className={styles.policyBody}>
-                        <span className={styles.policyTitle}>
-                          {listing.deal.badge}
-                        </span>
-                        <span className={styles.policyDesc}>
-                          {listing.deal.label}
-                        </span>
-                      </div>
+                    <div className={styles.dealCallout}>
+                      <p className={styles.dealCalloutBadge}>
+                        {listing.deal.badge}
+                      </p>
                     </div>
                   )}
                   {listing.priceTiers && listing.priceTiers.length > 0 && (
@@ -273,9 +392,11 @@ export default function ListingPage({
             {listing.dishes.map((dish) => {
               const qty = getQty(dish.id);
               const atListingMax =
+                !orderLocked &&
                 listing.maxUnits !== undefined &&
-                listingCount >= listing.maxUnits &&
+                selectionCount >= listing.maxUnits &&
                 qty === 0;
+              const controlsLocked = orderLocked || atMaxUnits;
               return (
                 /* biome-ignore lint/a11y/useSemanticElements: contains nested buttons — a <button> cannot have <button> children */
                 <div
@@ -327,9 +448,9 @@ export default function ListingPage({
                         {qty === 0 ? (
                           <button
                             type="button"
-                            className={`${styles.addBtn} ${atListingMax ? styles.addBtnDisabled : ""}`}
+                            className={`${styles.addBtn} ${atListingMax || orderLocked ? styles.addBtnDisabled : ""}`}
                             onClick={() => handleAdd(dish)}
-                            disabled={atListingMax}
+                            disabled={atListingMax || orderLocked}
                             aria-label={`Add ${dish.name}`}
                           >
                             <Plus size={16} strokeWidth={2.5} />
@@ -338,17 +459,18 @@ export default function ListingPage({
                           <div className={styles.qtyControl}>
                             <button
                               type="button"
-                              className={styles.qtyBtn}
+                              className={`${styles.qtyBtn} ${orderLocked ? styles.qtyBtnDisabled : ""}`}
                               onClick={() => handleDecrement(dish)}
+                              disabled={orderLocked}
                             >
                               <Minus size={14} />
                             </button>
                             <span className={styles.qtyNum}>{qty}</span>
                             <button
                               type="button"
-                              className={`${styles.qtyBtn} ${atMaxUnits ? styles.qtyBtnDisabled : ""}`}
+                              className={`${styles.qtyBtn} ${controlsLocked ? styles.qtyBtnDisabled : ""}`}
                               onClick={() => handleAdd(dish)}
-                              disabled={atMaxUnits}
+                              disabled={controlsLocked}
                             >
                               <Plus size={14} />
                             </button>
@@ -421,6 +543,28 @@ export default function ListingPage({
         <aside className={styles.sidebar}>
           {/* Card 1 — Order widget */}
           <div className={styles.orderCard}>
+            {/* Pickup / Delivery selector — only for listings that support both */}
+            {listing.fulfillment === "both" && (
+              <div className={styles.fulfillmentToggle}>
+                <button
+                  type="button"
+                  className={`${styles.fulfillmentBtn} ${localFulfillment === "pickup" ? styles.fulfillmentBtnActive : ""}`}
+                  onClick={() => setLocalFulfillment("pickup")}
+                  disabled={orderLocked}
+                >
+                  Pickup
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.fulfillmentBtn} ${localFulfillment === "delivery" ? styles.fulfillmentBtnActive : ""}`}
+                  onClick={() => setLocalFulfillment("delivery")}
+                  disabled={orderLocked}
+                >
+                  Delivery
+                </button>
+              </div>
+            )}
+
             <div className={styles.logisticsGrid}>
               <span className={styles.logLabel}>From</span>
               <span className={styles.logVal}>
@@ -453,38 +597,105 @@ export default function ListingPage({
               </div>
             </div>
 
-            {hasItems && (
+            {hasSelection && (
               <div className={styles.bookingSummary}>
                 <hr className={styles.bookingRule} />
-                {cartItems.map((item) => (
-                  <div key={item.dishId} className={styles.summaryRow}>
-                    <span className={styles.summaryName}>
-                      {item.quantity}× {item.dishName}
-                    </span>
-                    <span className={styles.summaryPrice}>
-                      ${item.price * item.quantity}
-                    </span>
-                  </div>
-                ))}
+                {listing.dishes
+                  .filter((dish) => getQty(dish.id) > 0)
+                  .map((dish) => (
+                    <div key={dish.id} className={styles.summaryRow}>
+                      <span className={styles.summaryName}>
+                        {getQty(dish.id)}× {dish.name}
+                      </span>
+                      <span className={styles.summaryPrice}>
+                        ${dish.price * getQty(dish.id)}
+                      </span>
+                    </div>
+                  ))}
                 <div className={styles.summaryTotal}>
                   <span>Total</span>
-                  <span>${listingTotal}.00</span>
+                  <span>${selectionTotal}.00</span>
                 </div>
               </div>
             )}
 
             <div className={styles.ctaWrap}>
-              <button
-                type="button"
-                className={`${styles.ctaBtn} ${canCheckout ? styles.ctaBtnActive : ""}`}
-                onClick={handleCtaClick}
-              >
-                {canCheckout
-                  ? `Review order · $${listingTotal}.00`
-                  : !hasItems
-                    ? "Select dishes to order"
-                    : `Add ${unitsNeeded} more portion${unitsNeeded !== 1 ? "s" : ""} to continue`}
-              </button>
+              {/* Order mode toggle + disclaimer live inside the padded CTA zone */}
+              {listing.subscriptionEnabled && (!isInCart || isModifying) && (
+                <div className={styles.orderModeToggle}>
+                  <button
+                    type="button"
+                    className={`${styles.orderModeBtn} ${!subscribeMode ? styles.orderModeBtnActive : ""}`}
+                    onClick={() => setSubscribeMode(false)}
+                  >
+                    Order once
+                  </button>
+                  <button
+                    type="button"
+                    className={`${styles.orderModeBtn} ${subscribeMode ? styles.orderModeBtnActive : ""}`}
+                    onClick={() => setSubscribeMode(true)}
+                  >
+                    <RefreshCw size={11} />
+                    Subscribe weekly
+                  </button>
+                </div>
+              )}
+
+              {subscribeMode && (
+                <p className={styles.weeklyNote}>
+                  <RefreshCw size={11} />
+                  Charged every week · cancel any time
+                </p>
+              )}
+
+              {isInCart && !isModifying ? (
+                <div className={styles.inCartBanner}>
+                  <div className={styles.inCartBannerHead}>
+                    <Check size={18} strokeWidth={2.5} aria-hidden />
+                    <p className={styles.inCartBannerTitle}>In cart</p>
+                  </div>
+                  <div className={styles.inCartBannerActions}>
+                    <button
+                      type="button"
+                      className={styles.inCartModifyBtn}
+                      onClick={startModifying}
+                    >
+                      Modify order
+                    </button>
+                    <Link href="/app/cart" className={styles.inCartViewLink}>
+                      View cart
+                    </Link>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    className={`${styles.ctaBtn} ${canAddToCart ? styles.ctaBtnActive : ""}`}
+                    onClick={handleAddToCart}
+                    disabled={!canAddToCart}
+                  >
+                    {!hasSelection
+                      ? "Select dishes to order"
+                      : !meetsMinUnits
+                        ? `Add ${unitsNeeded} more portion${unitsNeeded !== 1 ? "s" : ""}`
+                        : isInCart && isModifying
+                          ? `Update cart · $${selectionTotal}.00`
+                          : subscribeMode
+                            ? `Subscribe weekly · $${selectionTotal}.00/wk`
+                            : `Add to cart · $${selectionTotal}.00`}
+                  </button>
+                  {isInCart && isModifying && (
+                    <button
+                      type="button"
+                      className={styles.cancelModifyBtn}
+                      onClick={cancelModifying}
+                    >
+                      Cancel
+                    </button>
+                  )}
+                </>
+              )}
             </div>
           </div>
 
@@ -533,15 +744,7 @@ export default function ListingPage({
           {/* Card 3 — Bundle deals & order policy (only when applicable) */}
           {hasPolicy && (
             <div className={styles.policyCard}>
-              {listing.deal && (
-                <div className={styles.pcDeal}>
-                  <span className={styles.pcDealBadge}>
-                    <Tag size={10} />
-                    {listing.deal.badge}
-                  </span>
-                  <p className={styles.pcDealDesc}>{listing.deal.label}</p>
-                </div>
-              )}
+              {listing.deal && <DealCallout deal={listing.deal} />}
               {listing.priceTiers && listing.priceTiers.length > 0 && (
                 <div className={styles.pcSection}>
                   <span className={styles.pcHead}>Volume savings</span>
@@ -582,17 +785,50 @@ export default function ListingPage({
       </div>
 
       {/* ── Mobile sticky bar ────────────────────────────────────────────── */}
-      {hasItems && (
+      {(hasSelection || isInCart) && (
         <div className={styles.mobileBar}>
           <div className={styles.mobileBarInfo}>
-            <span className={styles.mobileBarCount}>
-              {listingCount} dish{listingCount !== 1 ? "es" : ""}
-            </span>
-            <span className={styles.mobileBarTotal}>${listingTotal}.00</span>
+            {isInCart && !isModifying ? (
+              <>
+                <span className={styles.mobileBarCount}>In cart</span>
+                <span className={styles.mobileBarTotal}>
+                  ${selectionTotal}.00
+                </span>
+              </>
+            ) : (
+              <>
+                <span className={styles.mobileBarCount}>
+                  {selectionCount} portion{selectionCount !== 1 ? "s" : ""}
+                </span>
+                <span className={styles.mobileBarTotal}>
+                  ${selectionTotal}.00
+                </span>
+              </>
+            )}
           </div>
-          <Link href="/app/cart" className={styles.mobileBarBtn}>
-            View cart →
-          </Link>
+          {isInCart && !isModifying ? (
+            <div className={styles.mobileBarActions}>
+              <button
+                type="button"
+                className={styles.mobileBarBtnOutline}
+                onClick={startModifying}
+              >
+                Modify
+              </button>
+              <Link href="/app/cart" className={styles.mobileBarBtn}>
+                View cart
+              </Link>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className={`${styles.mobileBarBtn} ${!canAddToCart ? styles.mobileBarBtnDisabled : ""}`}
+              onClick={handleAddToCart}
+              disabled={!canAddToCart}
+            >
+              {isInCart && isModifying ? "Update cart" : "Add to cart"}
+            </button>
+          )}
         </div>
       )}
 
@@ -601,6 +837,7 @@ export default function ListingPage({
         <DishModal
           dish={selectedDish}
           quantity={getQty(selectedDish.id)}
+          orderLocked={orderLocked}
           onClose={() => setSelectedDish(null)}
           onAdd={(dish) => handleAdd(dish)}
           onDecrement={(dish) => handleDecrement(dish)}

@@ -1,6 +1,12 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Heart, Star } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Heart,
+  RefreshCw,
+  Star,
+} from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -127,6 +133,12 @@ function ListingCard({
         <p className={styles.metaLine}>
           {cook.displayName.split(" ")[0]} · {formatDist(listing.distanceKm)} ·{" "}
           <span className={styles.metaPrice}>From ${listing.priceFrom}</span>
+          {listing.subscriptionEnabled && (
+            <span className={styles.subHint}>
+              <RefreshCw size={10} />
+              Subscribe
+            </span>
+          )}
         </p>
 
         <p className={styles.scheduleLine}>

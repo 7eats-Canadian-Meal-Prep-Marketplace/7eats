@@ -1,36 +1,39 @@
-/* ─── Page ──────────────────────────────────────────────────────────────────── */
+/* ─── Page shell ─────────────────────────────────────────────────────────────── */
 .page {
   background: var(--white);
   min-height: 100%;
 }
 
-.successBanner {
-  background: var(--grey-100);
-  border-bottom: 1px solid var(--grey-200);
-  padding: 14px var(--pad-x);
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--ink);
-  text-align: center;
-}
-
 .inner {
   max-width: 680px;
   margin: 0 auto;
-  padding: 32px 20px 80px;
+  padding: 40px 32px 96px;
 }
 
+/* ─── Heading ────────────────────────────────────────────────────────────────── */
 .heading {
-  font-size: 28px;
+  font-size: 30px;
   font-weight: 800;
   color: var(--ink);
   letter-spacing: -0.03em;
-  margin-bottom: 32px;
+  margin: 0 0 36px;
 }
 
-/* ─── Section ───────────────────────────────────────────────────────────────── */
+/* ─── Success banner ─────────────────────────────────────────────────────────── */
+.successBanner {
+  background: var(--white);
+  border-left: 3px solid var(--red);
+  border-bottom: 1px solid var(--grey-200);
+  padding: 14px 32px 14px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.5;
+}
+
+/* ─── Sections ───────────────────────────────────────────────────────────────── */
 .section {
-  margin-bottom: 40px;
+  margin-bottom: 44px;
 }
 
 .sectionTitle {
@@ -39,16 +42,17 @@
   color: var(--grey-500);
   text-transform: uppercase;
   letter-spacing: 0.12em;
-  margin-bottom: 14px;
+  margin: 0 0 14px;
 }
 
-/* ─── Order list ────────────────────────────────────────────────────────────── */
+/* ─── Order list ─────────────────────────────────────────────────────────────── */
 .orderList {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
+/* ─── Order card ─────────────────────────────────────────────────────────────── */
 .orderCard {
   display: flex;
   align-items: stretch;
@@ -56,51 +60,58 @@
   border-radius: var(--radius-md);
   overflow: hidden;
   text-decoration: none;
+  background: var(--white);
   box-shadow: var(--shadow-md);
   transition:
-    border-color 0.15s,
-    box-shadow 0.15s,
-    transform 0.15s;
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
 }
 
 .orderCard:hover {
-  border-color: var(--grey-500);
+  border-color: var(--grey-300);
   box-shadow:
-    0 8px 24px rgba(15, 15, 15, 0.08),
-    0 2px 6px rgba(15, 15, 15, 0.04);
-  transform: translateY(-1px);
+    0 8px 28px rgba(15, 15, 15, 0.08),
+    0 2px 8px rgba(15, 15, 15, 0.04);
+  transform: translateY(-2px);
 }
 
+/* Past orders: slightly dimmed, no hover lift */
 .orderCardPast {
-  opacity: 0.75;
+  box-shadow: none;
 }
 
-/* Left accent strip — replaces emoji cover */
+.orderCardPast:hover {
+  transform: none;
+  box-shadow: none;
+  border-color: var(--grey-200);
+}
+
+/* ─── Gradient cover (left square) ──────────────────────────────────────────── */
 .orderCover {
-  width: 6px;
+  width: 72px;
+  min-height: 72px;
   flex-shrink: 0;
   align-self: stretch;
 }
 
-.orderInitials {
-  display: none;
-}
-
+/* ─── Card body ──────────────────────────────────────────────────────────────── */
 .orderBody {
   flex: 1;
   min-width: 0;
-  padding: 16px 18px;
+  padding: 14px 16px 14px 14px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 }
 
+/* ─── Top row: cook name + status badge ──────────────────────────────────────── */
 .orderTop {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin-bottom: 2px;
+  margin-bottom: 1px;
 }
 
 .cookName {
@@ -111,11 +122,12 @@
   letter-spacing: 0.08em;
 }
 
+/* ─── Status badge ───────────────────────────────────────────────────────────── */
 .statusBadge {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 4px 10px;
+  padding: 3px 9px;
   border-radius: var(--radius-pill);
   font-size: 11px;
   font-weight: 700;
@@ -124,29 +136,34 @@
   letter-spacing: 0.01em;
 }
 
+/* confirmed: subtle blue tint text, no heavy background */
 .statusConfirmed {
-  background: var(--grey-100);
-  color: var(--ink);
+  background: rgba(37, 99, 235, 0.07);
+  color: #1d4ed8;
 }
 
+/* ready: green text, faint green tint */
 .statusReady {
-  background: var(--red);
-  color: var(--white);
+  background: rgba(22, 163, 74, 0.08);
+  color: #15803d;
 }
 
+/* completed: muted grey */
 .statusCompleted {
-  background: var(--grey-100);
-  color: var(--grey-700);
+  background: transparent;
+  color: var(--grey-500);
 }
 
+/* cancelled: muted red */
 .statusCancelled {
   background: transparent;
-  color: var(--red-deep);
-  border: 1px solid rgba(214, 64, 69, 0.25);
+  color: var(--red);
+  opacity: 0.75;
 }
 
+/* ─── Listing title ──────────────────────────────────────────────────────────── */
 .orderTitle {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 800;
   color: var(--ink);
   letter-spacing: -0.02em;
@@ -156,51 +173,65 @@
   text-overflow: ellipsis;
 }
 
-.orderMeta {
-  font-size: 13px;
-  color: var(--grey-500);
-  margin-top: 2px;
+/* Past order title: slightly muted */
+.orderCardPast .orderTitle {
+  color: var(--grey-700);
 }
 
+/* ─── Meta line (date / time) ────────────────────────────────────────────────── */
+.orderMeta {
+  font-size: 12px;
+  color: var(--grey-500);
+  margin-top: 1px;
+}
+
+/* ─── Footer row ─────────────────────────────────────────────────────────────── */
 .orderFooter {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
   gap: 8px;
-  margin-top: 8px;
+  margin-top: 6px;
 }
 
 .orderTotal {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 800;
   color: var(--ink);
   letter-spacing: -0.02em;
 }
 
+/* ─── Pickup code ────────────────────────────────────────────────────────────── */
 .pickupCode {
   font-size: 12px;
   color: var(--grey-500);
+  font-weight: 500;
 }
 
 .code {
-  font-family: monospace;
-  color: var(--ink);
-  font-size: 13px;
+  font-family: "SF Mono", "Fira Code", "Fira Mono", "Roboto Mono", monospace;
+  font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.08em;
+  color: var(--ink);
+  background: var(--grey-100);
+  padding: 1px 5px;
+  border-radius: 4px;
 }
 
+/* ─── Reorder button ─────────────────────────────────────────────────────────── */
 .reorderBtn {
   font-size: 13px;
   font-weight: 700;
   color: var(--red);
   letter-spacing: -0.01em;
+  flex-shrink: 0;
 }
 
-/* ─── Empty state ───────────────────────────────────────────────────────────── */
+/* ─── Empty state ────────────────────────────────────────────────────────────── */
 .empty {
   text-align: center;
-  padding: 64px 0;
+  padding: 72px 0 48px;
 }
 
 .emptyIcon {
@@ -221,17 +252,15 @@
   font-weight: 800;
   color: var(--ink);
   letter-spacing: -0.025em;
-  margin-bottom: 8px;
+  margin: 0 0 8px;
 }
 
 .emptyDesc {
   font-size: 15px;
   color: var(--grey-500);
-  margin-bottom: 24px;
-  max-width: 30ch;
-  margin-left: auto;
-  margin-right: auto;
   line-height: 1.6;
+  max-width: 30ch;
+  margin: 0 auto 28px;
 }
 
 .browseBtn {
@@ -245,11 +274,39 @@
   border-radius: var(--radius-pill);
   text-decoration: none;
   transition:
-    background 0.15s,
-    box-shadow 0.15s;
+    background 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .browseBtn:hover {
   background: var(--red-deep);
   box-shadow: 0 6px 20px rgba(214, 64, 69, 0.3);
+}
+
+/* ─── Responsive ─────────────────────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .inner {
+    padding: 28px 16px 80px;
+  }
+
+  .heading {
+    font-size: 26px;
+  }
+
+  .successBanner {
+    padding: 12px 16px 12px 16px;
+    border-left-width: 3px;
+  }
+
+  .orderCover {
+    width: 56px;
+  }
+
+  .orderTitle {
+    font-size: 14px;
+  }
+
+  .orderTotal {
+    font-size: 14px;
+  }
 }

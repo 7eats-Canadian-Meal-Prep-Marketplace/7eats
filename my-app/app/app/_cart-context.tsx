@@ -9,14 +9,24 @@ import {
 } from "react";
 import type { CartItem } from "./_mock";
 
+export type CartMode = "one-time" | "subscription" | "mixed";
+
 type CartContextType = {
   items: CartItem[];
-  addItem: (item: Omit<CartItem, "quantity">) => void;
-  updateQuantity: (dishId: string, qty: number) => void;
-  removeItem: (dishId: string) => void;
+  /** Replace all cart lines for one listing (commit from listing page). */
+  setListingItems: (
+    listingId: string,
+    lines: Array<Omit<CartItem, "quantity"> & { quantity: number }>,
+  ) => void;
+  removeListing: (listingId: string) => void;
   clearCart: () => void;
-  itemCount: number;
+  /** Distinct listings in the cart (badge count). */
+  listingCount: number;
   total: number;
+  /** Drives checkout payment flow and consent UI. */
+  cartMode: CartMode;
+  /** True if any cart item requires delivery. */
+  needsDeliveryAddress: boolean;
 };
 
 const CartContext = createContext<CartContextType | null>(null);
@@ -30,36 +40,28 @@ export function useCart(): CartContextType {
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
 
-  const addItem = useCallback((item: Omit<CartItem, "quantity">) => {
-    setItems((prev) => {
-      const existing = prev.find((i) => i.dishId === item.dishId);
-      if (existing) {
-        return prev.map((i) =>
-          i.dishId === item.dishId ? { ...i, quantity: i.quantity + 1 } : i,
-        );
-      }
-      return [...prev, { ...item, quantity: 1 }];
-    });
-  }, []);
+  const setListingItems = useCallback(
+    (
+      listingId: string,
+      lines: Array<Omit<CartItem, "quantity"> & { quantity: number }>,
+    ) => {
+      const committed = lines.filter((l) => l.quantity > 0);
+      setItems((prev) => [
+        ...prev.filter((i) => i.listingId !== listingId),
+        ...committed,
+      ]);
+    },
+    [],
+  );
 
-  const updateQuantity = useCallback((dishId: string, qty: number) => {
-    if (qty <= 0) {
-      setItems((prev) => prev.filter((i) => i.dishId !== dishId));
-    } else {
-      setItems((prev) =>
-        prev.map((i) => (i.dishId === dishId ? { ...i, quantity: qty } : i)),
-      );
-    }
-  }, []);
-
-  const removeItem = useCallback((dishId: string) => {
-    setItems((prev) => prev.filter((i) => i.dishId !== dishId));
+  const removeListing = useCallback((listingId: string) => {
+    setItems((prev) => prev.filter((i) => i.listingId !== listingId));
   }, []);
 
   const clearCart = useCallback(() => setItems([]), []);
 
-  const itemCount = useMemo(
-    () => items.reduce((sum, i) => sum + i.quantity, 0),
+  const listingCount = useMemo(
+    () => new Set(items.map((i) => i.listingId)).size,
     [items],
   );
 
@@ -68,16 +70,30 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     [items],
   );
 
+  const cartMode = useMemo<CartMode>(() => {
+    if (items.length === 0) return "one-time";
+    const types = new Set(items.map((i) => i.orderType));
+    if (types.has("one-time") && types.has("subscription")) return "mixed";
+    if (types.has("subscription")) return "subscription";
+    return "one-time";
+  }, [items]);
+
+  const needsDeliveryAddress = useMemo(
+    () => items.some((i) => i.fulfillmentMode === "delivery"),
+    [items],
+  );
+
   return (
     <CartContext.Provider
       value={{
         items,
-        addItem,
-        updateQuantity,
-        removeItem,
+        setListingItems,
+        removeListing,
         clearCart,
-        itemCount,
+        listingCount,
         total,
+        cartMode,
+        needsDeliveryAddress,
       }}
     >
       {children}

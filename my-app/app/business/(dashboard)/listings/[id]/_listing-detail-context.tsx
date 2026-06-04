@@ -128,6 +128,7 @@ type ListingMeta = {
   minOrderQty: number;
   maxOrderQty: number | null;
   status: ListingStatus;
+  subscriptionEnabled: boolean;
 };
 
 type ListingDetailContextValue = {
@@ -154,6 +155,7 @@ type ListingDetailContextValue = {
     maxOrderQty: string;
     status: ListingStatus;
     tiers: PricingTier[];
+    subscriptionEnabled: boolean;
   }) => Promise<boolean>;
   addDish: (dish: AvailableDish) => Promise<boolean>;
   removeDish: (dish: ListingDish) => Promise<boolean>;
@@ -254,6 +256,7 @@ export function ListingDetailProvider({
         minOrderQty: listing.minOrderQty,
         maxOrderQty: listing.maxOrderQty,
         status: listing.status as ListingStatus,
+        subscriptionEnabled: listing.subscriptionEnabled ?? false,
       });
       setDishes(
         (listing.dishes ?? []).map(
@@ -368,6 +371,7 @@ export function ListingDetailProvider({
       maxOrderQty: string;
       status: ListingStatus;
       tiers: PricingTier[];
+      subscriptionEnabled: boolean;
     }) => {
       const body = {
         title: payload.title,
@@ -376,6 +380,7 @@ export function ListingDetailProvider({
         currency: payload.currency,
         minOrderQty: payload.minOrderQty,
         maxOrderQty: payload.maxOrderQty ? Number(payload.maxOrderQty) : null,
+        subscriptionEnabled: payload.subscriptionEnabled,
       };
 
       const res = await fetch(`/api/business/listings/${listingId}`, {

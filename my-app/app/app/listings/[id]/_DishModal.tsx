@@ -23,6 +23,7 @@ function dishImages(_dishId: string): string[] {
 interface Props {
   dish: MockDish;
   quantity: number;
+  orderLocked?: boolean;
   onClose: () => void;
   onAdd: (dish: MockDish) => void;
   onDecrement: (dish: MockDish) => void;
@@ -31,6 +32,7 @@ interface Props {
 export default function DishModal({
   dish,
   quantity,
+  orderLocked = false,
   onClose,
   onAdd,
   onDecrement,
@@ -221,13 +223,17 @@ export default function DishModal({
 
         {/* ── Sticky CTA ──────────────────────────────────────────────────── */}
         <div className={styles.cta}>
-          {quantity === 0 ? (
+          {orderLocked ? (
+            <p className={styles.lockedNote}>
+              Use Modify order on the menu to change this listing.
+            </p>
+          ) : quantity === 0 ? (
             <button
               type="button"
               className={styles.addBtn}
               onClick={() => onAdd(dish)}
             >
-              Add to cart — ${dish.price}
+              Add — ${dish.price}
             </button>
           ) : (
             <div className={styles.qtyRow}>
