@@ -11,4 +11,5 @@ export * from "./orders";
 export * from "./payments";
 export * from "./subscriptions";
 export * from "./tags";
+export * from "./user_preferences";
 export * from "./waitlist";

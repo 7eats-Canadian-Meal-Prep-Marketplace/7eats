@@ -59,9 +59,11 @@ A dedicated, lazily-loaded endpoint keeps the unit isolated and testable.
   `createdAt`/`updatedAt`. Mirrors existing RLS (`.enableRLS()` + the two permissive
   policies) so schema matches reality.
 - Exported from `db/schema/index.ts`.
-- **No migration / no `drizzle-kit push`** — the table already exists unchanged; this
-  file only provides typed access. Run `drizzle-kit generate` solely to confirm it
-  produces no destructive diff; do not apply anything.
+- **No migration / no `drizzle-kit push` / no `drizzle-kit generate`** — the table
+  already exists unchanged and was created out-of-band (so it is absent from Drizzle's
+  migration snapshot; `generate` would emit a spurious `CREATE TABLE`). This file only
+  provides typed access. Correctness is verified via `tsc`, the full Vitest suite
+  (including `schema-review`), and a production build — all green.
 
 ## 2. API — cook-scoped read endpoint
 
