@@ -73,9 +73,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const cartMode = useMemo<CartMode>(() => {
     if (items.length === 0) return "one-time";
     const types = new Set(items.map((i) => i.orderType));
-    if (types.has("one-time") && types.has("subscription")) return "mixed";
+    if (types.has("one_time") && types.has("subscription")) return "mixed";
     if (types.has("subscription")) return "subscription";
-    return "one-time";
+    return "one-time"; // cartMode uses hyphen for UI (not sent to API)
   }, [items]);
 
   const needsDeliveryAddress = useMemo(

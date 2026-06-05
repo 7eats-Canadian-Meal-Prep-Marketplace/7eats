@@ -210,6 +210,97 @@
   }
 }
 
+.addressWrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.addressChipOpen {
+  border-color: var(--grey-500);
+}
+
+.addressChevron {
+  margin-left: 2px;
+  color: var(--grey-500);
+  transition: transform 0.15s;
+}
+
+.addressChipOpen .addressChevron {
+  transform: rotate(180deg);
+}
+
+.addressDropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 240px;
+  background: var(--white);
+  border: 1px solid var(--grey-200);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(15, 15, 15, 0.1);
+  z-index: 200;
+  padding: 4px;
+  animation: dropIn 0.14s ease;
+}
+
+@keyframes dropIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.addressOption {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 9px 12px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--ink);
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition: background 0.1s;
+}
+
+.addressOption:hover {
+  background: var(--grey-100);
+}
+
+.addressOptionActive {
+  font-weight: 700;
+}
+
+.addressOptionIcon {
+  color: var(--grey-500);
+  flex-shrink: 0;
+}
+
+.addressOptionCheck {
+  color: var(--ink);
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.addressOptionAdd {
+  color: var(--grey-700);
+}
+
+.addressDropdownDivider {
+  height: 1px;
+  background: var(--grey-200);
+  margin: 4px 0;
+}
+
 /* ─── Address modal ──────────────────────────────────────────────────────────── */
 .backdrop {
   position: fixed;

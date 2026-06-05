@@ -1,12 +1,15 @@
 "use client";
 
 import {
+  Check,
+  ChevronDown,
   Crosshair,
   Heart,
   LogOut,
   MapPin,
   MessageSquare,
   Package,
+  Plus,
   Search,
   Settings,
   ShoppingCart,
@@ -277,6 +280,33 @@ function ShellInner({
   const { listingCount } = useCart();
   const [address, setAddress] = useState("123 King St W, Toronto");
   const [showAddress, setShowAddress] = useState(false);
+  const [showAddressDropdown, setShowAddressDropdown] = useState(false);
+  const [savedAddresses] = useState([
+    "123 King St W, Toronto",
+    "456 Queen St E, Toronto",
+  ]);
+  const addressDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showAddressDropdown) return;
+    function onDocClick(e: MouseEvent) {
+      if (
+        addressDropdownRef.current &&
+        !addressDropdownRef.current.contains(e.target as Node)
+      ) {
+        setShowAddressDropdown(false);
+      }
+    }
+    function onEsc(e: KeyboardEvent) {
+      if (e.key === "Escape") setShowAddressDropdown(false);
+    }
+    document.addEventListener("mousedown", onDocClick);
+    document.addEventListener("keydown", onEsc);
+    return () => {
+      document.removeEventListener("mousedown", onDocClick);
+      document.removeEventListener("keydown", onEsc);
+    };
+  }, [showAddressDropdown]);
 
   const isOnboarding = pathname.startsWith("/app-auth/onboarding");
   const isCheckout = pathname.startsWith("/app/checkout");
@@ -313,16 +343,67 @@ function ShellInner({
               <HeaderSearchInner />
             </Suspense>
 
-            <button
-              type="button"
-              className={styles.addressChip}
-              onClick={() => setShowAddress(true)}
-            >
-              <MapPin size={14} />
-              <span className={styles.addressChipText}>
-                {address.split(",")[0]}
-              </span>
-            </button>
+            <div className={styles.addressWrap} ref={addressDropdownRef}>
+              <button
+                type="button"
+                className={`${styles.addressChip} ${showAddressDropdown ? styles.addressChipOpen : ""}`}
+                onClick={() => setShowAddressDropdown((o) => !o)}
+              >
+                <MapPin size={14} />
+                <span className={styles.addressChipText}>
+                  {address.split(",")[0]}
+                </span>
+                <ChevronDown size={12} className={styles.addressChevron} />
+              </button>
+
+              {showAddressDropdown && (
+                <div className={styles.addressDropdown}>
+                  {savedAddresses.map((addr) => (
+                    <button
+                      key={addr}
+                      type="button"
+                      className={`${styles.addressOption} ${addr === address ? styles.addressOptionActive : ""}`}
+                      onClick={() => {
+                        setAddress(addr);
+                        setShowAddressDropdown(false);
+                      }}
+                    >
+                      <MapPin size={13} className={styles.addressOptionIcon} />
+                      <span>{addr.split(",")[0]}</span>
+                      {addr === address && (
+                        <Check
+                          size={13}
+                          className={styles.addressOptionCheck}
+                        />
+                      )}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    className={styles.addressOption}
+                    onClick={() => {
+                      setShowAddressDropdown(false);
+                      setAddress("Current location");
+                    }}
+                  >
+                    <Crosshair size={13} className={styles.addressOptionIcon} />
+                    <span>Use my location</span>
+                  </button>
+                  <div className={styles.addressDropdownDivider} />
+                  <button
+                    type="button"
+                    className={`${styles.addressOption} ${styles.addressOptionAdd}`}
+                    onClick={() => {
+                      setShowAddressDropdown(false);
+                      setShowAddress(true);
+                    }}
+                  >
+                    <Plus size={13} className={styles.addressOptionIcon} />
+                    <span>Add new address</span>
+                  </button>
+                </div>
+              )}
+            </div>
 
             <div className={styles.headerRight}>
               <Link

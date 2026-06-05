@@ -1,42 +1,33 @@
 "use client";
 
-import { CheckCircle, Clock, Package } from "lucide-react";
+import { Package, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
-import { MOCK_ORDERS, type OrderStatus } from "../_mock";
+import { MOCK_ORDERS, type MockOrder } from "../_mock";
 import styles from "./page.module.css";
 
-function statusInfo(status: OrderStatus): {
-  label: string;
-  color: string;
-  icon: React.ReactNode;
-} {
-  switch (status) {
+function statusInfo(order: MockOrder): { label: string; color: string } {
+  switch (order.status) {
+    case "pending":
+      return { label: "Pending", color: styles.statusPending };
     case "confirmed":
-      return {
-        label: "Confirmed",
-        color: styles.statusConfirmed,
-        icon: <Clock size={13} />,
-      };
+      return { label: "Preparing", color: styles.statusConfirmed };
     case "ready":
       return {
-        label: "Ready for pickup",
+        label:
+          order.fulfillmentMode === "delivery"
+            ? "Out for delivery"
+            : "Ready for pickup",
         color: styles.statusReady,
-        icon: <Package size={13} />,
       };
-    case "completed":
+    case "fulfilled":
       return {
-        label: "Completed",
-        color: styles.statusCompleted,
-        icon: <CheckCircle size={13} />,
+        label: order.fulfillmentMode === "delivery" ? "Delivered" : "Picked up",
+        color: styles.statusFulfilled,
       };
     case "cancelled":
-      return {
-        label: "Cancelled",
-        color: styles.statusCancelled,
-        icon: null,
-      };
+      return { label: "Cancelled", color: styles.statusCancelled };
   }
 }
 
@@ -45,10 +36,10 @@ function OrdersContent() {
   const success = searchParams.get("success");
 
   const active = MOCK_ORDERS.filter((o) =>
-    ["confirmed", "ready"].includes(o.status),
+    ["pending", "confirmed", "ready"].includes(o.status),
   );
   const past = MOCK_ORDERS.filter((o) =>
-    ["completed", "cancelled"].includes(o.status),
+    ["fulfilled", "cancelled"].includes(o.status),
   );
 
   return (
@@ -68,7 +59,9 @@ function OrdersContent() {
             <h2 className={styles.sectionTitle}>Active</h2>
             <div className={styles.orderList}>
               {active.map((order) => {
-                const info = statusInfo(order.status);
+                const info = statusInfo(order);
+                const fulfillmentPrefix =
+                  order.fulfillmentMode === "delivery" ? "Delivery" : "Pickup";
                 return (
                   <Link
                     key={order.id}
@@ -78,34 +71,44 @@ function OrdersContent() {
                     <div
                       className={styles.orderCover}
                       style={{ background: order.listingGradient }}
-                    />
-                    <div className={styles.orderBody}>
-                      <div className={styles.orderTop}>
-                        <span className={styles.cookName}>
-                          {order.cookName}
-                        </span>
-                        <span className={`${styles.statusBadge} ${info.color}`}>
-                          {info.icon}
-                          {info.label}
-                        </span>
-                      </div>
+                    >
+                      {/* biome-ignore lint/performance/noImgElement: order thumbnail */}
+                      <img
+                        src="/placeholder.jpg"
+                        alt=""
+                        aria-hidden="true"
+                        className={styles.orderCoverImg}
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).style.display =
+                            "none";
+                        }}
+                      />
+                    </div>
+
+                    <div className={styles.orderCenter}>
+                      <span className={styles.cookName}>{order.cookName}</span>
                       <h3 className={styles.orderTitle}>
                         {order.listingTitle}
                       </h3>
                       <p className={styles.orderMeta}>
-                        {order.pickupDate} · {order.pickupWindow}
+                        {fulfillmentPrefix} · {order.pickupDate} ·{" "}
+                        {order.pickupWindow}
                       </p>
-                      <div className={styles.orderFooter}>
-                        <span className={styles.orderTotal}>
-                          ${order.total}.00
+                      {order.isSubscription && (
+                        <span className={styles.subscriptionTag}>
+                          <RefreshCw size={10} />
+                          Weekly subscription
                         </span>
-                        <span className={styles.pickupCode}>
-                          Code:{" "}
-                          <strong className={styles.code}>
-                            {order.pickupCode}
-                          </strong>
-                        </span>
-                      </div>
+                      )}
+                    </div>
+
+                    <div className={styles.orderRight}>
+                      <span className={`${styles.statusBadge} ${info.color}`}>
+                        {info.label}
+                      </span>
+                      <span className={styles.orderTotal}>
+                        ${order.total}.00
+                      </span>
                     </div>
                   </Link>
                 );
@@ -119,7 +122,9 @@ function OrdersContent() {
             <h2 className={styles.sectionTitle}>Past orders</h2>
             <div className={styles.orderList}>
               {past.map((order) => {
-                const info = statusInfo(order.status);
+                const info = statusInfo(order);
+                const fulfillmentPrefix =
+                  order.fulfillmentMode === "delivery" ? "Delivery" : "Pickup";
                 return (
                   <Link
                     key={order.id}
@@ -130,28 +135,47 @@ function OrdersContent() {
                       className={styles.orderCover}
                       style={{
                         background: order.listingGradient,
-                        opacity: 0.7,
+                        opacity: 0.6,
                       }}
-                    />
-                    <div className={styles.orderBody}>
-                      <div className={styles.orderTop}>
-                        <span className={styles.cookName}>
-                          {order.cookName}
-                        </span>
-                        <span className={`${styles.statusBadge} ${info.color}`}>
-                          {info.icon}
-                          {info.label}
-                        </span>
-                      </div>
+                    >
+                      {/* biome-ignore lint/performance/noImgElement: order thumbnail */}
+                      <img
+                        src="/placeholder.jpg"
+                        alt=""
+                        aria-hidden="true"
+                        className={styles.orderCoverImg}
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).style.display =
+                            "none";
+                        }}
+                      />
+                    </div>
+
+                    <div className={styles.orderCenter}>
+                      <span className={styles.cookName}>{order.cookName}</span>
                       <h3 className={styles.orderTitle}>
                         {order.listingTitle}
                       </h3>
-                      <p className={styles.orderMeta}>{order.pickupDate}</p>
-                      <div className={styles.orderFooter}>
+                      <p className={styles.orderMeta}>
+                        {fulfillmentPrefix} · {order.pickupDate}
+                      </p>
+                    </div>
+
+                    <div className={styles.orderRight}>
+                      <span className={`${styles.statusBadge} ${info.color}`}>
+                        {info.label}
+                      </span>
+                      <div className={styles.orderPriceBlock}>
                         <span className={styles.orderTotal}>
                           ${order.total}.00
                         </span>
-                        <span className={styles.reorderBtn}>Order again →</span>
+                        <Link
+                          href={`/app/listings/${order.listingId}`}
+                          className={styles.reorderBtn}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          Order again
+                        </Link>
                       </div>
                     </div>
                   </Link>

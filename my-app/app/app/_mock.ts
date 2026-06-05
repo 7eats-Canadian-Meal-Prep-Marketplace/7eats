@@ -119,8 +119,8 @@ export type CartItem = {
   dishEmoji: string;
   listingId: string;
   listingTitle: string;
-  /** Drives payment flow: one-time PaymentIntent vs subscription SetupIntent */
-  orderType: "one-time" | "subscription";
+  /** Drives payment flow: one_time PaymentIntent vs subscription SetupIntent */
+  orderType: "one_time" | "subscription";
   /** Resolved fulfillment mode for this cart line (never "both") */
   fulfillmentMode: "pickup" | "delivery";
   cookId: string;
@@ -131,11 +131,17 @@ export type CartItem = {
   quantity: number;
 };
 
-export type OrderStatus = "confirmed" | "ready" | "completed" | "cancelled";
+export type OrderStatus =
+  | "pending"
+  | "confirmed"
+  | "ready"
+  | "fulfilled"
+  | "cancelled";
 
 export type MockOrder = {
   id: string;
   cookId: string;
+  listingId: string;
   cookName: string;
   cookInitials: string;
   listingTitle: string;
@@ -143,6 +149,8 @@ export type MockOrder = {
   listingEmoji: string;
   pickupDate: string;
   pickupWindow: string;
+  fulfillmentMode: "pickup" | "delivery";
+  isSubscription?: boolean;
   dishes: { name: string; quantity: number; price: number }[];
   subtotal: number;
   serviceFee: number;
@@ -161,6 +169,10 @@ export type MockMessageThread = {
   preview: string;
   timestamp: string;
   unread: boolean;
+  /** True when the linked order is fulfilled or cancelled — composer is hidden */
+  orderCompleted?: boolean;
+  /** Linked order ID — shows a mini order card at the top of the chat */
+  orderId?: string;
   messages: {
     id: string;
     from: "client" | "cook";
@@ -1927,6 +1939,7 @@ export const MOCK_ORDERS: MockOrder[] = [
   {
     id: "order-1",
     cookId: "cook-1",
+    listingId: "listing-1",
     cookName: "Amara Diallo",
     cookInitials: "AD",
     listingTitle: "West African Weekend Feast",
@@ -1934,6 +1947,7 @@ export const MOCK_ORDERS: MockOrder[] = [
     listingEmoji: "🥘",
     pickupDate: "Sat Jun 6",
     pickupWindow: "12pm – 5pm",
+    fulfillmentMode: "pickup",
     dishes: [
       { name: "Jollof Rice (Party Style)", quantity: 1, price: 18 },
       { name: "Suya Skewers (6 pcs)", quantity: 2, price: 20 },
@@ -1946,8 +1960,30 @@ export const MOCK_ORDERS: MockOrder[] = [
     pickupAddress: "248 Roncesvalles Ave, Toronto",
   },
   {
+    id: "order-3",
+    cookId: "cook-2",
+    listingId: "listing-2",
+    cookName: "Ji-won Park",
+    cookInitials: "JP",
+    listingTitle: "Korean Banchan Box",
+    listingGradient: "linear-gradient(135deg, #bf2026 0%, #6e0a0e 100%)",
+    listingEmoji: "🍱",
+    pickupDate: "Every Friday",
+    pickupWindow: "5pm – 8pm",
+    fulfillmentMode: "delivery",
+    isSubscription: true,
+    dishes: [{ name: "Banchan Box (5 sides)", quantity: 1, price: 24 }],
+    subtotal: 24,
+    serviceFee: 2,
+    total: 26,
+    status: "confirmed",
+    pickupCode: "7E-9102",
+    pickupAddress: "91 Christie St, Toronto",
+  },
+  {
     id: "order-2",
     cookId: "cook-2",
+    listingId: "listing-2",
     cookName: "Ji-won Park",
     cookInitials: "JP",
     listingTitle: "Korean Banchan Box",
@@ -1955,6 +1991,7 @@ export const MOCK_ORDERS: MockOrder[] = [
     listingEmoji: "🍱",
     pickupDate: "Sat May 24",
     pickupWindow: "5pm – 8pm",
+    fulfillmentMode: "pickup",
     dishes: [
       { name: "Banchan Box (5 sides)", quantity: 1, price: 24 },
       { name: "Galbi (Short Ribs)", quantity: 1, price: 32 },
@@ -1962,9 +1999,32 @@ export const MOCK_ORDERS: MockOrder[] = [
     subtotal: 56,
     serviceFee: 3,
     total: 59,
-    status: "completed",
+    status: "fulfilled",
     pickupCode: "7E-3311",
     pickupAddress: "91 Christie St, Toronto",
+  },
+  {
+    id: "order-4",
+    cookId: "cook-3",
+    listingId: "listing-3",
+    cookName: "Fatima Al-Hassan",
+    cookInitials: "FA",
+    listingTitle: "Levantine Mezze Spread",
+    listingGradient: "linear-gradient(135deg, #ca8a04 0%, #854d0e 100%)",
+    listingEmoji: "🥙",
+    pickupDate: "Fri May 16",
+    pickupWindow: "4pm – 7pm",
+    fulfillmentMode: "delivery",
+    dishes: [
+      { name: "Hummus & Pita", quantity: 2, price: 14 },
+      { name: "Lamb Kofta", quantity: 1, price: 22 },
+    ],
+    subtotal: 50,
+    serviceFee: 3,
+    total: 53,
+    status: "cancelled",
+    pickupCode: "7E-0071",
+    pickupAddress: "12 Kensington Ave, Toronto",
   },
 ];
 
@@ -1980,6 +2040,7 @@ export const MOCK_MESSAGE_THREADS: MockMessageThread[] = [
     preview: "Your order is confirmed! See you Saturday 😊",
     timestamp: "2h ago",
     unread: true,
+    orderId: "order-1",
     messages: [
       {
         id: "m1",
@@ -2010,6 +2071,8 @@ export const MOCK_MESSAGE_THREADS: MockMessageThread[] = [
     preview: "Thanks for the 5-star review! 🙏",
     timestamp: "3 days ago",
     unread: false,
+    orderCompleted: true,
+    orderId: "order-2",
     messages: [
       {
         id: "m4",
@@ -2025,19 +2088,51 @@ export const MOCK_MESSAGE_THREADS: MockMessageThread[] = [
       },
     ],
   },
+  {
+    id: "thread-3",
+    cookId: "cook-3",
+    cookName: "Fatima Al-Hassan",
+    cookInitials: "FA",
+    cookGradient: COOK_AVATAR_GRADIENTS["cook-3"],
+    preview: "Sorry to hear that — refund processed.",
+    timestamp: "1 week ago",
+    unread: false,
+    orderCompleted: true,
+    orderId: "order-4",
+    messages: [
+      {
+        id: "m6",
+        from: "client",
+        text: "Hi Fatima, I need to cancel my order — something came up.",
+        timestamp: "1 week ago",
+      },
+      {
+        id: "m7",
+        from: "cook",
+        text: "No worries at all! I've cancelled the order and your refund is being processed.",
+        timestamp: "1 week ago",
+      },
+      {
+        id: "m8",
+        from: "cook",
+        text: "Sorry to hear that — refund processed. Hope to cook for you another time! 🙏",
+        timestamp: "1 week ago",
+      },
+    ],
+  },
 ];
 
 // ─── Preference Sheet ─────────────────────────────────────────────────────────
 
+// Keys match userPreferences DB schema: dietary, allergies, goals, whyMealPrep
 export const PREFERENCE_QUESTIONS: PreferenceQuestion[] = [
   {
-    id: "diet",
-    question: "Any dietary restrictions or preferences?",
+    id: "dietary",
+    question: "Dietary needs",
     options: [
-      "None",
       "Halal",
-      "Vegetarian",
       "Vegan",
+      "Vegetarian",
       "Gluten-free",
       "Dairy-free",
       "Nut-free",
@@ -2046,41 +2141,45 @@ export const PREFERENCE_QUESTIONS: PreferenceQuestion[] = [
     multiSelect: true,
   },
   {
-    id: "spice",
-    question: "How spicy do you like your food?",
-    options: ["Not spicy", "Mild", "Medium", "Hot", "Extra hot 🔥"],
-    multiSelect: false,
-  },
-  {
-    id: "group",
-    question: "How many people do you usually order for?",
-    options: ["Just me", "2 people", "3–4 people", "5+ people"],
-    multiSelect: false,
-  },
-  {
-    id: "cuisine",
-    question: "What cuisines excite you most?",
+    id: "allergies",
+    question: "Allergies",
     options: [
-      "West African",
-      "Korean",
-      "Brazilian",
-      "Middle Eastern",
-      "Italian",
-      "Caribbean",
-      "South Asian",
-      "East Asian",
-      "Latin American",
+      "Tree nuts",
+      "Peanuts",
+      "Dairy",
+      "Gluten",
+      "Shellfish",
+      "Eggs",
+      "Soy",
+      "None",
     ],
     multiSelect: true,
   },
   {
-    id: "frequency",
-    question: "How often do you meal prep?",
+    id: "goals",
+    question: "Goals & preferences",
     options: [
-      "Never tried it",
-      "Occasionally",
-      "Weekly",
-      "Multiple times a week",
+      "High protein",
+      "Weight loss",
+      "Low carb",
+      "Muscle gain",
+      "Heart health",
+      "Comfort food",
+      "Family-friendly",
+      "Balanced",
+    ],
+    multiSelect: true,
+  },
+  {
+    id: "whyMealPrep",
+    question: "Why do you order meal prep?",
+    options: [
+      "Save time cooking",
+      "Eat healthier",
+      "Budget-friendly eating",
+      "Discover new cuisines",
+      "Support local home cooks",
+      "Convenient for my schedule",
     ],
     multiSelect: false,
   },

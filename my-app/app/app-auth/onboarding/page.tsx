@@ -87,9 +87,24 @@ function Chip({
   );
 }
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function isAtLeast16(dob: string): boolean {
+  const birth = new Date(dob);
+  const cutoff = new Date();
+  cutoff.setFullYear(cutoff.getFullYear() - 16);
+  return birth <= cutoff;
+}
+
 // ─── Step 1: Phone ────────────────────────────────────────────────────────────
 
-function PhoneStep({ onComplete }: { onComplete: (phone: string) => void }) {
+function PhoneStep({
+  onComplete,
+}: {
+  onComplete: (phone: string, dob: string) => void;
+}) {
+  const [dob, setDob] = useState("");
+  const [ageError, setAgeError] = useState("");
   const [phone, setPhone] = useState("");
   const [phase, setPhase] = useState<PhonePhase>("idle");
   const [code, setCode] = useState("");
@@ -97,6 +112,8 @@ function PhoneStep({ onComplete }: { onComplete: (phone: string) => void }) {
   const [verifying, setVerifying] = useState(false);
   const [sendError, setSendError] = useState("");
   const [codeError, setCodeError] = useState("");
+
+  const todayStr = new Date().toISOString().split("T")[0];
 
   const canSend = phone.replace(/\D/g, "").length >= 10;
   const isVerified = phase === "verified";
@@ -161,6 +178,27 @@ function PhoneStep({ onComplete }: { onComplete: (phone: string) => void }) {
       </p>
 
       <div className={`${styles.panel} ${styles.phoneBlock}`}>
+        <div className={styles.dobField}>
+          <label className={styles.dobLabel} htmlFor="dob">
+            Date of birth
+          </label>
+          <input
+            id="dob"
+            type="date"
+            className={styles.phoneInput}
+            max={todayStr}
+            value={dob}
+            onChange={(e) => {
+              setDob(e.target.value);
+              setAgeError("");
+            }}
+          />
+          <p className={styles.dobHint}>
+            You must be 16 or older to use 7eats.
+          </p>
+          {ageError && <p className={styles.codeError}>{ageError}</p>}
+        </div>
+
         <div className={styles.phoneRow}>
           <input
             type="tel"
@@ -232,7 +270,21 @@ function PhoneStep({ onComplete }: { onComplete: (phone: string) => void }) {
         type="button"
         className={styles.nextBtn}
         disabled={!isVerified}
-        onClick={() => onComplete(phone)}
+        onClick={() => {
+          if (!dob) {
+            setAgeError(
+              "You must be at least 16 years old to create an account.",
+            );
+            return;
+          }
+          if (!isAtLeast16(dob)) {
+            setAgeError(
+              "You must be at least 16 years old to create an account.",
+            );
+            return;
+          }
+          onComplete(phone, dob);
+        }}
       >
         Continue
       </button>
@@ -242,7 +294,13 @@ function PhoneStep({ onComplete }: { onComplete: (phone: string) => void }) {
 
 // ─── Step 2: Preferences ──────────────────────────────────────────────────────
 
-function PrefsStep({ onComplete }: { onComplete: () => void }) {
+function PrefsStep({
+  dob,
+  onComplete,
+}: {
+  dob: string;
+  onComplete: () => void;
+}) {
   const [prefs, setPrefs] = useState<Prefs>({
     dietary: [],
     allergies: [],
@@ -285,7 +343,10 @@ function PrefsStep({ onComplete }: { onComplete: () => void }) {
       const res = await fetch("/api/auth/complete-onboarding", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(prefs),
+        body: JSON.stringify({
+          ...prefs,
+          ...(dob ? { dateOfBirth: dob } : {}),
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -397,6 +458,7 @@ function PrefsStep({ onComplete }: { onComplete: () => void }) {
 export default function OnboardingPage() {
   const router = useRouter();
   const [step, setStep] = useState<Step | null>(null);
+  const [dob, setDob] = useState("");
 
   // Restore step from session — phoneVerified=true means phone step done.
   useEffect(() => {
@@ -409,7 +471,14 @@ export default function OnboardingPage() {
       .catch(() => setStep(1));
   }, []);
 
-  function handlePhoneComplete(_phone: string) {
+  function handlePhoneComplete(phone: string, collectedDob: string) {
+    setDob(collectedDob);
+    if (typeof window !== "undefined") {
+      localStorage.setItem(
+        "onboarding",
+        JSON.stringify({ step: 2, phone, dob: collectedDob }),
+      );
+    }
     setStep(2);
   }
 
@@ -456,7 +525,7 @@ export default function OnboardingPage() {
 
       <div className={styles.content}>
         {step === 1 && <PhoneStep onComplete={handlePhoneComplete} />}
-        {step === 2 && <PrefsStep onComplete={handlePrefsComplete} />}
+        {step === 2 && <PrefsStep dob={dob} onComplete={handlePrefsComplete} />}
       </div>
     </div>
   );

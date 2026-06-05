@@ -280,6 +280,14 @@ API validates `listingId: z.string().uuid()`. Mock listing IDs are `"listing-1"`
 
 ---
 
+## Edge cases to design (deferred)
+
+| # | Scenario | Open questions |
+|---|---|---|
+| E1 | **Client deletes account with an active or past order** | What does the cook see in their orders list / inbox for that client? Should the order row show "Deleted account" instead of the client name? Is the order record preserved (it should be — for financial records)? Does the inbox thread become read-only and show a "This account no longer exists" notice? Does a subscription auto-cancel on account deletion? RLS/cascade rules need a product decision before implementation. |
+
+---
+
 ## Recommended fix order before backend wiring
 
 ```

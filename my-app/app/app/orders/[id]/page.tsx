@@ -4,15 +4,120 @@ import {
   ArrowLeft,
   CheckCircle,
   Clock,
+  Edit3,
   MapPin,
   MessageSquare,
   Package,
   Star,
+  Trash2,
+  Truck,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import { use, useState } from "react";
 import { MOCK_ORDERS } from "../../_mock";
 import styles from "./page.module.css";
+
+// ─── Review modal ──────────────────────────────────────────────────────────────
+
+function ReviewModal({
+  cookName,
+  listingTitle,
+  initial,
+  onSave,
+  onClose,
+}: {
+  cookName: string;
+  listingTitle: string;
+  initial?: { rating: number; comment: string };
+  onSave: (rating: number, comment: string) => void;
+  onClose: () => void;
+}) {
+  const [rating, setRating] = useState(initial?.rating ?? 5);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [comment, setComment] = useState(initial?.comment ?? "");
+
+  const displayed = hoverRating || rating;
+
+  return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: modal backdrop dismiss
+    // biome-ignore lint/a11y/useKeyWithClickEvents: modal backdrop dismiss
+    <div className={styles.modalBackdrop} onClick={onClose}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        className={styles.modal}
+        onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
+      >
+        <div className={styles.modalHead}>
+          <div>
+            <p className={styles.modalEyebrow}>{cookName}</p>
+            <h2 className={styles.modalTitle}>{listingTitle}</h2>
+          </div>
+          <button type="button" className={styles.modalClose} onClick={onClose}>
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className={styles.starRow}>
+          {[1, 2, 3, 4, 5].map((n) => (
+            <button
+              key={n}
+              type="button"
+              className={styles.starBtn}
+              onMouseEnter={() => setHoverRating(n)}
+              onMouseLeave={() => setHoverRating(0)}
+              onClick={() => setRating(n)}
+              aria-label={`Rate ${n} star${n !== 1 ? "s" : ""}`}
+            >
+              <Star
+                size={28}
+                fill={n <= displayed ? "currentColor" : "none"}
+                className={n <= displayed ? styles.starOn : styles.starOff}
+              />
+            </button>
+          ))}
+        </div>
+        <p className={styles.ratingLabel}>
+          {["", "Poor", "Fair", "Good", "Great", "Excellent!"][displayed]}
+        </p>
+
+        <textarea
+          className={styles.reviewTextarea}
+          placeholder={`What did you think of ${cookName}'s cooking?`}
+          value={comment}
+          onChange={(e) => setComment(e.target.value)}
+          rows={4}
+        />
+
+        <div className={styles.modalActions}>
+          <button
+            type="button"
+            className={styles.modalCancel}
+            onClick={onClose}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            className={styles.modalSubmit}
+            onClick={() => {
+              if (rating > 0) {
+                onSave(rating, comment);
+                onClose();
+              }
+            }}
+          >
+            {initial ? "Update review" : "Submit review"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Page ──────────────────────────────────────────────────────────────────────
 
 export default function OrderDetailPage({
   params,
@@ -22,6 +127,11 @@ export default function OrderDetailPage({
   const { id } = use(params);
   const order = MOCK_ORDERS.find((o) => o.id === id) ?? MOCK_ORDERS[0];
   const [copied, setCopied] = useState(false);
+  const [review, setReview] = useState<{
+    rating: number;
+    comment: string;
+  } | null>(null);
+  const [showReviewModal, setShowReviewModal] = useState(false);
 
   const copyCode = () => {
     navigator.clipboard.writeText(order.pickupCode).catch(() => {});
@@ -29,12 +139,42 @@ export default function OrderDetailPage({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const steps = [
-    { label: "Order confirmed", done: true },
-    { label: "Cook is preparing", done: order.status !== "confirmed" },
-    { label: "Ready for pickup", done: order.status === "completed" },
-    { label: "Picked up", done: order.status === "completed" },
-  ];
+  const isDelivery = order.fulfillmentMode === "delivery";
+
+  const steps = order.isSubscription
+    ? [
+        { label: `Auto-confirmed · ${order.pickupDate}`, done: true },
+        {
+          label: "Cook is preparing",
+          done: ["confirmed", "ready", "fulfilled"].includes(order.status),
+        },
+        {
+          label: isDelivery ? "Out for delivery" : "Ready for pickup",
+          done: ["ready", "fulfilled"].includes(order.status),
+        },
+        {
+          label: isDelivery ? "Delivered" : "Picked up",
+          done: order.status === "fulfilled",
+        },
+      ]
+    : [
+        { label: "Order placed", done: true },
+        {
+          label: "Cook is preparing",
+          done: ["confirmed", "ready", "fulfilled"].includes(order.status),
+        },
+        {
+          label: isDelivery ? "Out for delivery" : "Ready for pickup",
+          done: ["ready", "fulfilled"].includes(order.status),
+        },
+        {
+          label: isDelivery ? "Delivered" : "Picked up",
+          done: order.status === "fulfilled",
+        },
+      ];
+
+  const isCancelled = order.status === "cancelled";
+  const isDone = order.status === "fulfilled";
 
   return (
     <div className={styles.page}>
@@ -47,7 +187,7 @@ export default function OrderDetailPage({
           <span className={styles.orderId}>#{order.id.toUpperCase()}</span>
         </div>
 
-        {/* Header card */}
+        {/* Header */}
         <div
           className={styles.heroCard}
           style={{ background: order.listingGradient }}
@@ -66,53 +206,129 @@ export default function OrderDetailPage({
           </div>
         </div>
 
-        {/* Pickup code */}
-        <div className={styles.codeCard}>
-          <div className={styles.codeLabel}>Your pickup code</div>
-          <div className={styles.codeDisplay}>{order.pickupCode}</div>
-          <p className={styles.codeDesc}>
-            Show this code to {order.cookName} when you arrive.
-          </p>
-          <button type="button" className={styles.copyBtn} onClick={copyCode}>
-            {copied ? "Copied!" : "Copy code"}
-          </button>
-        </div>
+        {/* Message CTA */}
+        {!isCancelled && !isDone && (
+          <Link href="/app/inbox" className={styles.messageCta}>
+            <MessageSquare size={16} />
+            Message {order.cookName}
+          </Link>
+        )}
+
+        {/* Code card */}
+        {!isCancelled && (
+          <div className={styles.codeCard}>
+            <div className={styles.codeLabel}>
+              {order.isSubscription
+                ? isDelivery
+                  ? `Weekly delivery code · ${order.pickupDate}`
+                  : `Weekly pickup code · ${order.pickupDate}`
+                : isDelivery
+                  ? "Your delivery code"
+                  : "Your pickup code"}
+            </div>
+            <div className={styles.codeDisplay}>{order.pickupCode}</div>
+            <p className={styles.codeDesc}>
+              {isDelivery
+                ? `Share this code with ${order.cookName} when your order arrives.`
+                : `Show this code to ${order.cookName} when you arrive.`}
+              {order.isSubscription &&
+                " Your code renews automatically each week."}
+            </p>
+            <button type="button" className={styles.copyBtn} onClick={copyCode}>
+              {copied ? "Copied!" : "Copy code"}
+            </button>
+          </div>
+        )}
 
         {/* Status tracker */}
-        <div className={styles.statusCard}>
-          <h2 className={styles.sectionTitle}>Order status</h2>
-          <div className={styles.tracker}>
-            {steps.map((step, i) => (
-              <div key={step.label} className={styles.step}>
-                <div className={styles.stepLeft}>
-                  <div
-                    className={`${styles.stepDot} ${step.done ? styles.stepDotDone : ""}`}
-                  >
-                    {step.done ? (
-                      <CheckCircle size={14} />
-                    ) : (
-                      <Clock size={14} />
+        {!isCancelled && (
+          <div className={styles.statusCard}>
+            <h2 className={styles.sectionTitle}>Order status</h2>
+            <div className={styles.tracker}>
+              {steps.map((step, i) => (
+                <div key={step.label} className={styles.step}>
+                  <div className={styles.stepLeft}>
+                    <div
+                      className={`${styles.stepDot} ${step.done ? styles.stepDotDone : ""}`}
+                    >
+                      {step.done ? (
+                        <CheckCircle size={14} />
+                      ) : (
+                        <Clock size={14} />
+                      )}
+                    </div>
+                    {i < steps.length - 1 && (
+                      <div
+                        className={`${styles.stepLine} ${step.done ? styles.stepLineDone : ""}`}
+                      />
                     )}
                   </div>
-                  {i < steps.length - 1 && (
-                    <div
-                      className={`${styles.stepLine} ${step.done ? styles.stepLineDone : ""}`}
-                    />
-                  )}
+                  <span
+                    className={`${styles.stepLabel} ${step.done ? styles.stepLabelDone : ""}`}
+                  >
+                    {step.label}
+                  </span>
                 </div>
-                <span
-                  className={`${styles.stepLabel} ${step.done ? styles.stepLabelDone : ""}`}
-                >
-                  {step.label}
-                </span>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Pickup details */}
+        {/* Review section — shown when fulfilled */}
+        {isDone &&
+          (review ? (
+            <div className={styles.reviewCard}>
+              <div className={styles.reviewCardHead}>
+                <div className={styles.reviewStars}>
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <Star
+                      key={n}
+                      size={16}
+                      fill={n <= review.rating ? "currentColor" : "none"}
+                      className={
+                        n <= review.rating ? styles.starOn : styles.starOff
+                      }
+                    />
+                  ))}
+                </div>
+                <div className={styles.reviewCardActions}>
+                  <button
+                    type="button"
+                    className={styles.reviewEditBtn}
+                    onClick={() => setShowReviewModal(true)}
+                  >
+                    <Edit3 size={14} />
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.reviewDeleteBtn}
+                    onClick={() => setReview(null)}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              </div>
+              {review.comment && (
+                <p className={styles.reviewComment}>{review.comment}</p>
+              )}
+            </div>
+          ) : (
+            <button
+              type="button"
+              className={styles.rateBtn}
+              onClick={() => setShowReviewModal(true)}
+            >
+              <Star size={16} />
+              Leave a review
+            </button>
+          ))}
+
+        {/* Fulfillment details */}
         <div className={styles.detailsCard}>
-          <h2 className={styles.sectionTitle}>Pickup details</h2>
+          <h2 className={styles.sectionTitle}>
+            {isDelivery ? "Delivery details" : "Pickup details"}
+          </h2>
           <div className={styles.detailRow}>
             <Clock size={15} className={styles.detailIcon} />
             <div>
@@ -123,9 +339,15 @@ export default function OrderDetailPage({
             </div>
           </div>
           <div className={styles.detailRow}>
-            <MapPin size={15} className={styles.detailIcon} />
+            {isDelivery ? (
+              <Truck size={15} className={styles.detailIcon} />
+            ) : (
+              <MapPin size={15} className={styles.detailIcon} />
+            )}
             <div>
-              <div className={styles.detailLabel}>Location</div>
+              <div className={styles.detailLabel}>
+                {isDelivery ? "Delivery address" : "Location"}
+              </div>
               <div className={styles.detailVal}>{order.pickupAddress}</div>
             </div>
           </div>
@@ -167,21 +389,18 @@ export default function OrderDetailPage({
             <span className={styles.totalVal}>${order.total}.00</span>
           </div>
         </div>
-
-        {/* Actions */}
-        <div className={styles.actions}>
-          <Link href="/app/inbox" className={styles.messageBtn}>
-            <MessageSquare size={16} />
-            Message {order.cookName}
-          </Link>
-          {order.status === "completed" && (
-            <button type="button" className={styles.rateBtn}>
-              <Star size={16} />
-              Leave a review
-            </button>
-          )}
-        </div>
       </div>
+
+      {/* Review modal */}
+      {showReviewModal && (
+        <ReviewModal
+          cookName={order.cookName}
+          listingTitle={order.listingTitle}
+          initial={review ?? undefined}
+          onSave={(rating, comment) => setReview({ rating, comment })}
+          onClose={() => setShowReviewModal(false)}
+        />
+      )}
     </div>
   );
 }

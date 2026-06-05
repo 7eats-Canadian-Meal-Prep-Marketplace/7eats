@@ -1,8 +1,13 @@
 "use client";
 
-import { ArrowLeft, Send } from "lucide-react";
+import { ArrowLeft, ChevronRight, Send } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
-import { MOCK_MESSAGE_THREADS, type MockMessageThread } from "../_mock";
+import {
+  MOCK_MESSAGE_THREADS,
+  MOCK_ORDERS,
+  type MockMessageThread,
+} from "../_mock";
 import styles from "./page.module.css";
 
 export default function InboxPage() {
@@ -109,6 +114,28 @@ export default function InboxPage() {
               <span className={styles.chatName}>{selected.cookName}</span>
               <span className={styles.chatStatus}>Cook · Active recently</span>
             </div>
+
+            {/* Compact order link — right side of header */}
+            {selected.orderId &&
+              (() => {
+                const order = MOCK_ORDERS.find(
+                  (o) => o.id === selected.orderId,
+                );
+                if (!order) return null;
+                return (
+                  <Link
+                    href={`/app/orders/${order.id}`}
+                    className={styles.orderChip}
+                  >
+                    <div
+                      className={styles.orderChipThumb}
+                      style={{ background: order.listingGradient }}
+                    />
+                    <span className={styles.orderChipTitle}>View order</span>
+                    <ChevronRight size={13} className={styles.orderChipArrow} />
+                  </Link>
+                );
+              })()}
           </div>
 
           <div className={styles.messages}>
@@ -135,29 +162,35 @@ export default function InboxPage() {
             ))}
           </div>
 
-          <div className={styles.composer}>
-            <input
-              type="text"
-              className={styles.composerInput}
-              placeholder={`Message ${selected.cookName}…`}
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSend();
-                }
-              }}
-            />
-            <button
-              type="button"
-              className={styles.sendBtn}
-              onClick={handleSend}
-              disabled={!draft.trim()}
-            >
-              <Send size={17} />
-            </button>
-          </div>
+          {selected.orderCompleted ? (
+            <div className={styles.composerClosed}>
+              Messaging is unavailable for this order.
+            </div>
+          ) : (
+            <div className={styles.composer}>
+              <input
+                type="text"
+                className={styles.composerInput}
+                placeholder={`Message ${selected.cookName}…`}
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                  }
+                }}
+              />
+              <button
+                type="button"
+                className={styles.sendBtn}
+                onClick={handleSend}
+                disabled={!draft.trim()}
+              >
+                <Send size={17} />
+              </button>
+            </div>
+          )}
         </div>
       )}
 

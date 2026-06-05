@@ -181,25 +181,35 @@ function CheckoutInner() {
       .finally(() => setLoadingCards(false));
   }, [isLoggedIn, step]);
 
-  // Pre-fill contact + saved address for logged-in users
-  // (replace mocks with real session data when wired)
+  // Pre-fill contact from real session + saved address for logged-in users
   useEffect(() => {
-    if (isLoggedIn) {
-      setContact({
-        firstName: "Jordan",
-        lastName: "Doe",
-        email: "jordan@example.com",
-        phone: "+1 (416) 555-0100",
-      });
-      setAddress({
-        street: "123 King St W",
-        unit: "Apt 4B",
-        city: "Toronto",
-        province: "ON",
-        postal: "M5H 1A1",
-      });
-      setCheckoutMode("account");
-    }
+    if (!isLoggedIn) return;
+    setCheckoutMode("account");
+    fetch("/api/auth/get-session")
+      .then((r) => r.json())
+      .then((data) => {
+        const u = data?.user;
+        if (!u) return;
+        setContact({
+          firstName:
+            (u.firstName as string | undefined) ?? u.name?.split(" ")[0] ?? "",
+          lastName:
+            (u.lastName as string | undefined) ??
+            u.name?.split(" ").slice(1).join(" ") ??
+            "",
+          email: u.email ?? "",
+          phone: (u.phone as string | undefined) ?? "",
+        });
+      })
+      .catch(() => {});
+    // Delivery address: set from user's saved address once address book is wired
+    setAddress({
+      street: "123 King St W",
+      unit: "Apt 4B",
+      city: "Toronto",
+      province: "ON",
+      postal: "M5H 1A1",
+    });
   }, [isLoggedIn]);
 
   // Block direct access and redirect when cart empties (unless mid-order or post-order)

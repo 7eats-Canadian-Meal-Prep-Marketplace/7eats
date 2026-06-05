@@ -161,8 +161,8 @@ export default function ListingPage({
         dishEmoji: dish.emoji,
         listingId: listing.id,
         listingTitle: listing.title,
-        orderType: (subscribeMode ? "subscription" : "one-time") as
-          | "one-time"
+        orderType: (subscribeMode ? "subscription" : "one_time") as
+          | "one_time"
           | "subscription",
         fulfillmentMode: resolvedFulfillmentMode,
         cookId: cook.id,

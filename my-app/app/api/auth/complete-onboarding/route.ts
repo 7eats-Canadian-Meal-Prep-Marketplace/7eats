@@ -10,6 +10,7 @@ const schema = z.object({
   allergies: z.array(z.string()),
   goals: z.array(z.string()),
   whyMealPrep: z.array(z.string()).optional().default([]),
+  dateOfBirth: z.string().date().optional(),
 });
 
 export async function POST(req: Request) {
@@ -33,7 +34,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const { dietary, allergies, goals, whyMealPrep } = parsed.data;
+  const { dietary, allergies, goals, whyMealPrep, dateOfBirth } = parsed.data;
   const userId = session.user.id;
 
   await db
@@ -46,7 +47,10 @@ export async function POST(req: Request) {
 
   await db
     .update(authUser)
-    .set({ onboardingCompletedAt: new Date() })
+    .set({
+      onboardingCompletedAt: new Date(),
+      ...(dateOfBirth ? { dateOfBirth } : {}),
+    })
     .where(eq(authUser.id, userId));
 
   const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";

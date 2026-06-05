@@ -381,61 +381,325 @@
   letter-spacing: -0.02em;
 }
 
-/* ─── Actions ─────────────────────────────────────────────────────────────── */
-.actions {
+/* ─── Message CTA — prominent, right below hero ──────────────────────────── */
+.messageCta {
   display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-top: 4px;
-}
-
-.messageBtn,
-.rateBtn {
-  display: inline-flex;
   align-items: center;
-  gap: 7px;
-  padding: 12px 22px;
-  border-radius: var(--radius-pill);
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 13px 20px;
+  margin-bottom: 20px;
+  border: 1.5px solid var(--grey-200);
+  border-radius: var(--radius-sm);
+  background: var(--white);
   font-size: 14px;
-  font-weight: 600;
-  font-family: inherit;
-  cursor: pointer;
+  font-weight: 700;
+  color: var(--ink);
   text-decoration: none;
+  font-family: inherit;
   transition:
     border-color 0.14s,
-    background 0.14s,
-    box-shadow 0.14s,
-    transform 0.1s;
+    background 0.14s;
 }
 
-.messageBtn:active,
-.rateBtn:active {
-  transform: scale(0.98);
-}
-
-/* Outlined ghost */
-.messageBtn {
-  border: 1.5px solid var(--grey-300);
-  background: var(--white);
-  color: var(--ink);
-}
-
-.messageBtn:hover {
+.messageCta:hover {
   border-color: var(--ink);
   background: var(--grey-100);
 }
 
-/* Red filled */
+/* ─── Review button ──────────────────────────────────────────────────────── */
 .rateBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px 20px;
+  margin-top: 8px;
+  margin-bottom: 20px;
   border: 1.5px solid var(--red);
+  border-radius: var(--radius-sm);
   background: var(--red);
+  font-size: 14px;
+  font-weight: 700;
   color: var(--white);
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    background 0.14s,
+    box-shadow 0.14s;
 }
 
 .rateBtn:hover {
   background: var(--red-deep);
-  border-color: var(--red-deep);
-  box-shadow: 0 6px 20px rgba(214, 64, 69, 0.3);
+  box-shadow: 0 6px 20px rgba(214, 64, 69, 0.28);
+}
+
+/* ─── Review card (submitted state) ─────────────────────────────────────── */
+.reviewCard {
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+  margin-bottom: 16px;
+  background: var(--white);
+}
+
+.reviewCardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.reviewStars {
+  display: flex;
+  gap: 3px;
+}
+
+.reviewCardActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.reviewEditBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--grey-700);
+  background: none;
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-pill);
+  padding: 4px 10px;
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    border-color 0.12s,
+    color 0.12s;
+}
+
+.reviewEditBtn:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.reviewDeleteBtn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: none;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--grey-400, #c0c0c0);
+  cursor: pointer;
+  transition:
+    color 0.12s,
+    background 0.12s;
+}
+
+.reviewDeleteBtn:hover {
+  color: var(--red);
+  background: rgba(214, 64, 69, 0.07);
+}
+
+.reviewComment {
+  font-size: 14px;
+  color: var(--grey-700);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* ─── Review modal ───────────────────────────────────────────────────────── */
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 15, 15, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 500;
+  padding: 20px;
+  animation: fadeIn 0.15s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.modal {
+  width: 100%;
+  max-width: 440px;
+  background: var(--white);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 20px 60px rgba(15, 15, 15, 0.2);
+  animation: slideUp 0.2s cubic-bezier(0.34, 1.2, 0.64, 1);
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(12px);
+    opacity: 0.6;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.modalHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.modalEyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--grey-500);
+  margin: 0 0 4px;
+}
+
+.modalTitle {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.025em;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.modalClose {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: var(--grey-100);
+  color: var(--grey-700);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.12s;
+}
+
+.modalClose:hover {
+  background: var(--grey-200);
+}
+
+.starRow {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.starBtn {
+  background: none;
+  border: none;
+  padding: 2px;
+  cursor: pointer;
+  transition: transform 0.12s;
+}
+
+.starBtn:hover {
+  transform: scale(1.15);
+}
+
+.starOn {
+  color: var(--red);
+}
+.starOff {
+  color: var(--grey-200);
+}
+
+.ratingLabel {
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--grey-500);
+  height: 20px;
+  margin: 0 0 16px;
+}
+
+.reviewTextarea {
+  width: 100%;
+  border: 1.5px solid var(--grey-200);
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--ink);
+  resize: none;
+  outline: none;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+  line-height: 1.5;
+}
+
+.reviewTextarea:focus {
+  border-color: var(--ink);
+}
+
+.reviewTextarea::placeholder {
+  color: var(--grey-300);
+}
+
+.modalActions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.modalCancel {
+  flex: 1;
+  padding: 12px;
+  border: 1.5px solid var(--grey-200);
+  border-radius: 8px;
+  background: var(--white);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--grey-700);
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.12s;
+}
+
+.modalCancel:hover {
+  border-color: var(--grey-500);
+}
+
+.modalSubmit {
+  flex: 2;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  background: var(--ink);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--white);
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity 0.12s;
+}
+
+.modalSubmit:hover {
+  opacity: 0.88;
 }
 
 /* ─── Responsive ──────────────────────────────────────────────────────────── */

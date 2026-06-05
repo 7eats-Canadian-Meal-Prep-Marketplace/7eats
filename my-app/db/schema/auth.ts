@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   boolean,
+  date,
   pgPolicy,
   pgTable,
   text,
@@ -31,6 +32,8 @@ export const authUser = pgTable(
     phoneVerified: boolean("phone_verified").notNull().default(false),
     stripeCustomerId: text("stripe_customer_id"),
     onboardingCompletedAt: timestamp("onboarding_completed_at"),
+    // Must be >= 16 years old. Set at onboarding, not editable after.
+    dateOfBirth: date("date_of_birth"),
   },
   () => [
     // Public read required: other tables' RLS policies JOIN this table to check

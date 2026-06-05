@@ -161,7 +161,7 @@ const createOrderSchema = z.object({
   listingId: z.string().uuid(),
   quantity: z.number().int().min(1),
   paymentMethodId: z.string().min(1),
-  pickupAt: z.string().datetime(),
+  pickupAt: z.string().datetime(), // TODO: make optional once DB column is nullable
   promotionId: z.string().uuid().optional(),
   notes: z.string().max(500).optional(),
 });

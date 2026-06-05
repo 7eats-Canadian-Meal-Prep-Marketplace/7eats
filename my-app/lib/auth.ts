@@ -96,6 +96,7 @@ export const auth = betterAuth({
       phone: { type: "string", required: false },
       phoneVerified: { type: "boolean", defaultValue: false, required: false },
       onboardingCompletedAt: { type: "string", required: false },
+      dateOfBirth: { type: "string", required: false },
     },
   },
   rateLimit: {
