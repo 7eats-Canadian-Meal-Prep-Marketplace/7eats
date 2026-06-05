@@ -27,7 +27,9 @@ export async function POST(req: Request) {
     );
   }
 
-  const redirectTo = `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/business-auth/reset-password`;
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const audience = body?.audience === "client" ? "client" : "business";
+  const redirectTo = `${baseUrl}/${audience === "client" ? "app-auth" : "business-auth"}/reset-password`;
 
   // Errors swallowed intentionally — always return 200 to prevent email enumeration.
   try {

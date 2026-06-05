@@ -1,0 +1,731 @@
+/* ─── Page shell ─────────────────────────────────────────────────────────── */
+.page {
+  background: var(--white);
+  min-height: 100%;
+}
+
+.inner {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 24px 24px 80px;
+}
+
+/* ─── Back row ───────────────────────────────────────────────────────────── */
+.backRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.backBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--grey-700);
+  text-decoration: none;
+  transition: color 0.12s;
+}
+
+.backBtn:hover {
+  color: var(--ink);
+}
+
+.orderId {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--grey-500);
+  font-family: "SF Mono", "Fira Code", "Roboto Mono", monospace;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* ─── Hero card ──────────────────────────────────────────────────────────── */
+.heroCard {
+  border-radius: 12px;
+  padding: 24px 22px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 12px;
+  min-height: 120px;
+  overflow: hidden;
+}
+
+.heroInitials {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.38);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--white);
+  flex-shrink: 0;
+  letter-spacing: -0.02em;
+}
+
+.heroInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.heroCook {
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.68);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 5px;
+}
+
+.heroTitle {
+  font-size: 21px;
+  font-weight: 800;
+  color: var(--white);
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+
+/* ─── Code card ──────────────────────────────────────────────────────────── */
+.codeCard {
+  border: 1px solid var(--grey-200);
+  border-radius: 12px;
+  padding: 28px 24px 24px;
+  text-align: center;
+  margin-bottom: 12px;
+  background: var(--white);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Subtle red top-edge accent */
+.codeCard::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--red);
+  border-radius: 12px 12px 0 0;
+}
+
+.codeLabel {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--red);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  margin-bottom: 14px;
+}
+
+.codeDisplay {
+  font-size: 40px;
+  font-weight: 900;
+  color: var(--ink);
+  letter-spacing: 0.18em;
+  font-family: "SF Mono", "Fira Code", "Fira Mono", "Roboto Mono", monospace;
+  margin-bottom: 10px;
+  line-height: 1;
+}
+
+.codeDesc {
+  font-size: 13px;
+  color: var(--grey-500);
+  margin-bottom: 20px;
+  line-height: 1.55;
+}
+
+.copyBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 13px 0;
+  background: var(--ink);
+  color: var(--white);
+  font-size: 13.5px;
+  font-weight: 700;
+  border: none;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  font-family: inherit;
+  letter-spacing: 0.01em;
+  transition:
+    background 0.12s,
+    transform 0.1s;
+}
+
+.copyBtn:hover {
+  background: #000;
+}
+
+.copyBtn:active {
+  transform: scale(0.98);
+}
+
+/* ─── Section cards ───────────────────────────────────────────────────────── */
+.statusCard,
+.detailsCard,
+.itemsCard {
+  border: 1px solid var(--grey-200);
+  border-radius: 12px;
+  padding: 22px 22px;
+  margin-bottom: 12px;
+  background: var(--white);
+}
+
+/* ─── Section title ───────────────────────────────────────────────────────── */
+.sectionTitle {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--grey-700);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0 0 16px;
+}
+
+/* ─── Status tracker ──────────────────────────────────────────────────────── */
+.tracker {
+  display: flex;
+  flex-direction: column;
+}
+
+.step {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.stepLeft {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  width: 26px;
+}
+
+.stepDot {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid var(--grey-300);
+  background: var(--white);
+  color: var(--grey-300);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition:
+    border-color 0.18s,
+    background 0.18s,
+    color 0.18s;
+}
+
+.stepDotDone {
+  border-color: var(--red);
+  background: var(--red);
+  color: var(--white);
+}
+
+.stepLine {
+  width: 2px;
+  height: 22px;
+  background: var(--grey-200);
+  margin: 3px 0;
+  flex-shrink: 0;
+  transition: background 0.18s;
+}
+
+.stepLineDone {
+  background: var(--red);
+}
+
+.stepLabel {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--grey-500);
+  padding: 4px 0;
+  line-height: 1.35;
+}
+
+.stepLabelDone {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+/* ─── Detail rows ─────────────────────────────────────────────────────────── */
+.detailRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--grey-100);
+}
+
+/* h2.sectionTitle is the first child; the first .detailRow div follows it */
+.detailRow:first-of-type {
+  padding-top: 0;
+}
+
+.detailRow:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.detailIcon {
+  color: var(--grey-500);
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+
+.detailLabel {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--grey-500);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 3px;
+}
+
+.detailVal {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+  line-height: 1.35;
+}
+
+/* ─── Dish rows ───────────────────────────────────────────────────────────── */
+.dishRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--grey-100);
+}
+
+.dishRow:last-child {
+  border-bottom: none;
+}
+
+.dishQty {
+  font-size: 12.5px;
+  color: var(--grey-500);
+  width: 26px;
+  flex-shrink: 0;
+  font-weight: 700;
+  font-family: "SF Mono", "Fira Code", "Roboto Mono", monospace;
+}
+
+.dishName {
+  flex: 1;
+  font-size: 14px;
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.dishPrice {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  flex-shrink: 0;
+  letter-spacing: -0.01em;
+}
+
+.totalDivider {
+  border: none;
+  border-top: 1px solid var(--grey-200);
+  margin: 6px 0 2px;
+}
+
+.summaryLabel {
+  flex: 1;
+  font-size: 13.5px;
+  color: var(--grey-500);
+  font-weight: 500;
+}
+
+.summaryVal {
+  font-size: 13.5px;
+  color: var(--grey-700);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.totalRow {
+  border-bottom: none;
+  padding-top: 12px;
+}
+
+.totalLabel {
+  flex: 1;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.02em;
+}
+
+.totalVal {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--ink);
+  flex-shrink: 0;
+  letter-spacing: -0.02em;
+}
+
+/* ─── Message CTA — prominent, right below hero ──────────────────────────── */
+.messageCta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 13px 20px;
+  margin-bottom: 20px;
+  border: 1.5px solid var(--grey-200);
+  border-radius: var(--radius-sm);
+  background: var(--white);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  text-decoration: none;
+  font-family: inherit;
+  transition:
+    border-color 0.14s,
+    background 0.14s;
+}
+
+.messageCta:hover {
+  border-color: var(--ink);
+  background: var(--grey-100);
+}
+
+/* ─── Review button ──────────────────────────────────────────────────────── */
+.rateBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px 20px;
+  margin-top: 8px;
+  margin-bottom: 20px;
+  border: 1.5px solid var(--red);
+  border-radius: var(--radius-sm);
+  background: var(--red);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--white);
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    background 0.14s,
+    box-shadow 0.14s;
+}
+
+.rateBtn:hover {
+  background: var(--red-deep);
+  box-shadow: 0 6px 20px rgba(214, 64, 69, 0.28);
+}
+
+/* ─── Review card (submitted state) ─────────────────────────────────────── */
+.reviewCard {
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+  margin-bottom: 16px;
+  background: var(--white);
+}
+
+.reviewCardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.reviewStars {
+  display: flex;
+  gap: 3px;
+}
+
+.reviewCardActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.reviewEditBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--grey-700);
+  background: none;
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-pill);
+  padding: 4px 10px;
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    border-color 0.12s,
+    color 0.12s;
+}
+
+.reviewEditBtn:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.reviewDeleteBtn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: none;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--grey-400, #c0c0c0);
+  cursor: pointer;
+  transition:
+    color 0.12s,
+    background 0.12s;
+}
+
+.reviewDeleteBtn:hover {
+  color: var(--red);
+  background: rgba(214, 64, 69, 0.07);
+}
+
+.reviewComment {
+  font-size: 14px;
+  color: var(--grey-700);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* ─── Review modal ───────────────────────────────────────────────────────── */
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 15, 15, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 500;
+  padding: 20px;
+  animation: fadeIn 0.15s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.modal {
+  width: 100%;
+  max-width: 440px;
+  background: var(--white);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 20px 60px rgba(15, 15, 15, 0.2);
+  animation: slideUp 0.2s cubic-bezier(0.34, 1.2, 0.64, 1);
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(12px);
+    opacity: 0.6;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.modalHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.modalEyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--grey-500);
+  margin: 0 0 4px;
+}
+
+.modalTitle {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.025em;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.modalClose {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: var(--grey-100);
+  color: var(--grey-700);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.12s;
+}
+
+.modalClose:hover {
+  background: var(--grey-200);
+}
+
+.starRow {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.starBtn {
+  background: none;
+  border: none;
+  padding: 2px;
+  cursor: pointer;
+  transition: transform 0.12s;
+}
+
+.starBtn:hover {
+  transform: scale(1.15);
+}
+
+.starOn {
+  color: var(--red);
+}
+.starOff {
+  color: var(--grey-200);
+}
+
+.ratingLabel {
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--grey-500);
+  height: 20px;
+  margin: 0 0 16px;
+}
+
+.reviewTextarea {
+  width: 100%;
+  border: 1.5px solid var(--grey-200);
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--ink);
+  resize: none;
+  outline: none;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+  line-height: 1.5;
+}
+
+.reviewTextarea:focus {
+  border-color: var(--ink);
+}
+
+.reviewTextarea::placeholder {
+  color: var(--grey-300);
+}
+
+.modalActions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.modalCancel {
+  flex: 1;
+  padding: 12px;
+  border: 1.5px solid var(--grey-200);
+  border-radius: 8px;
+  background: var(--white);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--grey-700);
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.12s;
+}
+
+.modalCancel:hover {
+  border-color: var(--grey-500);
+}
+
+.modalSubmit {
+  flex: 2;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  background: var(--ink);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--white);
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity 0.12s;
+}
+
+.modalSubmit:hover {
+  opacity: 0.88;
+}
+
+/* ─── Responsive ──────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .inner {
+    padding: 20px 16px 80px;
+  }
+}
+
+@media (max-width: 480px) {
+  .heroTitle {
+    font-size: 18px;
+  }
+
+  .codeDisplay {
+    font-size: 32px;
+    letter-spacing: 0.14em;
+  }
+
+  .actions {
+    flex-direction: column;
+  }
+
+  .messageBtn,
+  .rateBtn {
+    width: 100%;
+    justify-content: center;
+  }
+}

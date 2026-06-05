@@ -49,6 +49,7 @@ export default function NewListingPage() {
   const [created, setCreated] = useState(false);
 
   const [form, setForm] = useState(EMPTY_FORM);
+  const [subscriptionEnabled, setSubscriptionEnabled] = useState(false);
   const [selectedDishes, setSelectedDishes] = useState<string[]>([]);
   const [dealEnabled, setDealEnabled] = useState(false);
   const [dealType, setDealType] = useState<DealType>("percentage_off");
@@ -67,6 +68,7 @@ export default function NewListingPage() {
 
   function resetAll() {
     setForm(EMPTY_FORM);
+    setSubscriptionEnabled(false);
     setSelectedDishes([]);
     setDealEnabled(false);
     setDealType("percentage_off");
@@ -219,6 +221,32 @@ export default function NewListingPage() {
                   }
                 />
               </div>
+            </div>
+
+            {/* Weekly subscription toggle */}
+            <div className={styles.subscriptionToggleRow}>
+              <div className={styles.subscriptionToggleInfo}>
+                <span className={styles.formLabel}>
+                  Accept weekly subscriptions
+                </span>
+                <span className={styles.subscriptionToggleDesc}>
+                  Let customers subscribe and get this listing automatically
+                  every week. They can cancel any time.
+                </span>
+              </div>
+              <button
+                type="button"
+                className={`${styles.toggleSwitch} ${subscriptionEnabled ? styles.toggleSwitchOn : ""}`}
+                onClick={() => setSubscriptionEnabled((v) => !v)}
+                aria-label={
+                  subscriptionEnabled
+                    ? "Disable weekly subscriptions"
+                    : "Enable weekly subscriptions"
+                }
+                aria-pressed={subscriptionEnabled}
+              >
+                <span className={styles.toggleKnob} />
+              </button>
             </div>
 
             <div className={styles.formActions}>

@@ -18,8 +18,6 @@ const signUpSchema = z
     lastName: z.string().trim().min(1).max(100),
     email: z.string().trim().email().max(255),
     password: z.string().min(8).max(128),
-    // Optional for clients — no phone verification in this flow.
-    phone: z.string().trim().max(20).optional(),
   })
   .strict();
 
@@ -41,7 +39,6 @@ export async function POST(req: Request) {
 
   const { firstName, lastName, password } = parsed.data;
   const email = parsed.data.email.toLowerCase();
-  const phone = parsed.data.phone?.trim() ? parsed.data.phone.trim() : null;
 
   const ip =
     req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
@@ -59,6 +56,36 @@ export async function POST(req: Request) {
     );
   }
 
+  // Check for an existing account with this email before hitting Better Auth,
+  // so we can handle the unverified-duplicate case gracefully.
+  const [existing] = await db
+    .select({ emailVerified: authUser.emailVerified })
+    .from(authUser)
+    .where(eq(authUser.email, email))
+    .limit(1);
+
+  if (existing) {
+    if (!existing.emailVerified) {
+      // Account exists but was never verified — resend the link and guide them
+      // back to check-email rather than showing a confusing "already exists" error.
+      try {
+        await auth.api.sendVerificationEmail({
+          body: { email, callbackURL: "/app-auth/onboarding" },
+        });
+      } catch (err) {
+        console.error("[sign-up] resend verification failed:", err);
+      }
+      return NextResponse.json({
+        redirect: `/app-auth/signup/check-email?email=${encodeURIComponent(email)}`,
+      });
+    }
+    // Verified account — tell them plainly.
+    return NextResponse.json(
+      { error: "An account with this email already exists." },
+      { status: 409 },
+    );
+  }
+
   // Create the credential + user row. autoSignIn is disabled globally, so this
   // does NOT start a session — the client must confirm their email first.
   const signUpRes = await auth.api.signUpEmail({
@@ -68,14 +95,6 @@ export async function POST(req: Request) {
   });
 
   if (!signUpRes.ok) {
-    // 422 = Better Auth rejected the credentials; the common case is a
-    // duplicate email. Keep the message generic but actionable.
-    if (signUpRes.status === 422) {
-      return NextResponse.json(
-        { error: "An account with this email already exists." },
-        { status: 409 },
-      );
-    }
     console.error("[sign-up] signup failed:", signUpRes.status);
     return NextResponse.json(
       { error: "Could not create account. Please try again." },
@@ -96,14 +115,14 @@ export async function POST(req: Request) {
   // profile fields.
   await db
     .update(authUser)
-    .set({ role: "client", status: "active", firstName, lastName, phone })
+    .set({ role: "client", status: "active", firstName, lastName })
     .where(eq(authUser.id, userId));
 
-  // Send the confirmation email. Best-effort: if it fails the account still
-  // exists and the user can request a new link from the check-email page.
+  // Send the verification email with the correct callbackURL. Better Auth's
+  // auto-send is disabled (sendOnSignUp: false) so this is the only send.
   try {
     await auth.api.sendVerificationEmail({
-      body: { email, callbackURL: "/app-auth/login?verified=1" },
+      body: { email, callbackURL: "/app-auth/onboarding" },
     });
   } catch (err) {
     console.error("[sign-up] verification email failed:", err);

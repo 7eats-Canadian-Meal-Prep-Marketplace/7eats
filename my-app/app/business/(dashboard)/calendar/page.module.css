@@ -486,6 +486,21 @@
   border-radius: var(--radius-md);
 }
 
+/* ─── Tablet ───────────────────────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .weekStrip {
+    gap: 4px;
+  }
+
+  .stripDow {
+    font-size: 9px;
+  }
+
+  .stripNum {
+    font-size: 13px;
+  }
+}
+
 /* ─── Mobile ───────────────────────────────────────────────────────────────── */
 @media (max-width: 720px) {
   .headerTop {
@@ -505,11 +520,23 @@
 }
 
 @media (max-width: 520px) {
+  .weekStrip {
+    gap: 3px;
+  }
+
+  .stripCell {
+    padding: 6px 2px 5px;
+  }
+
   .orderListing {
     display: none;
   }
 
   .verifyChip {
     width: auto;
+  }
+
+  .orderTime {
+    width: 48px;
   }
 }

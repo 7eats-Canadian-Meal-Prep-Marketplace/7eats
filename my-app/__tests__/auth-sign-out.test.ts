@@ -115,4 +115,11 @@ describe("POST /api/auth/sign-out", () => {
     expect(setCookieHeaders).toContain("sess=; Max-Age=0; Path=/");
     expect(setCookieHeaders).toContain("token=; Max-Age=0; Path=/");
   });
+
+  it("clears the 7eats-onboarded cookie on sign-out", async () => {
+    const res = await POST(makeRequest());
+    const setCookieHeaders = res.headers.getSetCookie().join(";");
+    expect(setCookieHeaders).toContain("7eats-onboarded=");
+    expect(setCookieHeaders).toContain("Max-Age=0");
+  });
 });

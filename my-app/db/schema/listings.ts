@@ -20,6 +20,7 @@ import {
   listingStatus,
   listingType,
   promotionType,
+  subscriptionInterval as subscriptionIntervalEnum,
 } from "./enums";
 
 const isAdmin = sql`auth.role() = 'admin'`;
@@ -39,11 +40,18 @@ export const listings = pgTable(
       .references(() => cookProfiles.id, { onDelete: "cascade" }),
     title: varchar("title", { length: 255 }).notNull(),
     description: text("description"),
-    // Subscription type: one_time now; subscription reserved for future use.
     type: listingType("type").notNull().default("one_time"),
     status: listingStatus("status").notNull().default("draft"),
     basePrice: numeric("base_price", { precision: 10, scale: 2 }).notNull(),
     currency: varchar("currency", { length: 3 }).notNull().default("CAD"),
+    // When true, customers can subscribe to receive this listing every week
+    // automatically. Always weekly — no interval selection needed.
+    subscriptionEnabled: boolean("subscription_enabled")
+      .notNull()
+      .default(false),
+    // Legacy columns kept to match existing DB state — unused by application.
+    subscriptionInterval: subscriptionIntervalEnum("subscription_interval"),
+    commitmentPeriods: integer("commitment_periods"),
     // If null the UI generates a collage from the listing's dish photos.
     coverPhotoUrl: text("cover_photo_url"),
     stripeProductId: text("stripe_product_id"),

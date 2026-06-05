@@ -19,7 +19,6 @@ import {
   ListingDetailProvider,
   type ListingDish,
   type ListingOrder,
-  type ListingReview,
   type PricingTier,
   type UiDealType,
   useListingDetail,
@@ -103,6 +102,7 @@ function OverviewTab() {
     maxOrderQty: "" as string | number,
     status: "active" as "active" | "draft" | "archived",
   });
+  const [subscriptionEnabled, setSubscriptionEnabled] = useState(false);
   const [tiers, setTiers] = useState<PricingTier[]>([]);
   const [saved, setSaved] = useState(false);
   const [initialized, setInitialized] = useState(false);
@@ -118,6 +118,7 @@ function OverviewTab() {
         maxOrderQty: listing.maxOrderQty ?? "",
         status: listing.status,
       });
+      setSubscriptionEnabled(listing.subscriptionEnabled ?? false);
       setTiers(bundles.map(bundleToTier));
       setInitialized(true);
     }
@@ -173,6 +174,7 @@ function OverviewTab() {
       ...form,
       maxOrderQty: String(form.maxOrderQty),
       tiers,
+      subscriptionEnabled,
     });
     if (!ok) return;
     setSaved(true);
@@ -356,6 +358,32 @@ function OverviewTab() {
             >
               <Plus size={13} />
               Add tier
+            </button>
+          </div>
+
+          {/* Weekly subscription toggle */}
+          <div className={styles.subscriptionToggleRow}>
+            <div className={styles.subscriptionToggleInfo}>
+              <span className={styles.formLabel}>
+                Accept weekly subscriptions
+              </span>
+              <span className={styles.subscriptionToggleDesc}>
+                Let customers subscribe and get this listing automatically every
+                week. They can cancel any time.
+              </span>
+            </div>
+            <button
+              type="button"
+              className={`${styles.toggleSwitch} ${subscriptionEnabled ? styles.toggleSwitchOn : ""}`}
+              onClick={() => setSubscriptionEnabled((v) => !v)}
+              aria-label={
+                subscriptionEnabled
+                  ? "Disable weekly subscriptions"
+                  : "Enable weekly subscriptions"
+              }
+              aria-pressed={subscriptionEnabled}
+            >
+              <span className={styles.toggleKnob} />
             </button>
           </div>
 

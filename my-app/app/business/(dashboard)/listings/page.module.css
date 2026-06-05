@@ -426,7 +426,42 @@
   opacity: 0.82;
 }
 
+/* ─── Tablet ──────────────────────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  }
+}
+
 /* ─── Mobile ──────────────────────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  .tabRow {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    white-space: nowrap;
+  }
+
+  .tabRow::-webkit-scrollbar {
+    display: none;
+  }
+
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .filterGroup {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .newBtn {
+    align-self: flex-start;
+  }
+}
+
 @media (max-width: 540px) {
   .grid {
     grid-template-columns: 1fr;

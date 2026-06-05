@@ -1,0 +1,397 @@
+/* ─── Canvas ─────────────────────────────────────────────────────────────────── */
+.page {
+  background: #fafafa;
+  min-height: 100%;
+}
+
+.inner {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 44px 32px 96px;
+}
+
+/* ─── Heading ────────────────────────────────────────────────────────────────── */
+.heading {
+  font-size: 30px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.035em;
+  margin: 0 0 40px;
+}
+
+/* ─── Success banner ─────────────────────────────────────────────────────────── */
+.successBanner {
+  background: var(--white);
+  border-left: 3px solid var(--red);
+  padding: 14px 20px;
+  margin-bottom: 32px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.5;
+  border-radius: 0 8px 8px 0;
+}
+
+/* ─── Sections ───────────────────────────────────────────────────────────────── */
+.section {
+  margin-bottom: 48px;
+}
+
+.sectionTitle {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--grey-500);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  margin: 0 0 16px;
+}
+
+/* ─── Order list ─────────────────────────────────────────────────────────────── */
+.orderList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ─── Order card — horizontal premium row ────────────────────────────────────── */
+.orderCard {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 20px;
+  padding: 20px;
+  background: var(--white);
+  border-radius: 12px;
+  border: none;
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.02),
+    0 1px 3px rgba(0, 0, 0, 0.03);
+  text-decoration: none;
+  color: inherit;
+  transition:
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.orderCard:hover {
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.06),
+    0 2px 6px rgba(0, 0, 0, 0.04);
+  transform: translateY(-1px);
+}
+
+.orderCardPast {
+  opacity: 0.85;
+}
+
+.orderCardPast:hover {
+  opacity: 1;
+}
+
+/* ─── Image frame ────────────────────────────────────────────────────────────── */
+.orderCover {
+  width: 140px;
+  height: 100px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.orderCoverImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* ─── Center content — 3-row hierarchy ──────────────────────────────────────── */
+.orderCenter {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cookName {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.orderTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: #111111;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0;
+}
+
+.orderMeta {
+  font-size: 13px;
+  color: #4b5563;
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* ─── Subscription tag ───────────────────────────────────────────────────────── */
+.subscriptionTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--red);
+  margin-top: 6px;
+}
+
+/* ─── Right column — badge on top, price/action at bottom ───────────────────── */
+.orderRight {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  flex-shrink: 0;
+  min-width: 120px;
+  align-self: stretch;
+  padding: 4px 0;
+}
+
+/* ─── Status badges ──────────────────────────────────────────────────────────── */
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+  border: 1.5px solid transparent;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+}
+
+.statusConfirmed {
+  background: transparent;
+  color: var(--ink);
+  border: 1.5px solid var(--ink);
+}
+
+.statusReady {
+  background: #ecfdf5;
+  color: #065f46;
+}
+
+.statusCompleted {
+  background: transparent;
+  color: #6b7280;
+}
+
+.statusPending {
+  background: transparent;
+  color: #92400e;
+  border: 1.5px solid #d97706;
+}
+
+.statusFulfilled {
+  background: transparent;
+  color: var(--grey-500);
+  border: 1.5px solid var(--grey-300);
+}
+
+.statusCancelled {
+  background: transparent;
+  color: var(--red);
+  border: 1.5px solid var(--red);
+}
+
+/* ─── Price + action block ───────────────────────────────────────────────────── */
+.orderPriceBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.orderTotal {
+  font-size: 20px;
+  font-weight: 800;
+  color: #111111;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+/* ─── Pickup code — premium ticket style ─────────────────────────────────────── */
+.pickupCodeBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+}
+
+.pickupCodeLabel {
+  font-size: 10px;
+  font-weight: 600;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.pickupCodeValue {
+  font-family: "SF Mono", "Fira Code", ui-monospace, monospace;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--ink);
+  background: #f3f4f6;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+/* ─── Reorder button — clean outlined ───────────────────────────────────────── */
+.reorderBtn {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 14px;
+  border: 1px solid #e4e4e7;
+  border-radius: 8px;
+  background: var(--white);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #3f3f46;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
+}
+
+.reorderBtn:hover {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--white);
+}
+
+/* ─── Empty state ────────────────────────────────────────────────────────────── */
+.empty {
+  text-align: center;
+  padding: 80px 0 48px;
+}
+
+.emptyIcon {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--white);
+  border: 1px solid var(--grey-200);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--grey-400, #c0c0c0);
+  margin: 0 auto 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.emptyTitle {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.025em;
+  margin: 0 0 8px;
+}
+
+.emptyDesc {
+  font-size: 15px;
+  color: var(--grey-500);
+  line-height: 1.6;
+  max-width: 30ch;
+  margin: 0 auto 28px;
+}
+
+.browseBtn {
+  display: inline-flex;
+  align-items: center;
+  padding: 12px 28px;
+  background: var(--red);
+  color: var(--white);
+  font-size: 14px;
+  font-weight: 700;
+  border-radius: var(--radius-pill);
+  text-decoration: none;
+  transition:
+    background 0.15s,
+    box-shadow 0.15s;
+}
+
+.browseBtn:hover {
+  background: var(--red-deep);
+  box-shadow: 0 6px 20px rgba(214, 64, 69, 0.3);
+}
+
+/* ─── Responsive ─────────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .inner {
+    padding: 28px 16px 80px;
+  }
+
+  .orderCard {
+    gap: 14px;
+    padding: 16px;
+  }
+
+  .orderCover {
+    width: 88px;
+    height: 72px;
+  }
+
+  .orderTitle {
+    font-size: 14px;
+  }
+
+  .orderTotal {
+    font-size: 15px;
+  }
+
+  .orderRight {
+    min-width: 100px;
+  }
+
+  .heading {
+    font-size: 24px;
+    margin-bottom: 28px;
+  }
+}
+
+/* On very small phones stack the order card right column below center */
+@media (max-width: 400px) {
+  .orderCard {
+    flex-wrap: wrap;
+  }
+
+  .orderCover {
+    width: 72px;
+    height: 60px;
+  }
+
+  .orderRight {
+    min-width: unset;
+    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    align-self: auto;
+    padding: 0;
+    border-top: 1px solid var(--grey-100);
+    padding-top: 10px;
+    gap: 10px;
+  }
+}

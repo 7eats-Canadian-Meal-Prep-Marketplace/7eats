@@ -64,6 +64,13 @@
       "when": 1780378921595,
       "tag": "0008_salty_professor_monster",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1780532813499,
+      "tag": "0009_client_onboarding",
+      "breakpoints": true
     }
   ]
 }

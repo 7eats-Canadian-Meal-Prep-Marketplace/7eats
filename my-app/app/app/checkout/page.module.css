@@ -1,0 +1,951 @@
+/* ─── Empty ──────────────────────────────────────────────────────────────────── */
+.emptyPage {
+  text-align: center;
+  padding: 80px var(--pad-x);
+  min-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.browseBtn {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 16px;
+  padding: 13px 28px;
+  background: var(--red);
+  color: var(--white);
+  font-weight: 700;
+  border-radius: 8px;
+  text-decoration: none;
+  transition:
+    background 0.15s,
+    box-shadow 0.15s;
+}
+
+.browseBtn:hover {
+  background: var(--red-deep);
+  box-shadow: 0 6px 20px rgba(214, 64, 69, 0.3);
+}
+
+/* ─── Page ──────────────────────────────────────────────────────────────────── */
+.page {
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: 24px var(--pad-x) 80px;
+}
+
+/* ─── Header ────────────────────────────────────────────────────────────────── */
+.checkoutHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 32px;
+}
+
+.backBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--grey-700);
+  text-decoration: none;
+  transition: color 0.12s;
+}
+
+.backBtn:hover {
+  color: var(--ink);
+}
+
+.secureTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--grey-500);
+  letter-spacing: 0.01em;
+}
+
+/* ─── Stepper ───────────────────────────────────────────────────────────────── */
+.stepper {
+  display: flex;
+  gap: 0;
+  margin-bottom: 32px;
+  border: 1px solid var(--grey-200);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.step {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  background: var(--white);
+  color: var(--grey-500);
+  border-right: 1px solid var(--grey-200);
+}
+
+.step:last-child {
+  border-right: none;
+}
+
+.stepActive {
+  background: var(--grey-100);
+  color: var(--ink);
+}
+
+.stepDone {
+  color: var(--ink);
+}
+
+.stepNum {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  background: var(--grey-200);
+  color: var(--grey-700);
+  flex-shrink: 0;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.stepActive .stepNum {
+  background: var(--ink);
+  color: var(--white);
+}
+
+.stepDone .stepNum {
+  background: var(--ink);
+  color: var(--white);
+}
+
+.stepLabel {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+@media (max-width: 479px) {
+  .stepper {
+    flex-direction: column;
+    border-radius: 8px;
+  }
+
+  .step {
+    border-right: none;
+    border-bottom: 1px solid var(--grey-200);
+  }
+
+  .step:last-child {
+    border-bottom: none;
+  }
+}
+
+/* ─── Layout ────────────────────────────────────────────────────────────────── */
+.inner {
+  display: flex;
+  gap: 40px;
+  align-items: flex-start;
+}
+
+.formSide {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (max-width: 767px) {
+  .inner {
+    flex-direction: column-reverse;
+    gap: 24px;
+  }
+
+  .summary {
+    width: 100%;
+    position: static;
+  }
+}
+
+/* ─── Form sections ─────────────────────────────────────────────────────────── */
+.formSection {
+  border: 1px solid var(--grey-200);
+  border-radius: 8px;
+  padding: 24px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow-md);
+  background: var(--white);
+}
+
+/* "Edit address" row — sits at the bottom of the read-only summary box */
+.addressEditRow {
+  display: block;
+  width: 100%;
+  padding: 10px 14px;
+  border: none;
+  border-top: 1px solid var(--grey-200);
+  background: transparent;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--grey-500);
+  cursor: pointer;
+  font-family: inherit;
+  text-align: center;
+  transition: color 0.12s;
+  border-radius: 0 0 8px 8px;
+}
+
+.addressEditRow:hover {
+  color: var(--ink);
+}
+
+/* "Save" — confirms address edit and collapses back to summary */
+.cancelEditBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin-top: 12px;
+  padding: 11px 20px;
+  background: var(--ink);
+  color: var(--white);
+  border: none;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity 0.15s;
+}
+
+.cancelEditBtn:hover {
+  opacity: 0.85;
+}
+
+.formTitle {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.02em;
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ─── Logged-in contact summary (read-only) ─────────────────────────────────── */
+.contactSummary {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid var(--grey-200);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.contactRow {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--grey-200);
+}
+
+.contactRow:last-child {
+  border-bottom: none;
+}
+
+.contactLabel {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--grey-500);
+  flex-shrink: 0;
+  width: 48px;
+}
+
+.contactValue {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.sectionLead {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--grey-500);
+  margin: -10px 0 18px;
+}
+
+.formRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.formGroup:last-child {
+  margin-bottom: 0;
+}
+
+.label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--grey-700);
+}
+
+.input {
+  padding: 12px 14px;
+  border: 1.5px solid var(--grey-200);
+  border-radius: 8px;
+  font-size: 15px;
+  font-family: inherit;
+  color: var(--ink);
+  background: var(--white);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.input::placeholder {
+  color: var(--grey-500);
+}
+
+.input:focus {
+  border-color: var(--ink);
+}
+
+.fieldError {
+  font-size: 12px;
+  color: var(--red);
+  margin-top: 2px;
+}
+
+/* Pickup card */
+.pickupCard {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid var(--grey-200);
+  border-radius: 8px;
+  margin-bottom: 12px;
+  background: var(--white);
+}
+
+.pickupCard:last-child {
+  margin-bottom: 0;
+}
+
+.pickupAvatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--white);
+  flex-shrink: 0;
+}
+
+.pickupCook {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+
+.pickupListing {
+  font-size: 13px;
+  color: var(--grey-700);
+  margin-top: 2px;
+}
+
+.pickupMeta {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-top: 3px;
+}
+
+.pickupMetaSub {
+  font-size: 11.5px;
+  color: var(--grey-500);
+  margin-top: 2px;
+}
+
+/* ─── Choice cards ──────────────────────────────────────────────────────────── */
+.choiceCard {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 18px 20px;
+  margin-bottom: 10px;
+  border: 1.5px solid var(--grey-200);
+  border-radius: 8px;
+  background: var(--white);
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+
+.choiceCard:hover {
+  border-color: var(--grey-700);
+  box-shadow: var(--shadow-md);
+}
+
+.choiceCardActive {
+  border-color: var(--ink);
+  background: var(--grey-100);
+}
+
+.choiceIcon {
+  display: inline-flex;
+  margin-bottom: 10px;
+  color: var(--grey-700);
+}
+
+.choiceTitle {
+  display: block;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.015em;
+  margin-bottom: 4px;
+}
+
+.choiceDesc {
+  display: block;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--grey-500);
+}
+
+/* ─── Misc actions ──────────────────────────────────────────────────────────── */
+.primaryBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 15px 24px;
+  background: var(--red);
+  color: var(--white);
+  font-size: 15px;
+  font-weight: 800;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    background 0.15s,
+    box-shadow 0.15s;
+}
+
+.primaryBtn:hover {
+  background: var(--red-deep);
+  box-shadow: 0 6px 20px rgba(214, 64, 69, 0.3);
+}
+
+.textBtn {
+  margin-top: 12px;
+  padding: 8px 0;
+  background: none;
+  border: none;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--grey-700);
+  cursor: pointer;
+  font-family: inherit;
+  transition: color 0.12s;
+}
+
+.textBtn:hover {
+  color: var(--ink);
+}
+
+.guestBanner {
+  padding: 13px 16px;
+  margin-bottom: 16px;
+  background: var(--grey-100);
+  border: 1px solid var(--grey-200);
+  border-radius: 8px;
+  font-size: 13.5px;
+  color: var(--grey-700);
+}
+
+.inlineLink {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 700;
+  color: var(--red);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.stepActions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ─── Summary sidebar ───────────────────────────────────────────────────────── */
+.summary {
+  width: 300px;
+  flex-shrink: 0;
+  padding: 20px;
+  border: 1px solid var(--grey-200);
+  border-radius: 8px;
+  background: var(--white);
+  position: sticky;
+  top: 20px;
+  box-shadow: var(--shadow-md);
+}
+
+.summaryEyebrow {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--grey-500);
+  margin: 0 0 6px;
+}
+
+.summaryTitle {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.025em;
+  margin: 0 0 16px;
+  line-height: 1.15;
+}
+
+.summaryLines {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--grey-200);
+}
+
+.summaryGroup {
+  min-width: 0;
+}
+
+.summaryGroupHead {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 8px;
+}
+
+.summaryGroupTitle {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.summaryGroupCook {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--grey-500);
+}
+
+.summaryGroupList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.summaryLine {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.summaryLineName {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--grey-700);
+  line-height: 1.35;
+}
+
+.summaryLinePrice {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  flex-shrink: 0;
+  letter-spacing: -0.01em;
+}
+
+.summarySheet {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--grey-200);
+}
+
+.summaryRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.summaryRowLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--grey-700);
+}
+
+.taxNote {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--grey-500);
+  letter-spacing: 0.02em;
+}
+
+.summaryRowVal {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  flex-shrink: 0;
+  letter-spacing: -0.01em;
+}
+
+.summaryTotal {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 16px;
+}
+
+.summaryTotal span:first-child {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--grey-700);
+}
+
+.summaryTotal span:last-child {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.02em;
+}
+
+.placeOrderBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 15px 24px;
+  background: var(--red);
+  color: var(--white);
+  font-size: 15px;
+  font-weight: 800;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    background 0.15s,
+    box-shadow 0.15s;
+  margin-bottom: 12px;
+}
+
+.placeOrderBtn:hover:not(:disabled) {
+  background: var(--red-deep);
+  box-shadow: 0 6px 20px rgba(214, 64, 69, 0.3);
+}
+
+.placeOrderBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.stepActions .placeOrderBtn {
+  margin-bottom: 0;
+}
+
+.terms {
+  font-size: 11.5px;
+  color: var(--grey-500);
+  line-height: 1.55;
+  margin: 0;
+}
+
+.termsLink {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* ─── Optional label ────────────────────────────────────────────────────────── */
+.optionalLabel {
+  font-weight: 500;
+  color: var(--grey-500);
+  font-size: 11px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* ─── Subscription account notice ───────────────────────────────────────────── */
+.subAccountNotice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+  background: #fff8f0;
+  border: 1px solid #fed7aa;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #7c4a1e;
+  line-height: 1.5;
+}
+
+/* ─── Wallet (logged-in payment methods) ─────────────────────────────────────── */
+.loadingCards {
+  font-size: 13.5px;
+  color: var(--grey-500);
+  margin: 0;
+}
+
+.walletList {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--grey-200);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.walletRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 13px 16px;
+  border: none;
+  border-bottom: 1px solid var(--grey-200);
+  background: var(--white);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--ink);
+  text-align: left;
+  transition: background 0.12s;
+}
+
+.walletRow:last-child {
+  border-bottom: none;
+}
+
+.walletRow:hover {
+  background: var(--grey-100);
+}
+
+.walletRowActive {
+  background: #f8f8f8;
+}
+
+.walletRadio {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1.5px solid var(--grey-300);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.12s;
+}
+
+.walletRowActive .walletRadio {
+  border-color: var(--red);
+}
+
+.walletRadioDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--red);
+}
+
+.walletCardBrand {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--ink);
+  min-width: 90px;
+}
+
+.walletCardNum {
+  font-size: 13.5px;
+  color: var(--grey-700);
+  flex: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.walletCardExp {
+  font-size: 12px;
+  color: var(--grey-500);
+  font-variant-numeric: tabular-nums;
+}
+
+.walletRowAdd {
+  color: var(--grey-600, #6b6b6b);
+}
+
+.walletAddIcon {
+  color: var(--grey-500);
+  flex-shrink: 0;
+}
+
+.walletAddLabel {
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+/* New card form — expands inside wallet list */
+.newCardForm {
+  border-top: 1px solid var(--grey-200);
+  padding: 16px;
+  background: var(--white);
+}
+
+/* ─── New card form ──────────────────────────────────────────────────────────── */
+.newCardForm {
+  /* Placeholder for Stripe Elements mount point.
+     In production, replace inputs with mounted Stripe Card Elements here. */
+}
+
+/* ─── Subscription consent ──────────────────────────────────────────────────── */
+.consentBox {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+  border: 1.5px solid var(--grey-200);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.12s;
+}
+
+.consentBox:hover {
+  border-color: var(--grey-500);
+}
+
+.consentBoxUnchecked {
+  border-color: var(--red);
+  background: rgba(214, 64, 69, 0.03);
+}
+
+.consentCheckbox {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  cursor: pointer;
+  accent-color: var(--red);
+  margin-top: 1px;
+}
+
+.consentText {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--grey-700);
+}
+
+/* ─── Subscription summary indicator ────────────────────────────────────────── */
+.subscriptionBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--red);
+  margin-top: 3px;
+}
+
+/* ─── Recurring note in summary ─────────────────────────────────────────────── */
+.recurringNote {
+  font-size: 11.5px;
+  color: var(--red);
+  line-height: 1.5;
+  padding: 10px 12px;
+  background: rgba(214, 64, 69, 0.04);
+  border: 1px solid rgba(214, 64, 69, 0.18);
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+
+/* ─── Place order error ──────────────────────────────────────────────────────── */
+.placeError {
+  font-size: 13px;
+  color: var(--red);
+  padding: 10px 14px;
+  background: rgba(214, 64, 69, 0.06);
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+
+@media (max-width: 768px) {
+  .page {
+    padding: 20px 16px 80px;
+  }
+
+  /* Collapse 2-col name grid to single column */
+  .formRow {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  /* Wallet rows: ensure minimum 44px tap target */
+  .walletRow {
+    min-height: 44px;
+  }
+
+  /* Stepper: compact on mobile */
+  .stepLabel {
+    font-size: 12px;
+  }
+}

@@ -35,5 +35,10 @@ export async function POST(req: Request) {
   ).getSetCookie?.() ?? []) {
     res.headers.append("Set-Cookie", cookie);
   }
+  // Clear the onboarding cookie so middleware re-checks on next login.
+  res.headers.append(
+    "Set-Cookie",
+    "7eats-onboarded=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0",
+  );
   return res;
 }

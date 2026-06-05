@@ -1,80 +1,66 @@
-.page {
-  min-height: 100vh;
+.wrap {
+  width: 100%;
+  max-width: 400px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background: #ffffff;
-  padding: 40px 24px;
-}
-
-.card {
-  width: 100%;
-  max-width: 460px;
-  background: #ffffff;
-  border: 1px solid var(--grey-200);
-  border-radius: 4px;
-  padding: 40px 40px 44px;
-  box-shadow: 0 2px 12px rgba(15, 15, 15, 0.06);
-}
-
-@media (max-width: 480px) {
-  .card {
-    padding: 32px 24px 36px;
-  }
+  gap: 0;
 }
 
 .eyebrow {
   font-size: 10.5px;
   font-weight: 700;
-  letter-spacing: 0.11em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--grey-500);
-  margin: 0 0 12px;
+  color: var(--red);
+  margin: 0 0 14px;
 }
 
 .title {
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: -0.025em;
+  font-size: 30px;
+  font-weight: 900;
+  letter-spacing: -0.04em;
   color: var(--ink);
-  line-height: 1.2;
+  line-height: 1.1;
+  margin: 0 0 20px;
 }
 
 .body {
-  margin: 16px 0 0;
   font-size: 15px;
-  line-height: 1.55;
   color: var(--grey-700);
+  line-height: 1.65;
+  margin: 0 0 10px;
 }
 
 .body strong {
   color: var(--ink);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .hint {
-  margin: 12px 0 24px;
   font-size: 13px;
   color: var(--grey-500);
+  margin: 0 0 28px;
+  line-height: 1.5;
 }
 
 .resend {
   width: 100%;
+  margin-bottom: 24px;
 }
 
 .altAction {
-  margin: 20px 0 0;
-  font-size: 13.5px;
-  text-align: center;
+  font-size: 13px;
+  color: var(--grey-500);
+  margin: 0;
 }
 
 .altAction a {
-  color: var(--red);
   font-weight: 600;
+  color: var(--grey-700);
   text-decoration: none;
+  transition: color 0.15s;
 }
 
 .altAction a:hover {
-  text-decoration: underline;
+  color: var(--ink);
 }

@@ -1,0 +1,686 @@
+/* ─── Page ───────────────────────────────────────────────────────────────────── */
+.page {
+  background: var(--white);
+  min-height: 100%;
+  padding-bottom: 80px;
+}
+
+/* ─── Breadcrumb ─────────────────────────────────────────────────────────────── */
+.breadcrumb {
+  max-width: 740px;
+  margin: 0 auto;
+  padding: 18px var(--pad-x) 0;
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--grey-700);
+  text-decoration: none;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  cursor: pointer;
+  transition: color 0.12s;
+}
+
+.backLink:hover {
+  color: var(--ink);
+}
+
+/* ─── Header ─────────────────────────────────────────────────────────────────── */
+.headerCard {
+  max-width: 740px;
+  margin: 0 auto;
+  padding: 24px var(--pad-x) 28px;
+  border-bottom: 1px solid var(--grey-200);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Top row: avatar · name · follow */
+.headerTop {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.avatarWrap {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  border: 2px solid var(--grey-200);
+  box-shadow: 0 2px 8px rgba(15, 15, 15, 0.1);
+}
+
+.avatarImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.nameBlock {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: 1;
+  min-width: 0;
+}
+
+.name {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+.verifiedIcon {
+  color: var(--red);
+  flex-shrink: 0;
+  stroke-width: 2.25;
+}
+
+/* Follow button */
+.followBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 18px;
+  border: 1.5px solid var(--grey-300);
+  border-radius: var(--radius-pill);
+  background: var(--white);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition:
+    border-color 0.15s,
+    background 0.15s,
+    color 0.15s;
+}
+
+.followBtn:hover {
+  border-color: var(--ink);
+  background: var(--grey-100);
+}
+
+.followBtnActive {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--white);
+}
+
+/* Cuisine + experience — full width subtitle */
+.cuisineLine {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+  margin-bottom: 10px;
+  width: 100%;
+}
+
+/* Rating row — full width, prominent */
+.ratingRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.ratingStar {
+  color: var(--red);
+  flex-shrink: 0;
+}
+
+.ratingBig {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--red);
+  letter-spacing: -0.025em;
+}
+
+.ratingCount {
+  font-size: 14px;
+  font-weight: 500;
+  color: #3f3f46;
+}
+
+.ratingDot {
+  color: #d4d4d8;
+  font-size: 14px;
+}
+
+.ratingLocIcon {
+  color: #52525b;
+  flex-shrink: 0;
+}
+
+.ratingLoc {
+  font-size: 14px;
+  font-weight: 500;
+  color: #3f3f46;
+}
+
+/* Stat strip — 3 equal columns, full width */
+.statsStrip {
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  border: 1px solid var(--grey-200);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.statItem {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 14px 12px;
+  gap: 3px;
+  border-right: 1px solid var(--grey-200);
+}
+
+.statItem:last-child {
+  border-right: none;
+}
+
+.statNum {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--red);
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.statLabel {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.statSep {
+  display: none;
+}
+
+/* Schedule — full-width day grid */
+.availabilityBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  margin-bottom: 16px;
+  padding: 14px;
+  border: 1px solid var(--grey-200);
+  border-radius: 8px;
+}
+
+.availRow {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.availLabel {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #52525b;
+}
+
+.dayChips {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+  width: 100%;
+}
+
+.dayChip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  width: 100%;
+  padding: 8px 4px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  text-align: center;
+}
+
+.dayChipOn {
+  background: var(--red);
+  border: 1.5px solid var(--red);
+  color: var(--white);
+}
+
+.dayChipOff {
+  background: var(--white);
+  border: 1.5px solid var(--grey-300);
+  color: #71717a;
+}
+
+/* ─── Body ───────────────────────────────────────────────────────────────────── */
+.body {
+  max-width: 740px;
+  margin: 0 auto;
+  padding: 24px var(--pad-x);
+}
+
+/* ─── Badges — removed from profile (dietary tags live on listings) ─────────── */
+
+/* ─── Section ────────────────────────────────────────────────────────────────── */
+.section {
+  margin-bottom: 36px;
+}
+
+.sectionTitle {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.02em;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.listingCount {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--red);
+  color: var(--white);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.sectionRating {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--red);
+  letter-spacing: -0.02em;
+}
+
+.sectionRating svg {
+  color: var(--red);
+}
+
+/* ─── Bio ────────────────────────────────────────────────────────────────────── */
+.bio {
+  font-size: 15px;
+  color: #3f3f46;
+  line-height: 1.7;
+  margin-bottom: 12px;
+  width: 100%;
+}
+
+.leadTimeWrap {
+  width: 100%;
+}
+
+.leadTimeBadge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 12px 16px;
+  background: var(--ink);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--white);
+  box-sizing: border-box;
+}
+
+/* ─── Listing cards ──────────────────────────────────────────────────────────── */
+.noListings {
+  font-size: 14px;
+  color: #52525b;
+}
+
+.listingList {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: #f9fafb;
+  border-radius: 16px;
+  padding: 16px;
+}
+
+.listingCard {
+  display: flex;
+  flex-direction: row;
+  border-radius: 12px;
+  overflow: hidden;
+  text-decoration: none;
+  background: var(--white);
+  box-shadow:
+    0 2px 12px rgba(0, 0, 0, 0.05),
+    0 1px 3px rgba(0, 0, 0, 0.03);
+  transition:
+    transform 0.28s cubic-bezier(0.34, 1.3, 0.64, 1),
+    box-shadow 0.28s ease;
+}
+
+.listingCard:hover {
+  transform: translateY(-3px);
+  box-shadow:
+    0 14px 36px rgba(0, 0, 0, 0.1),
+    0 4px 10px rgba(0, 0, 0, 0.05);
+}
+
+/* ─── Left image — fixed width ──────────────────────────────────────────────── */
+.listingCover {
+  width: 200px;
+  height: 140px;
+  flex-shrink: 0;
+  overflow: hidden;
+  background: var(--grey-100);
+}
+
+.listingCoverImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.listingCard:hover .listingCoverImg {
+  transform: scale(1.06);
+}
+
+/* ─── Right content column ──────────────────────────────────────────────────── */
+.listingMain {
+  flex: 1;
+  min-width: 0;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+/* Row 1: title + price */
+.listingHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.listingTitle {
+  font-size: 17px;
+  font-weight: 700;
+  color: #111111;
+  letter-spacing: -0.025em;
+  line-height: 1.3;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.listingPrice {
+  font-size: 16px;
+  font-weight: 800;
+  color: #000000;
+  letter-spacing: -0.02em;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* Row 2: description */
+.listingSummary {
+  font-size: 13.5px;
+  color: #4b5563;
+  line-height: 1.5;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Row 3: tags left, spots right */
+.listingFooter {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: auto;
+  flex-wrap: wrap;
+}
+
+.listingMeta {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+/* dietary / niche tags — dark outlined */
+.listingMetaLabel {
+  display: inline-flex;
+  padding: 4px 10px;
+  background: transparent;
+  border: 1.5px solid #1a1a1a;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #1a1a1a;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+}
+
+/* deal pill — white bg, red outlined */
+.listingMetaDeal {
+  display: inline-flex;
+  padding: 4px 10px;
+  background: var(--white);
+  border: 1.5px solid var(--red);
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--red);
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+}
+
+.listingSpots {
+  font-size: 12px;
+  font-weight: 500;
+  color: #9ca3af;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.listingSpotsLow {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--red);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.listingSpotsOut {
+  font-size: 12px;
+  font-weight: 600;
+  color: #9ca3af;
+  text-decoration: line-through;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ─── Narrow screens: stack image above content ─────────────────────────────── */
+@media (max-width: 480px) {
+  .listingCard {
+    flex-direction: column;
+  }
+
+  .listingCover {
+    width: 100%;
+    height: 160px;
+  }
+
+  .listingMain {
+    padding: 14px 16px;
+  }
+
+  .listingTitle {
+    font-size: 15px;
+    white-space: normal;
+  }
+
+  .listingFooter {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}
+
+/* ─── Mobile responsive ──────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .headerCard {
+    padding: 20px 16px 24px;
+  }
+
+  .body {
+    padding: 20px 16px;
+  }
+
+  /* Day chips: 4 columns on narrow phones instead of 7 cramped */
+  .dayChips {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 380px) {
+  .dayChips {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  .dayChip {
+    font-size: 10px;
+    padding: 7px 2px;
+  }
+
+  .name {
+    font-size: 18px;
+  }
+}
+
+/* ─── Reviews — single column stack ─────────────────────────────────────────── */
+.reviewList {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.reviewCard {
+  border: 1px solid var(--grey-200);
+  border-radius: 8px;
+  padding: 18px 20px;
+  box-shadow: var(--shadow-md);
+}
+
+.reviewTop {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.reviewerAvatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--white);
+  border: 1px solid var(--grey-200);
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.reviewerInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.reviewerName {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.reviewDate {
+  font-size: 12px;
+  color: #71717a;
+}
+
+.stars {
+  display: flex;
+  gap: 2px;
+}
+
+.starFilled {
+  color: var(--red);
+}
+
+.starEmpty {
+  color: var(--grey-200);
+}
+
+.reviewComment {
+  font-size: 14px;
+  color: #3f3f46;
+  line-height: 1.65;
+  margin-bottom: 10px;
+}
+
+.reviewDish {
+  display: inline-block;
+  padding: 3px 10px;
+  background: var(--white);
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  color: #3f3f46;
+  font-weight: 600;
+}

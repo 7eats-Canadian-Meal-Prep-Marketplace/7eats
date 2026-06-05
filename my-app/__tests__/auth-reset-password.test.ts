@@ -25,7 +25,7 @@ describe("POST /api/auth/reset-password", () => {
     vi.mocked(auth.api.resetPassword).mockResolvedValue(resetResponse(true));
   });
 
-  it("returns 200 { redirect: '/business-auth/login' } for valid token and password", async () => {
+  it("returns 200 { redirect: '/business-auth/login' } for business audience", async () => {
     const res = await POST(
       makeRequest({ token: "valid-token", newPassword: "securepass" }),
     );
@@ -33,6 +33,20 @@ describe("POST /api/auth/reset-password", () => {
 
     expect(res.status).toBe(200);
     expect(body).toEqual({ redirect: "/business-auth/login" });
+  });
+
+  it("returns 200 { redirect: '/app-auth/login' } for client audience", async () => {
+    const res = await POST(
+      makeRequest({
+        token: "valid-token",
+        newPassword: "securepass",
+        audience: "client",
+      }),
+    );
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body).toEqual({ redirect: "/app-auth/login" });
   });
 
   it("returns 400 and skips resetPassword when token is missing", async () => {

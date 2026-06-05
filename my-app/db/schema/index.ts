@@ -9,6 +9,7 @@ export * from "./messaging";
 export * from "./notifications";
 export * from "./orders";
 export * from "./payments";
+export * from "./preferences";
 export * from "./subscriptions";
 export * from "./tags";
 export * from "./waitlist";

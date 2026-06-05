@@ -16,7 +16,7 @@ export default function ResendButton({ email }: { email: string }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email,
-          callbackURL: "/app-auth/login?verified=1",
+          callbackURL: "/app-auth/onboarding",
         }),
       });
       if (res.ok) {
