@@ -1242,3 +1242,23 @@
     grid-template-columns: 1fr;
   }
 }
+
+@media (max-width: 480px) {
+  .formRow3 {
+    grid-template-columns: 1fr;
+  }
+
+  .statsRow {
+    grid-template-columns: 1fr;
+  }
+
+  .reviewSummary {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .overviewColumns {
+    gap: 20px;
+  }
+}

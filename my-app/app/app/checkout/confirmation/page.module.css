@@ -239,6 +239,36 @@
   padding-top: 12px;
 }
 
+/* ─── Mobile responsive ──────────────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .page {
+    padding: 28px 16px 60px;
+  }
+
+  .title {
+    font-size: 24px;
+  }
+
+  /* Collapse 4-col charge dates to 2×2 */
+  .chargeDates {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Fix right border on items that are now last in their row */
+  .chargeDate:nth-child(2) {
+    border-right: none;
+  }
+
+  .chargeDate:nth-child(3) {
+    border-right: 1px solid var(--grey-200);
+    border-top: 1px solid var(--grey-200);
+  }
+
+  .chargeDate:nth-child(4) {
+    border-top: 1px solid var(--grey-200);
+  }
+}
+
 /* ─── Actions ────────────────────────────────────────────────────────────────── */
 .actions {
   display: flex;

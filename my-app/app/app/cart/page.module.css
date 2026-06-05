@@ -468,7 +468,7 @@
 
 @media (max-width: 767px) {
   .page {
-    padding: 24px 20px 80px;
+    padding: 24px 16px 80px;
   }
 
   .bodyRow {
@@ -483,6 +483,11 @@
   }
 
   .heading {
-    font-size: 24px;
+    font-size: 22px;
+  }
+
+  /* Narrow listing title in cart header */
+  .listingTitle {
+    font-size: 15px;
   }
 }

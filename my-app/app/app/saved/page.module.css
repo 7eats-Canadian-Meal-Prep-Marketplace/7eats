@@ -26,6 +26,13 @@
   border-bottom: 1px solid var(--grey-200);
   margin-bottom: 28px;
   gap: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .tab {
@@ -323,6 +330,18 @@
 .unsaveBtn:hover {
   color: var(--red);
   transform: scale(1.1);
+}
+
+/* ─── Mobile responsive ──────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .inner {
+    padding: 20px 16px 80px;
+  }
+
+  .heading {
+    font-size: 22px;
+    margin-bottom: 16px;
+  }
 }
 
 /* ─── Cook list ─────────────────────────────────────────────────────────────── */

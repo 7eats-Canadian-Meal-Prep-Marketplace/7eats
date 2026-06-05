@@ -210,6 +210,13 @@
   }
 }
 
+/* On very small screens hide the address chip entirely to prevent header overflow */
+@media (max-width: 360px) {
+  .addressWrap {
+    display: none;
+  }
+}
+
 .addressWrap {
   position: relative;
   flex-shrink: 0;
@@ -619,6 +626,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-shrink: 0;
 }
 
 .loginBtn {
@@ -628,6 +636,7 @@
   color: var(--ink);
   border-radius: var(--radius-sm);
   transition: background 0.12s;
+  white-space: nowrap;
 }
 
 .loginBtn:hover {
@@ -642,10 +651,20 @@
   color: var(--white);
   border-radius: var(--radius-sm);
   transition: opacity 0.12s;
+  white-space: nowrap;
 }
 
 .signupBtn:hover {
   opacity: 0.88;
+}
+
+/* On very small screens, shrink guest buttons */
+@media (max-width: 400px) {
+  .loginBtn,
+  .signupBtn {
+    padding: 7px 10px;
+    font-size: 13px;
+  }
 }
 
 /* ─── Main ──────────────────────────────────────────────────────────────────── */

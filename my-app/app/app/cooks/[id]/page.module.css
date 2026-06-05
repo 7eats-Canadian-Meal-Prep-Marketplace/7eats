@@ -568,6 +568,38 @@
   }
 }
 
+/* ─── Mobile responsive ──────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .headerCard {
+    padding: 20px 16px 24px;
+  }
+
+  .body {
+    padding: 20px 16px;
+  }
+
+  /* Day chips: 4 columns on narrow phones instead of 7 cramped */
+  .dayChips {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 380px) {
+  .dayChips {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  .dayChip {
+    font-size: 10px;
+    padding: 7px 2px;
+  }
+
+  .name {
+    font-size: 18px;
+  }
+}
+
 /* ─── Reviews — single column stack ─────────────────────────────────────────── */
 .reviewList {
   display: flex;

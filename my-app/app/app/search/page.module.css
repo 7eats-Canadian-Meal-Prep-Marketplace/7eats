@@ -185,6 +185,16 @@
   padding: 28px 24px 80px;
 }
 
+@media (max-width: 768px) {
+  .filterInner {
+    padding: 12px 20px;
+  }
+
+  .content {
+    padding: 20px 16px 80px;
+  }
+}
+
 .resultsBar {
   display: flex;
   align-items: center;

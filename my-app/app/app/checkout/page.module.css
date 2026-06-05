@@ -930,6 +930,22 @@
 
 @media (max-width: 768px) {
   .page {
-    padding: 20px 20px 80px;
+    padding: 20px 16px 80px;
+  }
+
+  /* Collapse 2-col name grid to single column */
+  .formRow {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  /* Wallet rows: ensure minimum 44px tap target */
+  .walletRow {
+    min-height: 44px;
+  }
+
+  /* Stepper: compact on mobile */
+  .stepLabel {
+    font-size: 12px;
   }
 }

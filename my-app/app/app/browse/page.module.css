@@ -542,4 +542,17 @@
   .sectionTitle {
     font-size: 22px;
   }
+
+  /* Hide carousel arrow buttons on touch — native scroll handles it */
+  .arrows {
+    display: none;
+  }
+
+  .section {
+    margin-bottom: 36px;
+  }
+
+  .sectionHead {
+    margin-bottom: 16px;
+  }
 }

@@ -418,6 +418,44 @@
   color: var(--red);
 }
 
+/* ─── Mobile responsive ──────────────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .content {
+    padding: 0 16px 64px;
+  }
+
+  .stepContent {
+    padding-top: 28px;
+  }
+}
+
+/* On very small phones, stack phone input + send button vertically */
+@media (max-width: 360px) {
+  .phoneRow {
+    flex-direction: column;
+  }
+
+  .sendBtn {
+    width: 100%;
+    padding: 13px;
+  }
+
+  .codeRow {
+    flex-direction: column;
+  }
+
+  .verifyBtn {
+    width: 100%;
+    padding: 13px;
+  }
+
+  .verifiedBadge {
+    width: 100%;
+    justify-content: center;
+    padding: 13px;
+  }
+}
+
 /* ─── Buttons ────────────────────────────────────────────────────────────────── */
 .nextBtn {
   display: flex;

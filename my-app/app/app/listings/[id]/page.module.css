@@ -1267,6 +1267,27 @@
   }
 }
 
+/* Shrink dish card image on very small screens */
+@media (max-width: 480px) {
+  .dishCover {
+    width: 72px;
+    height: 72px;
+  }
+
+  .dishName {
+    font-size: 14px;
+  }
+
+  .dishPrice {
+    font-size: 15px;
+  }
+
+  /* Tighten the listing page padding */
+  .page {
+    padding-bottom: 140px;
+  }
+}
+
 .mobileBarInfo {
   display: flex;
   flex-direction: column;

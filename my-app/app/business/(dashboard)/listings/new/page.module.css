@@ -598,6 +598,14 @@
   transform: translateX(16px);
 }
 
+/* ─── Tablet ───────────────────────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .form,
+  .step2 {
+    max-width: 100%;
+  }
+}
+
 /* ─── Mobile ───────────────────────────────────────────────────────────────── */
 @media (max-width: 640px) {
   .formRow {
@@ -614,5 +622,19 @@
 
   .step {
     padding: 7px 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .steps {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+
+  .steps::-webkit-scrollbar {
+    display: none;
   }
 }

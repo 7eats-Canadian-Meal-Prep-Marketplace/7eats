@@ -364,4 +364,34 @@
   .orderRight {
     min-width: 100px;
   }
+
+  .heading {
+    font-size: 24px;
+    margin-bottom: 28px;
+  }
+}
+
+/* On very small phones stack the order card right column below center */
+@media (max-width: 400px) {
+  .orderCard {
+    flex-wrap: wrap;
+  }
+
+  .orderCover {
+    width: 72px;
+    height: 60px;
+  }
+
+  .orderRight {
+    min-width: unset;
+    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    align-self: auto;
+    padding: 0;
+    border-top: 1px solid var(--grey-100);
+    padding-top: 10px;
+    gap: 10px;
+  }
 }
