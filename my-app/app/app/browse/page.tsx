@@ -11,11 +11,20 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useApp } from "../_app-context";
-import { MOCK_COOKS } from "../_mock";
 import { FulfillmentToggle } from "../_shell";
 import styles from "./page.module.css";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+
+type CookSpotlight = {
+  id: string;
+  firstName: string | null;
+  lastName: string | null;
+  neighborhood: string | null;
+  rating: number | null;
+  reviewCount: number;
+  ordersCompleted: number;
+};
 
 type ListingCard = {
   id: string;
@@ -238,7 +247,14 @@ function RowSection({
 
 // ─── Cook Spotlight ───────────────────────────────────────────────────────────
 
-function CookSpotlightSection() {
+function cookInitials(cook: CookSpotlight): string {
+  const first = cook.firstName?.charAt(0) ?? "";
+  const last = cook.lastName?.charAt(0) ?? "";
+  return (first + last).toUpperCase() || "?";
+}
+
+function CookSpotlightSection({ cooks }: { cooks: CookSpotlight[] }) {
+  if (cooks.length === 0) return null;
   return (
     <section className={styles.section}>
       <div className={styles.sectionHead}>
@@ -250,28 +266,27 @@ function CookSpotlightSection() {
         </div>
       </div>
       <div className={styles.strip}>
-        {MOCK_COOKS.map((cook) => (
+        {cooks.map((cook) => (
           <Link
             key={cook.id}
             href={`/app/cooks/${cook.id}`}
             className={styles.cookCard}
           >
-            <div
-              className={styles.cookAvatarLg}
-              style={{ background: cook.gradient }}
-            >
-              {cook.initials}
-            </div>
+            <div className={styles.cookAvatarLg}>{cookInitials(cook)}</div>
             <span className={styles.cookCardName}>
-              {cook.displayName.split(" ")[0]}
+              {cook.firstName ?? "Chef"}
             </span>
-            <span className={styles.cookCardCuisine}>
-              {cook.cuisineTypes[0]}
-            </span>
-            <span className={styles.cookCardRating}>
-              <Star size={11} fill="currentColor" />
-              {cook.rating.toFixed(1)}
-            </span>
+            {cook.neighborhood && (
+              <span className={styles.cookCardCuisine}>
+                {cook.neighborhood}
+              </span>
+            )}
+            {cook.rating != null && (
+              <span className={styles.cookCardRating}>
+                <Star size={11} fill="currentColor" />
+                {cook.rating.toFixed(1)}
+              </span>
+            )}
           </Link>
         ))}
       </div>
@@ -286,30 +301,43 @@ export default function BrowsePage() {
   const [listings, setListings] = useState<ListingCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState<Set<string>>(new Set());
+  const [cooks, setCooks] = useState<CookSpotlight[]>([]);
 
   useEffect(() => {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-    fetch(`${baseUrl}/api/listings`, { cache: "no-store" })
-      .then((r) => r.json())
-      .then((json) => {
-        setListings(Array.isArray(json.data) ? json.data : []);
+    Promise.all([
+      fetch(`${baseUrl}/api/listings`, { cache: "no-store" })
+        .then((r) => r.json())
+        .catch(() => ({ data: [] })),
+      fetch(`${baseUrl}/api/cooks`, { cache: "no-store" })
+        .then((r) => r.json())
+        .catch(() => ({ data: [] })),
+    ])
+      .then(([listingsJson, cooksJson]) => {
+        setListings(Array.isArray(listingsJson.data) ? listingsJson.data : []);
+        setCooks(Array.isArray(cooksJson.data) ? cooksJson.data : []);
       })
-      .catch(() => setListings([]))
       .finally(() => setLoading(false));
   }, []);
 
-  // Load saved listing IDs for logged-in users (silently ignore auth errors)
+  // Load saved listing IDs — always fire, silently ignore non-200 responses
   useEffect(() => {
-    if (!isLoggedIn) return;
     fetch("/api/favourites/listings")
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) return null; // silently ignore 401 and other errors
+        return r.json();
+      })
       .then((json) => {
-        if (json.success) {
-          setSaved(new Set((json.data ?? []).map((s: { id: string }) => s.id)));
+        if (json?.success) {
+          setSaved(
+            new Set(
+              (json.data ?? []).map((s: { listingId: string }) => s.listingId),
+            ),
+          );
         }
       })
-      .catch(() => {}); // Not logged in or network error — ignore
-  }, [isLoggedIn]);
+      .catch(() => {}); // network error — ignore
+  }, []);
 
   async function toggleSave(id: string, e: React.MouseEvent) {
     e.preventDefault();
@@ -425,7 +453,7 @@ export default function BrowsePage() {
               onSave={toggleSave}
               canSave={isLoggedIn}
             />
-            <CookSpotlightSection />
+            <CookSpotlightSection cooks={cooks} />
             <RowSection
               title="Recently added"
               subtitle="Fresh menus just posted"
