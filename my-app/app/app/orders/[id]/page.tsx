@@ -334,8 +334,8 @@ export default function OrderDetailPage({
           </Link>
         )}
 
-        {/* Code card — only shown when a pickup code is available (status === "ready") */}
-        {!isCancelled && order.pickupCode && (
+        {/* Code card — only shown when status is "ready" and a pickup code exists */}
+        {order.status === "ready" && order.pickupCode && (
           <div className={styles.codeCard}>
             <div className={styles.codeLabel}>
               {order.isSubscription
