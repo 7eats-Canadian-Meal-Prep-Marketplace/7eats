@@ -298,14 +298,47 @@ export default function BrowsePage() {
       .finally(() => setLoading(false));
   }, []);
 
-  function toggleSave(id: string, e: React.MouseEvent) {
+  // Load saved listing IDs for logged-in users (silently ignore auth errors)
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    fetch("/api/favourites/listings")
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.success) {
+          setSaved(new Set((json.data ?? []).map((s: { id: string }) => s.id)));
+        }
+      })
+      .catch(() => {}); // Not logged in or network error — ignore
+  }, [isLoggedIn]);
+
+  async function toggleSave(id: string, e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
+    const isSaved = saved.has(id);
+    // Optimistic update
     setSaved((prev) => {
-      const n = new Set(prev);
-      n.has(id) ? n.delete(id) : n.add(id);
-      return n;
+      const next = new Set(prev);
+      isSaved ? next.delete(id) : next.add(id);
+      return next;
     });
+    try {
+      if (isSaved) {
+        await fetch(`/api/favourites/listings/${id}`, { method: "DELETE" });
+      } else {
+        await fetch("/api/favourites/listings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ listingId: id }),
+        });
+      }
+    } catch {
+      // Revert optimistic update on failure
+      setSaved((prev) => {
+        const next = new Set(prev);
+        isSaved ? next.add(id) : next.delete(id);
+        return next;
+      });
+    }
   }
 
   const subscriptionListings = useMemo(
