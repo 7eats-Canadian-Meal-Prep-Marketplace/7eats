@@ -6,118 +6,83 @@ import {
   Heart,
   RefreshCw,
   SlidersHorizontal,
-  Star,
   X,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
-import { useApp } from "../_app-context";
-import { type FulfillmentMode, scheduleLine } from "../_listing-card-utils";
 import {
-  type CuisineType,
-  type DietaryBadge,
-  MOCK_COOKS,
-  MOCK_LISTINGS,
-  type MockCook,
-  type MockListing,
-  type NicheCategory,
-} from "../_mock";
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { useApp } from "../_app-context";
 import { FulfillmentToggle } from "../_shell";
 import styles from "./page.module.css";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type FiltersState = {
-  cuisine: CuisineType | "all";
-  dietary: Set<DietaryBadge>;
-  niche: Set<NicheCategory>;
-  orderType: "all" | "one-time" | "subscription";
-  distanceKm: number; // 1–25; 25 = no limit
+type ListingCard = {
+  id: string;
+  title: string;
+  description: string | null;
+  cookId: string;
+  cookName: string | null;
+  cookFirstName: string | null;
+  priceFrom: number | null;
+  type: string;
+  subscriptionEnabled: boolean;
+  coverPhotoUrl: string | null;
+  minOrderQty: number | null;
+  maxOrderQty: number | null;
+  createdAt: string;
 };
 
-// FulfillmentMode imported from _listing-card-utils
+type FiltersState = {
+  orderType: "all" | "one_time" | "subscription";
+};
+
+type SortOption = "relevance" | "price_asc" | "price_desc";
+
+// ─── Defaults ─────────────────────────────────────────────────────────────────
 
 const DEFAULT_FILTERS: FiltersState = {
-  cuisine: "all",
-  dietary: new Set(),
-  niche: new Set(),
   orderType: "all",
-  distanceKm: 25,
 };
-
-type SortOption = "relevance" | "price_asc" | "price_desc" | "rating_desc";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function hoursUntil(iso: string): number {
-  return (new Date(iso).getTime() - Date.now()) / 3_600_000;
+function formatPrice(price: number | null): string {
+  if (price == null) return "";
+  return `From $${price}`;
 }
 
-function formatDist(km: number): string {
-  return km < 1 ? `${Math.round(km * 1000)}m` : `${km.toFixed(1)} km`;
+function cookDisplayName(listing: ListingCard): string {
+  return listing.cookFirstName ?? listing.cookName ?? "Chef";
 }
 
-function cookFor(listing: MockListing): MockCook {
-  return MOCK_COOKS.find((c) => c.id === listing.cookId) ?? MOCK_COOKS[0];
-}
-
-function matchesQuery(l: MockListing, q: string): boolean {
-  if (!q) return true;
-  const s = q.toLowerCase();
-  const cook = cookFor(l);
-  return (
-    l.title.toLowerCase().includes(s) ||
-    l.description.toLowerCase().includes(s) ||
-    cook.displayName.toLowerCase().includes(s) ||
-    l.cuisineTypes.some((c) => c.toLowerCase().includes(s)) ||
-    l.dishes.some((d) => d.name.toLowerCase().includes(s))
-  );
-}
-
-function applyFilters(
-  listings: MockListing[],
-  mode: FulfillmentMode,
+function applyClientFilters(
+  listings: ListingCard[],
   f: FiltersState,
-  q: string,
-): MockListing[] {
+): ListingCard[] {
   return listings.filter((l) => {
-    if (l.fulfillment !== mode && l.fulfillment !== "both") return false;
-    if (hoursUntil(l.orderDeadlineIso) <= 0) return false;
-    if (!matchesQuery(l, q)) return false;
-    if (f.cuisine !== "all" && !l.cuisineTypes.includes(f.cuisine))
-      return false;
-    if (f.dietary.size > 0) {
-      const ok =
-        l.dishes.length > 0 &&
-        l.dishes.every((d) =>
-          [...f.dietary].every((b) => d.badges.includes(b)),
-        );
-      if (!ok) return false;
-    }
-    if (f.niche.size > 0) {
-      if (![...f.niche].every((n) => l.niches.includes(n))) return false;
-    }
-    if (f.orderType !== "all" && l.orderType !== f.orderType) return false;
-    if (f.distanceKm < 25 && l.distanceKm > f.distanceKm) return false;
+    if (f.orderType !== "all" && l.type !== f.orderType) return false;
     return true;
   });
 }
 
 function activeFilterCount(f: FiltersState): number {
   let n = 0;
-  if (f.cuisine !== "all") n++;
-  n += f.dietary.size;
-  n += f.niche.size;
   if (f.orderType !== "all") n++;
-  if (f.distanceKm < 25) n++;
   return n;
 }
 
 // ─── Options ──────────────────────────────────────────────────────────────────
 
-const CUISINE_OPTIONS: { label: string; value: CuisineType | "all" }[] = [
+const CUISINE_OPTIONS: { label: string; value: string }[] = [
   { label: "Search all", value: "all" },
   { label: "West African", value: "West African" },
   { label: "Korean", value: "Korean" },
@@ -129,32 +94,10 @@ const CUISINE_OPTIONS: { label: string; value: CuisineType | "all" }[] = [
   { label: "South Asian", value: "South Asian" },
 ];
 
-const DIETARY_OPTIONS: { label: string; value: DietaryBadge }[] = [
-  { label: "Halal", value: "halal" },
-  { label: "Vegetarian", value: "vegetarian" },
-  { label: "Vegan", value: "vegan" },
-  { label: "Gluten-free", value: "gluten-free" },
-  { label: "Dairy-free", value: "dairy-free" },
-  { label: "Nut-free", value: "nut-free" },
-  { label: "Kosher", value: "kosher" },
-];
-
-const NICHE_OPTIONS: { label: string; value: NicheCategory }[] = [
-  { label: "High protein", value: "high_protein" },
-  { label: "Muscle gain", value: "muscle_gain" },
-  { label: "Low carb", value: "low_carb" },
-  { label: "Heart health", value: "heart_health" },
-  { label: "Weight loss", value: "weight_loss" },
-  { label: "Balanced", value: "balanced" },
-  { label: "Comfort food", value: "comfort_food" },
-  { label: "Kids friendly", value: "kids_friendly" },
-];
-
 const SORT_OPTIONS: { label: string; value: SortOption }[] = [
   { label: "Best match", value: "relevance" },
   { label: "Price: Low to High", value: "price_asc" },
   { label: "Price: High to Low", value: "price_desc" },
-  { label: "Top Rated", value: "rating_desc" },
 ];
 
 // ─── Sort Dropdown ────────────────────────────────────────────────────────────
@@ -230,36 +173,22 @@ function FiltersPanel({
   filters,
   onChange,
   onClose,
-  fulfillment,
-  query,
+  allListings,
 }: {
   filters: FiltersState;
   onChange: (f: FiltersState) => void;
   onClose: () => void;
-  fulfillment: FulfillmentMode;
-  query: string;
+  allListings: ListingCard[];
 }) {
-  const [draft, setDraft] = useState<FiltersState>({
-    ...filters,
-    dietary: new Set(filters.dietary),
-    niche: new Set(filters.niche),
-  });
+  const [draft, setDraft] = useState<FiltersState>({ ...filters });
 
   const draftCount = useMemo(
-    () => applyFilters(MOCK_LISTINGS, fulfillment, draft, query).length,
-    [draft, fulfillment, query],
+    () => applyClientFilters(allListings, draft).length,
+    [draft, allListings],
   );
 
   function set(patch: Partial<FiltersState>) {
     setDraft((p) => ({ ...p, ...patch }));
-  }
-
-  function toggle<T>(key: "dietary" | "niche", val: T) {
-    setDraft((p) => {
-      const next = new Set(p[key] as Set<T>);
-      next.has(val) ? next.delete(val) : next.add(val);
-      return { ...p, [key]: next };
-    });
   }
 
   function opt<T>(val: T, current: T, label: string, onSelect: () => void) {
@@ -294,70 +223,17 @@ function FiltersPanel({
         </div>
         <div className={styles.panelBody}>
           <div className={styles.filterGroup}>
-            <span className={styles.filterGroupLabel}>
-              Dietary restrictions
-            </span>
-            <div className={styles.filterOpts}>
-              {DIETARY_OPTIONS.map(({ label, value }) => (
-                <button
-                  key={value}
-                  type="button"
-                  className={`${styles.filterOpt} ${draft.dietary.has(value) ? styles.filterOptActive : ""}`}
-                  onClick={() => toggle("dietary", value)}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className={styles.filterGroup}>
-            <span className={styles.filterGroupLabel}>Niche</span>
-            <div className={styles.filterOpts}>
-              {NICHE_OPTIONS.map(({ label, value }) => (
-                <button
-                  key={value}
-                  type="button"
-                  className={`${styles.filterOpt} ${draft.niche.has(value) ? styles.filterOptActive : ""}`}
-                  onClick={() => toggle("niche", value)}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className={styles.filterGroup}>
             <span className={styles.filterGroupLabel}>Order type</span>
             <div className={styles.filterOpts}>
               {opt("all", draft.orderType, "All", () =>
                 set({ orderType: "all" }),
               )}
-              {opt("one-time", draft.orderType, "Single order", () =>
-                set({ orderType: "one-time" }),
+              {opt("one_time", draft.orderType, "Single order", () =>
+                set({ orderType: "one_time" }),
               )}
               {opt("subscription", draft.orderType, "Subscription", () =>
                 set({ orderType: "subscription" }),
               )}
-            </div>
-          </div>
-          <div className={styles.filterGroup}>
-            <div className={styles.sliderLabelRow}>
-              <span className={styles.filterGroupLabel}>Max distance</span>
-              <span className={styles.sliderValue}>
-                {draft.distanceKm >= 25 ? "Any" : `${draft.distanceKm} km`}
-              </span>
-            </div>
-            <input
-              type="range"
-              className={styles.slider}
-              min={1}
-              max={25}
-              step={1}
-              value={draft.distanceKm}
-              onChange={(e) => set({ distanceKm: Number(e.target.value) })}
-            />
-            <div className={styles.sliderTicks}>
-              <span>1 km</span>
-              <span>Any</span>
             </div>
           </div>
         </div>
@@ -365,13 +241,7 @@ function FiltersPanel({
           <button
             type="button"
             className={styles.panelClearBtn}
-            onClick={() =>
-              setDraft({
-                ...DEFAULT_FILTERS,
-                dietary: new Set(),
-                niche: new Set(),
-              })
-            }
+            onClick={() => setDraft({ ...DEFAULT_FILTERS })}
           >
             Clear
           </button>
@@ -396,33 +266,22 @@ function FiltersPanel({
 
 // ─── Listing Card ─────────────────────────────────────────────────────────────
 
-function ListingCard({
+function ListingCardItem({
   listing,
-  cook,
   isSaved,
   onSave,
   canSave,
-  fulfillment,
 }: {
-  listing: MockListing;
-  cook: MockCook;
+  listing: ListingCard;
   isSaved: boolean;
   onSave: (id: string, e: React.MouseEvent) => void;
   canSave: boolean;
-  fulfillment: FulfillmentMode;
 }) {
-  const spotsLow = listing.ordersLeft > 0 && listing.ordersLeft <= 5;
-  const spotsOut = listing.ordersLeft === 0;
-  const schedule = scheduleLine(listing, fulfillment);
-
   return (
     <Link href={`/app/listings/${listing.id}`} className={styles.card}>
       <div className={styles.cardCover}>
-        {listing.deal && (
-          <span className={styles.dealBadge}>{listing.deal.badge}</span>
-        )}
         <Image
-          src={listing.image}
+          src={listing.coverPhotoUrl ?? "/placeholder.jpg"}
           alt={listing.title}
           fill
           className={styles.cardImage}
@@ -442,29 +301,24 @@ function ListingCard({
             />
           </button>
         )}
-        {spotsOut ? (
-          <span className={`${styles.stockPill} ${styles.stockOut}`}>
-            Sold out
-          </span>
-        ) : spotsLow ? (
-          <span className={`${styles.stockPill} ${styles.stockLow}`}>
-            {listing.ordersLeft} left
-          </span>
-        ) : null}
       </div>
 
       <div className={styles.cardBody}>
         <div className={styles.titleRow}>
           <h3 className={styles.cardTitle}>{listing.title}</h3>
-          <span className={styles.rating}>
-            <Star size={12} fill="currentColor" className={styles.star} />
-            <span className={styles.ratingValue}>{cook.rating.toFixed(1)}</span>
-          </span>
         </div>
 
         <p className={styles.metaLine}>
-          {cook.displayName.split(" ")[0]} · {formatDist(listing.distanceKm)} ·{" "}
-          <span className={styles.metaPrice}>From ${listing.priceFrom}</span>
+          {cookDisplayName(listing)}
+          {listing.priceFrom != null && (
+            <>
+              {" "}
+              ·{" "}
+              <span className={styles.metaPrice}>
+                {formatPrice(listing.priceFrom)}
+              </span>
+            </>
+          )}
           {listing.subscriptionEnabled && (
             <span className={styles.subHint}>
               <RefreshCw size={10} />
@@ -474,17 +328,9 @@ function ListingCard({
         </p>
 
         <p className={styles.scheduleLine}>
-          <span
-            className={
-              schedule.urgency !== "normal"
-                ? styles.scheduleUrgent
-                : styles.scheduleMuted
-            }
-          >
-            {schedule.orderBy}
+          <span className={styles.scheduleMuted}>
+            {listing.type === "subscription" ? "Subscription" : "Single order"}
           </span>
-          <span className={styles.scheduleSep}> · </span>
-          <span className={styles.scheduleMuted}>{schedule.receiveOn}</span>
         </p>
       </div>
     </Link>
@@ -495,25 +341,42 @@ function ListingCard({
 
 function SearchPageContent() {
   const searchParams = useSearchParams();
-  const { fulfillment, isLoggedIn } = useApp();
+  const { isLoggedIn } = useApp();
   const [query, setQuery] = useState(() => searchParams.get("q") ?? "");
-  const [filters, setFilters] = useState<FiltersState>(() => {
-    const c = searchParams.get("cuisine") as CuisineType | null;
-    return {
-      ...DEFAULT_FILTERS,
-      dietary: new Set(),
-      niche: new Set(),
-      ...(c ? { cuisine: c } : {}),
-    };
-  });
+  const [filters, setFilters] = useState<FiltersState>(() => ({
+    ...DEFAULT_FILTERS,
+  }));
   const [showFilters, setShowFilters] = useState(false);
   const [saved, setSaved] = useState<Set<string>>(new Set());
+  const [allListings, setAllListings] = useState<ListingCard[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [sort, setSort] = useState<SortOption>("relevance");
 
+  // Sync query from URL params
   useEffect(() => {
     setQuery(searchParams.get("q") ?? "");
-    const c = searchParams.get("cuisine") as CuisineType | null;
-    setFilters((f) => ({ ...f, cuisine: c ?? "all" }));
   }, [searchParams]);
+
+  // Fetch from API whenever query changes (debounced)
+  const fetchListings = useCallback((q: string) => {
+    setLoading(true);
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+    const url = q
+      ? `${baseUrl}/api/listings?q=${encodeURIComponent(q)}`
+      : `${baseUrl}/api/listings`;
+    fetch(url)
+      .then((r) => r.json())
+      .then((json) => {
+        setAllListings(Array.isArray(json.data) ? json.data : []);
+      })
+      .catch(() => setAllListings([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => fetchListings(query), query ? 300 : 0);
+    return () => clearTimeout(timer);
+  }, [query, fetchListings]);
 
   function toggleSave(id: string, e: React.MouseEvent) {
     e.preventDefault();
@@ -525,20 +388,17 @@ function SearchPageContent() {
     });
   }
 
-  const [sort, setSort] = useState<SortOption>("relevance");
-
   const results = useMemo(
-    () => applyFilters(MOCK_LISTINGS, fulfillment, filters, query),
-    [fulfillment, filters, query],
+    () => applyClientFilters(allListings, filters),
+    [allListings, filters],
   );
 
   const sorted = useMemo(() => {
     const arr = [...results];
-    if (sort === "price_asc") arr.sort((a, b) => a.priceFrom - b.priceFrom);
+    if (sort === "price_asc")
+      arr.sort((a, b) => (a.priceFrom ?? 0) - (b.priceFrom ?? 0));
     else if (sort === "price_desc")
-      arr.sort((a, b) => b.priceFrom - a.priceFrom);
-    else if (sort === "rating_desc")
-      arr.sort((a, b) => cookFor(b).rating - cookFor(a).rating);
+      arr.sort((a, b) => (b.priceFrom ?? 0) - (a.priceFrom ?? 0));
     return arr;
   }, [results, sort]);
 
@@ -554,14 +414,22 @@ function SearchPageContent() {
           </div>
           <div className={styles.chipScroller}>
             {CUISINE_OPTIONS.map(({ label, value }) => (
-              <button
+              <Link
                 key={value}
-                type="button"
-                className={`${styles.chip} ${filters.cuisine === value ? styles.chipActive : ""}`}
-                onClick={() => setFilters((f) => ({ ...f, cuisine: value }))}
+                href={
+                  value === "all"
+                    ? "/app/search"
+                    : `/app/search?q=${encodeURIComponent(value)}`
+                }
+                className={`${styles.chip} ${
+                  (value === "all" && !query) ||
+                  query.toLowerCase() === value.toLowerCase()
+                    ? styles.chipActive
+                    : ""
+                }`}
               >
                 {label}
-              </button>
+              </Link>
             ))}
           </div>
           <button
@@ -582,15 +450,19 @@ function SearchPageContent() {
       <div className={styles.content}>
         <div className={styles.resultsBar}>
           <p className={styles.resultCount}>
-            {results.length === 0 ? "Nothing found" : `${results.length} found`}
-            {query ? ` for "${query}"` : ""}
+            {loading
+              ? "Searching…"
+              : results.length === 0
+                ? "Nothing found"
+                : `${results.length} found`}
+            {!loading && query ? ` for "${query}"` : ""}
           </p>
           {results.length > 0 && (
             <SortDropdown value={sort} onChange={setSort} />
           )}
         </div>
 
-        {sorted.length === 0 ? (
+        {!loading && sorted.length === 0 ? (
           <div className={styles.emptyState}>
             <p className={styles.emptyTitle}>Nothing matched</p>
             <p className={styles.emptyDesc}>
@@ -610,14 +482,12 @@ function SearchPageContent() {
         ) : (
           <div className={styles.grid}>
             {sorted.map((l) => (
-              <ListingCard
+              <ListingCardItem
                 key={l.id}
                 listing={l}
-                cook={cookFor(l)}
                 isSaved={saved.has(l.id)}
                 onSave={toggleSave}
                 canSave={isLoggedIn}
-                fulfillment={fulfillment}
               />
             ))}
           </div>
@@ -629,8 +499,7 @@ function SearchPageContent() {
           filters={filters}
           onChange={setFilters}
           onClose={() => setShowFilters(false)}
-          fulfillment={fulfillment}
-          query={query}
+          allListings={allListings}
         />
       )}
     </div>
