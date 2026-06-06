@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { listings } from "@/db/schema";
+import { cookProfiles, listings } from "@/db/schema";
 
 export async function GET(
   _req: NextRequest,
@@ -10,6 +10,16 @@ export async function GET(
   const { cookId } = await params;
 
   try {
+    const [cook] = await db
+      .select({ id: cookProfiles.id })
+      .from(cookProfiles)
+      .where(eq(cookProfiles.id, cookId))
+      .limit(1);
+
+    if (!cook) {
+      return NextResponse.json({ error: "Cook not found." }, { status: 404 });
+    }
+
     const rows = await db
       .select({
         id: listings.id,

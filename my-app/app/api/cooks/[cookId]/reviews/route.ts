@@ -1,7 +1,7 @@
 import { count, desc, eq, sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { authUser, listings, reviews } from "@/db/schema";
+import { authUser, cookProfiles, listings, reviews } from "@/db/schema";
 
 export async function GET(
   req: NextRequest,
@@ -20,6 +20,16 @@ export async function GET(
   const offset = Number.isNaN(rawOffset) ? 0 : Math.max(0, rawOffset);
 
   try {
+    const [cook] = await db
+      .select({ id: cookProfiles.id })
+      .from(cookProfiles)
+      .where(eq(cookProfiles.id, cookId))
+      .limit(1);
+
+    if (!cook) {
+      return NextResponse.json({ error: "Cook not found." }, { status: 404 });
+    }
+
     const whereClause = sql`${reviews.cookId} = ${cookId} AND ${reviews.isVisible} = TRUE`;
 
     const [{ total }] = await db
