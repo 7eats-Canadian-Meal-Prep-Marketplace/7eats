@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import twilio from "twilio";
 import { db } from "@/db";
-import { authUser } from "@/db/schema";
+import { authUser, authUserTable } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { verifySignedPhone } from "@/lib/cookie";
 import { logAndCheckRateLimit } from "@/lib/rate-limit";
@@ -82,7 +82,7 @@ export async function POST(req: Request) {
   }
 
   await db
-    .update(authUser)
+    .update(authUserTable)
     .set({ phone, phoneVerified: true })
     .where(eq(authUser.id, session.user.id));
 

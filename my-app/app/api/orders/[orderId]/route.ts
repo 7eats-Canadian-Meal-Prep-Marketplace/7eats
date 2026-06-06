@@ -246,9 +246,10 @@ export async function DELETE(req: NextRequest, { params }: Params) {
 
     // Compute capture floor
     const now = new Date();
-    const pickupAt = new Date(order.pickupAt);
+    const pickupAt = order.pickupAt;
     const windowMs = (order.lateCancelWindowHours ?? 24) * 60 * 60 * 1000;
-    const withinWindow = now > new Date(pickupAt.getTime() - windowMs);
+    const withinWindow =
+      pickupAt !== null && now > new Date(pickupAt.getTime() - windowMs);
 
     const totalPrice = parseFloat(order.totalPrice);
     const depositAmount = order.depositAmount

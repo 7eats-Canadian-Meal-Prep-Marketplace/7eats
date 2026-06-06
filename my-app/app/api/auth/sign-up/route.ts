@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/db";
-import { authUser } from "@/db/schema";
+import { authUser, authUserTable } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { hashIp } from "@/lib/hash";
 import { logAndCheckRateLimit } from "@/lib/rate-limit";
@@ -114,7 +114,7 @@ export async function POST(req: Request) {
   // Promote the fresh row from the default `cook` to `client` and attach the
   // profile fields.
   await db
-    .update(authUser)
+    .update(authUserTable)
     .set({ role: "client", status: "active", firstName, lastName })
     .where(eq(authUser.id, userId));
 

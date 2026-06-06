@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/db";
-import { authUser, userPreferences } from "@/db/schema";
+import { authUser, authUserTable, userPreferences } from "@/db/schema";
 import { auth } from "@/lib/auth";
 
 const schema = z.object({
@@ -46,7 +46,7 @@ export async function POST(req: Request) {
     });
 
   await db
-    .update(authUser)
+    .update(authUserTable)
     .set({
       onboardingCompletedAt: new Date(),
       ...(dateOfBirth ? { dateOfBirth } : {}),

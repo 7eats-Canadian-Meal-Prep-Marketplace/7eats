@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/db";
-import { authUser } from "@/db/schema";
+import { authUser, authUserTable } from "@/db/schema";
 import { auth } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
@@ -80,7 +80,7 @@ export async function PATCH(req: NextRequest) {
 
   try {
     await db
-      .update(authUser)
+      .update(authUserTable)
       .set(updates)
       .where(eq(authUser.id, session.user.id));
 

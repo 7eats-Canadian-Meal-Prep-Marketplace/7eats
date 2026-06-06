@@ -150,6 +150,7 @@ export async function GET(req: NextRequest) {
     );
 
     for (const row of rawOrders) {
+      if (!row.pickupAt) continue;
       const pickupTime = row.pickupAt.getTime();
       for (const bucket of periods) {
         if (

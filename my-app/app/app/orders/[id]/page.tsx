@@ -14,7 +14,8 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
-import { use, useEffect, useRouter, useState } from "react";
+import { useRouter } from "next/navigation";
+import { use, useEffect, useState } from "react";
 import styles from "./page.module.css";
 
 // ─── Types ──────────────────────────────────────────────────────────────────────

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import {
   authUser,
+  authUserTable,
   clientSubscriptions,
   cookProfiles,
   listingSubscriptionTiers,
@@ -192,7 +193,7 @@ export async function POST(req: NextRequest) {
       );
 
       await db
-        .update(authUser)
+        .update(authUserTable)
         .set({ stripeCustomerId })
         .where(eq(authUser.id, session.user.id));
     }
