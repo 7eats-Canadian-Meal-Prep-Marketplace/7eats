@@ -6,7 +6,10 @@ const { verificationChecksCreate } = vi.hoisted(() => ({
 
 vi.mock("@/lib/auth", () => ({ auth: { api: { getSession: vi.fn() } } }));
 vi.mock("@/db", () => ({ db: { update: vi.fn() } }));
-vi.mock("@/db/schema", () => ({ authUser: { id: "id" } }));
+vi.mock("@/db/schema", () => ({
+  authUser: { id: "id" },
+  authUserTable: { id: "id" },
+}));
 vi.mock("drizzle-orm", () => ({ eq: vi.fn() }));
 vi.mock("@/lib/cookie", () => ({ verifySignedPhone: vi.fn() }));
 vi.mock("@/lib/rate-limit", () => ({ logAndCheckRateLimit: vi.fn() }));

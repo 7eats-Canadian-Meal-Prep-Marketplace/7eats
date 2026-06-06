@@ -99,7 +99,7 @@ export const cookProfiles = pgTable(
     pgPolicy("cook_profiles_select_active", {
       for: "select",
       to: "public",
-      using: sql`EXISTS (SELECT 1 FROM "user" u WHERE u.id = cook_profiles.user_id AND u.status = 'active')`,
+      using: sql`app_public_user_is_active(cook_profiles.user_id)`,
     }),
     pgPolicy("cook_profiles_update_own", {
       for: "update",

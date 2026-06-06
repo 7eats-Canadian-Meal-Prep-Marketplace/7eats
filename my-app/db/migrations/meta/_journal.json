@@ -71,6 +71,13 @@
       "when": 1780532813499,
       "tag": "0009_client_onboarding",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1780787040000,
+      "tag": "0010_lock_down_auth_user_rls",
+      "breakpoints": true
     }
   ]
 }

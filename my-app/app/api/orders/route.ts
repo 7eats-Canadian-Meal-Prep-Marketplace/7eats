@@ -413,10 +413,18 @@ export async function POST(req: NextRequest) {
         email: authUser.email,
         firstName: authUser.firstName,
         lastName: authUser.lastName,
+        onboardingCompletedAt: authUser.onboardingCompletedAt,
       })
       .from(authUser)
       .where(eq(authUser.id, session.user.id))
       .limit(1);
+
+    if (!userRow?.onboardingCompletedAt) {
+      return NextResponse.json(
+        { error: "Complete onboarding before placing an order." },
+        { status: 403 },
+      );
+    }
 
     let stripeCustomerId = userRow?.stripeCustomerId ?? null;
     if (!stripeCustomerId) {

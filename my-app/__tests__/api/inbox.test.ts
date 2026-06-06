@@ -29,6 +29,7 @@ vi.mock("drizzle-orm", () => ({
 }));
 
 import { NextRequest } from "next/server";
+import { POST as postBusinessConversation } from "@/app/api/business/inbox/conversations/route";
 import {
   GET as getMessages,
   POST as postMessage,
@@ -129,6 +130,12 @@ function updateReturningChain(rows: unknown[]) {
   vi.mocked(db.update).mockReturnValue({ set } as never);
 }
 
+function insertReturningChain(rows: unknown[]) {
+  const returning = vi.fn().mockResolvedValue(rows);
+  const values = vi.fn(() => ({ returning }));
+  vi.mocked(db.insert).mockReturnValue({ values } as never);
+}
+
 // ─── GET /api/inbox ───────────────────────────────────────────────────────────
 
 describe("GET /api/inbox", () => {
@@ -186,6 +193,34 @@ describe("GET /api/inbox", () => {
     expect(body.data).toHaveLength(1);
     expect(body.data[0].id).toBe(CONV_ID);
     expect(body.data[0].cookName).toBe("Maria G.");
+  });
+});
+
+// ─── POST /api/business/inbox/conversations ──────────────────────────────────
+
+describe("POST /api/business/inbox/conversations", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("returns 403 when the order/client pair does not belong to the cook", async () => {
+    mockCookSession(USER_ID);
+    let call = 0;
+    vi.mocked(db.select).mockImplementation(() => {
+      call++;
+      if (call === 1) return limitChain([{ id: "cook-uuid" }]);
+      return limitChain([]);
+    });
+    insertReturningChain([{ id: CONV_ID }]);
+
+    const res = await postBusinessConversation(
+      makeReq("http://localhost/api/business/inbox/conversations", "POST", {
+        clientId: "other-client",
+        orderId: "11111111-1111-4111-8111-111111111111",
+        initialMessage: "Hello",
+      }),
+    );
+
+    expect(res.status).toBe(403);
+    expect(db.insert).not.toHaveBeenCalled();
   });
 });
 

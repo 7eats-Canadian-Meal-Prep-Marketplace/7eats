@@ -26,6 +26,24 @@ export function getListingPhotoUrl(key: string): string {
   return `${base}/${key}`;
 }
 
+export function isListingPhotoUrl(url: string): boolean {
+  const base = BUCKET_CONFIG[BUCKETS.LISTINGS].cdnBaseUrl;
+  if (!base) return false;
+
+  try {
+    const normalizedBase = base.replace(/\/+$/, "");
+    const parsedUrl = new URL(url);
+    const parsedBase = new URL(normalizedBase);
+
+    return (
+      parsedUrl.origin === parsedBase.origin &&
+      url.startsWith(`${normalizedBase}/listings/`)
+    );
+  } catch {
+    return false;
+  }
+}
+
 export async function deleteListingPhoto(key: string): Promise<void> {
   await getR2Client().send(
     new DeleteObjectCommand({ Bucket: BUCKETS.LISTINGS, Key: key }),

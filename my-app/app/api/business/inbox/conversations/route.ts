@@ -169,6 +169,27 @@ export async function POST(req: NextRequest) {
   const { clientId, orderId, initialMessage } = parsed.data;
 
   try {
+    const orderOwnershipConditions = [
+      eq(orders.cookId, cookId),
+      eq(orders.clientId, clientId),
+    ];
+    if (orderId) {
+      orderOwnershipConditions.push(eq(orders.id, orderId));
+    }
+
+    const [authorizedOrder] = await db
+      .select({ id: orders.id })
+      .from(orders)
+      .where(and(...orderOwnershipConditions))
+      .limit(1);
+
+    if (!authorizedOrder) {
+      return NextResponse.json(
+        { error: "Client/order does not belong to this cook." },
+        { status: 403 },
+      );
+    }
+
     // Check if a conversation already exists for this cook+client+order triple
     const conditions = [
       eq(conversations.cookId, cookId),

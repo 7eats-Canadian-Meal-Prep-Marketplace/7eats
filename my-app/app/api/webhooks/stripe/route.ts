@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import type Stripe from "stripe";
-import { db } from "@/db";
+import { db, dbPool } from "@/db";
 import {
   clientSubscriptions,
   cookPayouts,
@@ -115,7 +115,11 @@ export async function POST(req: NextRequest) {
           .where(eq(clientSubscriptions.stripeSubscriptionId, subscriptionId))
           .limit(1);
 
-        if (!sub) break;
+        if (!sub) {
+          throw new Error(
+            `Subscription ${subscriptionId} is not ready for invoice ${invoice.id}`,
+          );
+        }
 
         const [tier] = await db
           .select({ price: listingSubscriptionTiers.price })
@@ -123,7 +127,11 @@ export async function POST(req: NextRequest) {
           .where(eq(listingSubscriptionTiers.id, sub.tierId))
           .limit(1);
 
-        if (!tier) break;
+        if (!tier) {
+          throw new Error(
+            `Tier ${sub.tierId} not found for subscription ${sub.id}`,
+          );
+        }
 
         const [cook] = await db
           .select({ platformFeePct: cookProfiles.platformFeePct })
@@ -131,7 +139,11 @@ export async function POST(req: NextRequest) {
           .where(eq(cookProfiles.id, sub.cookId))
           .limit(1);
 
-        if (!cook) break;
+        if (!cook) {
+          throw new Error(
+            `Cook ${sub.cookId} not found for subscription ${sub.id}`,
+          );
+        }
 
         const tierPriceCents = Math.round(Number.parseFloat(tier.price) * 100);
         const totalCents =
@@ -143,49 +155,6 @@ export async function POST(req: NextRequest) {
         const periodEnd = invoice.period_end
           ? new Date(invoice.period_end * 1000)
           : new Date();
-
-        const [order] = await db
-          .insert(orders)
-          .values({
-            clientId: sub.clientId,
-            listingId: sub.listingId,
-            cookId: sub.cookId,
-            subscriptionId: sub.id,
-            status: "pending",
-            quantity: 1,
-            unitPrice,
-            totalPrice,
-            currency: "CAD",
-            pickupAt: periodEnd,
-          })
-          .onConflictDoNothing()
-          .returning();
-
-        if (!order) break;
-
-        // Snapshot the listing's current dishes into order_dishes
-        const listingDishRows = await db
-          .select({
-            dishId: listingDishes.dishId,
-            quantity: listingDishes.quantity,
-            sortOrder: listingDishes.sortOrder,
-            dishName: dishes.name,
-          })
-          .from(listingDishes)
-          .innerJoin(dishes, eq(listingDishes.dishId, dishes.id))
-          .where(eq(listingDishes.listingId, sub.listingId));
-
-        if (listingDishRows.length > 0) {
-          await db.insert(orderDishes).values(
-            listingDishRows.map((d) => ({
-              orderId: order.id,
-              dishId: d.dishId,
-              dishName: d.dishName,
-              quantity: d.quantity,
-              sortOrder: d.sortOrder,
-            })),
-          );
-        }
 
         const feePct = Number.parseFloat(cook.platformFeePct);
         const platformFeeCents = Math.round((totalCents * feePct) / 100);
@@ -223,31 +192,80 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        await db.insert(orderPayments).values({
-          orderId: order.id,
-          cookId: sub.cookId,
-          clientId: sub.clientId,
-          type: "full",
-          status: "held",
-          totalAmount: totalPrice,
-          platformFeePct: cook.platformFeePct,
-          platformFeeAmount,
-          cookPayoutAmount,
-          currency: "CAD",
-          stripePaymentIntentId: paymentIntentId,
-          stripeChargeId,
-          authorizedAt: new Date(),
-          heldAt: new Date(),
-        });
+        await dbPool.transaction(async (tx) => {
+          const [order] = await tx
+            .insert(orders)
+            .values({
+              clientId: sub.clientId,
+              listingId: sub.listingId,
+              cookId: sub.cookId,
+              subscriptionId: sub.id,
+              status: "pending",
+              quantity: 1,
+              unitPrice,
+              totalPrice,
+              currency: "CAD",
+              pickupAt: periodEnd,
+            })
+            .onConflictDoNothing()
+            .returning();
 
-        // Sync subscription period dates
-        await db
-          .update(clientSubscriptions)
-          .set({
-            currentPeriodStart: new Date(invoice.period_start * 1000),
-            currentPeriodEnd: periodEnd,
-          })
-          .where(eq(clientSubscriptions.id, sub.id));
+          if (!order) {
+            throw new Error(
+              `Subscription order already exists for invoice ${invoice.id}`,
+            );
+          }
+
+          // Snapshot the listing's current dishes into order_dishes
+          const listingDishRows = await tx
+            .select({
+              dishId: listingDishes.dishId,
+              quantity: listingDishes.quantity,
+              sortOrder: listingDishes.sortOrder,
+              dishName: dishes.name,
+            })
+            .from(listingDishes)
+            .innerJoin(dishes, eq(listingDishes.dishId, dishes.id))
+            .where(eq(listingDishes.listingId, sub.listingId));
+
+          if (listingDishRows.length > 0) {
+            await tx.insert(orderDishes).values(
+              listingDishRows.map((d) => ({
+                orderId: order.id,
+                dishId: d.dishId,
+                dishName: d.dishName,
+                quantity: d.quantity,
+                sortOrder: d.sortOrder,
+              })),
+            );
+          }
+
+          await tx.insert(orderPayments).values({
+            orderId: order.id,
+            cookId: sub.cookId,
+            clientId: sub.clientId,
+            type: "full",
+            status: "held",
+            totalAmount: totalPrice,
+            platformFeePct: cook.platformFeePct,
+            platformFeeAmount,
+            cookPayoutAmount,
+            currency: "CAD",
+            stripePaymentIntentId: paymentIntentId,
+            stripeChargeId,
+            authorizedAt: new Date(),
+            heldAt: new Date(),
+          });
+
+          // Sync subscription period dates only after the order/payment rows exist.
+          await tx
+            .update(clientSubscriptions)
+            .set({
+              currentPeriodStart: new Date(invoice.period_start * 1000),
+              currentPeriodEnd: periodEnd,
+            })
+            .where(eq(clientSubscriptions.id, sub.id));
+        });
 
         break;
       }

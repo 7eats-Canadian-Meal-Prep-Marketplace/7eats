@@ -71,9 +71,12 @@ export async function PATCH(req: NextRequest) {
     );
   }
 
-  const updates = Object.fromEntries(
+  const updates: Partial<typeof authUser.$inferInsert> = Object.fromEntries(
     Object.entries(parsed.data).filter(([, v]) => v !== undefined),
   );
+  if (Object.hasOwn(updates, "phone")) {
+    updates.phoneVerified = false;
+  }
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json(

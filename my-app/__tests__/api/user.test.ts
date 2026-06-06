@@ -10,6 +10,7 @@ vi.mock("@/db", () => ({
 
 vi.mock("@/db/schema", () => ({
   authUser: {},
+  authUserTable: {},
 }));
 
 vi.mock("drizzle-orm", () => ({
@@ -65,6 +66,7 @@ function updateWhereChain() {
   const where = vi.fn().mockResolvedValue([]);
   const set = vi.fn(() => ({ where }));
   vi.mocked(db.update).mockReturnValue({ set } as never);
+  return { set, where };
 }
 
 const MOCK_USER = {
@@ -178,6 +180,27 @@ describe("PATCH /api/user/profile", () => {
     const body = await res.json();
     expect(body.success).toBe(true);
     expect(body.data.firstName).toBe("Bob");
+  });
+
+  it("clears phoneVerified when the phone number changes", async () => {
+    mockSession(USER_ID);
+    const { set } = updateWhereChain();
+    const updatedUser = { ...MOCK_USER, phone: "+14165550999" };
+    vi.mocked(db.select).mockImplementation(() => limitChain([updatedUser]));
+
+    const res = await patchProfile(
+      makeReq("http://localhost/api/user/profile", "PATCH", {
+        phone: "+14165550999",
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    expect(set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        phone: "+14165550999",
+        phoneVerified: false,
+      }),
+    );
   });
 
   it("returns 404 when user not found after update", async () => {

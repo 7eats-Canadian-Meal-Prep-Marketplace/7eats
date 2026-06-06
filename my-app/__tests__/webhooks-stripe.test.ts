@@ -6,6 +6,7 @@ const { constructEventMock } = vi.hoisted(() => ({
 
 vi.mock("@/db", () => ({
   db: { select: vi.fn(), insert: vi.fn(), update: vi.fn(), delete: vi.fn() },
+  dbPool: { transaction: vi.fn() },
 }));
 vi.mock("@/db/schema", () => ({
   clientSubscriptions: {},
@@ -30,7 +31,7 @@ vi.mock("stripe", () => ({
 
 import { NextRequest } from "next/server";
 import { POST } from "@/app/api/webhooks/stripe/route";
-import { db } from "@/db";
+import { db, dbPool } from "@/db";
 
 function makeRequest(
   event: unknown,
@@ -126,6 +127,9 @@ beforeEach(() => {
   );
   mockUpdate();
   mockDelete();
+  vi.mocked(dbPool.transaction).mockImplementation(async (cb) => {
+    return cb(db as never);
+  });
 });
 
 afterEach(() => {
@@ -206,14 +210,45 @@ describe("invoice.payment_succeeded", () => {
     });
   });
 
-  it("no-ops when the subscription is unknown", async () => {
+  it("returns 500 and removes the event marker when the subscription is not ready yet", async () => {
     vi.mocked(db.select).mockImplementation(() => limitChain([]));
+    mockInsert({ id: "order-1" });
+
+    const res = await POST(
+      makeRequest({
+        id: "evt_subscription_not_ready",
+        ...paymentSucceededEvent(),
+      }),
+    );
+
+    expect(res.status).toBe(500);
+    expect(deleteWhere).toHaveBeenCalled();
+  });
+
+  it("uses a transaction for subscription order, dish snapshot, payment, and period writes", async () => {
+    let call = 0;
+    vi.mocked(db.select).mockImplementation(() => {
+      call++;
+      if (call === 1)
+        return limitChain([
+          {
+            id: "subrow-1",
+            clientId: "client-1",
+            listingId: "listing-1",
+            tierId: "tier-1",
+            cookId: "cook-1",
+          },
+        ]);
+      if (call === 2) return limitChain([{ price: "20.00" }]);
+      if (call === 3) return limitChain([{ platformFeePct: "15.00" }]);
+      return joinChain([]);
+    });
     mockInsert({ id: "order-1" });
 
     const res = await POST(makeRequest(paymentSucceededEvent()));
 
     expect(res.status).toBe(200);
-    expect(db.insert).not.toHaveBeenCalled();
+    expect(dbPool.transaction).toHaveBeenCalledTimes(1);
   });
 });
 

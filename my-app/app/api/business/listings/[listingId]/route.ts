@@ -13,6 +13,7 @@ import {
   listingSubscriptionTiers,
   listings,
 } from "@/db/schema";
+import { isListingPhotoUrl } from "@/lib/storage/listings";
 
 export type Params = { params: Promise<{ listingId: string }> };
 
@@ -22,7 +23,10 @@ const updateListingSchema = z
     description: z.string().optional(),
     basePrice: z.number().positive(),
     currency: z.string().length(3),
-    coverPhotoUrl: z.url().nullable(),
+    coverPhotoUrl: z
+      .url()
+      .refine(isListingPhotoUrl, "Cover photo must be hosted on the 7eats CDN.")
+      .nullable(),
     minOrderQty: z.number().int().min(1),
     maxOrderQty: z.number().int().nullable(),
     cancellationNoticeDays: z.number().int().min(0).nullable(),

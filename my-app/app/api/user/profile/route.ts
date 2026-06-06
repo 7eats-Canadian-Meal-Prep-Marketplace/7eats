@@ -70,7 +70,10 @@ export async function PATCH(req: NextRequest) {
     );
   }
 
-  const updates = parsed.data;
+  const updates: Partial<typeof authUser.$inferInsert> = { ...parsed.data };
+  if (Object.hasOwn(updates, "phone")) {
+    updates.phoneVerified = false;
+  }
   if (Object.keys(updates).length === 0) {
     return NextResponse.json(
       { error: "No fields provided to update." },

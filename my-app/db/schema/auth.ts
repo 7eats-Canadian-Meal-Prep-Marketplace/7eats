@@ -50,13 +50,20 @@ const authUserTable = pgTable(
     }>(),
   },
   () => [
-    // Public read required: other tables' RLS policies JOIN this table to check
-    // user.status (e.g. cook_profiles_select_active). Restricting select would
-    // silently break anonymous browse flows.
-    pgPolicy("user_select_all", {
+    pgPolicy("user_select_own", {
       for: "select",
       to: "public",
-      using: sql`true`,
+      using: sql`id = auth.uid()`,
+    }),
+    pgPolicy("user_select_admin", {
+      for: "select",
+      to: "public",
+      using: isAdmin,
+    }),
+    pgPolicy("user_select_service", {
+      for: "select",
+      to: "public",
+      using: isServiceRole,
     }),
     pgPolicy("user_insert_service", {
       for: "insert",

@@ -252,6 +252,24 @@ describe("PATCH /api/business/listings/[listingId]", () => {
     expect(body.error).toBeDefined();
   });
 
+  it("returns 400 when coverPhotoUrl is not hosted on the listings CDN", async () => {
+    vi.stubEnv("R2_PUBLIC_BUCKET_URL_LISTINGS", "https://cdn.7eats.test");
+    mockSession(USER_ID);
+    const limit = vi.fn().mockResolvedValue([{ id: COOK_ID }]);
+    const where = vi.fn(() => ({ limit }));
+    const from = vi.fn(() => ({ where }));
+    vi.mocked(db.select).mockReturnValue({ from } as never);
+
+    const res = await PATCH(
+      makeRequest("PATCH", {
+        coverPhotoUrl: "https://tracker.example/pixel.png",
+      }),
+      { params },
+    );
+
+    expect(res.status).toBe(400);
+  });
+
   it("returns 200 on valid patch", async () => {
     mockSession(USER_ID);
     const updatedListing = {

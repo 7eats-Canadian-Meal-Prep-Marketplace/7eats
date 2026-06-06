@@ -7,6 +7,7 @@ import {
 } from "@/app/api/business/listings/_lib/cook-auth";
 import { db } from "@/db";
 import { listings } from "@/db/schema";
+import { isListingPhotoUrl } from "@/lib/storage/listings";
 
 const VALID_STATUSES = [
   "draft",
@@ -22,7 +23,10 @@ const createListingSchema = z
     description: z.string().optional(),
     basePrice: z.number().positive(),
     currency: z.string().length(3).optional().default("CAD"),
-    coverPhotoUrl: z.url().optional(),
+    coverPhotoUrl: z
+      .url()
+      .refine(isListingPhotoUrl, "Cover photo must be hosted on the 7eats CDN.")
+      .optional(),
     minOrderQty: z.number().int().min(1).optional().default(1),
     maxOrderQty: z.number().int().optional(),
     fulfillment: z

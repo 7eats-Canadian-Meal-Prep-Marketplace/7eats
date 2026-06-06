@@ -195,6 +195,19 @@ export async function PATCH(req: NextRequest, { params }: Params) {
               refundedAt: new Date(),
             })
             .where(eq(orderPayments.id, payment.id));
+        } else if (payment.status === "held") {
+          const refundId = await refundPaymentIntent({
+            paymentIntentId: payment.stripePaymentIntentId,
+            idempotencyKey: `cook-cancel-held-refund-${orderId}-${payment.id}`,
+          });
+          await db
+            .update(orderPayments)
+            .set({
+              status: "refunded",
+              stripeRefundId: refundId,
+              refundedAt: new Date(),
+            })
+            .where(eq(orderPayments.id, payment.id));
         }
       }
     }
