@@ -406,8 +406,8 @@ function CheckoutInner() {
               <section className={styles.formSection}>
                 <h2 className={styles.formTitle}>Contact details</h2>
 
+                {/* Logged-in: read-only summary — unauthenticated users are redirected to login by validateDetails() */}
                 {isLoggedIn ? (
-                  /* Logged-in: read-only summary — no need to re-enter known info */
                   <div className={styles.contactSummary}>
                     <div className={styles.contactRow}>
                       <span className={styles.contactLabel}>Name</span>
@@ -430,93 +430,7 @@ function CheckoutInner() {
                       </div>
                     )}
                   </div>
-                ) : (
-                  /* Guest: full editable form */
-                  <>
-                    <p className={styles.sectionLead}>
-                      We'll send your order confirmation and updates here.
-                    </p>
-                    <div className={styles.formRow}>
-                      <div className={styles.formGroup}>
-                        <label className={styles.label} htmlFor="firstName">
-                          First name
-                        </label>
-                        <input
-                          id="firstName"
-                          type="text"
-                          className={styles.input}
-                          value={contact.firstName}
-                          onChange={(e) =>
-                            setContact((c) => ({
-                              ...c,
-                              firstName: e.target.value,
-                            }))
-                          }
-                        />
-                        {errors.firstName && (
-                          <p className={styles.fieldError}>
-                            {errors.firstName}
-                          </p>
-                        )}
-                      </div>
-                      <div className={styles.formGroup}>
-                        <label className={styles.label} htmlFor="lastName">
-                          Last name
-                        </label>
-                        <input
-                          id="lastName"
-                          type="text"
-                          className={styles.input}
-                          value={contact.lastName}
-                          onChange={(e) =>
-                            setContact((c) => ({
-                              ...c,
-                              lastName: e.target.value,
-                            }))
-                          }
-                        />
-                        {errors.lastName && (
-                          <p className={styles.fieldError}>{errors.lastName}</p>
-                        )}
-                      </div>
-                    </div>
-                    <div className={styles.formGroup}>
-                      <label className={styles.label} htmlFor="email">
-                        Email
-                      </label>
-                      <input
-                        id="email"
-                        type="email"
-                        className={styles.input}
-                        value={contact.email}
-                        onChange={(e) =>
-                          setContact((c) => ({ ...c, email: e.target.value }))
-                        }
-                      />
-                      {errors.email && (
-                        <p className={styles.fieldError}>{errors.email}</p>
-                      )}
-                    </div>
-                    <div className={styles.formGroup}>
-                      <label className={styles.label} htmlFor="phone">
-                        Phone
-                      </label>
-                      <input
-                        id="phone"
-                        type="tel"
-                        placeholder="+1 (416) 555-0000"
-                        className={styles.input}
-                        value={contact.phone}
-                        onChange={(e) =>
-                          setContact((c) => ({ ...c, phone: e.target.value }))
-                        }
-                      />
-                      {errors.phone && (
-                        <p className={styles.fieldError}>{errors.phone}</p>
-                      )}
-                    </div>
-                  </>
-                )}
+                ) : null}
               </section>
 
               {/* Delivery address — only when at least one item requires delivery */}

@@ -97,12 +97,7 @@ function ConfirmationInner() {
                   )}
                 </span>
               </div>
-              <div className={styles.orderRowRight}>
-                <span className={styles.pickupCodeLabel}>Order</span>
-                <span className={styles.pickupCode}>
-                  {o.orderId.split("-").slice(-1)[0]}
-                </span>
-              </div>
+              <p className={styles.orderRef}>{o.orderId}</p>
             </div>
           ))}
         </div>
