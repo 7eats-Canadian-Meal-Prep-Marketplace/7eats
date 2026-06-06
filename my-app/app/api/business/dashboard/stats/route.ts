@@ -138,9 +138,9 @@ export async function GET(req: NextRequest) {
       success: true,
       data: {
         orders: {
-          pending: statusMap["pending"] ?? 0,
-          confirmed: statusMap["confirmed"] ?? 0,
-          ready: statusMap["ready"] ?? 0,
+          pending: statusMap.pending ?? 0,
+          confirmed: statusMap.confirmed ?? 0,
+          ready: statusMap.ready ?? 0,
           fulfilledThisMonth: Number(fulfilledThisMonthCount[0]?.count ?? 0),
           fulfilledAllTime: Number(fulfilledAllTimeCount[0]?.count ?? 0),
         },

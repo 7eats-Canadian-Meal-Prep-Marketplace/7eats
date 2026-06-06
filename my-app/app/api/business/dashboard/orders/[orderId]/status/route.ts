@@ -22,7 +22,6 @@ import {
 import {
   cancelPaymentIntent,
   capturePaymentIntent,
-  partialCapturePaymentIntent,
   refundPaymentIntent,
 } from "@/lib/stripe-payments";
 

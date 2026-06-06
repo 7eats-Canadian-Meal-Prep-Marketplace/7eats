@@ -84,14 +84,24 @@ function buildCountChain(total: number) {
   return { from: fromFn } as never;
 }
 
-// Chain for data query: db.select({...}).from(...).leftJoin(...).where(...).orderBy(...).limit(...).offset(...) => resolves
+// Chain for data query: db.select({...}).from(...).leftJoin(...).leftJoin(...).leftJoin(...).where(...).orderBy(...).limit(...).offset(...) => resolves
+// The route now has 3 leftJoin calls: listings, cookProfiles, authUser
 function buildDataChain(finalValue: unknown) {
   const offsetFn = vi.fn().mockResolvedValue(finalValue);
   const limitFn = vi.fn(() => ({ offset: offsetFn }));
   const orderByFn = vi.fn(() => ({ limit: limitFn }));
   const whereFn = vi.fn(() => ({ orderBy: orderByFn }));
-  const leftJoinFn = vi.fn(() => ({ where: whereFn }));
-  const fromFn = vi.fn(() => ({ leftJoin: leftJoinFn }));
+  // Each leftJoin returns an object that has both leftJoin (for chaining) and where
+  const thirdLeftJoinFn = vi.fn(() => ({ where: whereFn }));
+  const secondLeftJoinFn = vi.fn(() => ({
+    leftJoin: thirdLeftJoinFn,
+    where: whereFn,
+  }));
+  const firstLeftJoinFn = vi.fn(() => ({
+    leftJoin: secondLeftJoinFn,
+    where: whereFn,
+  }));
+  const fromFn = vi.fn(() => ({ leftJoin: firstLeftJoinFn }));
   return { from: fromFn } as never;
 }
 

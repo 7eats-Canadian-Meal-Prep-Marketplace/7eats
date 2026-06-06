@@ -45,7 +45,7 @@ function mockSession(userId: string | null) {
   );
 }
 
-function mockCookLookup(cookId: string | null) {
+function _mockCookLookup(cookId: string | null) {
   const limit = vi.fn().mockResolvedValue(cookId ? [{ id: cookId }] : []);
   const where = vi.fn(() => ({ limit }));
   const from = vi.fn(() => ({ where }));

@@ -1,5 +1,5 @@
+import { readFileSync } from "node:fs";
 import { defineConfig } from "drizzle-kit";
-import { readFileSync } from "fs";
 
 // drizzle-kit only auto-loads .env, not .env.local — load it manually
 try {

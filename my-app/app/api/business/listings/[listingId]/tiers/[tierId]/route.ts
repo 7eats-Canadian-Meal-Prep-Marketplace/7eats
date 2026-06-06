@@ -201,7 +201,7 @@ export async function DELETE(req: NextRequest, { params }: Params) {
       );
     }
 
-    const [cook] = await db
+    const [_cook] = await db
       .select({ stripeAccountId: cookProfiles.stripeAccountId })
       .from(cookProfiles)
       .where(eq(cookProfiles.id, cookId))
