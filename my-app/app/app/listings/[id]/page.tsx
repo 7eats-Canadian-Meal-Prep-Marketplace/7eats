@@ -15,32 +15,105 @@ import {
   TrendingDown,
 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { use, useEffect, useMemo, useRef, useState } from "react";
+import { notFound, useRouter } from "next/navigation";
+import { use, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useCart } from "../../_cart-context";
-import {
-  type DietaryBadge,
-  MOCK_COOKS,
-  MOCK_LISTING_REVIEWS,
-  MOCK_LISTINGS,
-  type MockDish,
-} from "../../_mock";
+import type { MockDish } from "../../_mock";
 import { DealCallout } from "./_DealCallout";
 import DishModal from "./_DishModal";
 import styles from "./page.module.css";
 
-function badgeLabel(badge: DietaryBadge): string {
-  const map: Record<DietaryBadge, string> = {
-    halal: "Halal",
-    vegan: "Vegan",
-    vegetarian: "Vegetarian",
-    "gluten-free": "Gluten-free",
-    "dairy-free": "Dairy-free",
-    "nut-free": "Nut-free",
-    kosher: "Kosher",
+// ── Local API types ──────────────────────────────────────────────────────────
+
+type ApiDish = {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  portionSize: string | null;
+};
+
+type ApiPromotion = {
+  id: string;
+  type: string;
+  value: number | null;
+  badge: string;
+};
+
+type ApiBundle = {
+  id: string;
+  quantity: number;
+  price: number;
+  label: string | null;
+};
+
+type ApiCook = {
+  id: string;
+  name: string;
+  firstName: string | null;
+  neighborhood: string | null;
+  rating: number | null;
+  isVerified: boolean;
+};
+
+type ApiListing = {
+  id: string;
+  title: string;
+  description: string | null;
+  type: string;
+  subscriptionEnabled: boolean;
+  basePrice: number;
+  currency: string;
+  minOrderQty: number;
+  maxOrderQty: number | null;
+  coverPhotoUrl: string | null;
+  depositEnabled: boolean;
+  createdAt: string;
+  cook: ApiCook;
+  dishes: ApiDish[];
+  promotion: ApiPromotion | null;
+  bundles: ApiBundle[];
+};
+
+type ApiReview = {
+  id: string;
+  rating: number;
+  comment: string | null;
+  reviewerName: string;
+  createdAt: string | null;
+};
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+/** Convert an ApiDish to the MockDish shape that DishModal expects */
+function toMockDish(d: ApiDish): MockDish {
+  return {
+    id: d.id,
+    name: d.name,
+    description: d.description ?? "",
+    price: d.price,
+    portionSize: d.portionSize ?? "",
+    emoji: "🍽️",
+    badges: [],
   };
-  return map[badge];
 }
+
+/** Format ISO date as "May 28" */
+function formatReviewDate(iso: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleDateString("en-CA", { month: "short", day: "numeric" });
+}
+
+/** Derive initials from a full name */
+function nameInitials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+}
+
+// ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function ListingPage({
   params,
@@ -48,52 +121,90 @@ export default function ListingPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const listing = MOCK_LISTINGS.find((l) => l.id === id) ?? MOCK_LISTINGS[0];
-  const cook = MOCK_COOKS.find((c) => c.id === listing.cookId) ?? MOCK_COOKS[0];
-  const reviews = MOCK_LISTING_REVIEWS[listing.id] ?? [];
   const { setListingItems, items } = useCart();
-  // Subscribe mode: only available when listing has subscriptionEnabled
+  const router = useRouter();
+
+  // ── API state ──────────────────────────────────────────────────────────────
+  const [listing, setListing] = useState<ApiListing | null>(null);
+  const [reviews, setReviews] = useState<ApiReview[]>([]);
+  const [notFoundFlag, setNotFoundFlag] = useState(false);
+
+  useEffect(() => {
+    const baseUrl =
+      typeof window !== "undefined"
+        ? window.location.origin
+        : (process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000");
+
+    let cancelled = false;
+
+    async function fetchData() {
+      try {
+        const [listingRes, reviewsRes] = await Promise.all([
+          fetch(`${baseUrl}/api/listings/${id}`, { cache: "no-store" }),
+          fetch(`${baseUrl}/api/listings/${id}/reviews`, { cache: "no-store" }),
+        ]);
+
+        if (!listingRes.ok) {
+          if (!cancelled) setNotFoundFlag(true);
+          return;
+        }
+
+        const listingJson = await listingRes.json();
+        const reviewsJson = reviewsRes.ok
+          ? await reviewsRes.json()
+          : { data: [] };
+
+        if (!cancelled) {
+          setListing(listingJson.data);
+          setReviews(reviewsJson.data ?? []);
+        }
+      } catch {
+        if (!cancelled) setNotFoundFlag(true);
+      }
+    }
+
+    fetchData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
+
+  // ── Subscribe mode ─────────────────────────────────────────────────────────
   const [subscribeMode, setSubscribeMode] = useState(false);
-  // Local fulfillment mode — only used when listing supports both pickup + delivery.
-  // Initialized from the cart item if already added, otherwise defaults to pickup.
   const [localFulfillment, setLocalFulfillment] = useState<
     "pickup" | "delivery"
   >("pickup");
-  const router = useRouter();
   const wasInCartRef = useRef(false);
-
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [selectedDish, setSelectedDish] = useState<MockDish | null>(null);
   const [isModifying, setIsModifying] = useState(false);
 
-  const isInCart = useMemo(
-    () => items.some((i) => i.listingId === listing.id),
-    [items, listing.id],
-  );
-  const orderLocked = isInCart && !isModifying;
-
-  const getQty = (dishId: string) => quantities[dishId] ?? 0;
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: listing.id is an intentional trigger dep — effect resets state when the listing changes
+  // biome-ignore lint/correctness/useExhaustiveDependencies: id is an intentional trigger dep
   useEffect(() => {
     wasInCartRef.current = false;
     setQuantities({});
     setSelectedDish(null);
     setIsModifying(false);
-  }, [listing.id]);
+  }, [id]);
+
+  const isInCart = useMemo(
+    () => (listing ? items.some((i) => i.listingId === listing.id) : false),
+    [items, listing],
+  );
+  const orderLocked = isInCart && !isModifying;
+
+  const getQty = (dishId: string) => quantities[dishId] ?? 0;
 
   // Sync read-only view when this listing is already in the cart
   useEffect(() => {
+    if (!listing) return;
     const fromCart = items.filter((i) => i.listingId === listing.id);
     if (fromCart.length > 0) {
       const next: Record<string, number> = {};
       for (const line of fromCart) next[line.dishId] = line.quantity;
       setQuantities(next);
-      // Restore modes from the existing cart item
       setSubscribeMode(fromCart[0].orderType === "subscription");
-      if (listing.fulfillment === "both") {
-        setLocalFulfillment(fromCart[0].fulfillmentMode);
-      }
       wasInCartRef.current = true;
       return;
     }
@@ -104,20 +215,18 @@ export default function ListingPage({
       wasInCartRef.current = false;
       setIsModifying(false);
     }
-  }, [listing.id, listing.fulfillment, items]);
+  }, [listing, items]);
 
-  const restoreFromCart = () => {
+  const restoreFromCart = useCallback(() => {
+    if (!listing) return;
     const fromCart = items.filter((i) => i.listingId === listing.id);
     const next: Record<string, number> = {};
     for (const line of fromCart) next[line.dishId] = line.quantity;
-    // Restore modes so toggles reflect the current cart state
     if (fromCart.length > 0) {
       setSubscribeMode(fromCart[0].orderType === "subscription");
-      if (listing.fulfillment === "both")
-        setLocalFulfillment(fromCart[0].fulfillmentMode);
     }
     setQuantities(next);
-  };
+  }, [listing, items]);
 
   const selectionCount = useMemo(
     () => Object.values(quantities).reduce((sum, q) => sum + q, 0),
@@ -125,10 +234,14 @@ export default function ListingPage({
   );
 
   const handleAdd = (dish: MockDish) => {
-    if (orderLocked) return;
+    if (orderLocked || !listing) return;
     setQuantities((prev) => {
       const current = Object.values(prev).reduce((s, q) => s + q, 0);
-      if (listing.maxUnits !== undefined && current >= listing.maxUnits)
+      if (
+        listing.maxOrderQty !== null &&
+        listing.maxOrderQty !== undefined &&
+        current >= listing.maxOrderQty
+      )
         return prev;
       const newQty = (prev[dish.id] ?? 0) + 1;
       return { ...prev, [dish.id]: newQty };
@@ -147,59 +260,54 @@ export default function ListingPage({
     });
   };
 
-  // Resolve fulfillmentMode: "both" listings use the explicit local selector;
-  // fixed listings are always pickup or always delivery.
-  const resolvedFulfillmentMode =
-    listing.fulfillment === "both" ? localFulfillment : listing.fulfillment;
+  const selectionTotal = useMemo(() => {
+    if (!listing) return 0;
+    return listing.dishes.reduce(
+      (sum, dish) => sum + dish.price * (quantities[dish.id] ?? 0),
+      0,
+    );
+  }, [listing, quantities]);
 
-  const buildCartLines = () =>
-    listing.dishes
+  const hasSelection = selectionCount > 0;
+  const meetsMinUnits =
+    !listing?.minOrderQty || selectionCount >= listing.minOrderQty;
+  const atMaxUnits =
+    listing?.maxOrderQty !== null &&
+    listing?.maxOrderQty !== undefined &&
+    selectionCount >= (listing?.maxOrderQty ?? 0);
+  const canAddToCart = hasSelection && meetsMinUnits;
+  const unitsNeeded = listing?.minOrderQty
+    ? Math.max(0, listing.minOrderQty - selectionCount)
+    : 0;
+
+  const buildCartLines = () => {
+    if (!listing) return [];
+    const cookId = listing.cook.id;
+    const cookName = listing.cook.name;
+    const cookInitials = nameInitials(cookName);
+    return listing.dishes
       .filter((dish) => getQty(dish.id) > 0)
       .map((dish) => ({
         dishId: dish.id,
         dishName: dish.name,
-        dishEmoji: dish.emoji,
+        dishEmoji: "🍽️",
         listingId: listing.id,
         listingTitle: listing.title,
         orderType: (subscribeMode ? "subscription" : "one_time") as
           | "one_time"
           | "subscription",
-        fulfillmentMode: resolvedFulfillmentMode,
-        cookId: cook.id,
-        cookName: cook.displayName,
-        cookInitials: cook.initials,
-        cookGradient: cook.gradient,
+        fulfillmentMode: localFulfillment,
+        cookId,
+        cookName,
+        cookInitials,
+        cookGradient: "linear-gradient(135deg, #6b6b6b 0%, #3a3a3a 100%)",
         price: dish.price,
         quantity: getQty(dish.id),
       }));
-
-  const spotsLeft = listing.ordersLeft;
-  const spotsLow = spotsLeft <= 3;
-  const fillPct = Math.round(
-    ((listing.maxOrders - spotsLeft) / listing.maxOrders) * 100,
-  );
-
-  const hasSelection = selectionCount > 0;
-  const selectionTotal = listing.dishes.reduce(
-    (sum, dish) => sum + dish.price * getQty(dish.id),
-    0,
-  );
-  const meetsMinUnits = !listing.minUnits || selectionCount >= listing.minUnits;
-  const atMaxUnits =
-    listing.maxUnits !== undefined && selectionCount >= listing.maxUnits;
-  const canAddToCart = hasSelection && meetsMinUnits;
-  const unitsNeeded = listing.minUnits
-    ? Math.max(0, listing.minUnits - selectionCount)
-    : 0;
-
-  const hasPolicy =
-    listing.deal ||
-    (listing.priceTiers && listing.priceTiers.length > 0) ||
-    listing.minUnits ||
-    listing.maxUnits;
+  };
 
   const handleAddToCart = () => {
-    if (!canAddToCart) return;
+    if (!canAddToCart || !listing) return;
     if (isInCart && !isModifying) return;
     setListingItems(listing.id, buildCartLines());
     setIsModifying(false);
@@ -216,26 +324,64 @@ export default function ListingPage({
     setIsModifying(false);
   };
 
-  // Reusable cook bar markup used in both mobile inline and sidebar
+  // ── Render states ──────────────────────────────────────────────────────────
+
+  if (notFoundFlag) {
+    notFound();
+  }
+
+  if (!listing) {
+    return (
+      <div className={styles.page}>
+        <div style={{ padding: "2rem", textAlign: "center", color: "#666" }}>
+          Loading…
+        </div>
+      </div>
+    );
+  }
+
+  // Derived display values
+  const cook = listing.cook;
+  const cookName = cook.name;
+  const cookInitials = nameInitials(cookName);
+  const cookGradient = "linear-gradient(135deg, #6b6b6b 0%, #3a3a3a 100%)";
+
+  // Promotion → deal shape for DealCallout
+  const deal = listing.promotion ? { badge: listing.promotion.badge } : null;
+
+  // Bundles → priceTiers shape
+  const priceTiers = listing.bundles.map((b) => ({
+    minUnits: b.quantity,
+    savingsLabel: b.label ?? `Bundle of ${b.quantity} – $${b.price}`,
+  }));
+
+  const hasPolicy =
+    deal || priceTiers.length > 0 || listing.minOrderQty || listing.maxOrderQty;
+
+  const totalReviewCount = reviews.length;
+
+  // Cook bar reused in mobile strip and sidebar
   const cookBarContent = (
     <Link href={`/app/cooks/${cook.id}`} className={styles.cookBar}>
-      <div className={styles.cookAvatar} style={{ background: cook.gradient }}>
-        {cook.initials}
+      <div className={styles.cookAvatar} style={{ background: cookGradient }}>
+        {cookInitials}
       </div>
       <div className={styles.cookInfo}>
-        <span className={styles.cookName}>{cook.displayName}</span>
+        <span className={styles.cookName}>{cookName}</span>
         <span className={styles.cookMeta}>
-          {cook.cuisineTypes.join(", ")} · {cook.neighborhood}, Toronto
+          {cook.neighborhood ? `${cook.neighborhood}, Toronto` : "Toronto"}
         </span>
       </div>
-      {cook.verified && (
+      {cook.isVerified && (
         <CheckCircle size={16} className={styles.verifiedIcon} />
       )}
-      <div className={styles.cookRating}>
-        <Star size={13} fill="currentColor" className={styles.ratingStar} />
-        <span className={styles.ratingNum}>{cook.rating}</span>
-        <span className={styles.ratingCount}>({cook.reviewCount})</span>
-      </div>
+      {cook.rating !== null && (
+        <div className={styles.cookRating}>
+          <Star size={13} fill="currentColor" className={styles.ratingStar} />
+          <span className={styles.ratingNum}>{cook.rating}</span>
+          <span className={styles.ratingCount}>({totalReviewCount})</span>
+        </div>
+      )}
     </Link>
   );
 
@@ -245,7 +391,7 @@ export default function ListingPage({
       <div className={styles.hero}>
         {/* biome-ignore lint/performance/noImgElement: listing hero */}
         <img
-          src="/placeholder.jpg"
+          src={listing.coverPhotoUrl ?? "/placeholder.jpg"}
           alt={listing.title}
           className={styles.heroImg}
         />
@@ -261,9 +407,7 @@ export default function ListingPage({
         >
           <ArrowLeft size={20} />
         </button>
-        {listing.deal && (
-          <div className={styles.heroDeal}>{listing.deal.badge}</div>
-        )}
+        {deal && <div className={styles.heroDeal}>{deal.badge}</div>}
       </div>
 
       {/* ── Two-column ───────────────────────────────────────────────────── */}
@@ -271,7 +415,7 @@ export default function ListingPage({
         {/* ── LEFT: food-first ─────────────────────────────────────────── */}
         <div className={styles.main}>
           <h1 className={styles.title}>{listing.title}</h1>
-          {reviews.length > 0 && (
+          {reviews.length > 0 && cook.rating !== null && (
             <div className={styles.titleMeta}>
               <Star
                 size={13}
@@ -281,7 +425,7 @@ export default function ListingPage({
               <span className={styles.titleRating}>{cook.rating}</span>
               <span className={styles.titleDot}>·</span>
               <a href="#reviews" className={styles.reviewsLink}>
-                {cook.reviewCount} reviews
+                {totalReviewCount} review{totalReviewCount !== 1 ? "s" : ""}
               </a>
             </div>
           )}
@@ -312,20 +456,19 @@ export default function ListingPage({
               <div className={styles.pickupItem}>
                 <Clock size={16} className={styles.pickupIcon} />
                 <div>
-                  <div className={styles.pickupLabel}>Pickup</div>
+                  <div className={styles.pickupLabel}>Order min</div>
                   <div className={styles.pickupVal}>
-                    {listing.pickupDateFull} · {listing.pickupWindow}
+                    {listing.minOrderQty} portion
+                    {listing.minOrderQty !== 1 ? "s" : ""}
                   </div>
                 </div>
               </div>
               <div className={styles.pickupItem}>
                 <ShoppingBag size={16} className={styles.pickupIcon} />
                 <div>
-                  <div className={styles.pickupLabel}>Order by</div>
-                  <div
-                    className={`${styles.pickupVal} ${spotsLow ? styles.urgent : ""}`}
-                  >
-                    {listing.orderDeadline}
+                  <div className={styles.pickupLabel}>Base price</div>
+                  <div className={styles.pickupVal}>
+                    ${listing.basePrice} / portion
                   </div>
                 </div>
               </div>
@@ -334,7 +477,7 @@ export default function ListingPage({
                 <div>
                   <div className={styles.pickupLabel}>Location</div>
                   <div className={styles.pickupVal}>
-                    {cook.neighborhood}, Toronto
+                    {cook.neighborhood ?? "Toronto"}
                   </div>
                 </div>
               </div>
@@ -343,38 +486,34 @@ export default function ListingPage({
               <>
                 <hr className={styles.rule} />
                 <div className={styles.policySection}>
-                  {listing.deal && (
+                  {deal && (
                     <div className={styles.dealCallout}>
-                      <p className={styles.dealCalloutBadge}>
-                        {listing.deal.badge}
-                      </p>
+                      <p className={styles.dealCalloutBadge}>{deal.badge}</p>
                     </div>
                   )}
-                  {listing.priceTiers && listing.priceTiers.length > 0 && (
+                  {priceTiers.length > 0 && (
                     <div className={styles.policyRow}>
                       <TrendingDown size={15} className={styles.policyIcon} />
                       <div className={styles.policyBody}>
-                        <span className={styles.policyTitle}>
-                          Volume discount
-                        </span>
+                        <span className={styles.policyTitle}>Bundle deals</span>
                         <span className={styles.policyDesc}>
-                          {listing.priceTiers
+                          {priceTiers
                             .map((t) => `${t.minUnits}+: ${t.savingsLabel}`)
                             .join("  ·  ")}
                         </span>
                       </div>
                     </div>
                   )}
-                  {(listing.minUnits || listing.maxUnits) && (
+                  {(listing.minOrderQty || listing.maxOrderQty) && (
                     <div className={styles.policyRow}>
                       <Info size={15} className={styles.policyIcon} />
                       <div className={styles.policyBody}>
                         <span className={styles.policyTitle}>
-                          {listing.minUnits && listing.maxUnits
-                            ? `${listing.minUnits}–${listing.maxUnits} portions per order`
-                            : listing.minUnits
-                              ? `Minimum ${listing.minUnits} portions`
-                              : `Maximum ${listing.maxUnits} portions`}
+                          {listing.minOrderQty && listing.maxOrderQty
+                            ? `${listing.minOrderQty}–${listing.maxOrderQty} portions per order`
+                            : listing.minOrderQty
+                              ? `Minimum ${listing.minOrderQty} portions`
+                              : `Maximum ${listing.maxOrderQty} portions`}
                         </span>
                       </div>
                     </div>
@@ -386,33 +525,35 @@ export default function ListingPage({
 
           <hr className={styles.rule} />
 
-          {/* ── Menu (immediately visible) ─────────────────────────────── */}
+          {/* ── Menu ──────────────────────────────────────────────────────── */}
           <h2 className={styles.sectionTitle}>What&apos;s on the menu</h2>
           <div className={styles.dishes}>
             {listing.dishes.map((dish) => {
+              const mockDish = toMockDish(dish);
               const qty = getQty(dish.id);
               const atListingMax =
                 !orderLocked &&
-                listing.maxUnits !== undefined &&
-                selectionCount >= listing.maxUnits &&
+                listing.maxOrderQty !== null &&
+                listing.maxOrderQty !== undefined &&
+                selectionCount >= listing.maxOrderQty &&
                 qty === 0;
               const controlsLocked = orderLocked || atMaxUnits;
               return (
-                /* biome-ignore lint/a11y/useSemanticElements: contains nested buttons — a <button> cannot have <button> children */
+                /* biome-ignore lint/a11y/useSemanticElements: contains nested buttons */
                 <div
                   key={dish.id}
                   className={styles.dishCard}
-                  onClick={() => setSelectedDish(dish)}
+                  onClick={() => setSelectedDish(mockDish)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ")
-                      setSelectedDish(dish);
+                      setSelectedDish(mockDish);
                   }}
                   role="button"
                   tabIndex={0}
                   aria-label={`View ${dish.name} details`}
                 >
                   <div className={styles.dishCover}>
-                    {/* biome-ignore lint/performance/noImgElement: mock placeholder */}
+                    {/* biome-ignore lint/performance/noImgElement: placeholder */}
                     <img
                       src="/placeholder.jpg"
                       alt={dish.name}
@@ -426,17 +567,16 @@ export default function ListingPage({
                     <div className={styles.dishRow}>
                       <div className={styles.dishLeft}>
                         <h3 className={styles.dishName}>{dish.name}</h3>
-                        <p className={styles.dishDesc}>{dish.description}</p>
-                        <div className={styles.dishTags}>
-                          <span className={styles.portion}>
-                            {dish.portionSize}
-                          </span>
-                          {dish.badges.map((b) => (
-                            <span key={b} className={styles.dishBadge}>
-                              {badgeLabel(b)}
+                        <p className={styles.dishDesc}>
+                          {dish.description ?? ""}
+                        </p>
+                        {dish.portionSize && (
+                          <div className={styles.dishTags}>
+                            <span className={styles.portion}>
+                              {dish.portionSize}
                             </span>
-                          ))}
-                        </div>
+                          </div>
+                        )}
                       </div>
                       {/* biome-ignore lint/a11y/noStaticElementInteractions: stops modal open */}
                       <div
@@ -449,8 +589,8 @@ export default function ListingPage({
                           <button
                             type="button"
                             className={`${styles.addBtn} ${atListingMax || orderLocked ? styles.addBtnDisabled : ""}`}
-                            onClick={() => handleAdd(dish)}
-                            disabled={atListingMax || orderLocked}
+                            onClick={() => handleAdd(mockDish)}
+                            disabled={!!atListingMax || orderLocked}
                             aria-label={`Add ${dish.name}`}
                           >
                             <Plus size={16} strokeWidth={2.5} />
@@ -460,7 +600,7 @@ export default function ListingPage({
                             <button
                               type="button"
                               className={`${styles.qtyBtn} ${orderLocked ? styles.qtyBtnDisabled : ""}`}
-                              onClick={() => handleDecrement(dish)}
+                              onClick={() => handleDecrement(mockDish)}
                               disabled={orderLocked}
                             >
                               <Minus size={14} />
@@ -469,7 +609,7 @@ export default function ListingPage({
                             <button
                               type="button"
                               className={`${styles.qtyBtn} ${controlsLocked ? styles.qtyBtnDisabled : ""}`}
-                              onClick={() => handleAdd(dish)}
+                              onClick={() => handleAdd(mockDish)}
                               disabled={controlsLocked}
                             >
                               <Plus size={14} />
@@ -495,44 +635,49 @@ export default function ListingPage({
                     fill="currentColor"
                     className={styles.ratingStar}
                   />
-                  {cook.rating} · {cook.reviewCount} reviews
+                  {cook.rating ?? "–"} · {totalReviewCount} review
+                  {totalReviewCount !== 1 ? "s" : ""}
                 </h2>
                 <div className={styles.reviewList}>
-                  {reviews.map((review) => (
-                    <div key={review.id} className={styles.reviewCard}>
-                      <div className={styles.reviewTop}>
-                        <div className={styles.reviewerAvatar}>
-                          {review.clientInitials}
+                  {reviews.map((review) => {
+                    const initials = nameInitials(review.reviewerName);
+                    return (
+                      <div key={review.id} className={styles.reviewCard}>
+                        <div className={styles.reviewTop}>
+                          <div className={styles.reviewerAvatar}>
+                            {initials}
+                          </div>
+                          <div className={styles.reviewerInfo}>
+                            <span className={styles.reviewerName}>
+                              {review.reviewerName}
+                            </span>
+                            <span className={styles.reviewDate}>
+                              {formatReviewDate(review.createdAt)}
+                            </span>
+                          </div>
+                          <div className={styles.reviewStars}>
+                            {Array.from({ length: 5 }, (_, i) => i).map((i) => (
+                              <Star
+                                key={`star-${i}`}
+                                size={12}
+                                fill={
+                                  i < review.rating ? "currentColor" : "none"
+                                }
+                                className={
+                                  i < review.rating
+                                    ? styles.starFilled
+                                    : styles.starEmpty
+                                }
+                              />
+                            ))}
+                          </div>
                         </div>
-                        <div className={styles.reviewerInfo}>
-                          <span className={styles.reviewerName}>
-                            {review.clientName}
-                          </span>
-                          <span className={styles.reviewDate}>
-                            {review.date}
-                          </span>
-                        </div>
-                        <div className={styles.reviewStars}>
-                          {Array.from({ length: 5 }, (_, i) => i).map((i) => (
-                            <Star
-                              key={`star-${i}`}
-                              size={12}
-                              fill={i < review.rating ? "currentColor" : "none"}
-                              className={
-                                i < review.rating
-                                  ? styles.starFilled
-                                  : styles.starEmpty
-                              }
-                            />
-                          ))}
-                        </div>
+                        <p className={styles.reviewComment}>
+                          {review.comment ?? ""}
+                        </p>
                       </div>
-                      <p className={styles.reviewComment}>{review.comment}</p>
-                      <span className={styles.reviewDish}>
-                        {review.orderedDish}
-                      </span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </section>
             </>
@@ -543,58 +688,28 @@ export default function ListingPage({
         <aside className={styles.sidebar}>
           {/* Card 1 — Order widget */}
           <div className={styles.orderCard}>
-            {/* Pickup / Delivery selector — only for listings that support both */}
-            {listing.fulfillment === "both" && (
-              <div className={styles.fulfillmentToggle}>
-                <button
-                  type="button"
-                  className={`${styles.fulfillmentBtn} ${localFulfillment === "pickup" ? styles.fulfillmentBtnActive : ""}`}
-                  onClick={() => setLocalFulfillment("pickup")}
-                  disabled={orderLocked}
-                >
-                  Pickup
-                </button>
-                <button
-                  type="button"
-                  className={`${styles.fulfillmentBtn} ${localFulfillment === "delivery" ? styles.fulfillmentBtnActive : ""}`}
-                  onClick={() => setLocalFulfillment("delivery")}
-                  disabled={orderLocked}
-                >
-                  Delivery
-                </button>
-              </div>
-            )}
-
             <div className={styles.logisticsGrid}>
               <span className={styles.logLabel}>From</span>
               <span className={styles.logVal}>
-                ${listing.priceFrom} / portion
+                ${listing.basePrice} / portion
               </span>
-              <span className={styles.logLabel}>Pickup</span>
-              <div className={styles.logValues}>
-                <span className={styles.logVal}>{listing.pickupDateFull}</span>
-                <span className={styles.logMeta}>{listing.pickupWindow}</span>
-              </div>
-              <span className={styles.logLabel}>Order by</span>
-              <span
-                className={`${styles.logVal} ${spotsLow ? styles.urgent : ""}`}
-              >
-                {listing.orderDeadline}
-              </span>
-            </div>
-
-            <div className={styles.spotsSection}>
-              <span
-                className={`${styles.spotsText} ${spotsLow ? styles.urgent : ""}`}
-              >
-                {spotsLeft} left
-              </span>
-              <div className={styles.spotsTrack}>
-                <div
-                  className={`${styles.spotsTrackFill} ${spotsLow ? styles.spotsTrackFillLow : ""}`}
-                  style={{ width: `${fillPct}%` }}
-                />
-              </div>
+              {listing.minOrderQty && (
+                <>
+                  <span className={styles.logLabel}>Min order</span>
+                  <span className={styles.logVal}>
+                    {listing.minOrderQty} portion
+                    {listing.minOrderQty !== 1 ? "s" : ""}
+                  </span>
+                </>
+              )}
+              {listing.maxOrderQty && (
+                <>
+                  <span className={styles.logLabel}>Max order</span>
+                  <span className={styles.logVal}>
+                    {listing.maxOrderQty} portions
+                  </span>
+                </>
+              )}
             </div>
 
             {hasSelection && (
@@ -620,7 +735,6 @@ export default function ListingPage({
             )}
 
             <div className={styles.ctaWrap}>
-              {/* Order mode toggle + disclaimer live inside the padded CTA zone */}
               {listing.subscriptionEnabled && (!isInCart || isModifying) && (
                 <div className={styles.orderModeToggle}>
                   <button
@@ -707,16 +821,14 @@ export default function ListingPage({
             >
               <div
                 className={styles.cookCardAvatar}
-                style={{ background: cook.gradient }}
+                style={{ background: cookGradient }}
               >
-                {cook.initials}
+                {cookInitials}
               </div>
               <div className={styles.cookCardBody}>
                 <div className={styles.cookCardTop}>
-                  <span className={styles.cookCardName}>
-                    {cook.displayName}
-                  </span>
-                  {cook.verified && (
+                  <span className={styles.cookCardName}>{cookName}</span>
+                  {cook.isVerified && (
                     <CheckCircle
                       size={14}
                       className={styles.cookCardVerified}
@@ -724,19 +836,23 @@ export default function ListingPage({
                   )}
                 </div>
                 <span className={styles.cookCardMeta}>
-                  {cook.cuisineTypes.join(", ")} · {cook.neighborhood}, Toronto
+                  {cook.neighborhood
+                    ? `${cook.neighborhood}, Toronto`
+                    : "Toronto"}
                 </span>
-                <div className={styles.cookCardStats}>
-                  <Star
-                    size={12}
-                    fill="currentColor"
-                    className={styles.ratingStar}
-                  />
-                  <span className={styles.cookCardRating}>{cook.rating}</span>
-                  <span className={styles.cookCardReviews}>
-                    ({cook.reviewCount} reviews)
-                  </span>
-                </div>
+                {cook.rating !== null && (
+                  <div className={styles.cookCardStats}>
+                    <Star
+                      size={12}
+                      fill="currentColor"
+                      className={styles.ratingStar}
+                    />
+                    <span className={styles.cookCardRating}>{cook.rating}</span>
+                    <span className={styles.cookCardReviews}>
+                      ({totalReviewCount} reviews)
+                    </span>
+                  </div>
+                )}
               </div>
             </Link>
           </div>
@@ -744,11 +860,11 @@ export default function ListingPage({
           {/* Card 3 — Bundle deals & order policy (only when applicable) */}
           {hasPolicy && (
             <div className={styles.policyCard}>
-              {listing.deal && <DealCallout deal={listing.deal} />}
-              {listing.priceTiers && listing.priceTiers.length > 0 && (
+              {deal && <DealCallout deal={deal} />}
+              {priceTiers.length > 0 && (
                 <div className={styles.pcSection}>
-                  <span className={styles.pcHead}>Volume savings</span>
-                  {listing.priceTiers.map((t) => (
+                  <span className={styles.pcHead}>Bundle deals</span>
+                  {priceTiers.map((t) => (
                     <div key={t.minUnits} className={styles.pcRow}>
                       <span className={styles.pcRowLabel}>
                         {t.minUnits}+ portions
@@ -758,22 +874,22 @@ export default function ListingPage({
                   ))}
                 </div>
               )}
-              {(listing.minUnits || listing.maxUnits) && (
+              {(listing.minOrderQty || listing.maxOrderQty) && (
                 <div className={styles.pcSection}>
                   <span className={styles.pcHead}>Order range</span>
-                  {listing.minUnits && (
+                  {listing.minOrderQty && (
                     <div className={styles.pcRow}>
                       <span className={styles.pcRowLabel}>Minimum</span>
                       <span className={styles.pcRowVal}>
-                        {listing.minUnits} portions
+                        {listing.minOrderQty} portions
                       </span>
                     </div>
                   )}
-                  {listing.maxUnits && (
+                  {listing.maxOrderQty && (
                     <div className={styles.pcRow}>
                       <span className={styles.pcRowLabel}>Maximum</span>
                       <span className={styles.pcRowVal}>
-                        {listing.maxUnits} portions
+                        {listing.maxOrderQty} portions
                       </span>
                     </div>
                   )}
