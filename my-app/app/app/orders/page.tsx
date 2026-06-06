@@ -2,12 +2,32 @@
 
 import { Package, RefreshCw } from "lucide-react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { Suspense } from "react";
-import { MOCK_ORDERS, type MockOrder } from "../_mock";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
 import styles from "./page.module.css";
 
-function statusInfo(order: MockOrder): { label: string; color: string } {
+type OrderStatus =
+  | "pending"
+  | "confirmed"
+  | "ready"
+  | "fulfilled"
+  | "cancelled";
+
+type ApiOrder = {
+  id: string;
+  status: OrderStatus;
+  listingTitle: string | null;
+  listingId: string | null;
+  totalPrice: string | null;
+  pickupDate: string | null;
+  pickupWindow: string | null;
+  fulfillmentMode: "pickup" | "delivery" | null;
+  isSubscription: boolean;
+  cookName: string | null;
+  cookInitials: string | null;
+};
+
+function statusInfo(order: ApiOrder): { label: string; color: string } {
   switch (order.status) {
     case "pending":
       return { label: "Pending", color: styles.statusPending };
@@ -32,15 +52,55 @@ function statusInfo(order: MockOrder): { label: string; color: string } {
 }
 
 function OrdersContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const success = searchParams.get("success");
 
-  const active = MOCK_ORDERS.filter((o) =>
+  const [orders, setOrders] = useState<ApiOrder[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/orders")
+      .then((r) => {
+        if (r.status === 401) {
+          router.replace("/app-auth/sign-in");
+          return null;
+        }
+        return r.json();
+      })
+      .then((json) => {
+        if (json) {
+          setOrders(json.data ?? []);
+        }
+      })
+      .catch(() => {
+        setOrders([]);
+      })
+      .finally(() => setLoading(false));
+  }, [router]);
+
+  const active = orders.filter((o) =>
     ["pending", "confirmed", "ready"].includes(o.status),
   );
-  const past = MOCK_ORDERS.filter((o) =>
+  const past = orders.filter((o) =>
     ["fulfilled", "cancelled"].includes(o.status),
   );
+
+  if (loading) {
+    return (
+      <div className={styles.page}>
+        <div className={styles.inner}>
+          <h1 className={styles.heading}>Your orders</h1>
+          <div className={styles.empty}>
+            <div className={styles.emptyIcon}>
+              <Package size={40} />
+            </div>
+            <p className={styles.emptyDesc}>Loading your orders…</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.page}>
@@ -70,29 +130,27 @@ function OrdersContent() {
                   >
                     <div
                       className={styles.orderCover}
-                      style={{ background: order.listingGradient }}
+                      style={{
+                        background:
+                          "linear-gradient(135deg, #3a3a3a 0%, #1a1a1a 100%)",
+                      }}
                     >
-                      {/* biome-ignore lint/performance/noImgElement: order thumbnail */}
-                      <img
-                        src="/placeholder.jpg"
-                        alt=""
-                        aria-hidden="true"
-                        className={styles.orderCoverImg}
-                        onError={(e) => {
-                          (e.currentTarget as HTMLImageElement).style.display =
-                            "none";
-                        }}
-                      />
+                      <span className={styles.orderCoverInitials}>
+                        {order.cookInitials ?? "?"}
+                      </span>
                     </div>
 
                     <div className={styles.orderCenter}>
-                      <span className={styles.cookName}>{order.cookName}</span>
+                      <span className={styles.cookName}>
+                        {order.cookName ?? "Unknown cook"}
+                      </span>
                       <h3 className={styles.orderTitle}>
-                        {order.listingTitle}
+                        {order.listingTitle ?? "Order"}
                       </h3>
                       <p className={styles.orderMeta}>
-                        {fulfillmentPrefix} · {order.pickupDate} ·{" "}
-                        {order.pickupWindow}
+                        {fulfillmentPrefix}
+                        {order.pickupDate ? ` · ${order.pickupDate}` : ""}
+                        {order.pickupWindow ? ` · ${order.pickupWindow}` : ""}
                       </p>
                       {order.isSubscription && (
                         <span className={styles.subscriptionTag}>
@@ -107,7 +165,9 @@ function OrdersContent() {
                         {info.label}
                       </span>
                       <span className={styles.orderTotal}>
-                        ${order.total}.00
+                        {order.totalPrice
+                          ? `$${Number(order.totalPrice).toFixed(2)}`
+                          : "—"}
                       </span>
                     </div>
                   </Link>
@@ -134,30 +194,26 @@ function OrdersContent() {
                     <div
                       className={styles.orderCover}
                       style={{
-                        background: order.listingGradient,
+                        background:
+                          "linear-gradient(135deg, #3a3a3a 0%, #1a1a1a 100%)",
                         opacity: 0.6,
                       }}
                     >
-                      {/* biome-ignore lint/performance/noImgElement: order thumbnail */}
-                      <img
-                        src="/placeholder.jpg"
-                        alt=""
-                        aria-hidden="true"
-                        className={styles.orderCoverImg}
-                        onError={(e) => {
-                          (e.currentTarget as HTMLImageElement).style.display =
-                            "none";
-                        }}
-                      />
+                      <span className={styles.orderCoverInitials}>
+                        {order.cookInitials ?? "?"}
+                      </span>
                     </div>
 
                     <div className={styles.orderCenter}>
-                      <span className={styles.cookName}>{order.cookName}</span>
+                      <span className={styles.cookName}>
+                        {order.cookName ?? "Unknown cook"}
+                      </span>
                       <h3 className={styles.orderTitle}>
-                        {order.listingTitle}
+                        {order.listingTitle ?? "Order"}
                       </h3>
                       <p className={styles.orderMeta}>
-                        {fulfillmentPrefix} · {order.pickupDate}
+                        {fulfillmentPrefix}
+                        {order.pickupDate ? ` · ${order.pickupDate}` : ""}
                       </p>
                     </div>
 
@@ -167,15 +223,19 @@ function OrdersContent() {
                       </span>
                       <div className={styles.orderPriceBlock}>
                         <span className={styles.orderTotal}>
-                          ${order.total}.00
+                          {order.totalPrice
+                            ? `$${Number(order.totalPrice).toFixed(2)}`
+                            : "—"}
                         </span>
-                        <Link
-                          href={`/app/listings/${order.listingId}`}
-                          className={styles.reorderBtn}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          Order again
-                        </Link>
+                        {order.listingId && (
+                          <Link
+                            href={`/app/listings/${order.listingId}`}
+                            className={styles.reorderBtn}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            Order again
+                          </Link>
+                        )}
                       </div>
                     </div>
                   </Link>
