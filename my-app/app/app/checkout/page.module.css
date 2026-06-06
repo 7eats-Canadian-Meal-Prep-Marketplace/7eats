@@ -853,9 +853,18 @@
 }
 
 /* ─── New card form ──────────────────────────────────────────────────────────── */
-.newCardForm {
-  /* Placeholder for Stripe Elements mount point.
-     In production, replace inputs with mounted Stripe Card Elements here. */
+
+/* Stripe CardElement host — gives it the same look as our <input> fields */
+.stripeCardWrapper {
+  padding: 12px 14px;
+  border: 1.5px solid var(--grey-200);
+  border-radius: 8px;
+  background: var(--white);
+  transition: border-color 0.15s;
+}
+
+.stripeCardWrapper:focus-within {
+  border-color: var(--ink);
 }
 
 /* ─── Subscription consent ──────────────────────────────────────────────────── */

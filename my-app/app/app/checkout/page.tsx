@@ -1,5 +1,7 @@
 "use client";
 
+import { Elements } from "@stripe/react-stripe-js";
+import { loadStripe } from "@stripe/stripe-js";
 import {
   ArrowLeft,
   ArrowRight,
@@ -19,7 +21,14 @@ import {
   formatCartMoney,
   ONTARIO_HST_LABEL,
 } from "../cart/_cart-tax";
+import { NewCardForm } from "./_payment-form";
 import styles from "./page.module.css";
+
+// ─── Stripe singleton ─────────────────────────────────────────────────────────
+
+const stripePromise = loadStripe(
+  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "",
+);
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -105,9 +114,6 @@ function CheckoutInner() {
   const [loadingCards, setLoadingCards] = useState(false);
   const [selectedCardId, setSelectedCardId] = useState<string | "new">("new");
 
-  // New card fields (raw values — Stripe.js tokenizes on submit, never sent to server)
-  const [rawCard, setRawCard] = useState({ number: "", expiry: "", cvv: "" });
-
   // Subscription consent — one checkbox per distinct subscription listing
   const subscriptionListingIds = useMemo(
     () => [
@@ -128,14 +134,7 @@ function CheckoutInner() {
     (id) => subscriptionConsent[id] === true,
   );
 
-  // A valid payment method must be selected or entered before placing
-  const hasValidCard = useMemo(() => {
-    if (selectedCardId !== "new") return true; // saved card selected
-    return rawCard.number.trim().length >= 15; // new card number entered
-  }, [selectedCardId, rawCard.number]);
-
   // Fetch saved cards when logged-in user reaches payment step.
-  // Falls back to mock cards in dev so the UI is always testable.
   useEffect(() => {
     if (!isLoggedIn || step !== "payment") return;
     setLoadingCards(true);
@@ -147,25 +146,8 @@ function CheckoutInner() {
           setSavedCards(cards);
           setSelectedCardId(cards[0].id);
         } else {
-          // Mock cards for dev/visualization
-          const mock: SavedCard[] = [
-            {
-              id: "pm_mock_visa",
-              brand: "visa",
-              last4: "4242",
-              expMonth: 12,
-              expYear: 27,
-            },
-            {
-              id: "pm_mock_mc",
-              brand: "mastercard",
-              last4: "5555",
-              expMonth: 8,
-              expYear: 26,
-            },
-          ];
-          setSavedCards(mock);
-          setSelectedCardId(mock[0].id);
+          setSavedCards([]);
+          setSelectedCardId("new");
         }
       })
       .catch(() => {})
@@ -265,22 +247,10 @@ function CheckoutInner() {
     return Object.keys(e).length === 0;
   }
 
-  function validatePayment(): boolean {
-    const e: Record<string, string> = {};
-    if (selectedCardId === "new") {
-      if (!rawCard.number.trim()) e.card = "Required";
-      if (!rawCard.expiry.trim()) e.expiry = "Required";
-      if (!rawCard.cvv.trim()) e.cvv = "Required";
-    }
-    setErrors(e);
-    return Object.keys(e).length === 0;
-  }
+  // ── Place order with a real paymentMethodId ────────────────────────────────
 
-  // ── Place order ───────────────────────────────────────────────────────────────
-
-  async function handlePlaceOrder() {
-    if (!validatePayment()) return;
-    if (!allConsentGiven) {
+  async function placeOrdersWithPaymentMethod(paymentMethodId: string) {
+    if (!allConsentGiven && isSubscriptionCart) {
       setPlaceError(
         "Please confirm your subscription authorization above before placing your order.",
       );
@@ -290,57 +260,73 @@ function CheckoutInner() {
     setPlacing(true);
     setPlaceError("");
 
+    // One order per cook group — collect results for confirmation page
+    const cookGroups = Object.entries(grouped);
+    const orderEntries: Array<{
+      orderId: string;
+      cookName: string;
+      fulfillmentMode: "pickup" | "delivery";
+      hasSubscription: boolean;
+    }> = [];
+
     try {
-      // TODO: Before calling /api/orders, tokenize the new card via Stripe.js:
-      //   const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
-      //   const { paymentMethod, error } = await stripe.createPaymentMethod({
-      //     type: "card",
-      //     card: cardElement, // Stripe CardElement (not raw input)
-      //   });
-      //   if (error) { setPlaceError(error.message); setPlacing(false); return; }
-      //   const paymentMethodId = paymentMethod.id;
-      //
-      // For subscriptions, use SetupIntent:
-      //   const { data: { clientSecret } } = await fetch("/api/checkout/setup-intent", { method: "POST" }).then(r => r.json());
-      //   const { setupIntent, error } = await stripe.confirmCardSetup(clientSecret, { payment_method: { card: cardElement } });
-      //   const paymentMethodId = setupIntent.payment_method;
+      for (const [, cookItems] of cookGroups) {
+        // Group by listing within this cook's items
+        const byListing = cookItems.reduce<Record<string, typeof items>>(
+          (acc, item) => {
+            if (!acc[item.listingId]) acc[item.listingId] = [];
+            acc[item.listingId].push(item);
+            return acc;
+          },
+          {},
+        );
 
-      const paymentMethodId =
-        selectedCardId !== "new" ? selectedCardId : "pm_mock_new_card";
+        for (const [listingId, listingItems] of Object.entries(byListing)) {
+          const first = listingItems[0];
+          const quantity = listingItems.reduce((sum, i) => sum + i.quantity, 0);
 
-      // One order per cook group.
-      // TODO: replace with real POST /api/orders calls (one per cook group),
-      // passing { listingIds, quantity, paymentMethodId, pickupAt, ... }.
-      // Partial failure → cancel already-created PIs before surfacing error.
-      const cookGroups = Object.entries(grouped);
-      const orderEntries = cookGroups.map(([, cookItems]) => ({
-        orderId: `ORD-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 5).toUpperCase()}`,
-        cookName: cookItems[0].cookName,
-        fulfillmentMode: cookItems[0].fulfillmentMode,
-        hasSubscription: cookItems.some((i) => i.orderType === "subscription"),
-      }));
+          const body: Record<string, unknown> = {
+            listingId,
+            quantity,
+            paymentMethodId,
+            fulfillmentMode: first.fulfillmentMode,
+          };
 
-      console.log("[checkout] would call POST /api/orders per cook with:", {
-        paymentMethodId,
-        orders: orderEntries,
-        deliveryAddress: needsDeliveryAddress ? address : null,
-      });
+          if (needsDeliveryAddress && first.fulfillmentMode === "delivery") {
+            body.deliveryAddress = {
+              street: address.street,
+              unit: address.unit || undefined,
+              city: address.city,
+              province: address.province,
+              postal: address.postal,
+            };
+          }
 
-      await new Promise((res) => setTimeout(res, 1000));
+          const res = await fetch("/api/orders", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
 
-      // If a new card was used, mock-add it to saved payment methods
-      if (isLoggedIn && selectedCardId === "new" && rawCard.number.trim()) {
-        const last4 = rawCard.number.replace(/\s/g, "").slice(-4);
-        const newMock: SavedCard = {
-          id: `pm_mock_new_${Date.now()}`,
-          brand: "visa",
-          last4,
-          expMonth: 12,
-          expYear: 27,
-        };
-        setSavedCards((prev) => [...prev, newMock]);
-        setSelectedCardId(newMock.id);
-        setRawCard({ number: "", expiry: "", cvv: "" });
+          const json = await res.json();
+
+          if (!res.ok) {
+            throw new Error(
+              (json as { error?: string }).error ?? "Order creation failed.",
+            );
+          }
+
+          const orderId = (json as { data: { orderId: string } }).data.orderId;
+
+          orderEntries.push({
+            orderId,
+            cookName: first.cookName,
+            fulfillmentMode: first.fulfillmentMode,
+            hasSubscription: listingItems.some(
+              (i) => i.orderType === "subscription",
+            ),
+          });
+        }
       }
 
       setOrdered(true);
@@ -365,6 +351,18 @@ function CheckoutInner() {
     } finally {
       setPlacing(false);
     }
+  }
+
+  // ── Saved-card submit ──────────────────────────────────────────────────────
+
+  async function handleSavedCardSubmit() {
+    if (isSubscriptionCart && !allConsentGiven) {
+      setPlaceError(
+        "Please confirm your subscription authorization above before placing your order.",
+      );
+      return;
+    }
+    await placeOrdersWithPaymentMethod(selectedCardId);
   }
 
   if (items.length === 0) return null;
@@ -664,82 +662,15 @@ function CheckoutInner() {
                       </span>
                     </button>
 
-                    {/* New card form — expands inline when "Add a new card" is selected */}
+                    {/* New card form — Stripe CardElement when "Add a new card" is selected */}
                     {selectedCardId === "new" && (
                       <div className={styles.newCardForm}>
-                        <div className={styles.formGroup}>
-                          <label className={styles.label} htmlFor="card">
-                            Card number
-                          </label>
-                          <input
-                            id="card"
-                            type="text"
-                            placeholder="1234 5678 9012 3456"
-                            className={styles.input}
-                            value={rawCard.number}
-                            onChange={(e) =>
-                              setRawCard((c) => ({
-                                ...c,
-                                number: e.target.value,
-                              }))
-                            }
-                            maxLength={19}
-                            autoComplete="cc-number"
+                        <Elements stripe={stripePromise}>
+                          <NewCardForm
+                            onTokenized={placeOrdersWithPaymentMethod}
+                            loading={placing}
                           />
-                          {errors.card && (
-                            <p className={styles.fieldError}>{errors.card}</p>
-                          )}
-                        </div>
-                        <div className={styles.formRow}>
-                          <div className={styles.formGroup}>
-                            <label className={styles.label} htmlFor="expiry">
-                              Expiry
-                            </label>
-                            <input
-                              id="expiry"
-                              type="text"
-                              placeholder="MM / YY"
-                              className={styles.input}
-                              value={rawCard.expiry}
-                              onChange={(e) =>
-                                setRawCard((c) => ({
-                                  ...c,
-                                  expiry: e.target.value,
-                                }))
-                              }
-                              maxLength={7}
-                              autoComplete="cc-exp"
-                            />
-                            {errors.expiry && (
-                              <p className={styles.fieldError}>
-                                {errors.expiry}
-                              </p>
-                            )}
-                          </div>
-                          <div className={styles.formGroup}>
-                            <label className={styles.label} htmlFor="cvv">
-                              CVV
-                            </label>
-                            <input
-                              id="cvv"
-                              type="text"
-                              placeholder="•••"
-                              className={styles.input}
-                              value={rawCard.cvv}
-                              onChange={(e) =>
-                                setRawCard((c) => ({
-                                  ...c,
-                                  cvv: e.target.value,
-                                }))
-                              }
-                              maxLength={4}
-                              autoComplete="cc-csc"
-                            />
-                            {errors.cvv && (
-                              <p className={styles.fieldError}>{errors.cvv}</p>
-                            )}
-                          </div>
-                        </div>
+                        </Elements>
                       </div>
                     )}
                   </div>
@@ -799,28 +730,43 @@ function CheckoutInner() {
                 </section>
               )}
 
-              {placeError && <p className={styles.placeError}>{placeError}</p>}
+              {placeError && (
+                <p className={styles.placeError} role="alert">
+                  {placeError}
+                </p>
+              )}
 
               <div className={styles.stepActions}>
                 <button
                   type="button"
                   className={styles.textBtn}
-                  onClick={() => setStep("details")}
+                  onClick={() => {
+                    setStep("details");
+                    setPlaceError("");
+                  }}
                 >
                   ← Back
                 </button>
-                <button
-                  type="button"
-                  className={styles.placeOrderBtn}
-                  onClick={handlePlaceOrder}
-                  disabled={
-                    placing ||
-                    !hasValidCard ||
-                    (isSubscriptionCart && !allConsentGiven)
-                  }
-                >
-                  {placeCTACopy}
-                </button>
+
+                {/* Saved card — submit directly */}
+                {selectedCardId !== "new" && (
+                  <button
+                    type="button"
+                    className={styles.placeOrderBtn}
+                    onClick={handleSavedCardSubmit}
+                    disabled={
+                      placing || (isSubscriptionCart && !allConsentGiven)
+                    }
+                  >
+                    {placeCTACopy}
+                  </button>
+                )}
+                {/* New card — form submit is handled inside NewCardForm */}
+                {selectedCardId === "new" && (
+                  <p className={styles.loadingCards}>
+                    Complete the card details above to place your order.
+                  </p>
+                )}
               </div>
             </>
           )}
