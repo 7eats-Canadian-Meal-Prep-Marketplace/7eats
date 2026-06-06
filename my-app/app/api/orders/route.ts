@@ -21,6 +21,38 @@ import {
 } from "@/lib/stripe-payments";
 import { getOrCreateStripeCustomer } from "@/lib/stripe-subscriptions";
 
+function formatPickupDate(isoString: string): string {
+  const d = new Date(isoString);
+  return d.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+  // Example: "Sat Jun 6"
+}
+
+function formatPickupWindow(isoString: string, windowHours = 2): string {
+  const d = new Date(isoString);
+  const start = d
+    .toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: undefined,
+      hour12: true,
+    })
+    .toLowerCase()
+    .replace(":00", "");
+  const end = new Date(d.getTime() + windowHours * 3600000)
+    .toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: undefined,
+      hour12: true,
+    })
+    .toLowerCase()
+    .replace(":00", "");
+  return `${start} – ${end}`;
+  // Example: "12pm – 2pm"
+}
+
 const VALID_ORDER_STATUSES = [
   "pending",
   "confirmed",
@@ -88,9 +120,16 @@ export async function GET(req: NextRequest) {
         notes: orders.notes,
         createdAt: orders.createdAt,
         pickupCode: orders.pickupCode,
+        cookFirstName: authUser.firstName,
+        cookLastName: authUser.lastName,
+        listingId: orders.listingId,
+        fulfillmentMode: orders.fulfillmentMode,
+        subscriptionId: orders.subscriptionId,
       })
       .from(orders)
       .leftJoin(listings, eq(orders.listingId, listings.id))
+      .leftJoin(cookProfiles, eq(orders.cookId, cookProfiles.id))
+      .leftJoin(authUser, eq(cookProfiles.userId, authUser.id))
       .where(whereClause)
       .orderBy(desc(orders.createdAt))
       .limit(limit)
@@ -126,22 +165,36 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    const data = rows.map((r) => ({
-      id: r.id,
-      status: r.status,
-      listingTitle: r.listingTitle ?? null,
-      quantity: r.quantity,
-      unitPrice: r.unitPrice,
-      totalPrice: r.totalPrice,
-      currency: r.currency,
-      pickupAt:
-        r.pickupAt instanceof Date ? r.pickupAt.toISOString() : r.pickupAt,
-      notes: r.notes ?? null,
-      createdAt:
-        r.createdAt instanceof Date ? r.createdAt.toISOString() : r.createdAt,
-      pickupCode: r.status === "ready" ? (r.pickupCode ?? null) : null,
-      dishes: dishesByOrderId[r.id] ?? [],
-    }));
+    const data = rows.map((r) => {
+      const pickupAtIso =
+        r.pickupAt instanceof Date ? r.pickupAt.toISOString() : r.pickupAt;
+      return {
+        id: r.id,
+        status: r.status,
+        listingTitle: r.listingTitle ?? null,
+        quantity: r.quantity,
+        unitPrice: r.unitPrice,
+        totalPrice: r.totalPrice,
+        currency: r.currency,
+        pickupAt: pickupAtIso,
+        notes: r.notes ?? null,
+        createdAt:
+          r.createdAt instanceof Date ? r.createdAt.toISOString() : r.createdAt,
+        pickupCode: r.status === "ready" ? (r.pickupCode ?? null) : null,
+        dishes: dishesByOrderId[r.id] ?? [],
+        cookName:
+          [r.cookFirstName, r.cookLastName].filter(Boolean).join(" ") || null,
+        cookInitials:
+          [r.cookFirstName?.[0], r.cookLastName?.[0]]
+            .filter(Boolean)
+            .join("") || null,
+        listingId: r.listingId,
+        fulfillmentMode: r.fulfillmentMode,
+        isSubscription: r.subscriptionId !== null,
+        pickupDate: pickupAtIso ? formatPickupDate(pickupAtIso) : null,
+        pickupWindow: pickupAtIso ? formatPickupWindow(pickupAtIso) : null,
+      };
+    });
 
     return NextResponse.json({
       success: true,

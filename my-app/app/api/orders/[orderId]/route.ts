@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/db";
@@ -6,6 +6,7 @@ import {
   authUser,
   cookProfiles,
   listings,
+  orderDishes,
   orderPayments,
   orders,
 } from "@/db/schema";
@@ -18,9 +19,173 @@ import {
   refundPaymentIntent,
 } from "@/lib/stripe-payments";
 
+function formatPickupDate(isoString: string): string {
+  const d = new Date(isoString);
+  return d.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function formatPickupWindow(isoString: string, windowHours = 2): string {
+  const d = new Date(isoString);
+  const start = d
+    .toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: undefined,
+      hour12: true,
+    })
+    .toLowerCase()
+    .replace(":00", "");
+  const end = new Date(d.getTime() + windowHours * 3600000)
+    .toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: undefined,
+      hour12: true,
+    })
+    .toLowerCase()
+    .replace(":00", "");
+  return `${start} – ${end}`;
+}
+
 export type Params = { params: Promise<{ orderId: string }> };
 
 const orderIdSchema = z.string().uuid();
+
+export async function GET(req: NextRequest, { params }: Params) {
+  const session = await auth.api.getSession({ headers: req.headers });
+  if (!session) {
+    return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
+  }
+  if (session.user.role !== "client") {
+    return NextResponse.json({ error: "Access denied." }, { status: 403 });
+  }
+
+  const { orderId } = await params;
+  if (!orderIdSchema.safeParse(orderId).success) {
+    return NextResponse.json({ error: "Invalid order ID." }, { status: 400 });
+  }
+
+  try {
+    const [row] = await db
+      .select({
+        id: orders.id,
+        status: orders.status,
+        listingId: orders.listingId,
+        listingTitle: listings.title,
+        quantity: orders.quantity,
+        unitPrice: orders.unitPrice,
+        totalPrice: orders.totalPrice,
+        currency: orders.currency,
+        pickupAt: orders.pickupAt,
+        notes: orders.notes,
+        createdAt: orders.createdAt,
+        pickupCode: orders.pickupCode,
+        fulfillmentMode: orders.fulfillmentMode,
+        deliveryAddress: orders.deliveryAddress,
+        subscriptionId: orders.subscriptionId,
+        cancelledAt: orders.cancelledAt,
+        cancelledBy: orders.cancelledBy,
+        cookFirstName: authUser.firstName,
+        cookLastName: authUser.lastName,
+        cookNeighborhood: authUser.neighborhood,
+        cookPickupAddress: cookProfiles.pickupAddress,
+      })
+      .from(orders)
+      .leftJoin(listings, eq(orders.listingId, listings.id))
+      .leftJoin(cookProfiles, eq(orders.cookId, cookProfiles.id))
+      .leftJoin(authUser, eq(cookProfiles.userId, authUser.id))
+      .where(and(eq(orders.id, orderId), eq(orders.clientId, session.user.id)))
+      .limit(1);
+
+    if (!row) {
+      return NextResponse.json({ error: "Order not found." }, { status: 404 });
+    }
+
+    const dishRows = await db
+      .select({
+        id: orderDishes.id,
+        dishName: orderDishes.dishName,
+        quantity: orderDishes.quantity,
+        sortOrder: orderDishes.sortOrder,
+      })
+      .from(orderDishes)
+      .where(inArray(orderDishes.orderId, [orderId]));
+
+    const pickupAtIso =
+      row.pickupAt instanceof Date ? row.pickupAt.toISOString() : row.pickupAt;
+
+    const cookName =
+      [row.cookFirstName, row.cookLastName].filter(Boolean).join(" ") || null;
+    const cookInitials =
+      [row.cookFirstName?.[0], row.cookLastName?.[0]]
+        .filter(Boolean)
+        .join("") || null;
+
+    // Derive pickup address from fulfillment mode
+    let pickupAddress: string | null = null;
+    if (row.fulfillmentMode === "delivery") {
+      const addr = row.deliveryAddress as Record<string, string> | null;
+      if (addr) {
+        pickupAddress = [
+          addr.street,
+          addr.unit,
+          addr.city,
+          addr.province,
+          addr.postal,
+        ]
+          .filter(Boolean)
+          .join(", ");
+      }
+    } else {
+      // pickup or null — use cook's pickup address, fall back to neighborhood
+      pickupAddress = row.cookPickupAddress ?? row.cookNeighborhood ?? null;
+    }
+
+    const data = {
+      id: row.id,
+      status: row.status,
+      listingId: row.listingId,
+      listingTitle: row.listingTitle ?? null,
+      quantity: row.quantity,
+      unitPrice: row.unitPrice,
+      totalPrice: row.totalPrice,
+      currency: row.currency,
+      pickupAt: pickupAtIso,
+      notes: row.notes ?? null,
+      createdAt:
+        row.createdAt instanceof Date
+          ? row.createdAt.toISOString()
+          : row.createdAt,
+      pickupCode: row.status === "ready" ? (row.pickupCode ?? null) : null,
+      cookName,
+      cookInitials,
+      fulfillmentMode: row.fulfillmentMode,
+      isSubscription: row.subscriptionId !== null,
+      pickupDate: pickupAtIso ? formatPickupDate(pickupAtIso) : null,
+      pickupWindow: pickupAtIso ? formatPickupWindow(pickupAtIso) : null,
+      pickupAddress,
+      cancelledAt:
+        row.cancelledAt instanceof Date
+          ? row.cancelledAt.toISOString()
+          : (row.cancelledAt ?? null),
+      deliveryAddress:
+        row.fulfillmentMode === "delivery"
+          ? (row.deliveryAddress as object | null)
+          : null,
+      dishes: dishRows.sort((a, b) => a.sortOrder - b.sortOrder),
+    };
+
+    return NextResponse.json({ success: true, data });
+  } catch (err) {
+    console.error("[orders/orderId/GET]", err);
+    return NextResponse.json(
+      { error: "Failed to fetch order." },
+      { status: 500 },
+    );
+  }
+}
 
 const CANCELLABLE_STATUSES = ["pending", "confirmed"];
 
