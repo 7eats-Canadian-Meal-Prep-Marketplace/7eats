@@ -44,6 +44,10 @@ export const listings = pgTable(
     status: listingStatus("status").notNull().default("draft"),
     basePrice: numeric("base_price", { precision: 10, scale: 2 }).notNull(),
     currency: varchar("currency", { length: 3 }).notNull().default("CAD"),
+    // How the listing is fulfilled — pickup, delivery, or both.
+    fulfillment: varchar("fulfillment", { length: 20 })
+      .notNull()
+      .default("pickup"),
     // When true, customers can subscribe to receive this listing every week
     // automatically. Always weekly — no interval selection needed.
     subscriptionEnabled: boolean("subscription_enabled")
@@ -75,6 +79,10 @@ export const listings = pgTable(
       .$onUpdate(() => new Date()),
   },
   (t) => [
+    check(
+      "listings_fulfillment_valid",
+      sql`${t.fulfillment} IN ('pickup', 'delivery', 'both')`,
+    ),
     check("listings_base_price_positive", sql`${t.basePrice} > 0`),
     check("listings_min_order_qty_positive", sql`${t.minOrderQty} >= 1`),
     check(

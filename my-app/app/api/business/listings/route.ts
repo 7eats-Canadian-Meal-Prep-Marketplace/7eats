@@ -25,6 +25,11 @@ const createListingSchema = z
     coverPhotoUrl: z.url().optional(),
     minOrderQty: z.number().int().min(1).optional().default(1),
     maxOrderQty: z.number().int().optional(),
+    fulfillment: z
+      .enum(["pickup", "delivery", "both"])
+      .optional()
+      .default("pickup"),
+    subscriptionEnabled: z.boolean().optional().default(false),
   })
   .refine((d) => !d.maxOrderQty || d.maxOrderQty >= d.minOrderQty, {
     message: "maxOrderQty must be >= minOrderQty",

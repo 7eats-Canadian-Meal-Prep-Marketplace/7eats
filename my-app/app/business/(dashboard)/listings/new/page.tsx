@@ -2,6 +2,7 @@
 
 import { ArrowLeft, Check, Plus } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import styles from "./page.module.css";
 
@@ -20,10 +21,17 @@ const AVAILABLE_DISHES: AvailableDish[] = [
 ];
 
 type DealType = "percentage_off" | "fixed_off";
+type FulfillmentMode = "pickup" | "delivery" | "both";
 
 const DEAL_TYPE_LABELS: [DealType, string][] = [
   ["percentage_off", "% Off"],
   ["fixed_off", "$ Off"],
+];
+
+const FULFILLMENT_OPTIONS: [FulfillmentMode, string][] = [
+  ["pickup", "Pickup only"],
+  ["delivery", "Delivery only"],
+  ["both", "Both"],
 ];
 
 // ─── Steps ──────────────────────────────────────────────────────────────────────
@@ -45,10 +53,14 @@ const EMPTY_FORM = {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function NewListingPage() {
+  const router = useRouter();
   const [step, setStep] = useState<1 | 2>(1);
-  const [created, setCreated] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
 
   const [form, setForm] = useState(EMPTY_FORM);
+  const [fulfillmentMode, setFulfillmentMode] =
+    useState<FulfillmentMode>("pickup");
   const [subscriptionEnabled, setSubscriptionEnabled] = useState(false);
   const [selectedDishes, setSelectedDishes] = useState<string[]>([]);
   const [dealEnabled, setDealEnabled] = useState(false);
@@ -66,22 +78,41 @@ export default function NewListingPage() {
     setStep(2);
   }
 
-  function resetAll() {
-    setForm(EMPTY_FORM);
-    setSubscriptionEnabled(false);
-    setSelectedDishes([]);
-    setDealEnabled(false);
-    setDealType("percentage_off");
-    setDealValue("");
-    setStep(1);
-  }
+  async function handleCreate() {
+    setSubmitting(true);
+    setApiError(null);
+    try {
+      const body: Record<string, unknown> = {
+        title: form.title,
+        description: form.description || undefined,
+        basePrice: Number(form.basePrice),
+        currency: form.currency,
+        minOrderQty: Number(form.minOrderQty),
+        maxOrderQty: form.maxOrderQty ? Number(form.maxOrderQty) : undefined,
+        fulfillment: fulfillmentMode,
+        subscriptionEnabled,
+      };
 
-  function handleCreate() {
-    setCreated(true);
-    setTimeout(() => {
-      setCreated(false);
-      resetAll();
-    }, 1600);
+      const res = await fetch("/api/business/listings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      const json = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        setApiError((json.error as string) ?? "Failed to create listing.");
+        return;
+      }
+
+      const newId: string = (json.data as { id: string }).id;
+      router.push(`/business/listings/${newId}`);
+    } catch {
+      setApiError("Something went wrong. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -223,6 +254,23 @@ export default function NewListingPage() {
               </div>
             </div>
 
+            {/* Fulfillment mode */}
+            <div className={styles.formGroup}>
+              <span className={styles.formLabel}>Fulfillment</span>
+              <div className={styles.segControl}>
+                {FULFILLMENT_OPTIONS.map(([mode, label]) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    className={`${styles.segBtn} ${fulfillmentMode === mode ? styles.segBtnActive : ""}`}
+                    onClick={() => setFulfillmentMode(mode)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Weekly subscription toggle */}
             <div className={styles.subscriptionToggleRow}>
               <div className={styles.subscriptionToggleInfo}>
@@ -350,18 +398,26 @@ export default function NewListingPage() {
               )}
             </div>
 
+            {apiError && (
+              <p className={styles.formHint} style={{ color: "var(--red)" }}>
+                {apiError}
+              </p>
+            )}
+
             <div className={styles.formActions}>
               <button
                 type="button"
                 className={styles.saveBtn}
                 onClick={handleCreate}
+                disabled={submitting}
               >
-                {created ? "Created!" : "Create listing"}
+                {submitting ? "Creating…" : "Create listing"}
               </button>
               <button
                 type="button"
                 className={styles.secondaryBtn}
                 onClick={() => setStep(1)}
+                disabled={submitting}
               >
                 Back
               </button>
