@@ -1,4 +1,4 @@
-// Helper — deadlines relative to module load time so urgency demo always works
+﻿// Helper — deadlines relative to module load time so urgency demo always works
 const _now = Date.now();
 const _hrs = (h: number) => new Date(_now + h * 3_600_000).toISOString();
 
@@ -192,24 +192,32 @@ export type PreferenceQuestion = {
 
 /** Grayscale avatar backgrounds — profile circles only, not listing imagery */
 export const COOK_AVATAR_GRADIENTS: Record<string, string> = {
-  "cook-1": "linear-gradient(135deg, #6b6b6b 0%, #3a3a3a 100%)",
-  "cook-2": "linear-gradient(135deg, #757575 0%, #454545 100%)",
-  "cook-3": "linear-gradient(135deg, #828282 0%, #505050 100%)",
-  "cook-4": "linear-gradient(135deg, #585858 0%, #2e2e2e 100%)",
-  "cook-5": "linear-gradient(135deg, #707070 0%, #424242 100%)",
-  "cook-6": "linear-gradient(135deg, #6a6a6a 0%, #383838 100%)",
-  "cook-7": "linear-gradient(135deg, #797979 0%, #484848 100%)",
-  "cook-8": "linear-gradient(135deg, #676767 0%, #3c3c3c 100%)",
+  "b2c3d4e5-0001-4000-8000-000000000001":
+    "linear-gradient(135deg, #6b6b6b 0%, #3a3a3a 100%)",
+  "b2c3d4e5-0002-4000-8000-000000000002":
+    "linear-gradient(135deg, #757575 0%, #454545 100%)",
+  "b2c3d4e5-0003-4000-8000-000000000003":
+    "linear-gradient(135deg, #828282 0%, #505050 100%)",
+  "b2c3d4e5-0004-4000-8000-000000000004":
+    "linear-gradient(135deg, #585858 0%, #2e2e2e 100%)",
+  "b2c3d4e5-0005-4000-8000-000000000005":
+    "linear-gradient(135deg, #707070 0%, #424242 100%)",
+  "b2c3d4e5-0006-4000-8000-000000000006":
+    "linear-gradient(135deg, #6a6a6a 0%, #383838 100%)",
+  "b2c3d4e5-0007-4000-8000-000000000007":
+    "linear-gradient(135deg, #797979 0%, #484848 100%)",
+  "b2c3d4e5-0008-4000-8000-000000000008":
+    "linear-gradient(135deg, #676767 0%, #3c3c3c 100%)",
 };
 
 export const MOCK_COOKS: MockCook[] = [
   {
-    id: "cook-1",
+    id: "b2c3d4e5-0001-4000-8000-000000000001",
     displayName: "Amara Diallo",
     bio: "Bringing the rich, bold flavours of West Africa to Toronto — one home-cooked meal at a time. Every dish is made with love, fresh ingredients, and my grandmother's secret recipes.",
     cuisineTypes: ["West African"],
     initials: "AD",
-    gradient: COOK_AVATAR_GRADIENTS["cook-1"],
+    gradient: COOK_AVATAR_GRADIENTS["b2c3d4e5-0001-4000-8000-000000000001"],
     rating: 4.9,
     reviewCount: 47,
     neighborhood: "Roncesvalles",
@@ -218,7 +226,12 @@ export const MOCK_COOKS: MockCook[] = [
     leadTime: "Order 48h in advance",
     verified: true,
     emoji: "🥘",
-    listingIds: ["listing-1", "listing-6", "listing-17", "listing-21"],
+    listingIds: [
+      "a1b2c3d4-0001-4000-8000-000000000001",
+      "a1b2c3d4-0006-4000-8000-000000000006",
+      "a1b2c3d4-0017-4000-8000-000000000017",
+      "a1b2c3d4-0021-4000-8000-000000000021",
+    ],
     ordersCompleted: 342,
     memberSince: "Mar 2024",
     yearsExperience: 8,
@@ -227,12 +240,12 @@ export const MOCK_COOKS: MockCook[] = [
     deliveryDays: ["Fri", "Sat", "Sun"],
   },
   {
-    id: "cook-2",
+    id: "b2c3d4e5-0002-4000-8000-000000000002",
     displayName: "Ji-won Park",
     bio: "Korean home cooking made with the freshest ingredients. I make the banchan my halmeoni taught me — kimchi, japchae, galbi, and more. Everything is made to order, no shortcuts.",
     cuisineTypes: ["Korean"],
     initials: "JP",
-    gradient: COOK_AVATAR_GRADIENTS["cook-2"],
+    gradient: COOK_AVATAR_GRADIENTS["b2c3d4e5-0002-4000-8000-000000000002"],
     rating: 4.8,
     reviewCount: 31,
     neighborhood: "Christie Pits",
@@ -241,7 +254,12 @@ export const MOCK_COOKS: MockCook[] = [
     leadTime: "Order 24h in advance",
     verified: true,
     emoji: "🍲",
-    listingIds: ["listing-2", "listing-7", "listing-20", "listing-24"],
+    listingIds: [
+      "a1b2c3d4-0002-4000-8000-000000000002",
+      "a1b2c3d4-0007-4000-8000-000000000007",
+      "a1b2c3d4-0020-4000-8000-000000000020",
+      "a1b2c3d4-0024-4000-8000-000000000024",
+    ],
     ordersCompleted: 218,
     memberSince: "Jan 2024",
     yearsExperience: 12,
@@ -250,12 +268,12 @@ export const MOCK_COOKS: MockCook[] = [
     deliveryDays: ["Sat"],
   },
   {
-    id: "cook-3",
+    id: "b2c3d4e5-0003-4000-8000-000000000003",
     displayName: "Maria Santos",
     bio: "From São Paulo to your table. Feijoada, coxinha, brigadeiros — every bite is a trip home. I cook in large batches every Friday and Saturday for weekend pickup.",
     cuisineTypes: ["Brazilian"],
     initials: "MS",
-    gradient: COOK_AVATAR_GRADIENTS["cook-3"],
+    gradient: COOK_AVATAR_GRADIENTS["b2c3d4e5-0003-4000-8000-000000000003"],
     rating: 4.7,
     reviewCount: 22,
     neighborhood: "Kensington Market",
@@ -264,7 +282,11 @@ export const MOCK_COOKS: MockCook[] = [
     leadTime: "Order 48h in advance",
     verified: false,
     emoji: "🍖",
-    listingIds: ["listing-4", "listing-16", "listing-28"],
+    listingIds: [
+      "a1b2c3d4-0004-4000-8000-000000000004",
+      "a1b2c3d4-0016-4000-8000-000000000016",
+      "a1b2c3d4-0028-4000-8000-000000000028",
+    ],
     ordersCompleted: 156,
     memberSince: "Jun 2024",
     yearsExperience: 6,
@@ -272,12 +294,12 @@ export const MOCK_COOKS: MockCook[] = [
     pickupDays: ["Fri", "Sat"],
   },
   {
-    id: "cook-4",
+    id: "b2c3d4e5-0004-4000-8000-000000000004",
     displayName: "Fatima Al-Hassan",
     bio: "Levantine home cooking: shawarma plates, fattoush, musakhan, and the best hummus you'll have outside of Ramallah. Halal certified, always fresh, never frozen.",
     cuisineTypes: ["Middle Eastern"],
     initials: "FA",
-    gradient: COOK_AVATAR_GRADIENTS["cook-4"],
+    gradient: COOK_AVATAR_GRADIENTS["b2c3d4e5-0004-4000-8000-000000000004"],
     rating: 5.0,
     reviewCount: 18,
     neighborhood: "Scarborough",
@@ -287,11 +309,11 @@ export const MOCK_COOKS: MockCook[] = [
     verified: true,
     emoji: "🧆",
     listingIds: [
-      "listing-3",
-      "listing-8",
-      "listing-18",
-      "listing-22",
-      "listing-23",
+      "a1b2c3d4-0003-4000-8000-000000000003",
+      "a1b2c3d4-0008-4000-8000-000000000008",
+      "a1b2c3d4-0018-4000-8000-000000000018",
+      "a1b2c3d4-0022-4000-8000-000000000022",
+      "a1b2c3d4-0023-4000-8000-000000000023",
     ],
     ordersCompleted: 287,
     memberSince: "Sep 2023",
@@ -301,12 +323,12 @@ export const MOCK_COOKS: MockCook[] = [
     deliveryDays: ["Fri", "Sat"],
   },
   {
-    id: "cook-5",
+    id: "b2c3d4e5-0005-4000-8000-000000000005",
     displayName: "Nadia Romano",
     bio: "Northern Italian classics — risotto, osso buco, handmade pasta, and tiramisu. My nonna would approve. Sunday meal prep that actually transports you to Lombardy.",
     cuisineTypes: ["Italian"],
     initials: "NR",
-    gradient: COOK_AVATAR_GRADIENTS["cook-5"],
+    gradient: COOK_AVATAR_GRADIENTS["b2c3d4e5-0005-4000-8000-000000000005"],
     rating: 4.6,
     reviewCount: 14,
     neighborhood: "Little Italy",
@@ -315,7 +337,11 @@ export const MOCK_COOKS: MockCook[] = [
     leadTime: "Order 48h in advance",
     verified: false,
     emoji: "🍝",
-    listingIds: ["listing-5", "listing-15", "listing-27"],
+    listingIds: [
+      "a1b2c3d4-0005-4000-8000-000000000005",
+      "a1b2c3d4-0015-4000-8000-000000000015",
+      "a1b2c3d4-0027-4000-8000-000000000027",
+    ],
     ordersCompleted: 94,
     memberSince: "Aug 2024",
     yearsExperience: 5,
@@ -324,12 +350,12 @@ export const MOCK_COOKS: MockCook[] = [
     deliveryDays: ["Sat", "Sun"],
   },
   {
-    id: "cook-6",
+    id: "b2c3d4e5-0006-4000-8000-000000000006",
     displayName: "Priya Sharma",
     bio: "South Asian home cooking rooted in my mother's kitchen in Pune. From slow-cooked dals and spiced biryanis to fresh chutneys and rotis. Pure comfort in every box.",
     cuisineTypes: ["South Asian"],
     initials: "PS",
-    gradient: COOK_AVATAR_GRADIENTS["cook-6"],
+    gradient: COOK_AVATAR_GRADIENTS["b2c3d4e5-0006-4000-8000-000000000006"],
     rating: 4.8,
     reviewCount: 19,
     neighborhood: "Mississauga",
@@ -338,7 +364,12 @@ export const MOCK_COOKS: MockCook[] = [
     leadTime: "Order 48h in advance",
     verified: true,
     emoji: "🍛",
-    listingIds: ["listing-9", "listing-10", "listing-19", "listing-25"],
+    listingIds: [
+      "a1b2c3d4-0009-4000-8000-000000000009",
+      "a1b2c3d4-0010-4000-8000-000000000010",
+      "a1b2c3d4-0019-4000-8000-000000000019",
+      "a1b2c3d4-0025-4000-8000-000000000025",
+    ],
     ordersCompleted: 412,
     memberSince: "Oct 2023",
     yearsExperience: 20,
@@ -347,12 +378,12 @@ export const MOCK_COOKS: MockCook[] = [
     deliveryDays: ["Fri", "Sat"],
   },
   {
-    id: "cook-7",
+    id: "b2c3d4e5-0007-4000-8000-000000000007",
     displayName: "Takeshi Yamamoto",
     bio: "Osaka-born, Toronto-based. I make real tonkotsu ramen broth (18-hour simmer), bento boxes, and onigiri. Comfort food that takes time — yours doesn't have to.",
     cuisineTypes: ["Japanese"],
     initials: "TY",
-    gradient: COOK_AVATAR_GRADIENTS["cook-7"],
+    gradient: COOK_AVATAR_GRADIENTS["b2c3d4e5-0007-4000-8000-000000000007"],
     rating: 4.7,
     reviewCount: 9,
     neighborhood: "Bloor West Village",
@@ -361,7 +392,11 @@ export const MOCK_COOKS: MockCook[] = [
     leadTime: "Order 24h in advance",
     verified: false,
     emoji: "🍜",
-    listingIds: ["listing-11", "listing-12", "listing-26"],
+    listingIds: [
+      "a1b2c3d4-0011-4000-8000-000000000011",
+      "a1b2c3d4-0012-4000-8000-000000000012",
+      "a1b2c3d4-0026-4000-8000-000000000026",
+    ],
     ordersCompleted: 178,
     memberSince: "Apr 2024",
     yearsExperience: 10,
@@ -370,12 +405,12 @@ export const MOCK_COOKS: MockCook[] = [
     deliveryDays: ["Fri", "Sat"],
   },
   {
-    id: "cook-8",
+    id: "b2c3d4e5-0008-4000-8000-000000000008",
     displayName: "Yolanda Dubois",
     bio: "Trinidadian roots, Toronto kitchen. Jerk everything, curry goat, doubles, and rum cake. My food hits different — ask anyone who's tried it.",
     cuisineTypes: ["Caribbean"],
     initials: "YD",
-    gradient: COOK_AVATAR_GRADIENTS["cook-8"],
+    gradient: COOK_AVATAR_GRADIENTS["b2c3d4e5-0008-4000-8000-000000000008"],
     rating: 4.9,
     reviewCount: 27,
     neighborhood: "Brampton",
@@ -384,7 +419,11 @@ export const MOCK_COOKS: MockCook[] = [
     leadTime: "Order 72h in advance",
     verified: true,
     emoji: "🌶️",
-    listingIds: ["listing-13", "listing-14", "listing-29"],
+    listingIds: [
+      "a1b2c3d4-0013-4000-8000-000000000013",
+      "a1b2c3d4-0014-4000-8000-000000000014",
+      "a1b2c3d4-0029-4000-8000-000000000029",
+    ],
     ordersCompleted: 261,
     memberSince: "Dec 2023",
     yearsExperience: 18,
@@ -398,8 +437,8 @@ export const MOCK_COOKS: MockCook[] = [
 export const MOCK_LISTINGS: MockListing[] = [
   // ── listing-1 ──────────────────────────────────────────────────────────────
   {
-    id: "listing-1",
-    cookId: "cook-1",
+    id: "a1b2c3d4-0001-4000-8000-000000000001",
+    cookId: "b2c3d4e5-0001-4000-8000-000000000001",
     title: "West African Weekend Feast",
     description:
       "Choose from Jollof Rice, Egusi Stew, and Suya Skewers. Everything made fresh Friday morning for Saturday and Sunday pickup.",
@@ -433,7 +472,7 @@ export const MOCK_LISTINGS: MockListing[] = [
     ],
     dishes: [
       {
-        id: "dish-1-1",
+        id: "c3d4e5f6-0101-4000-8000-000000000101",
         name: "Jollof Rice (Party Style)",
         description: "Smoky, tomato-based rice with a signature crust.",
         price: 18,
@@ -442,7 +481,7 @@ export const MOCK_LISTINGS: MockListing[] = [
         badges: ["halal", "gluten-free"],
       },
       {
-        id: "dish-1-2",
+        id: "c3d4e5f6-0101-4000-8000-000000000102",
         name: "Egusi Stew + Fufu",
         description: "Ground melon seed stew with pounded yam.",
         price: 22,
@@ -451,7 +490,7 @@ export const MOCK_LISTINGS: MockListing[] = [
         badges: ["halal", "gluten-free"],
       },
       {
-        id: "dish-1-3",
+        id: "c3d4e5f6-0101-4000-8000-000000000103",
         name: "Suya Skewers (6 pcs)",
         description: "Spiced grilled beef skewers with yaji powder.",
         price: 20,
@@ -463,8 +502,8 @@ export const MOCK_LISTINGS: MockListing[] = [
   },
   // ── listing-2 ──────────────────────────────────────────────────────────────
   {
-    id: "listing-2",
-    cookId: "cook-2",
+    id: "a1b2c3d4-0002-4000-8000-000000000002",
+    cookId: "b2c3d4e5-0002-4000-8000-000000000002",
     title: "Korean Banchan Box",
     description:
       "A curated set of house-made banchan: kimchi, spinach namul, japchae, and more. Perfect for 2–3 days of incredible side dishes.",
@@ -496,7 +535,7 @@ export const MOCK_LISTINGS: MockListing[] = [
     ],
     dishes: [
       {
-        id: "dish-2-1",
+        id: "c3d4e5f6-0102-4000-8000-000000000201",
         name: "Banchan Box (5 sides)",
         description: "Kimchi, spinach namul, kongnamul, japchae, gyeran-mari.",
         price: 24,
@@ -505,7 +544,7 @@ export const MOCK_LISTINGS: MockListing[] = [
         badges: ["gluten-free"],
       },
       {
-        id: "dish-2-2",
+        id: "c3d4e5f6-0102-4000-8000-000000000202",
         name: "Galbi (Short Ribs)",
         description: "Marinated beef short ribs in soy-sesame sauce.",
         price: 32,
@@ -514,7 +553,7 @@ export const MOCK_LISTINGS: MockListing[] = [
         badges: [],
       },
       {
-        id: "dish-2-3",
+        id: "c3d4e5f6-0102-4000-8000-000000000203",
         name: "Doenjang Jjigae",
         description: "Fermented soybean paste stew with tofu and mushrooms.",
         price: 16,
@@ -526,8 +565,8 @@ export const MOCK_LISTINGS: MockListing[] = [
   },
   // ── listing-3 ──────────────────────────────────────────────────────────────
   {
-    id: "listing-3",
-    cookId: "cook-4",
+    id: "a1b2c3d4-0003-4000-8000-000000000003",
+    cookId: "b2c3d4e5-0004-4000-8000-000000000004",
     title: "Levantine Mezze Spread",
     description:
       "A full mezze experience: hummus, baba ganoush, fattoush, grape leaves, and your choice of protein. Halal certified.",
@@ -555,7 +594,7 @@ export const MOCK_LISTINGS: MockListing[] = [
     niches: ["balanced", "heart_health"],
     dishes: [
       {
-        id: "dish-3-1",
+        id: "c3d4e5f6-0103-4000-8000-000000000301",
         name: "Mezze Platter",
         description: "Hummus, baba ganoush, tabbouleh, and 4 warm pita breads.",
         price: 16,
@@ -564,7 +603,7 @@ export const MOCK_LISTINGS: MockListing[] = [
         badges: ["halal", "vegetarian"],
       },
       {
-        id: "dish-3-2",
+        id: "c3d4e5f6-0103-4000-8000-000000000302",
         name: "Chicken Musakhan",
         description:
           "Sumac-spiced chicken on taboon bread with caramelized onions.",
@@ -574,7 +613,7 @@ export const MOCK_LISTINGS: MockListing[] = [
         badges: ["halal", "dairy-free"],
       },
       {
-        id: "dish-3-3",
+        id: "c3d4e5f6-0103-4000-8000-000000000303",
         name: "Stuffed Grape Leaves (12 pcs)",
         description: "Rice and herb stuffed grape leaves with lemon sauce.",
         price: 14,
@@ -586,8 +625,8 @@ export const MOCK_LISTINGS: MockListing[] = [
   },
   // ── listing-4 ──────────────────────────────────────────────────────────────
   {
-    id: "listing-4",
-    cookId: "cook-3",
+    id: "a1b2c3d4-0004-4000-8000-000000000004",
+    cookId: "b2c3d4e5-0003-4000-8000-000000000003",
     title: "Brazilian Saturday",
     description:
       "Authentic feijoada and sides, coxinha for snacking, and brigadeiros for dessert. A full taste of São Paulo.",
@@ -621,7 +660,7 @@ export const MOCK_LISTINGS: MockListing[] = [
     maxUnits: 8,
     dishes: [
       {
-        id: "dish-4-1",
+        id: "c3d4e5f6-0104-4000-8000-000000000401",
         name: "Feijoada",
         description: "Black bean stew with pork and beef, rice and farofa.",
         price: 26,
@@ -630,7 +669,7 @@ export const MOCK_LISTINGS: MockListing[] = [
         badges: ["dairy-free", "gluten-free"],
       },
       {
-        id: "dish-4-2",
+        id: "c3d4e5f6-0104-4000-8000-000000000402",
         name: "Coxinha (6 pcs)",
         description: "Crispy chicken-filled dough balls.",
         price: 20,
@@ -639,7 +678,7 @@ export const MOCK_LISTINGS: MockListing[] = [
         badges: ["dairy-free"],
       },
       {
-        id: "dish-4-3",
+        id: "c3d4e5f6-0104-4000-8000-000000000403",
         name: "Brigadeiros (dozen)",
         description: "Classic Brazilian chocolate truffles.",
         price: 14,
@@ -651,8 +690,8 @@ export const MOCK_LISTINGS: MockListing[] = [
   },
   // ── listing-5 ──────────────────────────────────────────────────────────────
   {
-    id: "listing-5",
-    cookId: "cook-5",
+    id: "a1b2c3d4-0005-4000-8000-000000000005",
+    cookId: "b2c3d4e5-0005-4000-8000-000000000005",
     title: "Sunday Italian Meal Prep",
     description:
       "Northern Italian comfort food: handmade pasta, slow-cooked ragù, and tiramisu. Family recipes from Lombardy.",
@@ -680,7 +719,7 @@ export const MOCK_LISTINGS: MockListing[] = [
     niches: ["comfort_food"],
     dishes: [
       {
-        id: "dish-5-1",
+        id: "c3d4e5f6-0105-4000-8000-000000000501",
         name: "Handmade Tagliatelle + Ragù",
         description: "Fresh egg pasta with a 6-hour slow-cooked meat sauce.",
         price: 28,
@@ -689,7 +728,7 @@ export const MOCK_LISTINGS: MockListing[] = [
         badges: [],
       },
       {
-        id: "dish-5-2",
+        id: "c3d4e5f6-0105-4000-8000-000000000502",
         name: "Risotto Milanese",
         description: "Saffron-scented risotto with Parmigiano Reggiano.",
         price: 22,
@@ -698,7 +737,7 @@ export const MOCK_LISTINGS: MockListing[] = [
         badges: ["vegetarian"],
       },
       {
-        id: "dish-5-3",
+        id: "c3d4e5f6-0105-4000-8000-000000000503",
         name: "Tiramisu (2 portions)",
         description: "Classic tiramisu with savoiardi and espresso.",
         price: 16,
@@ -710,8 +749,8 @@ export const MOCK_LISTINGS: MockListing[] = [
   },
   // ── listing-6 ──────────────────────────────────────────────────────────────
   {
-    id: "listing-6",
-    cookId: "cook-1",
+    id: "a1b2c3d4-0006-4000-8000-000000000006",
+    cookId: "b2c3d4e5-0001-4000-8000-000000000001",
     title: "Suya Express",
     description:
       "Amara's famous suya delivered hot. Spiced beef skewers with yaji, onions, and tomatoes — ready in your neighbourhood.",
@@ -739,7 +778,7 @@ export const MOCK_LISTINGS: MockListing[] = [
     niches: ["high_protein", "comfort_food"],
     dishes: [
       {
-        id: "dish-6-1",
+        id: "c3d4e5f6-0106-4000-8000-000000000601",
         name: "Suya Skewers (6 pcs)",
         description: "Spiced grilled beef skewers with yaji and fresh onions.",
         price: 20,
@@ -748,7 +787,7 @@ export const MOCK_LISTINGS: MockListing[] = [
         badges: ["halal", "gluten-free"],
       },
       {
-        id: "dish-6-2",
+        id: "c3d4e5f6-0106-4000-8000-000000000602",
         name: "Suya Wrap",
         description:
           "Suya strips wrapped in flatbread with peppers and onions.",
@@ -761,8 +800,8 @@ export const MOCK_LISTINGS: MockListing[] = [
   },
   // ── listing-7 ──────────────────────────────────────────────────────────────
   {
-    id: "listing-7",
-    cookId: "cook-2",
+    id: "a1b2c3d4-0007-4000-8000-000000000007",
+    cookId: "b2c3d4e5-0002-4000-8000-000000000002",
     title: "K-BBQ Box",
     description:
       "Everything you need for a Korean BBQ night at home. Marinated meats, dipping sauces, and banchan included.",
@@ -790,7 +829,7 @@ export const MOCK_LISTINGS: MockListing[] = [
     niches: ["high_protein", "muscle_gain"],
     dishes: [
       {
-        id: "dish-7-1",
+        id: "c3d4e5f6-0107-4000-8000-000000000701",
         name: "BBQ Pack (4 proteins)",
         description:
           "Bulgogi, galbi, samgyeopsal, and dak galbi, marinated and ready to grill.",
@@ -800,7 +839,7 @@ export const MOCK_LISTINGS: MockListing[] = [
         badges: ["gluten-free"],
       },
       {
-        id: "dish-7-2",
+        id: "c3d4e5f6-0107-4000-8000-000000000702",
         name: "Banchan Set",
         description: "5 house-made sides to go with your BBQ.",
         price: 18,
@@ -812,8 +851,8 @@ export const MOCK_LISTINGS: MockListing[] = [
   },
   // ── listing-8 ──────────────────────────────────────────────────────────────
   {
-    id: "listing-8",
-    cookId: "cook-4",
+    id: "a1b2c3d4-0008-4000-8000-000000000008",
+    cookId: "b2c3d4e5-0004-4000-8000-000000000004",
     title: "Halal Weekly Prep Box",
     description:
       "A weekly subscription box of Levantine home cooking. Proteins, sides, and fresh dips — enough for 3 dinners for 2.",
@@ -845,7 +884,7 @@ export const MOCK_LISTINGS: MockListing[] = [
     ],
     dishes: [
       {
-        id: "dish-8-1",
+        id: "c3d4e5f6-0108-4000-8000-000000000801",
         name: "Weekly Protein (choice)",
         description:
           "Chicken shawarma, kofta, or grilled fish — rotates weekly.",
@@ -855,7 +894,7 @@ export const MOCK_LISTINGS: MockListing[] = [
         badges: ["halal", "gluten-free"],
       },
       {
-        id: "dish-8-2",
+        id: "c3d4e5f6-0108-4000-8000-000000000802",
         name: "Sides + Dips",
         description: "Fattoush, tabbouleh, hummus, and warm pita.",
         price: 22,
@@ -867,8 +906,8 @@ export const MOCK_LISTINGS: MockListing[] = [
   },
   // ── listing-9 ──────────────────────────────────────────────────────────────
   {
-    id: "listing-9",
-    cookId: "cook-6",
+    id: "a1b2c3d4-0009-4000-8000-000000000009",
+    cookId: "b2c3d4e5-0006-4000-8000-000000000006",
     title: "Priya's Thali Weekly",
     description:
       "A rotating weekly thali: dal, sabzi, roti, rice, pickle, and a sweet. Real home cooking, every week.",
@@ -896,7 +935,7 @@ export const MOCK_LISTINGS: MockListing[] = [
     niches: ["high_protein", "balanced"],
     dishes: [
       {
-        id: "dish-9-1",
+        id: "c3d4e5f6-0109-4000-8000-000000000901",
         name: "Thali (full)",
         description: "Dal tadka, aloo gobi, roti, rice, raita, and mithai.",
         price: 24,
@@ -905,7 +944,7 @@ export const MOCK_LISTINGS: MockListing[] = [
         badges: ["vegetarian"],
       },
       {
-        id: "dish-9-2",
+        id: "c3d4e5f6-0109-4000-8000-000000000902",
         name: "Thali (protein)",
         description: "Butter chicken, dal, rice, roti, and raita.",
         price: 28,
@@ -917,8 +956,8 @@ export const MOCK_LISTINGS: MockListing[] = [
   },
   // ── listing-10 ─────────────────────────────────────────────────────────────
   {
-    id: "listing-10",
-    cookId: "cook-6",
+    id: "a1b2c3d4-0010-4000-8000-000000000010",
+    cookId: "b2c3d4e5-0006-4000-8000-000000000006",
     title: "Biryani Friday",
     description:
       "Priya's legendary dum biryani: slow-cooked with whole spices, served with raita and salan. Pickup only, limited spots.",
@@ -957,7 +996,7 @@ export const MOCK_LISTINGS: MockListing[] = [
     ],
     dishes: [
       {
-        id: "dish-10-1",
+        id: "c3d4e5f6-0110-4000-8000-000000001001",
         name: "Chicken Dum Biryani",
         description:
           "Slow-cooked bone-in chicken with basmati, whole spices, and crispy onions.",
@@ -967,7 +1006,7 @@ export const MOCK_LISTINGS: MockListing[] = [
         badges: ["gluten-free"],
       },
       {
-        id: "dish-10-2",
+        id: "c3d4e5f6-0110-4000-8000-000000001002",
         name: "Veg Biryani",
         description: "Mixed vegetable dum biryani with saffron and nuts.",
         price: 22,
@@ -979,8 +1018,8 @@ export const MOCK_LISTINGS: MockListing[] = [
   },
   // ── listing-11 ─────────────────────────────────────────────────────────────
   {
-    id: "listing-11",
-    cookId: "cook-7",
+    id: "a1b2c3d4-0011-4000-8000-000000000011",
+    cookId: "b2c3d4e5-0007-4000-8000-000000000007",
     title: "Tonkotsu Ramen Kit",
     description:
       "18-hour pork bone broth with all the toppings, ready to heat and assemble at home. Chashu, noodles, eggs included.",
@@ -1008,7 +1047,7 @@ export const MOCK_LISTINGS: MockListing[] = [
     niches: ["high_protein", "comfort_food"],
     dishes: [
       {
-        id: "dish-11-1",
+        id: "c3d4e5f6-0111-4000-8000-000000001101",
         name: "Tonkotsu Kit (2 servings)",
         description:
           "Rich pork broth, chashu, soft-boiled eggs, noodles, and toppings.",
@@ -1018,7 +1057,7 @@ export const MOCK_LISTINGS: MockListing[] = [
         badges: [],
       },
       {
-        id: "dish-11-2",
+        id: "c3d4e5f6-0111-4000-8000-000000001102",
         name: "Shoyu Kit (2 servings)",
         description:
           "Lighter soy-based broth with chicken chashu and bamboo shoots.",
@@ -1031,8 +1070,8 @@ export const MOCK_LISTINGS: MockListing[] = [
   },
   // ── listing-12 ─────────────────────────────────────────────────────────────
   {
-    id: "listing-12",
-    cookId: "cook-7",
+    id: "a1b2c3d4-0012-4000-8000-000000000012",
+    cookId: "b2c3d4e5-0007-4000-8000-000000000007",
     title: "Bento Lunch Box",
     description:
       "Weekly bento subscription: rice, protein, pickled sides, and a miso soup packet. Ready to grab Monday morning.",
@@ -1060,7 +1099,7 @@ export const MOCK_LISTINGS: MockListing[] = [
     niches: ["high_protein", "balanced"],
     dishes: [
       {
-        id: "dish-12-1",
+        id: "c3d4e5f6-0112-4000-8000-000000001201",
         name: "Salmon Bento",
         description:
           "Teriyaki salmon, rice, tamagoyaki, pickled cucumber, edamame.",
@@ -1070,7 +1109,7 @@ export const MOCK_LISTINGS: MockListing[] = [
         badges: ["gluten-free"],
       },
       {
-        id: "dish-12-2",
+        id: "c3d4e5f6-0112-4000-8000-000000001202",
         name: "Chicken Karaage Bento",
         description:
           "Crispy karaage, rice, mayo, shredded cabbage, pickled ginger.",
@@ -1083,8 +1122,8 @@ export const MOCK_LISTINGS: MockListing[] = [
   },
   // ── listing-13 ─────────────────────────────────────────────────────────────
   {
-    id: "listing-13",
-    cookId: "cook-8",
+    id: "a1b2c3d4-0013-4000-8000-000000000013",
+    cookId: "b2c3d4e5-0008-4000-8000-000000000008",
     title: "Jerk Chicken Box",
     description:
       "Yolanda's world-famous jerk chicken — marinated overnight, cooked low and slow. Served with rice and peas and coleslaw.",
@@ -1112,7 +1151,7 @@ export const MOCK_LISTINGS: MockListing[] = [
     niches: ["high_protein", "comfort_food"],
     dishes: [
       {
-        id: "dish-13-1",
+        id: "c3d4e5f6-0113-4000-8000-000000001301",
         name: "Jerk Chicken Half",
         description: "Half chicken, jerk marinade, rice and peas, coleslaw.",
         price: 26,
@@ -1121,7 +1160,7 @@ export const MOCK_LISTINGS: MockListing[] = [
         badges: ["gluten-free", "dairy-free"],
       },
       {
-        id: "dish-13-2",
+        id: "c3d4e5f6-0113-4000-8000-000000001302",
         name: "Jerk Chicken Whole",
         description:
           "Full bird, jerk marinade, rice and peas, coleslaw, festival.",
@@ -1134,8 +1173,8 @@ export const MOCK_LISTINGS: MockListing[] = [
   },
   // ── listing-14 ─────────────────────────────────────────────────────────────
   {
-    id: "listing-14",
-    cookId: "cook-8",
+    id: "a1b2c3d4-0014-4000-8000-000000000014",
+    cookId: "b2c3d4e5-0008-4000-8000-000000000008",
     title: "Caribbean Stew Weekly",
     description:
       "A weekly rotation of Yolanda's hearty Caribbean stews: curry goat, oxtail, or stew chicken. With rice and peas.",
@@ -1163,7 +1202,7 @@ export const MOCK_LISTINGS: MockListing[] = [
     niches: ["comfort_food"],
     dishes: [
       {
-        id: "dish-14-1",
+        id: "c3d4e5f6-0114-4000-8000-000000001401",
         name: "Curry Goat",
         description:
           "Slow-braised goat in a Scotch bonnet curry with rice and peas.",
@@ -1173,7 +1212,7 @@ export const MOCK_LISTINGS: MockListing[] = [
         badges: ["gluten-free", "dairy-free"],
       },
       {
-        id: "dish-14-2",
+        id: "c3d4e5f6-0114-4000-8000-000000001402",
         name: "Oxtail Stew",
         description:
           "Rich, fall-off-the-bone oxtail braised with butter beans.",
@@ -1186,8 +1225,8 @@ export const MOCK_LISTINGS: MockListing[] = [
   },
   // ── listing-15 ─────────────────────────────────────────────────────────────
   {
-    id: "listing-15",
-    cookId: "cook-5",
+    id: "a1b2c3d4-0015-4000-8000-000000000015",
+    cookId: "b2c3d4e5-0005-4000-8000-000000000005",
     title: "Pasta Alla Norma",
     description:
       "Nadia's weeknight pasta: rigatoni with roasted aubergine, San Marzano tomatoes, ricotta salata, and fresh basil.",
@@ -1215,7 +1254,7 @@ export const MOCK_LISTINGS: MockListing[] = [
     niches: ["comfort_food"],
     dishes: [
       {
-        id: "dish-15-1",
+        id: "c3d4e5f6-0115-4000-8000-000000001501",
         name: "Pasta Alla Norma (2 portions)",
         description:
           "Rigatoni with roasted aubergine, San Marzano tomatoes, and ricotta salata.",
@@ -1225,7 +1264,7 @@ export const MOCK_LISTINGS: MockListing[] = [
         badges: ["vegetarian"],
       },
       {
-        id: "dish-15-2",
+        id: "c3d4e5f6-0115-4000-8000-000000001502",
         name: "Arancini (4 pcs)",
         description: "Crispy saffron rice balls filled with mozzarella.",
         price: 16,
@@ -1237,8 +1276,8 @@ export const MOCK_LISTINGS: MockListing[] = [
   },
   // ── listing-16 ─────────────────────────────────────────────────────────────
   {
-    id: "listing-16",
-    cookId: "cook-3",
+    id: "a1b2c3d4-0016-4000-8000-000000000016",
+    cookId: "b2c3d4e5-0003-4000-8000-000000000003",
     title: "Açaí Bowl Bundle",
     description:
       "Fresh açaí bowls delivered to your door. Topped with granola, banana, and honey. Healthy, filling, and fast.",
@@ -1266,7 +1305,7 @@ export const MOCK_LISTINGS: MockListing[] = [
     niches: ["heart_health", "weight_loss"],
     dishes: [
       {
-        id: "dish-16-1",
+        id: "c3d4e5f6-0116-4000-8000-000000001601",
         name: "Classic Açaí Bowl",
         description: "Açaí blend, granola, banana, honey, and coconut flakes.",
         price: 14,
@@ -1275,7 +1314,7 @@ export const MOCK_LISTINGS: MockListing[] = [
         badges: ["vegan", "gluten-free", "dairy-free"],
       },
       {
-        id: "dish-16-2",
+        id: "c3d4e5f6-0116-4000-8000-000000001602",
         name: "Protein Açaí Bowl",
         description: "Açaí with hemp seeds, nut butter, and protein granola.",
         price: 16,
@@ -1287,8 +1326,8 @@ export const MOCK_LISTINGS: MockListing[] = [
   },
   // ── listing-17 ─────────────────────────────────────────────────────────────
   {
-    id: "listing-17",
-    cookId: "cook-1",
+    id: "a1b2c3d4-0017-4000-8000-000000000017",
+    cookId: "b2c3d4e5-0001-4000-8000-000000000001",
     title: "Pepper Soup & Pepper Rice",
     description:
       "Amara's Sunday special: aromatic West African pepper soup with goat or chicken, served alongside fragrant pepper rice.",
@@ -1316,7 +1355,7 @@ export const MOCK_LISTINGS: MockListing[] = [
     niches: ["high_protein", "comfort_food"],
     dishes: [
       {
-        id: "dish-17-1",
+        id: "c3d4e5f6-0117-4000-8000-000000001701",
         name: "Pepper Soup (goat)",
         description:
           "Spiced goat broth with uziza leaves — warming and intensely flavoured.",
@@ -1326,7 +1365,7 @@ export const MOCK_LISTINGS: MockListing[] = [
         badges: ["halal", "gluten-free"],
       },
       {
-        id: "dish-17-2",
+        id: "c3d4e5f6-0117-4000-8000-000000001702",
         name: "Pepper Rice",
         description:
           "Fragrant long-grain rice cooked with peppers, crayfish, and palm oil.",
@@ -1339,8 +1378,8 @@ export const MOCK_LISTINGS: MockListing[] = [
   },
   // ── listing-18 ─────────────────────────────────────────────────────────────
   {
-    id: "listing-18",
-    cookId: "cook-4",
+    id: "a1b2c3d4-0018-4000-8000-000000000018",
+    cookId: "b2c3d4e5-0004-4000-8000-000000000004",
     title: "Shawarma Friday",
     description:
       "Fatima's famous chicken shawarma — marinated 24 hours, roasted on a spit, wrapped in warm bread with garlic sauce.",
@@ -1368,7 +1407,7 @@ export const MOCK_LISTINGS: MockListing[] = [
     niches: ["high_protein", "comfort_food"],
     dishes: [
       {
-        id: "dish-18-1",
+        id: "c3d4e5f6-0118-4000-8000-000000001801",
         name: "Chicken Shawarma Wrap",
         description:
           "Slow-roasted chicken, garlic sauce, pickles, tomatoes in warm bread.",
@@ -1378,7 +1417,7 @@ export const MOCK_LISTINGS: MockListing[] = [
         badges: ["halal", "dairy-free"],
       },
       {
-        id: "dish-18-2",
+        id: "c3d4e5f6-0118-4000-8000-000000001802",
         name: "Shawarma Plate",
         description:
           "Sliced shawarma over rice with fattoush and garlic sauce.",
@@ -1391,8 +1430,8 @@ export const MOCK_LISTINGS: MockListing[] = [
   },
   // ── listing-19 ─────────────────────────────────────────────────────────────
   {
-    id: "listing-19",
-    cookId: "cook-6",
+    id: "a1b2c3d4-0019-4000-8000-000000000019",
+    cookId: "b2c3d4e5-0006-4000-8000-000000000006",
     title: "Protein Thali",
     description:
       "A high-protein weekly subscription: paneer or chicken, dal, roti, and raita. Built for gym-goers and serious eaters.",
@@ -1420,7 +1459,7 @@ export const MOCK_LISTINGS: MockListing[] = [
     niches: ["high_protein", "muscle_gain"],
     dishes: [
       {
-        id: "dish-19-1",
+        id: "c3d4e5f6-0119-4000-8000-000000001901",
         name: "Chicken Protein Thali",
         description:
           "Tandoori chicken, dal makhani, roti, and raita. ~60g protein.",
@@ -1430,7 +1469,7 @@ export const MOCK_LISTINGS: MockListing[] = [
         badges: ["gluten-free"],
       },
       {
-        id: "dish-19-2",
+        id: "c3d4e5f6-0119-4000-8000-000000001902",
         name: "Paneer Protein Thali",
         description:
           "Shahi paneer, chana masala, roti, and raita. ~45g protein.",
@@ -1443,8 +1482,8 @@ export const MOCK_LISTINGS: MockListing[] = [
   },
   // ── listing-20 ─────────────────────────────────────────────────────────────
   {
-    id: "listing-20",
-    cookId: "cook-2",
+    id: "a1b2c3d4-0020-4000-8000-000000000020",
+    cookId: "b2c3d4e5-0002-4000-8000-000000000002",
     title: "Kimchi Making Kit",
     description:
       "Make your own kimchi at home with Ji-won's kit: pre-cut napa cabbage, house-made paste, and a step-by-step guide.",
@@ -1472,7 +1511,7 @@ export const MOCK_LISTINGS: MockListing[] = [
     niches: ["balanced"],
     dishes: [
       {
-        id: "dish-20-1",
+        id: "c3d4e5f6-0120-4000-8000-000000002001",
         name: "Kimchi Kit (1kg batch)",
         description: "Everything to make 1kg of baechu kimchi at home.",
         price: 28,
@@ -1481,7 +1520,7 @@ export const MOCK_LISTINGS: MockListing[] = [
         badges: ["vegan", "gluten-free"],
       },
       {
-        id: "dish-20-2",
+        id: "c3d4e5f6-0120-4000-8000-000000002002",
         name: "Kimchi Kit (2kg batch)",
         description: "Double batch with extra paste and a fermentation guide.",
         price: 48,
@@ -1493,8 +1532,8 @@ export const MOCK_LISTINGS: MockListing[] = [
   },
   // ── listing-21 ─────────────────────────────────────────────────────────────
   {
-    id: "listing-21",
-    cookId: "cook-1",
+    id: "a1b2c3d4-0021-4000-8000-000000000021",
+    cookId: "b2c3d4e5-0001-4000-8000-000000000001",
     title: "Ofada Rice & Ayamase Stew",
     description:
       "Nigerian green pepper stew (ofada sauce) with local rice and assorted meats. Bold, smoky, and unapologetically spicy.",
@@ -1522,7 +1561,7 @@ export const MOCK_LISTINGS: MockListing[] = [
     niches: ["high_protein", "comfort_food"],
     dishes: [
       {
-        id: "dish-21-1",
+        id: "c3d4e5f6-0121-4000-8000-000000002101",
         name: "Ofada Rice + Ayamase Stew",
         description: "Local rice with green pepper stew and assorted meats.",
         price: 24,
@@ -1531,7 +1570,7 @@ export const MOCK_LISTINGS: MockListing[] = [
         badges: ["halal", "gluten-free"],
       },
       {
-        id: "dish-21-2",
+        id: "c3d4e5f6-0121-4000-8000-000000002102",
         name: "Moimoi (Bean Pudding)",
         description: "Steamed black-eyed pea pudding, soft and savoury.",
         price: 14,
@@ -1543,8 +1582,8 @@ export const MOCK_LISTINGS: MockListing[] = [
   },
   // ── listing-22 ─────────────────────────────────────────────────────────────
   {
-    id: "listing-22",
-    cookId: "cook-4",
+    id: "a1b2c3d4-0022-4000-8000-000000000022",
+    cookId: "b2c3d4e5-0004-4000-8000-000000000004",
     title: "Falafel & Hummus Box",
     description:
       "Crispy falafel made from scratch, served with house hummus, pickled veg, and warm pita. 100% plant-based and halal.",
@@ -1572,7 +1611,7 @@ export const MOCK_LISTINGS: MockListing[] = [
     niches: ["balanced", "heart_health"],
     dishes: [
       {
-        id: "dish-22-1",
+        id: "c3d4e5f6-0122-4000-8000-000000002201",
         name: "Falafel Box (8 pcs)",
         description: "Crispy falafel with tahini, pickles, and pita.",
         price: 18,
@@ -1581,7 +1620,7 @@ export const MOCK_LISTINGS: MockListing[] = [
         badges: ["halal", "vegan", "dairy-free"],
       },
       {
-        id: "dish-22-2",
+        id: "c3d4e5f6-0122-4000-8000-000000002202",
         name: "Hummus Bowl",
         description: "House hummus with olive oil, paprika, and warm bread.",
         price: 16,
@@ -1593,8 +1632,8 @@ export const MOCK_LISTINGS: MockListing[] = [
   },
   // ── listing-23 ─────────────────────────────────────────────────────────────
   {
-    id: "listing-23",
-    cookId: "cook-4",
+    id: "a1b2c3d4-0023-4000-8000-000000000023",
+    cookId: "b2c3d4e5-0004-4000-8000-000000000004",
     title: "Lebanese Family Feast",
     description:
       "A spread for 4–6: whole roasted chicken, kibbeh, fattoush, rice and vermicelli, and a platter of mezze dips.",
@@ -1622,7 +1661,7 @@ export const MOCK_LISTINGS: MockListing[] = [
     niches: ["comfort_food"],
     dishes: [
       {
-        id: "dish-23-1",
+        id: "c3d4e5f6-0123-4000-8000-000000002301",
         name: "Family Feast (serves 4–6)",
         description:
           "Whole roasted chicken, kibbeh, fattoush, rice, and mezze dips.",
@@ -1635,8 +1674,8 @@ export const MOCK_LISTINGS: MockListing[] = [
   },
   // ── listing-24 ─────────────────────────────────────────────────────────────
   {
-    id: "listing-24",
-    cookId: "cook-2",
+    id: "a1b2c3d4-0024-4000-8000-000000000024",
+    cookId: "b2c3d4e5-0002-4000-8000-000000000002",
     title: "Japchae Meal Prep",
     description:
       "Glass noodles stir-fried with beef, spinach, mushrooms, and sesame. A weekly subscription for serious Korean food fans.",
@@ -1664,7 +1703,7 @@ export const MOCK_LISTINGS: MockListing[] = [
     niches: ["balanced", "comfort_food"],
     dishes: [
       {
-        id: "dish-24-1",
+        id: "c3d4e5f6-0124-4000-8000-000000002401",
         name: "Japchae (2 portions)",
         description: "Glass noodles with beef, mushrooms, spinach, and sesame.",
         price: 22,
@@ -1673,7 +1712,7 @@ export const MOCK_LISTINGS: MockListing[] = [
         badges: ["gluten-free"],
       },
       {
-        id: "dish-24-2",
+        id: "c3d4e5f6-0124-4000-8000-000000002402",
         name: "Japchae Veg (2 portions)",
         description: "Glass noodles with tofu, mushrooms, and spinach.",
         price: 20,
@@ -1685,8 +1724,8 @@ export const MOCK_LISTINGS: MockListing[] = [
   },
   // ── listing-25 ─────────────────────────────────────────────────────────────
   {
-    id: "listing-25",
-    cookId: "cook-6",
+    id: "a1b2c3d4-0025-4000-8000-000000000025",
+    cookId: "b2c3d4e5-0006-4000-8000-000000000006",
     title: "Dal Tadka & Roti Weekly",
     description:
       "Priya's weekly comfort staple: silky yellow dal with a smoky tadka, served with freshly made roti and pickle.",
@@ -1714,7 +1753,7 @@ export const MOCK_LISTINGS: MockListing[] = [
     niches: ["balanced", "comfort_food"],
     dishes: [
       {
-        id: "dish-25-1",
+        id: "c3d4e5f6-0125-4000-8000-000000002501",
         name: "Dal Tadka + 4 Roti",
         description:
           "Yellow dal with ghee tadka and cumin, served with fresh roti.",
@@ -1724,7 +1763,7 @@ export const MOCK_LISTINGS: MockListing[] = [
         badges: ["vegetarian", "gluten-free"],
       },
       {
-        id: "dish-25-2",
+        id: "c3d4e5f6-0125-4000-8000-000000002502",
         name: "Dal Makhani + 4 Roti",
         description: "Slow-cooked black lentil dal with butter and cream.",
         price: 20,
@@ -1736,8 +1775,8 @@ export const MOCK_LISTINGS: MockListing[] = [
   },
   // ── listing-26 ─────────────────────────────────────────────────────────────
   {
-    id: "listing-26",
-    cookId: "cook-7",
+    id: "a1b2c3d4-0026-4000-8000-000000000026",
+    cookId: "b2c3d4e5-0007-4000-8000-000000000007",
     title: "Onigiri Variety Pack",
     description:
       "5 hand-pressed rice balls with rotating fillings: salmon, tuna mayo, pickled plum, kombu, and teriyaki chicken.",
@@ -1770,7 +1809,7 @@ export const MOCK_LISTINGS: MockListing[] = [
     niches: ["balanced"],
     dishes: [
       {
-        id: "dish-26-1",
+        id: "c3d4e5f6-0126-4000-8000-000000002601",
         name: "Onigiri Pack (5 pcs)",
         description: "5 onigiri with mixed fillings, wrapped in nori.",
         price: 18,
@@ -1782,8 +1821,8 @@ export const MOCK_LISTINGS: MockListing[] = [
   },
   // ── listing-27 ─────────────────────────────────────────────────────────────
   {
-    id: "listing-27",
-    cookId: "cook-5",
+    id: "a1b2c3d4-0027-4000-8000-000000000027",
+    cookId: "b2c3d4e5-0005-4000-8000-000000000005",
     title: "Osso Buco & Saffron Polenta",
     description:
       "Braised veal shanks in white wine and gremolata, served over creamy saffron polenta. Nadia's Sunday showstopper.",
@@ -1811,7 +1850,7 @@ export const MOCK_LISTINGS: MockListing[] = [
     niches: ["high_protein", "comfort_food"],
     dishes: [
       {
-        id: "dish-27-1",
+        id: "c3d4e5f6-0127-4000-8000-000000002701",
         name: "Osso Buco + Polenta",
         description: "Braised veal shank with gremolata over saffron polenta.",
         price: 38,
@@ -1820,7 +1859,7 @@ export const MOCK_LISTINGS: MockListing[] = [
         badges: [],
       },
       {
-        id: "dish-27-2",
+        id: "c3d4e5f6-0127-4000-8000-000000002702",
         name: "Polenta Bowl (veg)",
         description:
           "Creamy saffron polenta with roasted mushrooms and parmesan.",
@@ -1833,8 +1872,8 @@ export const MOCK_LISTINGS: MockListing[] = [
   },
   // ── listing-28 ─────────────────────────────────────────────────────────────
   {
-    id: "listing-28",
-    cookId: "cook-3",
+    id: "a1b2c3d4-0028-4000-8000-000000000028",
+    cookId: "b2c3d4e5-0003-4000-8000-000000000003",
     title: "Açaí & Tapioca Breakfast",
     description:
       "Brazilian breakfast staple: thick açaí with banana and granola, plus tapioca crepes with cheese or Nutella.",
@@ -1862,7 +1901,7 @@ export const MOCK_LISTINGS: MockListing[] = [
     niches: ["balanced", "heart_health"],
     dishes: [
       {
-        id: "dish-28-1",
+        id: "c3d4e5f6-0128-4000-8000-000000002801",
         name: "Açaí Bowl",
         description: "Thick açaí with banana, granola, and honey.",
         price: 14,
@@ -1871,7 +1910,7 @@ export const MOCK_LISTINGS: MockListing[] = [
         badges: ["vegan", "gluten-free", "dairy-free"],
       },
       {
-        id: "dish-28-2",
+        id: "c3d4e5f6-0128-4000-8000-000000002802",
         name: "Tapioca Crepe",
         description: "Gluten-free tapioca crepe with cheese or Nutella.",
         price: 12,
@@ -1883,8 +1922,8 @@ export const MOCK_LISTINGS: MockListing[] = [
   },
   // ── listing-29 ─────────────────────────────────────────────────────────────
   {
-    id: "listing-29",
-    cookId: "cook-8",
+    id: "a1b2c3d4-0029-4000-8000-000000000029",
+    cookId: "b2c3d4e5-0008-4000-8000-000000000008",
     title: "Curry Goat Tacos",
     description:
       "Yolanda's fusion: slow-braised curry goat in a roti shell with mango slaw and scotch bonnet sauce. Limited run.",
@@ -1912,7 +1951,7 @@ export const MOCK_LISTINGS: MockListing[] = [
     niches: ["high_protein", "comfort_food"],
     dishes: [
       {
-        id: "dish-29-1",
+        id: "c3d4e5f6-0129-4000-8000-000000002901",
         name: "Curry Goat Tacos (3 pcs)",
         description: "Slow-braised curry goat in roti shells with mango slaw.",
         price: 20,
@@ -1921,7 +1960,7 @@ export const MOCK_LISTINGS: MockListing[] = [
         badges: ["gluten-free", "dairy-free"],
       },
       {
-        id: "dish-29-2",
+        id: "c3d4e5f6-0129-4000-8000-000000002902",
         name: "Plantain & Rice Side",
         description: "Fried sweet plantain with coconut rice.",
         price: 12,
@@ -1938,8 +1977,8 @@ export const MOCK_LISTINGS: MockListing[] = [
 export const MOCK_ORDERS: MockOrder[] = [
   {
     id: "order-1",
-    cookId: "cook-1",
-    listingId: "listing-1",
+    cookId: "b2c3d4e5-0001-4000-8000-000000000001",
+    listingId: "a1b2c3d4-0001-4000-8000-000000000001",
     cookName: "Amara Diallo",
     cookInitials: "AD",
     listingTitle: "West African Weekend Feast",
@@ -1961,8 +2000,8 @@ export const MOCK_ORDERS: MockOrder[] = [
   },
   {
     id: "order-3",
-    cookId: "cook-2",
-    listingId: "listing-2",
+    cookId: "b2c3d4e5-0002-4000-8000-000000000002",
+    listingId: "a1b2c3d4-0002-4000-8000-000000000002",
     cookName: "Ji-won Park",
     cookInitials: "JP",
     listingTitle: "Korean Banchan Box",
@@ -1982,8 +2021,8 @@ export const MOCK_ORDERS: MockOrder[] = [
   },
   {
     id: "order-2",
-    cookId: "cook-2",
-    listingId: "listing-2",
+    cookId: "b2c3d4e5-0002-4000-8000-000000000002",
+    listingId: "a1b2c3d4-0002-4000-8000-000000000002",
     cookName: "Ji-won Park",
     cookInitials: "JP",
     listingTitle: "Korean Banchan Box",
@@ -2005,8 +2044,8 @@ export const MOCK_ORDERS: MockOrder[] = [
   },
   {
     id: "order-4",
-    cookId: "cook-3",
-    listingId: "listing-3",
+    cookId: "b2c3d4e5-0003-4000-8000-000000000003",
+    listingId: "a1b2c3d4-0003-4000-8000-000000000003",
     cookName: "Fatima Al-Hassan",
     cookInitials: "FA",
     listingTitle: "Levantine Mezze Spread",
@@ -2033,10 +2072,10 @@ export const MOCK_ORDERS: MockOrder[] = [
 export const MOCK_MESSAGE_THREADS: MockMessageThread[] = [
   {
     id: "thread-1",
-    cookId: "cook-1",
+    cookId: "b2c3d4e5-0001-4000-8000-000000000001",
     cookName: "Amara Diallo",
     cookInitials: "AD",
-    cookGradient: COOK_AVATAR_GRADIENTS["cook-1"],
+    cookGradient: COOK_AVATAR_GRADIENTS["b2c3d4e5-0001-4000-8000-000000000001"],
     preview: "Your order is confirmed! See you Saturday 😊",
     timestamp: "2h ago",
     unread: true,
@@ -2064,10 +2103,10 @@ export const MOCK_MESSAGE_THREADS: MockMessageThread[] = [
   },
   {
     id: "thread-2",
-    cookId: "cook-2",
+    cookId: "b2c3d4e5-0002-4000-8000-000000000002",
     cookName: "Ji-won Park",
     cookInitials: "JP",
-    cookGradient: COOK_AVATAR_GRADIENTS["cook-2"],
+    cookGradient: COOK_AVATAR_GRADIENTS["b2c3d4e5-0002-4000-8000-000000000002"],
     preview: "Thanks for the 5-star review! 🙏",
     timestamp: "3 days ago",
     unread: false,
@@ -2090,10 +2129,10 @@ export const MOCK_MESSAGE_THREADS: MockMessageThread[] = [
   },
   {
     id: "thread-3",
-    cookId: "cook-3",
+    cookId: "b2c3d4e5-0003-4000-8000-000000000003",
     cookName: "Fatima Al-Hassan",
     cookInitials: "FA",
-    cookGradient: COOK_AVATAR_GRADIENTS["cook-3"],
+    cookGradient: COOK_AVATAR_GRADIENTS["b2c3d4e5-0003-4000-8000-000000000003"],
     preview: "Sorry to hear that — refund processed.",
     timestamp: "1 week ago",
     unread: false,
@@ -2198,7 +2237,7 @@ export type MockReview = {
 };
 
 export const MOCK_REVIEWS: Record<string, MockReview[]> = {
-  "cook-1": [
+  "b2c3d4e5-0001-4000-8000-000000000001": [
     {
       id: "r1",
       clientName: "Marcus R.",
@@ -2230,7 +2269,7 @@ export const MOCK_REVIEWS: Record<string, MockReview[]> = {
       orderedDish: "Egusi Stew + Fufu",
     },
   ],
-  "cook-2": [
+  "b2c3d4e5-0002-4000-8000-000000000002": [
     {
       id: "r4",
       clientName: "Hana S.",
@@ -2257,7 +2296,7 @@ export const MOCK_REVIEWS: Record<string, MockReview[]> = {
 // ─── Per-listing reviews ──────────────────────────────────────────────────────
 // Each listing has its own reviews. Cook profile compounds all of theirs.
 export const MOCK_LISTING_REVIEWS: Record<string, MockReview[]> = {
-  "listing-1": [
+  "a1b2c3d4-0001-4000-8000-000000000001": [
     {
       id: "rl1-1",
       clientName: "Marcus R.",
@@ -2289,7 +2328,7 @@ export const MOCK_LISTING_REVIEWS: Record<string, MockReview[]> = {
       orderedDish: "Egusi Stew + Fufu",
     },
   ],
-  "listing-2": [
+  "a1b2c3d4-0002-4000-8000-000000000002": [
     {
       id: "rl2-1",
       clientName: "Hana S.",
@@ -2311,7 +2350,7 @@ export const MOCK_LISTING_REVIEWS: Record<string, MockReview[]> = {
       orderedDish: "Galbi (Short Ribs)",
     },
   ],
-  "listing-3": [
+  "a1b2c3d4-0003-4000-8000-000000000003": [
     {
       id: "rl3-1",
       clientName: "Priya N.",
@@ -2343,7 +2382,7 @@ export const MOCK_LISTING_REVIEWS: Record<string, MockReview[]> = {
       orderedDish: "Stuffed Grape Leaves (12 pcs)",
     },
   ],
-  "listing-4": [
+  "a1b2c3d4-0004-4000-8000-000000000004": [
     {
       id: "rl4-1",
       clientName: "Sofia M.",
@@ -2365,7 +2404,7 @@ export const MOCK_LISTING_REVIEWS: Record<string, MockReview[]> = {
       orderedDish: "Coxinha (6 pcs)",
     },
   ],
-  "listing-5": [
+  "a1b2c3d4-0005-4000-8000-000000000005": [
     {
       id: "rl5-1",
       clientName: "Ana L.",
@@ -2387,7 +2426,7 @@ export const MOCK_LISTING_REVIEWS: Record<string, MockReview[]> = {
       orderedDish: "Risotto Milanese",
     },
   ],
-  "listing-6": [
+  "a1b2c3d4-0006-4000-8000-000000000006": [
     {
       id: "rl6-1",
       clientName: "Kwame A.",
@@ -2409,7 +2448,7 @@ export const MOCK_LISTING_REVIEWS: Record<string, MockReview[]> = {
       orderedDish: "Suya Wrap",
     },
   ],
-  "listing-7": [
+  "a1b2c3d4-0007-4000-8000-000000000007": [
     {
       id: "rl7-1",
       clientName: "Jason K.",
@@ -2431,7 +2470,7 @@ export const MOCK_LISTING_REVIEWS: Record<string, MockReview[]> = {
       orderedDish: "Banchan Set",
     },
   ],
-  "listing-8": [
+  "a1b2c3d4-0008-4000-8000-000000000008": [
     {
       id: "rl8-1",
       clientName: "Omar F.",
@@ -2453,7 +2492,7 @@ export const MOCK_LISTING_REVIEWS: Record<string, MockReview[]> = {
       orderedDish: "Sides + Dips",
     },
   ],
-  "listing-9": [
+  "a1b2c3d4-0009-4000-8000-000000000009": [
     {
       id: "rl9-1",
       clientName: "Dev M.",
@@ -2475,7 +2514,7 @@ export const MOCK_LISTING_REVIEWS: Record<string, MockReview[]> = {
       orderedDish: "Thali (protein)",
     },
   ],
-  "listing-10": [
+  "a1b2c3d4-0010-4000-8000-000000000010": [
     {
       id: "rl10-1",
       clientName: "Raj P.",
@@ -2497,7 +2536,7 @@ export const MOCK_LISTING_REVIEWS: Record<string, MockReview[]> = {
       orderedDish: "Veg Biryani",
     },
   ],
-  "listing-11": [
+  "a1b2c3d4-0011-4000-8000-000000000011": [
     {
       id: "rl11-1",
       clientName: "James L.",
@@ -2519,7 +2558,7 @@ export const MOCK_LISTING_REVIEWS: Record<string, MockReview[]> = {
       orderedDish: "Shoyu Kit (2 servings)",
     },
   ],
-  "listing-12": [
+  "a1b2c3d4-0012-4000-8000-000000000012": [
     {
       id: "rl12-1",
       clientName: "Emily W.",
@@ -2541,7 +2580,7 @@ export const MOCK_LISTING_REVIEWS: Record<string, MockReview[]> = {
       orderedDish: "Chicken Karaage Bento",
     },
   ],
-  "listing-13": [
+  "a1b2c3d4-0013-4000-8000-000000000013": [
     {
       id: "rl13-1",
       clientName: "Marcus P.",
@@ -2563,7 +2602,7 @@ export const MOCK_LISTING_REVIEWS: Record<string, MockReview[]> = {
       orderedDish: "Jerk Chicken Whole",
     },
   ],
-  "listing-14": [
+  "a1b2c3d4-0014-4000-8000-000000000014": [
     {
       id: "rl14-1",
       clientName: "Dennis A.",
@@ -2585,7 +2624,7 @@ export const MOCK_LISTING_REVIEWS: Record<string, MockReview[]> = {
       orderedDish: "Oxtail Stew",
     },
   ],
-  "listing-15": [
+  "a1b2c3d4-0015-4000-8000-000000000015": [
     {
       id: "rl15-1",
       clientName: "Isabella R.",

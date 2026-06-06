@@ -3,6 +3,7 @@ import {
   boolean,
   check,
   integer,
+  jsonb,
   numeric,
   pgPolicy,
   pgTable,
@@ -48,7 +49,9 @@ export const orders = pgTable(
     // total_price = unit_price * quantity - COALESCE(discount_amount, 0)
     totalPrice: numeric("total_price", { precision: 10, scale: 2 }).notNull(),
     currency: varchar("currency", { length: 3 }).notNull().default("CAD"),
-    pickupAt: timestamp("pickup_at").notNull(),
+    pickupAt: timestamp("pickup_at"),
+    deliveryAddress: jsonb("delivery_address"),
+    fulfillmentMode: varchar("fulfillment_mode", { length: 20 }),
     fulfilledAt: timestamp("fulfilled_at"),
     cancelledAt: timestamp("cancelled_at"),
     cancelledBy: text("cancelled_by").references(() => authUser.id, {

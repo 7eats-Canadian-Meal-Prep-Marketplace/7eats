@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
   boolean,
   date,
+  json,
   pgPolicy,
   pgTable,
   text,
@@ -34,6 +35,8 @@ export const authUser = pgTable(
     onboardingCompletedAt: timestamp("onboarding_completed_at"),
     // Must be >= 16 years old. Set at onboarding, not editable after.
     dateOfBirth: date("date_of_birth"),
+    neighborhood: varchar("neighborhood", { length: 100 }),
+    notificationPreferences: json("notification_preferences"),
   },
   () => [
     // Public read required: other tables' RLS policies JOIN this table to check
