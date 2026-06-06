@@ -161,7 +161,6 @@ export default function OrderDetailPage({
         {
           label: "Awaiting confirmation",
           done: ["confirmed", "ready", "fulfilled"].includes(order.status),
-          active: order.status === "pending",
         },
         { label: "Order placed", done: true },
         {

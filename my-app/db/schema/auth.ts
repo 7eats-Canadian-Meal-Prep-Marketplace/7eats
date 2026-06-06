@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 import {
   boolean,
   date,
-  json,
+  jsonb,
   pgPolicy,
   pgTable,
   text,
@@ -36,7 +36,15 @@ export const authUser = pgTable(
     // Must be >= 16 years old. Set at onboarding, not editable after.
     dateOfBirth: date("date_of_birth"),
     neighborhood: varchar("neighborhood", { length: 100 }),
-    notificationPreferences: json("notification_preferences"),
+    notificationPreferences: jsonb<{
+      notifs: {
+        new_listing: boolean;
+        order_updates: boolean;
+        messages: boolean;
+        marketing: boolean;
+      };
+      channels: { sms: boolean; email: boolean };
+    }>("notification_preferences"),
   },
   () => [
     // Public read required: other tables' RLS policies JOIN this table to check

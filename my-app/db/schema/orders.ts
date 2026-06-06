@@ -111,6 +111,10 @@ export const orders = pgTable(
       "orders_late_cancel_fee_applied_non_negative",
       sql`${t.lateCancelFeeApplied} IS NULL OR ${t.lateCancelFeeApplied} >= 0`,
     ),
+    check(
+      "orders_fulfillment_mode_valid",
+      sql`${t.fulfillmentMode} IS NULL OR ${t.fulfillmentMode} IN ('pickup', 'delivery')`,
+    ),
     pgPolicy("orders_select_client", {
       for: "select",
       to: "public",
