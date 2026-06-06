@@ -22,7 +22,6 @@ function nextWeeklyDates(count = 4): { label: string; day: string }[] {
 
 type OrderEntry = {
   orderId: string;
-  pickupCode: string;
   cookName: string;
   fulfillmentMode: "pickup" | "delivery";
   hasSubscription: boolean;
@@ -44,7 +43,6 @@ function ConfirmationInner() {
     for (let i = 0; i < count; i++) {
       entries.push({
         orderId: searchParams.get(`oid${i}`) ?? `ORD-${i}`,
-        pickupCode: searchParams.get(`pc${i}`) ?? "------",
         cookName: searchParams.get(`cook${i}`) ?? "Your cook",
         fulfillmentMode: (searchParams.get(`mode${i}`) ?? "pickup") as
           | "pickup"

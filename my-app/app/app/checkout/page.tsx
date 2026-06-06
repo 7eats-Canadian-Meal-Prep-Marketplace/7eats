@@ -5,9 +5,7 @@ import {
   ArrowRight,
   CreditCard,
   Lock,
-  LogIn,
   RefreshCw,
-  UserPlus,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -25,7 +23,7 @@ import styles from "./page.module.css";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type CheckoutStep = "details" | "account" | "payment";
+type CheckoutStep = "details" | "payment";
 
 type ContactForm = {
   firstName: string;
@@ -88,9 +86,6 @@ function CheckoutInner() {
   const isSubscriptionCart =
     cartMode === "subscription" || cartMode === "mixed";
 
-  // Subscription items require an account — guest checkout is blocked
-  const allowGuestCheckout = !isSubscriptionCart;
-
   const initialStep =
     (searchParams.get("step") as CheckoutStep | null) ?? "details";
   const [step, setStep] = useState<CheckoutStep>(
@@ -102,10 +97,6 @@ function CheckoutInner() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [contact, setContact] = useState<ContactForm>(EMPTY_CONTACT);
   const [address, setAddress] = useState<DeliveryAddress>(EMPTY_ADDRESS);
-  const [checkoutMode, setCheckoutMode] = useState<"guest" | "account">(
-    isLoggedIn ? "account" : "guest",
-  );
-
   const [editingAddress, setEditingAddress] = useState(false);
   const [ordered, setOrdered] = useState(false);
 
@@ -184,7 +175,6 @@ function CheckoutInner() {
   // Pre-fill contact from real session + saved address for logged-in users
   useEffect(() => {
     if (!isLoggedIn) return;
-    setCheckoutMode("account");
     fetch("/api/auth/get-session")
       .then((r) => r.json())
       .then((data) => {
@@ -217,28 +207,14 @@ function CheckoutInner() {
     if (items.length === 0 && !placing && !ordered) router.replace("/app/cart");
   }, [items.length, placing, ordered, router]);
 
-  // A guest who navigated directly to ?step=payment with a subscription cart
-  // must go through the account step — they can't subscribe without an account
-  useEffect(() => {
-    if (!isLoggedIn && isSubscriptionCart && step === "payment") {
-      setStep("account");
-    }
-  }, [isLoggedIn, isSubscriptionCart, step]);
-
   // All hooks must run before any early return
-  const steps = useMemo(() => {
-    if (isLoggedIn) {
-      return [
-        { id: "details" as const, label: "Details" },
-        { id: "payment" as const, label: "Payment" },
-      ];
-    }
-    return [
+  const steps = useMemo(
+    () => [
       { id: "details" as const, label: "Details" },
-      { id: "account" as const, label: "Account" },
       { id: "payment" as const, label: "Payment" },
-    ];
-  }, [isLoggedIn]);
+    ],
+    [],
+  );
 
   const grouped = items.reduce<Record<string, typeof items>>((acc, item) => {
     if (!acc[item.cookId]) acc[item.cookId] = [];
@@ -253,8 +229,6 @@ function CheckoutInner() {
       grandTotal: Math.round((total + taxAmount) * 100) / 100,
     };
   }, [total]);
-
-  const loginNext = `/app/checkout?step=${isLoggedIn ? "payment" : "account"}`;
 
   const placeCTACopy = useMemo(() => {
     const amount = `$${formatCartMoney(grandTotal)}`;
@@ -274,16 +248,14 @@ function CheckoutInner() {
   // ── Validation ────────────────────────────────────────────────────────────────
 
   function validateDetails(): boolean {
-    const e: Record<string, string> = {};
-    // Contact fields are read-only for logged-in users — skip validation
+    // Unauthenticated users must sign in before proceeding
     if (!isLoggedIn) {
-      if (!contact.firstName.trim()) e.firstName = "Required";
-      if (!contact.lastName.trim()) e.lastName = "Required";
-      if (!contact.email.trim()) e.email = "Required";
-      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact.email.trim()))
-        e.email = "Enter a valid email";
-      if (!contact.phone.trim()) e.phone = "Required for order updates";
+      router.push(
+        `/app-auth/login?next=${encodeURIComponent("/app/checkout?step=payment")}`,
+      );
+      return false;
     }
+    const e: Record<string, string> = {};
     if (needsDeliveryAddress && !editingAddress) {
       if (!address.street.trim()) e.street = "Required";
       if (!address.city.trim()) e.city = "Required";
@@ -343,7 +315,6 @@ function CheckoutInner() {
       const cookGroups = Object.entries(grouped);
       const orderEntries = cookGroups.map(([, cookItems]) => ({
         orderId: `ORD-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 5).toUpperCase()}`,
-        pickupCode: Math.random().toString(36).slice(2, 8).toUpperCase(),
         cookName: cookItems[0].cookName,
         fulfillmentMode: cookItems[0].fulfillmentMode,
         hasSubscription: cookItems.some((i) => i.orderType === "subscription"),
@@ -379,16 +350,11 @@ function CheckoutInner() {
       const params = new URLSearchParams();
       orderEntries.forEach((o, i) => {
         params.set(`oid${i}`, o.orderId);
-        params.set(`pc${i}`, o.pickupCode);
         params.set(`cook${i}`, o.cookName);
         params.set(`mode${i}`, o.fulfillmentMode);
         if (o.hasSubscription) params.set(`sub${i}`, "1");
       });
       params.set("count", String(orderEntries.length));
-      if (!isLoggedIn && checkoutMode === "guest") {
-        params.set("guest", "1");
-        params.set("email", contact.email.trim());
-      }
       router.push(`/app/checkout/confirmation?${params.toString()}`);
     } catch (err) {
       setPlaceError(
@@ -720,10 +686,7 @@ function CheckoutInner() {
                 className={styles.primaryBtn}
                 disabled={needsDeliveryAddress && editingAddress}
                 onClick={() => {
-                  if (validateDetails()) {
-                    if (isLoggedIn) setStep("payment");
-                    else setStep("account");
-                  }
+                  if (validateDetails()) setStep("payment");
                 }}
               >
                 Continue
@@ -732,306 +695,139 @@ function CheckoutInner() {
             </>
           )}
 
-          {/* ── Step 2: Account (guest flow) ── */}
-          {step === "account" && !isLoggedIn && (
-            <>
-              <section className={styles.formSection}>
-                <h2 className={styles.formTitle}>
-                  How would you like to continue?
-                </h2>
-                {isSubscriptionCart ? (
-                  <div className={styles.subAccountNotice}>
-                    <Lock size={14} />
-                    Subscriptions require an account to manage billing, pause,
-                    or cancel recurring charges.
-                  </div>
-                ) : (
-                  <p className={styles.sectionLead}>
-                    Guest checkout is available — no account required. Sign in
-                    if you already have one for saved details and order history.
-                  </p>
-                )}
-
-                {allowGuestCheckout && (
-                  <button
-                    type="button"
-                    className={`${styles.choiceCard} ${checkoutMode === "guest" ? styles.choiceCardActive : ""}`}
-                    onClick={() => {
-                      setCheckoutMode("guest");
-                      setStep("payment");
-                    }}
-                  >
-                    <span className={styles.choiceTitle}>
-                      Continue as guest
-                    </span>
-                    <span className={styles.choiceDesc}>
-                      Check out with {contact.email || "your email"} — create an
-                      account later from your confirmation.
-                    </span>
-                  </button>
-                )}
-
-                <Link
-                  href={`/app-auth/login?next=${encodeURIComponent(loginNext)}`}
-                  className={styles.choiceCard}
-                >
-                  <span className={styles.choiceIcon}>
-                    <LogIn size={18} />
-                  </span>
-                  <span className={styles.choiceTitle}>Sign in</span>
-                  <span className={styles.choiceDesc}>
-                    Use your 7eats account for faster checkout and order
-                    tracking.
-                  </span>
-                </Link>
-
-                <Link
-                  href={`/app-auth/signup?next=${encodeURIComponent("/app/checkout?step=payment")}`}
-                  className={styles.choiceCard}
-                >
-                  <span className={styles.choiceIcon}>
-                    <UserPlus size={18} />
-                  </span>
-                  <span className={styles.choiceTitle}>Create an account</span>
-                  <span className={styles.choiceDesc}>
-                    Save your details, track orders, and manage subscriptions.
-                  </span>
-                </Link>
-              </section>
-
-              <button
-                type="button"
-                className={styles.textBtn}
-                onClick={() => setStep("details")}
-              >
-                ← Back to details
-              </button>
-            </>
-          )}
-
-          {/* ── Step 3: Payment ── */}
+          {/* ── Step 2: Payment ── */}
           {step === "payment" && (
             <>
-              {!isLoggedIn && checkoutMode === "guest" && (
-                <div className={styles.guestBanner}>
-                  Checking out as guest ·{" "}
-                  <button
-                    type="button"
-                    className={styles.inlineLink}
-                    onClick={() => setStep("account")}
-                  >
-                    Sign in instead
-                  </button>
-                </div>
-              )}
-
               <section className={styles.formSection}>
                 <h2 className={styles.formTitle}>Payment</h2>
 
-                {isLoggedIn ? (
-                  /* ── Logged-in: wallet with saved cards + add new ─────────── */
-                  loadingCards ? (
-                    <p className={styles.loadingCards}>
-                      Loading payment methods…
-                    </p>
-                  ) : (
-                    <div className={styles.walletList}>
-                      {/* Saved cards */}
-                      {savedCards.map((card) => (
-                        <button
-                          key={card.id}
-                          type="button"
-                          className={`${styles.walletRow} ${selectedCardId === card.id ? styles.walletRowActive : ""}`}
-                          onClick={() => setSelectedCardId(card.id)}
-                        >
-                          <span className={styles.walletRadio}>
-                            {selectedCardId === card.id && (
-                              <span className={styles.walletRadioDot} />
-                            )}
-                          </span>
-                          <span className={styles.walletCardBrand}>
-                            {cardBrandLabel(card.brand)}
-                          </span>
-                          <span className={styles.walletCardNum}>
-                            •••• {card.last4}
-                          </span>
-                          <span className={styles.walletCardExp}>
-                            {card.expMonth?.toString().padStart(2, "0")}/
-                            {card.expYear?.toString().slice(-2)}
-                          </span>
-                        </button>
-                      ))}
-
-                      {/* Add a new card option */}
+                {loadingCards ? (
+                  <p className={styles.loadingCards}>
+                    Loading payment methods…
+                  </p>
+                ) : (
+                  <div className={styles.walletList}>
+                    {/* Saved cards */}
+                    {savedCards.map((card) => (
                       <button
+                        key={card.id}
                         type="button"
-                        className={`${styles.walletRow} ${styles.walletRowAdd} ${selectedCardId === "new" ? styles.walletRowActive : ""}`}
-                        onClick={() => setSelectedCardId("new")}
+                        className={`${styles.walletRow} ${selectedCardId === card.id ? styles.walletRowActive : ""}`}
+                        onClick={() => setSelectedCardId(card.id)}
                       >
                         <span className={styles.walletRadio}>
-                          {selectedCardId === "new" && (
+                          {selectedCardId === card.id && (
                             <span className={styles.walletRadioDot} />
                           )}
                         </span>
-                        <CreditCard
-                          size={15}
-                          className={styles.walletAddIcon}
-                        />
-                        <span className={styles.walletAddLabel}>
-                          Add a new card
+                        <span className={styles.walletCardBrand}>
+                          {cardBrandLabel(card.brand)}
+                        </span>
+                        <span className={styles.walletCardNum}>
+                          •••• {card.last4}
+                        </span>
+                        <span className={styles.walletCardExp}>
+                          {card.expMonth?.toString().padStart(2, "0")}/
+                          {card.expYear?.toString().slice(-2)}
                         </span>
                       </button>
+                    ))}
 
-                      {/* New card form — expands inline when "Add a new card" is selected */}
-                      {selectedCardId === "new" && (
-                        <div className={styles.newCardForm}>
+                    {/* Add a new card option */}
+                    <button
+                      type="button"
+                      className={`${styles.walletRow} ${styles.walletRowAdd} ${selectedCardId === "new" ? styles.walletRowActive : ""}`}
+                      onClick={() => setSelectedCardId("new")}
+                    >
+                      <span className={styles.walletRadio}>
+                        {selectedCardId === "new" && (
+                          <span className={styles.walletRadioDot} />
+                        )}
+                      </span>
+                      <CreditCard size={15} className={styles.walletAddIcon} />
+                      <span className={styles.walletAddLabel}>
+                        Add a new card
+                      </span>
+                    </button>
+
+                    {/* New card form — expands inline when "Add a new card" is selected */}
+                    {selectedCardId === "new" && (
+                      <div className={styles.newCardForm}>
+                        <div className={styles.formGroup}>
+                          <label className={styles.label} htmlFor="card">
+                            Card number
+                          </label>
+                          <input
+                            id="card"
+                            type="text"
+                            placeholder="1234 5678 9012 3456"
+                            className={styles.input}
+                            value={rawCard.number}
+                            onChange={(e) =>
+                              setRawCard((c) => ({
+                                ...c,
+                                number: e.target.value,
+                              }))
+                            }
+                            maxLength={19}
+                            autoComplete="cc-number"
+                          />
+                          {errors.card && (
+                            <p className={styles.fieldError}>{errors.card}</p>
+                          )}
+                        </div>
+                        <div className={styles.formRow}>
                           <div className={styles.formGroup}>
-                            <label className={styles.label} htmlFor="card">
-                              Card number
+                            <label className={styles.label} htmlFor="expiry">
+                              Expiry
                             </label>
                             <input
-                              id="card"
+                              id="expiry"
                               type="text"
-                              placeholder="1234 5678 9012 3456"
+                              placeholder="MM / YY"
                               className={styles.input}
-                              value={rawCard.number}
+                              value={rawCard.expiry}
                               onChange={(e) =>
                                 setRawCard((c) => ({
                                   ...c,
-                                  number: e.target.value,
+                                  expiry: e.target.value,
                                 }))
                               }
-                              maxLength={19}
-                              autoComplete="cc-number"
+                              maxLength={7}
+                              autoComplete="cc-exp"
                             />
-                            {errors.card && (
-                              <p className={styles.fieldError}>{errors.card}</p>
+                            {errors.expiry && (
+                              <p className={styles.fieldError}>
+                                {errors.expiry}
+                              </p>
                             )}
                           </div>
-                          <div className={styles.formRow}>
-                            <div className={styles.formGroup}>
-                              <label className={styles.label} htmlFor="expiry">
-                                Expiry
-                              </label>
-                              <input
-                                id="expiry"
-                                type="text"
-                                placeholder="MM / YY"
-                                className={styles.input}
-                                value={rawCard.expiry}
-                                onChange={(e) =>
-                                  setRawCard((c) => ({
-                                    ...c,
-                                    expiry: e.target.value,
-                                  }))
-                                }
-                                maxLength={7}
-                                autoComplete="cc-exp"
-                              />
-                              {errors.expiry && (
-                                <p className={styles.fieldError}>
-                                  {errors.expiry}
-                                </p>
-                              )}
-                            </div>
-                            <div className={styles.formGroup}>
-                              <label className={styles.label} htmlFor="cvv">
-                                CVV
-                              </label>
-                              <input
-                                id="cvv"
-                                type="text"
-                                placeholder="•••"
-                                className={styles.input}
-                                value={rawCard.cvv}
-                                onChange={(e) =>
-                                  setRawCard((c) => ({
-                                    ...c,
-                                    cvv: e.target.value,
-                                  }))
-                                }
-                                maxLength={4}
-                                autoComplete="cc-csc"
-                              />
-                              {errors.cvv && (
-                                <p className={styles.fieldError}>
-                                  {errors.cvv}
-                                </p>
-                              )}
-                            </div>
+                          <div className={styles.formGroup}>
+                            <label className={styles.label} htmlFor="cvv">
+                              CVV
+                            </label>
+                            <input
+                              id="cvv"
+                              type="text"
+                              placeholder="•••"
+                              className={styles.input}
+                              value={rawCard.cvv}
+                              onChange={(e) =>
+                                setRawCard((c) => ({
+                                  ...c,
+                                  cvv: e.target.value,
+                                }))
+                              }
+                              maxLength={4}
+                              autoComplete="cc-csc"
+                            />
+                            {errors.cvv && (
+                              <p className={styles.fieldError}>{errors.cvv}</p>
+                            )}
                           </div>
                         </div>
-                      )}
-                    </div>
-                  )
-                ) : (
-                  /* ── Guest: CC form directly ───────────────────────────────── */
-                  <div className={styles.newCardForm}>
-                    <div className={styles.formGroup}>
-                      <label className={styles.label} htmlFor="card">
-                        Card number
-                      </label>
-                      <input
-                        id="card"
-                        type="text"
-                        placeholder="1234 5678 9012 3456"
-                        className={styles.input}
-                        value={rawCard.number}
-                        onChange={(e) =>
-                          setRawCard((c) => ({ ...c, number: e.target.value }))
-                        }
-                        maxLength={19}
-                        autoComplete="cc-number"
-                      />
-                      {errors.card && (
-                        <p className={styles.fieldError}>{errors.card}</p>
-                      )}
-                    </div>
-                    <div className={styles.formRow}>
-                      <div className={styles.formGroup}>
-                        <label className={styles.label} htmlFor="expiry">
-                          Expiry
-                        </label>
-                        <input
-                          id="expiry"
-                          type="text"
-                          placeholder="MM / YY"
-                          className={styles.input}
-                          value={rawCard.expiry}
-                          onChange={(e) =>
-                            setRawCard((c) => ({
-                              ...c,
-                              expiry: e.target.value,
-                            }))
-                          }
-                          maxLength={7}
-                          autoComplete="cc-exp"
-                        />
-                        {errors.expiry && (
-                          <p className={styles.fieldError}>{errors.expiry}</p>
-                        )}
                       </div>
-                      <div className={styles.formGroup}>
-                        <label className={styles.label} htmlFor="cvv">
-                          CVV
-                        </label>
-                        <input
-                          id="cvv"
-                          type="text"
-                          placeholder="•••"
-                          className={styles.input}
-                          value={rawCard.cvv}
-                          onChange={(e) =>
-                            setRawCard((c) => ({ ...c, cvv: e.target.value }))
-                          }
-                          maxLength={4}
-                          autoComplete="cc-csc"
-                        />
-                        {errors.cvv && (
-                          <p className={styles.fieldError}>{errors.cvv}</p>
-                        )}
-                      </div>
-                    </div>
+                    )}
                   </div>
                 )}
               </section>
@@ -1095,7 +891,7 @@ function CheckoutInner() {
                 <button
                   type="button"
                   className={styles.textBtn}
-                  onClick={() => setStep(isLoggedIn ? "details" : "account")}
+                  onClick={() => setStep("details")}
                 >
                   ← Back
                 </button>

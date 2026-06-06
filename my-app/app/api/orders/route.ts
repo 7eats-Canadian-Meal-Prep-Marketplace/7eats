@@ -161,9 +161,19 @@ const createOrderSchema = z.object({
   listingId: z.string().uuid(),
   quantity: z.number().int().min(1),
   paymentMethodId: z.string().min(1),
-  pickupAt: z.string().datetime(), // TODO: make optional once DB column is nullable
+  pickupAt: z.string().datetime().optional(),
   promotionId: z.string().uuid().optional(),
   notes: z.string().max(500).optional(),
+  deliveryAddress: z
+    .object({
+      street: z.string().min(1).max(200),
+      unit: z.string().max(50).optional(),
+      city: z.string().min(1).max(100),
+      province: z.string().length(2),
+      postal: z.string().min(5).max(10),
+    })
+    .optional(),
+  fulfillmentMode: z.enum(["pickup", "delivery"]).optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -456,7 +466,9 @@ export async function POST(req: NextRequest) {
             discountAmount > 0 ? String(discountAmount.toFixed(2)) : null,
           totalPrice: String(totalPrice.toFixed(2)),
           currency: "CAD",
-          pickupAt: new Date(pickupAt),
+          pickupAt: pickupAt ? new Date(pickupAt) : null,
+          deliveryAddress: parsed.data.deliveryAddress ?? null,
+          fulfillmentMode: parsed.data.fulfillmentMode ?? null,
           notes: notes ?? null,
           depositEnabled: listing.depositEnabled,
           depositType: listing.depositType ?? null,
@@ -589,7 +601,7 @@ export async function POST(req: NextRequest) {
             quantity,
             totalPrice: totalPrice.toFixed(2),
             currency: "CAD",
-            pickupAt: new Date(pickupAt),
+            pickupAt: pickupAt ? new Date(pickupAt) : "TBD",
           },
         );
       })

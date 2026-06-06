@@ -158,6 +158,7 @@ export type MockOrder = {
   status: OrderStatus;
   pickupCode: string;
   pickupAddress: string;
+  cancelledAt?: string | null;
 };
 
 export type MockMessageThread = {
@@ -2064,6 +2065,7 @@ export const MOCK_ORDERS: MockOrder[] = [
     status: "cancelled",
     pickupCode: "7E-0071",
     pickupAddress: "12 Kensington Ave, Toronto",
+    cancelledAt: "2025-05-15T14:30:00.000Z",
   },
 ];
 

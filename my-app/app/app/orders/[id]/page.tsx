@@ -210,6 +210,25 @@ export default function OrderDetailPage({
           </div>
         </div>
 
+        {/* Cancellation banner */}
+        {isCancelled && (
+          <div className={styles.cancelledBanner}>
+            <span className={styles.cancelledBannerTitle}>
+              This order was cancelled
+            </span>
+            {order.cancelledAt && (
+              <span className={styles.cancelledBannerDate}>
+                {new Date(order.cancelledAt).toLocaleDateString("en-CA", {
+                  weekday: "long",
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                })}
+              </span>
+            )}
+          </div>
+        )}
+
         {/* Message CTA */}
         {!isCancelled && !isDone && (
           <Link href="/app/inbox" className={styles.messageCta}>
@@ -381,11 +400,6 @@ export default function OrderDetailPage({
             <span className={styles.dishQty} />
             <span className={styles.summaryLabel}>Subtotal</span>
             <span className={styles.summaryVal}>${order.subtotal}.00</span>
-          </div>
-          <div className={styles.dishRow}>
-            <span className={styles.dishQty} />
-            <span className={styles.summaryLabel}>Service fee</span>
-            <span className={styles.summaryVal}>${order.serviceFee}.00</span>
           </div>
           <div className={`${styles.dishRow} ${styles.totalRow}`}>
             <span className={styles.dishQty} />
