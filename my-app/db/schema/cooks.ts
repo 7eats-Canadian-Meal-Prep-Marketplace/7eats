@@ -50,6 +50,19 @@ export const cookProfiles = pgTable(
     pickupLat: doublePrecision("pickup_lat"),
     pickupLng: doublePrecision("pickup_lng"),
     pickupPlaceId: text("pickup_place_id"),
+    maxDeliveryKm: integer("max_delivery_km"),
+    deliveryRatePerKm: numeric("delivery_rate_per_km", {
+      precision: 6,
+      scale: 2,
+    }),
+    deliveryFlatFee: numeric("delivery_flat_fee", {
+      precision: 6,
+      scale: 2,
+    }).default("0"),
+    freeDeliveryAbove: numeric("free_delivery_above", {
+      precision: 8,
+      scale: 2,
+    }),
     leadTime: leadTimeEnum("lead_time"),
     maxCapacity: integer("max_capacity"),
     delivery: deliveryEnum("delivery"),
