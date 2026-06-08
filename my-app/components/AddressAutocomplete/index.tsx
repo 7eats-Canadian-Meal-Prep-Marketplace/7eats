@@ -9,6 +9,22 @@ type AddressAutofillRetrieveResponse = NonNullable<
   Parameters<NonNullable<AddressAutofillProps["onRetrieve"]>>[0]
 >;
 
+const PROVINCE_NAME_TO_CODE: Record<string, string> = {
+  Alberta: "AB",
+  "British Columbia": "BC",
+  Manitoba: "MB",
+  "New Brunswick": "NB",
+  "Newfoundland and Labrador": "NL",
+  "Northwest Territories": "NT",
+  "Nova Scotia": "NS",
+  Nunavut: "NU",
+  Ontario: "ON",
+  "Prince Edward Island": "PE",
+  Quebec: "QC",
+  Saskatchewan: "SK",
+  Yukon: "YT",
+};
+
 interface Props {
   onResolve: (address: NormalizedAddress) => void;
   initialValue?: string;
@@ -32,12 +48,14 @@ export function AddressAutocomplete({
     const { properties, geometry } = feature;
     // geometry.coordinates is GeoJSON Position (number[]) — lng first, lat second
     const coords = geometry.coordinates as [number, number];
+    const rawProvince = properties.address_level1 ?? "";
+    const province = PROVINCE_NAME_TO_CODE[rawProvince] ?? rawProvince;
     const resolved: NormalizedAddress = {
       street: properties.address_line1 ?? "",
       unit: properties.address_line2 || undefined,
       // address_level2 = city, address_level1 = province/state
       city: properties.address_level2 ?? "",
-      province: properties.address_level1 ?? "",
+      province,
       postal: properties.postcode ?? "",
       lat: coords[1],
       lng: coords[0],
@@ -47,21 +65,26 @@ export function AddressAutocomplete({
     setValue(properties.full_address ?? properties.address_line1 ?? "");
   }
 
+  const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+  if (!token) throw new Error("NEXT_PUBLIC_MAPBOX_TOKEN is not configured");
+
   return (
-    <AddressAutofill
-      accessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN!}
-      options={{ country: "ca", language: "en" }}
-      onRetrieve={handleRetrieve}
-    >
-      <input
-        type="text"
-        name={name}
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        placeholder={placeholder}
-        autoComplete="address-line1"
-        className={inputClassName}
-      />
-    </AddressAutofill>
+    <form onSubmit={(e) => e.preventDefault()} style={{ display: "contents" }}>
+      <AddressAutofill
+        accessToken={token}
+        options={{ country: "ca", language: "en" }}
+        onRetrieve={handleRetrieve}
+      >
+        <input
+          type="text"
+          name={name}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder={placeholder}
+          autoComplete="address-line1"
+          className={inputClassName}
+        />
+      </AddressAutofill>
+    </form>
   );
 }
