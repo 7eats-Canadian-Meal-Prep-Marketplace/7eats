@@ -3,25 +3,24 @@
 import { RefreshCw, ShoppingCart, X } from "lucide-react";
 import Link from "next/link";
 import { useMemo } from "react";
+import { useApp } from "../_app-context";
 import { type CartItem, useCart } from "../_cart-context";
 import { WEEKLY_CHARGE_DISCLAIMER } from "../_subscription-utils";
-import {
-  calcOntarioHst,
-  formatCartMoney,
-  ONTARIO_HST_LABEL,
-} from "./_cart-tax";
+import { calcTax, formatCartMoney, getTaxLabel } from "./_cart-tax";
 import styles from "./page.module.css";
 
 export default function CartPage() {
   const { items, removeListing, total } = useCart();
+  const { province } = useApp();
 
-  const { tax, grandTotal } = useMemo(() => {
-    const taxAmount = calcOntarioHst(total);
+  const { tax, grandTotal, taxLabel } = useMemo(() => {
+    const taxAmount = Math.round(calcTax(total, province) * 100) / 100;
     return {
       tax: taxAmount,
       grandTotal: Math.round((total + taxAmount) * 100) / 100,
+      taxLabel: getTaxLabel(province),
     };
-  }, [total]);
+  }, [total, province]);
 
   if (items.length === 0) {
     return (
@@ -162,10 +161,7 @@ export default function CartPage() {
                     </span>
                   </div>
                   <div className={styles.summaryRow}>
-                    <span className={styles.summaryRowLabel}>
-                      {ONTARIO_HST_LABEL}
-                      <span className={styles.taxNote}>Ontario</span>
-                    </span>
+                    <span className={styles.summaryRowLabel}>{taxLabel}</span>
                     <span className={styles.summaryRowVal}>
                       ${formatCartMoney(tax)}
                     </span>

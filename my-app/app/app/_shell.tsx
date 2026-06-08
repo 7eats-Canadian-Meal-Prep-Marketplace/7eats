@@ -285,6 +285,7 @@ function ShellInner({
 }) {
   const pathname = usePathname();
   const { listingCount } = useCart();
+  const { setProvince } = useApp();
   const [address, setAddress] = useState<NormalizedAddress | null>(null);
   const [showAddress, setShowAddress] = useState(false);
   const [showAddressDropdown, setShowAddressDropdown] = useState(false);
@@ -297,13 +298,15 @@ function ShellInner({
       .then((res) => res.json())
       .then((data) => {
         if (data.address) {
-          setAddress(data.address as NormalizedAddress);
+          const normalized = data.address as NormalizedAddress;
+          setAddress(normalized);
+          setProvince(normalized.province);
         }
       })
       .catch(() => {
         // Non-critical — silently ignore fetch errors
       });
-  }, [isLoggedIn]);
+  }, [isLoggedIn, setProvince]);
 
   useEffect(() => {
     if (!showAddressDropdown) return;
@@ -448,6 +451,7 @@ function ShellInner({
           current={address}
           onConfirm={async (newAddress) => {
             setAddress(newAddress);
+            setProvince(newAddress.province);
             try {
               await fetch("/api/user/address", {
                 method: "PUT",
