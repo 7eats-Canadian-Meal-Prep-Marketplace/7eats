@@ -18,8 +18,8 @@ import Link from "next/link";
 import { notFound, useRouter } from "next/navigation";
 import { use, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useCart } from "../../_cart-context";
-import type { MockDish } from "../../_mock";
 import { DealCallout } from "./_DealCallout";
+import type { Dish } from "./_DishModal";
 import DishModal from "./_DishModal";
 import styles from "./page.module.css";
 
@@ -85,8 +85,8 @@ type ApiReview = {
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-/** Convert an ApiDish to the MockDish shape that DishModal expects */
-function toMockDish(d: ApiDish): MockDish {
+/** Convert an ApiDish to the Dish shape that DishModal expects */
+function toDish(d: ApiDish): Dish {
   return {
     id: d.id,
     name: d.name,
@@ -177,7 +177,7 @@ export default function ListingPage({
   >("pickup");
   const wasInCartRef = useRef(false);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
-  const [selectedDish, setSelectedDish] = useState<MockDish | null>(null);
+  const [selectedDish, setSelectedDish] = useState<Dish | null>(null);
   const [isModifying, setIsModifying] = useState(false);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: id is an intentional trigger dep
@@ -233,7 +233,7 @@ export default function ListingPage({
     [quantities],
   );
 
-  const handleAdd = (dish: MockDish) => {
+  const handleAdd = (dish: Dish) => {
     if (orderLocked || !listing) return;
     setQuantities((prev) => {
       const current = Object.values(prev).reduce((s, q) => s + q, 0);
@@ -248,7 +248,7 @@ export default function ListingPage({
     });
   };
 
-  const handleDecrement = (dish: MockDish) => {
+  const handleDecrement = (dish: Dish) => {
     if (orderLocked) return;
     setQuantities((prev) => {
       const newQty = Math.max(0, (prev[dish.id] ?? 0) - 1);
@@ -529,7 +529,7 @@ export default function ListingPage({
           <h2 className={styles.sectionTitle}>What&apos;s on the menu</h2>
           <div className={styles.dishes}>
             {listing.dishes.map((dish) => {
-              const mockDish = toMockDish(dish);
+              const mockDish = toDish(dish);
               const qty = getQty(dish.id);
               const atListingMax =
                 !orderLocked &&

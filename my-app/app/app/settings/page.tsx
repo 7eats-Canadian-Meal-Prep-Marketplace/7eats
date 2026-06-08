@@ -1,17 +1,75 @@
 "use client";
 
-import {
-  Check,
-  CreditCard,
-  Edit3,
-  Plus,
-  RefreshCw,
-  Trash2,
-  X,
-} from "lucide-react";
+import { CreditCard, Edit3, Plus, RefreshCw, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { PREFERENCE_QUESTIONS } from "../_mock";
 import styles from "./page.module.css";
+
+type PreferenceQuestion = {
+  id: string;
+  question: string;
+  options: string[];
+  multiSelect: boolean;
+};
+
+const PREFERENCE_QUESTIONS: PreferenceQuestion[] = [
+  {
+    id: "dietary",
+    question: "Dietary needs",
+    options: [
+      "Halal",
+      "Vegan",
+      "Vegetarian",
+      "Gluten-free",
+      "Dairy-free",
+      "Nut-free",
+      "Kosher",
+    ],
+    multiSelect: true,
+  },
+  {
+    id: "allergies",
+    question: "Allergies",
+    options: [
+      "Tree nuts",
+      "Peanuts",
+      "Dairy",
+      "Gluten",
+      "Shellfish",
+      "Eggs",
+      "Soy",
+      "None",
+    ],
+    multiSelect: true,
+  },
+  {
+    id: "goals",
+    question: "Goals & preferences",
+    options: [
+      "High protein",
+      "Weight loss",
+      "Low carb",
+      "Muscle gain",
+      "Heart health",
+      "Comfort food",
+      "Family-friendly",
+      "Balanced",
+    ],
+    multiSelect: true,
+  },
+  {
+    id: "whyMealPrep",
+    question: "Why do you order meal prep?",
+    options: [
+      "Save time cooking",
+      "Eat healthier",
+      "Budget-friendly eating",
+      "Discover new cuisines",
+      "Support local home cooks",
+      "Convenient for my schedule",
+    ],
+    multiSelect: false,
+  },
+];
 
 type Tab =
   | "profile"
@@ -40,21 +98,17 @@ type SavedCard = {
   id: string;
   brand: string;
   last4: string;
-  expMonth: number;
-  expYear: number;
-  isDefault: boolean;
+  expMonth: number | undefined;
+  expYear: number | undefined;
 };
 type ActiveSub = {
   id: string;
-  listingTitle: string;
-  cookName: string;
-  interval: string;
-  price: number;
-  /** Next billing date */
-  nextDate: string;
-  /** Current week's fulfillment date — already paid, still gets fulfilled on cancel */
-  currentFulfillmentDate: string;
-  status: "active" | "cancelled";
+  status: string;
+  cancelAtPeriodEnd: boolean;
+  currentPeriodEnd: string | null;
+  listing: { id: string; title: string };
+  tier: { id: string; interval: string; price: string };
+  cookDisplayName: string;
 };
 
 // ─── API types ────────────────────────────────────────────────────────────────
@@ -90,37 +144,6 @@ const DEFAULT_NOTIF_PREFS: NotifPrefs = {
   },
   channels: { sms: true, email: true },
 };
-
-const MOCK_CARDS: SavedCard[] = [
-  {
-    id: "pm_1",
-    brand: "Visa",
-    last4: "4242",
-    expMonth: 12,
-    expYear: 27,
-    isDefault: true,
-  },
-  {
-    id: "pm_2",
-    brand: "Mastercard",
-    last4: "5555",
-    expMonth: 8,
-    expYear: 26,
-    isDefault: false,
-  },
-];
-const MOCK_SUBS: ActiveSub[] = [
-  {
-    id: "sub-1",
-    listingTitle: "Korean Banchan Box",
-    cookName: "Ji-won Park",
-    interval: "Weekly",
-    price: 26,
-    nextDate: "Fri Jun 13",
-    currentFulfillmentDate: "Fri Jun 6",
-    status: "active",
-  },
-];
 
 // ─── Card helpers ─────────────────────────────────────────────────────────────
 
@@ -176,7 +199,7 @@ function AddCardModal({
   onSave,
   onClose,
 }: {
-  onSave: (card: Omit<SavedCard, "id" | "isDefault">) => void;
+  onSave: (card: Omit<SavedCard, "id">) => void;
   onClose: () => void;
 }) {
   const [number, setNumber] = useState("");
@@ -350,13 +373,16 @@ export default function SettingsPage() {
   const [notifSaveSuccess, setNotifSaveSuccess] = useState(false);
 
   // ── Card / sub state ───────────────────────────────────────────────────────
-  const [cards, setCards] = useState<SavedCard[]>(MOCK_CARDS);
-  const [subs, setSubs] = useState<ActiveSub[]>(MOCK_SUBS);
+  const [cards, setCards] = useState<SavedCard[]>([]);
+  const [cardsLoading, setCardsLoading] = useState(true);
+  const [subs, setSubs] = useState<ActiveSub[]>([]);
+  const [subsLoading, setSubsLoading] = useState(true);
   const [showAddCard, setShowAddCard] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [confirmCancelSubId, setConfirmCancelSubId] = useState<string | null>(
     null,
   );
+  const [subCancelError, setSubCancelError] = useState<string | null>(null);
 
   // ── Fetch profile on mount ─────────────────────────────────────────────────
   useEffect(() => {
@@ -403,6 +429,30 @@ export default function SettingsPage() {
       .finally(() => setNotifLoading(false));
   }, []);
 
+  // ── Fetch cards on mount ───────────────────────────────────────────────────
+  useEffect(() => {
+    setCardsLoading(true);
+    fetch("/api/checkout/payment-methods")
+      .then((r) => r.json())
+      .then((json: { data?: SavedCard[] }) => {
+        if (json.data) setCards(json.data);
+      })
+      .catch(() => {})
+      .finally(() => setCardsLoading(false));
+  }, []);
+
+  // ── Fetch subscriptions on mount ───────────────────────────────────────────
+  useEffect(() => {
+    setSubsLoading(true);
+    fetch("/api/subscriptions")
+      .then((r) => r.json())
+      .then((json: { success?: boolean; data?: ActiveSub[] }) => {
+        if (json.data) setSubs(json.data);
+      })
+      .catch(() => {})
+      .finally(() => setSubsLoading(false));
+  }, []);
+
   // ── Helpers ────────────────────────────────────────────────────────────────
 
   const atLeastOneChannel =
@@ -420,33 +470,31 @@ export default function SettingsPage() {
     });
   };
 
-  const addCard = (card: Omit<SavedCard, "id" | "isDefault">) => {
-    setCards((prev) => [
-      ...prev,
-      { ...card, id: `pm_${Date.now()}`, isDefault: prev.length === 0 },
-    ]);
+  const addCard = (card: Omit<SavedCard, "id">) => {
+    setCards((prev) => [...prev, { ...card, id: `pm_${Date.now()}` }]);
   };
 
   const removeCard = (id: string) => {
-    setCards((prev) => {
-      const next = prev.filter((c) => c.id !== id);
-      if (next.length > 0 && !next.some((c) => c.isDefault))
-        next[0] = { ...next[0], isDefault: true };
-      return next;
-    });
+    setCards((prev) => prev.filter((c) => c.id !== id));
     setConfirmDeleteId(null);
   };
 
-  const setDefault = (id: string) =>
-    setCards((prev) => prev.map((c) => ({ ...c, isDefault: c.id === id })));
-
-  const confirmCancelSub = (id: string) => {
-    setSubs((prev) =>
-      prev.map((s) =>
-        s.id === id ? { ...s, status: "cancelled" as const } : s,
-      ),
-    );
-    setConfirmCancelSubId(null);
+  const confirmCancelSub = async (id: string) => {
+    setSubCancelError(null);
+    try {
+      const res = await fetch(`/api/subscriptions/${id}`, { method: "DELETE" });
+      const json = (await res.json()) as { success?: boolean; error?: string };
+      if (!res.ok) {
+        setSubCancelError(json.error ?? "Failed to cancel subscription.");
+        return;
+      }
+      setSubs((prev) =>
+        prev.map((s) => (s.id === id ? { ...s, cancelAtPeriodEnd: true } : s)),
+      );
+      setConfirmCancelSubId(null);
+    } catch {
+      setSubCancelError("Network error. Please try again.");
+    }
   };
 
   // ── Profile save ───────────────────────────────────────────────────────────
@@ -890,68 +938,71 @@ export default function SettingsPage() {
                 Cards on file are used for orders and weekly subscriptions.
               </p>
               <div className={styles.cardList}>
-                {cards.map((card) =>
-                  confirmDeleteId === card.id ? (
-                    <div key={card.id} className={styles.deleteConfirmRow}>
-                      <span className={styles.deleteConfirmText}>
-                        Remove {card.brand} ···· {card.last4}?
-                      </span>
-                      <div className={styles.deleteConfirmActions}>
-                        <button
-                          type="button"
-                          className={styles.deleteConfirmCancel}
-                          onClick={() => setConfirmDeleteId(null)}
-                        >
-                          Keep
-                        </button>
-                        <button
-                          type="button"
-                          className={styles.deleteConfirmRemove}
-                          onClick={() => removeCard(card.id)}
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div key={card.id} className={styles.paymentRow}>
-                      <div className={styles.paymentRowLeft}>
-                        <CreditCard size={18} className={styles.paymentIcon} />
-                        <div className={styles.paymentInfo}>
-                          <span className={styles.paymentBrand}>
-                            {card.brand} ···· {card.last4}
-                          </span>
-                          <span className={styles.paymentExp}>
-                            Expires {card.expMonth.toString().padStart(2, "0")}/
-                            {card.expYear.toString().slice(-2)}
-                          </span>
-                        </div>
-                        {card.isDefault && (
-                          <Check size={15} className={styles.defaultCheck} />
-                        )}
-                      </div>
-                      <div className={styles.paymentRowActions}>
-                        {!card.isDefault && (
+                {cardsLoading ? (
+                  <p className={styles.profileInfoEmpty}>Loading…</p>
+                ) : cards.length === 0 ? (
+                  <p className={styles.profileInfoEmpty}>No saved cards.</p>
+                ) : null}
+                {!cardsLoading &&
+                  cards.map((card) =>
+                    confirmDeleteId === card.id ? (
+                      <div key={card.id} className={styles.deleteConfirmRow}>
+                        <span className={styles.deleteConfirmText}>
+                          Remove {card.brand} ···· {card.last4}?
+                        </span>
+                        <div className={styles.deleteConfirmActions}>
                           <button
                             type="button"
-                            className={styles.setDefaultBtn}
-                            onClick={() => setDefault(card.id)}
+                            className={styles.deleteConfirmCancel}
+                            onClick={() => setConfirmDeleteId(null)}
                           >
-                            Set default
+                            Keep
                           </button>
-                        )}
-                        <button
-                          type="button"
-                          className={styles.removeCardBtn}
-                          onClick={() => setConfirmDeleteId(card.id)}
-                          aria-label="Remove card"
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                          <button
+                            type="button"
+                            className={styles.deleteConfirmRemove}
+                            onClick={() => removeCard(card.id)}
+                          >
+                            Remove
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ),
-                )}
+                    ) : (
+                      <div key={card.id} className={styles.paymentRow}>
+                        <div className={styles.paymentRowLeft}>
+                          <CreditCard
+                            size={18}
+                            className={styles.paymentIcon}
+                          />
+                          <div className={styles.paymentInfo}>
+                            <span className={styles.paymentBrand}>
+                              {card.brand} ···· {card.last4}
+                            </span>
+                            <span className={styles.paymentExp}>
+                              Expires{" "}
+                              {card.expMonth
+                                ? card.expMonth.toString().padStart(2, "0")
+                                : "??"}
+                              /
+                              {card.expYear
+                                ? card.expYear.toString().slice(-2)
+                                : "??"}
+                            </span>
+                          </div>
+                        </div>
+                        <div className={styles.paymentRowActions}>
+                          <button
+                            type="button"
+                            className={styles.removeCardBtn}
+                            onClick={() => setConfirmDeleteId(card.id)}
+                            aria-label="Remove card"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    ),
+                  )}
               </div>
               <button
                 type="button"
@@ -968,7 +1019,9 @@ export default function SettingsPage() {
         {/* Subscriptions */}
         {tab === "subscriptions" && (
           <div className={styles.tabContent}>
-            {subs.length === 0 ? (
+            {subsLoading ? (
+              <p className={styles.profileInfoEmpty}>Loading…</p>
+            ) : subs.length === 0 ? (
               <div className={styles.subEmpty}>
                 <RefreshCw size={32} className={styles.subEmptyIcon} />
                 <p className={styles.subEmptyText}>No active subscriptions.</p>
@@ -981,83 +1034,111 @@ export default function SettingsPage() {
                 <p className={styles.prefIntro}>
                   Charges occur automatically each week until you cancel.
                 </p>
-                {subs.map((sub) => (
-                  <div key={sub.id} className={styles.subCard}>
-                    <div className={styles.subCardTop}>
-                      <div className={styles.subCardInfo}>
-                        <div className={styles.subCardTitle}>
-                          {sub.listingTitle}
+                {subCancelError && (
+                  <p className={styles.profileInfoEmpty}>{subCancelError}</p>
+                )}
+                {subs.map((sub) => {
+                  const isActive =
+                    sub.status === "active" && !sub.cancelAtPeriodEnd;
+                  const isCancelling =
+                    sub.status === "active" && sub.cancelAtPeriodEnd;
+                  const nextDateLabel = sub.currentPeriodEnd
+                    ? new Date(sub.currentPeriodEnd).toLocaleDateString(
+                        "en-CA",
+                        { weekday: "short", month: "short", day: "numeric" },
+                      )
+                    : null;
+                  return (
+                    <div key={sub.id} className={styles.subCard}>
+                      <div className={styles.subCardTop}>
+                        <div className={styles.subCardInfo}>
+                          <div className={styles.subCardTitle}>
+                            {sub.listing.title}
+                          </div>
+                          <div className={styles.subCardCook}>
+                            {sub.cookDisplayName}
+                          </div>
                         </div>
-                        <div className={styles.subCardCook}>{sub.cookName}</div>
+                        <div className={styles.subCardRight}>
+                          <span
+                            className={`${styles.subStatus} ${isActive ? styles.subStatusActive : styles.subStatusCancelled}`}
+                          >
+                            {isActive
+                              ? "Active"
+                              : isCancelling
+                                ? "Cancelling"
+                                : "Cancelled"}
+                          </span>
+                          <span className={styles.subPrice}>
+                            ${Number(sub.tier.price)}
+                            <span className={styles.subInterval}>
+                              /{sub.tier.interval}
+                            </span>
+                          </span>
+                        </div>
                       </div>
-                      <div className={styles.subCardRight}>
-                        <span
-                          className={`${styles.subStatus} ${sub.status === "active" ? styles.subStatusActive : styles.subStatusCancelled}`}
-                        >
-                          {sub.status === "active" ? "Active" : "Cancelled"}
-                        </span>
-                        <span className={styles.subPrice}>
-                          ${sub.price}
-                          <span className={styles.subInterval}>/week</span>
-                        </span>
-                      </div>
+                      {/* Cancellation guard — shown when user clicked Cancel */}
+                      {confirmCancelSubId === sub.id ? (
+                        <div className={styles.subCancelConfirm}>
+                          <div className={styles.subCancelConfirmText}>
+                            <span className={styles.subCancelConfirmTitle}>
+                              Cancel this subscription?
+                            </span>
+                            <span className={styles.subCancelConfirmPolicy}>
+                              Your subscription will remain active until{" "}
+                              <strong>
+                                {nextDateLabel ?? "end of period"}
+                              </strong>
+                              . No further charges after that.
+                            </span>
+                          </div>
+                          <div className={styles.subCancelConfirmActions}>
+                            <button
+                              type="button"
+                              className={styles.subCancelKeep}
+                              onClick={() => setConfirmCancelSubId(null)}
+                            >
+                              Keep
+                            </button>
+                            <button
+                              type="button"
+                              className={styles.subCancelConfirmBtn}
+                              onClick={() => confirmCancelSub(sub.id)}
+                            >
+                              Confirm cancellation
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className={styles.subCardFooter}>
+                          {isActive && nextDateLabel ? (
+                            <span className={styles.subNextDate}>
+                              <RefreshCw size={11} />
+                              Next charge · {nextDateLabel}
+                            </span>
+                          ) : isCancelling && nextDateLabel ? (
+                            <span className={styles.subCancelledNote}>
+                              Cancels after <strong>{nextDateLabel}</strong>
+                            </span>
+                          ) : (
+                            <span className={styles.subCancelledNote}>
+                              Cancelled
+                            </span>
+                          )}
+                          {isActive && (
+                            <button
+                              type="button"
+                              className={styles.cancelSubBtn}
+                              onClick={() => setConfirmCancelSubId(sub.id)}
+                            >
+                              Cancel
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    {/* Cancellation guard — shown when user clicked Cancel */}
-                    {confirmCancelSubId === sub.id ? (
-                      <div className={styles.subCancelConfirm}>
-                        <div className={styles.subCancelConfirmText}>
-                          <span className={styles.subCancelConfirmTitle}>
-                            Cancel this subscription?
-                          </span>
-                          <span className={styles.subCancelConfirmPolicy}>
-                            Your <strong>{sub.currentFulfillmentDate}</strong>{" "}
-                            order is already confirmed and will still be
-                            fulfilled. No further charges after cancellation.
-                          </span>
-                        </div>
-                        <div className={styles.subCancelConfirmActions}>
-                          <button
-                            type="button"
-                            className={styles.subCancelKeep}
-                            onClick={() => setConfirmCancelSubId(null)}
-                          >
-                            Keep
-                          </button>
-                          <button
-                            type="button"
-                            className={styles.subCancelConfirmBtn}
-                            onClick={() => confirmCancelSub(sub.id)}
-                          >
-                            Confirm cancellation
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className={styles.subCardFooter}>
-                        {sub.status === "active" ? (
-                          <span className={styles.subNextDate}>
-                            <RefreshCw size={11} />
-                            Next charge · {sub.nextDate}
-                          </span>
-                        ) : (
-                          <span className={styles.subCancelledNote}>
-                            Cancelled · Last order:{" "}
-                            <strong>{sub.currentFulfillmentDate}</strong>
-                          </span>
-                        )}
-                        {sub.status === "active" && (
-                          <button
-                            type="button"
-                            className={styles.cancelSubBtn}
-                            onClick={() => setConfirmCancelSubId(sub.id)}
-                          >
-                            Cancel
-                          </button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </>
             )}
           </div>

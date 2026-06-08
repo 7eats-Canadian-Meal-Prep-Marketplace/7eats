@@ -50,6 +50,7 @@ export async function GET(req: NextRequest) {
           interval: listingSubscriptionTiers.interval,
           price: listingSubscriptionTiers.price,
         },
+        cookDisplayName: cookProfiles.displayName,
       })
       .from(clientSubscriptions)
       .innerJoin(listings, eq(clientSubscriptions.listingId, listings.id))
@@ -57,6 +58,7 @@ export async function GET(req: NextRequest) {
         listingSubscriptionTiers,
         eq(clientSubscriptions.tierId, listingSubscriptionTiers.id),
       )
+      .innerJoin(cookProfiles, eq(clientSubscriptions.cookId, cookProfiles.id))
       .where(eq(clientSubscriptions.clientId, session.user.id))
       .orderBy(desc(clientSubscriptions.createdAt));
 

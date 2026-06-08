@@ -13,8 +13,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useApp } from "../_app-context";
-import { useCart } from "../_cart-context";
-import { type CartItem, MOCK_LISTINGS } from "../_mock";
+import { type CartItem, useCart } from "../_cart-context";
 import { WEEKLY_CHARGE_DISCLAIMER } from "../_subscription-utils";
 import {
   calcOntarioHst,
@@ -560,10 +559,6 @@ function CheckoutInner() {
                 <h2 className={styles.formTitle}>Fulfillment details</h2>
                 {Object.entries(grouped).map(([cookId, cookItems]) => {
                   const first = cookItems[0];
-                  const listing = MOCK_LISTINGS.find(
-                    (l) => l.id === first.listingId,
-                  );
-                  const date = listing?.pickupDate ?? null;
                   const isDelivery = first.fulfillmentMode === "delivery";
                   return (
                     <div key={cookId} className={styles.pickupCard}>
@@ -582,7 +577,6 @@ function CheckoutInner() {
                         </div>
                         <div className={styles.pickupMeta}>
                           {isDelivery ? "Delivery" : "Pickup"}
-                          {date ? ` · ${date}` : ""}
                         </div>
                         <div className={styles.pickupMetaSub}>
                           Exact time confirmed after order

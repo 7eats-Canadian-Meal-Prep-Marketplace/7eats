@@ -3,22 +3,10 @@
 import { ArrowLeft, Check, Plus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import styles from "./page.module.css";
 
-// ─── Available dishes (mock) ────────────────────────────────────────────────────
-
-type AvailableDish = { id: string; name: string; cuisine: string };
-
-const AVAILABLE_DISHES: AvailableDish[] = [
-  { id: "d-1", name: "Jollof Rice & Chicken", cuisine: "West African" },
-  { id: "d-2", name: "Beef Suya Skewers", cuisine: "West African" },
-  { id: "d-3", name: "Vegetable Spring Rolls", cuisine: "Cantonese" },
-  { id: "d-4", name: "Margherita Flatbread", cuisine: "Italian" },
-  { id: "d-5", name: "Chicken Tikka Bowl", cuisine: "Indian" },
-  { id: "d-6", name: "Falafel Wrap", cuisine: "Levantine" },
-  { id: "d-7", name: "Miso Glazed Salmon", cuisine: "Japanese" },
-];
+type AvailableDish = { id: string; name: string; cuisine: string | null };
 
 type DealType = "percentage_off" | "fixed_off";
 type FulfillmentMode = "pickup" | "delivery" | "both";
@@ -57,6 +45,8 @@ export default function NewListingPage() {
   const [step, setStep] = useState<1 | 2>(1);
   const [submitting, setSubmitting] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [availableDishes, setAvailableDishes] = useState<AvailableDish[]>([]);
+  const [dishesLoading, setDishesLoading] = useState(true);
 
   const [form, setForm] = useState(EMPTY_FORM);
   const [fulfillmentMode, setFulfillmentMode] =
@@ -66,6 +56,16 @@ export default function NewListingPage() {
   const [dealEnabled, setDealEnabled] = useState(false);
   const [dealType, setDealType] = useState<DealType>("percentage_off");
   const [dealValue, setDealValue] = useState("");
+
+  useEffect(() => {
+    fetch("/api/business/listings/dishes?status=active")
+      .then((r) => r.json())
+      .then((json: { success?: boolean; data?: AvailableDish[] }) => {
+        if (json.data) setAvailableDishes(json.data);
+      })
+      .catch(() => {})
+      .finally(() => setDishesLoading(false));
+  }, []);
 
   function toggleDish(id: string) {
     setSelectedDishes((prev) =>
@@ -315,30 +315,40 @@ export default function NewListingPage() {
                 </span>
               </div>
               <div className={styles.dishGrid}>
-                {AVAILABLE_DISHES.map((dish) => {
-                  const active = selectedDishes.includes(dish.id);
-                  return (
-                    <button
-                      key={dish.id}
-                      type="button"
-                      className={`${styles.dishOption} ${active ? styles.dishOptionActive : ""}`}
-                      onClick={() => toggleDish(dish.id)}
-                      aria-pressed={active}
-                    >
-                      <span className={styles.dishCheck}>
-                        {active ? <Check size={12} /> : <Plus size={12} />}
-                      </span>
-                      <span className={styles.dishOptionInfo}>
-                        <span className={styles.dishOptionName}>
-                          {dish.name}
+                {dishesLoading ? (
+                  <p>Loading dishes…</p>
+                ) : availableDishes.length === 0 ? (
+                  <p>
+                    No active dishes yet.{" "}
+                    <Link href="/business/listings/dishes">Create a dish</Link>{" "}
+                    first.
+                  </p>
+                ) : (
+                  availableDishes.map((dish) => {
+                    const active = selectedDishes.includes(dish.id);
+                    return (
+                      <button
+                        key={dish.id}
+                        type="button"
+                        className={`${styles.dishOption} ${active ? styles.dishOptionActive : ""}`}
+                        onClick={() => toggleDish(dish.id)}
+                        aria-pressed={active}
+                      >
+                        <span className={styles.dishCheck}>
+                          {active ? <Check size={12} /> : <Plus size={12} />}
                         </span>
-                        <span className={styles.dishOptionCuisine}>
-                          {dish.cuisine}
+                        <span className={styles.dishOptionInfo}>
+                          <span className={styles.dishOptionName}>
+                            {dish.name}
+                          </span>
+                          <span className={styles.dishOptionCuisine}>
+                            {dish.cuisine ?? ""}
+                          </span>
                         </span>
-                      </span>
-                    </button>
-                  );
-                })}
+                      </button>
+                    );
+                  })
+                )}
               </div>
             </div>
 
