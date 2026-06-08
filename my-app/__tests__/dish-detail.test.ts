@@ -201,9 +201,9 @@ describe("PATCH /api/business/listings/dishes/[dishId]", () => {
 
   it("returns 400 for invalid JSON body", async () => {
     mockSession(USER_ID);
-    let callCount = 0;
+    let _callCount = 0;
     vi.mocked(db.select).mockImplementation(() => {
-      callCount++;
+      _callCount++;
       const limit = vi.fn().mockResolvedValue([{ id: COOK_ID }]);
       const where = vi.fn(() => ({ limit }));
       const from = vi.fn(() => ({ where }));

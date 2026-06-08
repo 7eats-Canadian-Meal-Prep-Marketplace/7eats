@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { authUser } from "@/db/schema";
+import { authUser, authUserTable } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { getStripe } from "@/lib/stripe";
 import { getOrCreateStripeCustomer } from "@/lib/stripe-subscriptions";
@@ -28,7 +28,8 @@ export async function POST(req: Request) {
     .where(eq(authUser.id, session.user.id))
     .limit(1);
 
-  let stripeCustomerId = user?.stripeCustomerId ?? null;
+  let stripeCustomerId: string | null =
+    (user?.stripeCustomerId as string | null) ?? null;
   if (!stripeCustomerId) {
     const name =
       [user?.firstName, user?.lastName].filter(Boolean).join(" ") ||
@@ -38,7 +39,7 @@ export async function POST(req: Request) {
       name,
     );
     await db
-      .update(authUser)
+      .update(authUserTable)
       .set({ stripeCustomerId })
       .where(eq(authUser.id, session.user.id));
   }

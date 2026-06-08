@@ -11,41 +11,46 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useApp } from "../_app-context";
-import { type FulfillmentMode, scheduleLine } from "../_listing-card-utils";
-import {
-  MOCK_COOKS,
-  MOCK_LISTINGS,
-  type MockCook,
-  type MockListing,
-} from "../_mock";
 import { FulfillmentToggle } from "../_shell";
 import styles from "./page.module.css";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+type CookSpotlight = {
+  id: string;
+  firstName: string | null;
+  lastName: string | null;
+  neighborhood: string | null;
+  rating: number | null;
+  reviewCount: number;
+  ordersCompleted: number;
+};
+
+type ListingCard = {
+  id: string;
+  title: string;
+  description: string | null;
+  cookId: string;
+  cookName: string | null;
+  cookFirstName: string | null;
+  priceFrom: number | null;
+  type: string;
+  subscriptionEnabled: boolean;
+  coverPhotoUrl: string | null;
+  minOrderQty: number | null;
+  maxOrderQty: number | null;
+  createdAt: string;
+};
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function hoursUntil(iso: string): number {
-  return (new Date(iso).getTime() - Date.now()) / 3_600_000;
+function formatPrice(price: number | null): string {
+  if (price == null) return "";
+  return `From $${price}`;
 }
 
-function formatDist(km: number): string {
-  return km < 1 ? `${Math.round(km * 1000)}m` : `${km.toFixed(1)} km`;
-}
-
-function cookFor(listing: MockListing): MockCook {
-  return MOCK_COOKS.find((c) => c.id === listing.cookId) ?? MOCK_COOKS[0];
-}
-
-function applyFilters(
-  listings: MockListing[],
-  mode: FulfillmentMode,
-): MockListing[] {
-  return listings.filter((l) => {
-    if (l.fulfillment !== mode && l.fulfillment !== "both") return false;
-    if (hoursUntil(l.orderDeadlineIso) <= 0) return false;
-    return true;
-  });
+function cookDisplayName(listing: ListingCard): string {
+  return listing.cookFirstName ?? listing.cookName ?? "Chef";
 }
 
 // ─── Options ──────────────────────────────────────────────────────────────────
@@ -64,33 +69,22 @@ const CUISINE_OPTIONS: { label: string; value: string }[] = [
 
 // ─── Listing Card ─────────────────────────────────────────────────────────────
 
-function ListingCard({
+function ListingCardItem({
   listing,
-  cook,
   isSaved,
   onSave,
   canSave,
-  fulfillment,
 }: {
-  listing: MockListing;
-  cook: MockCook;
+  listing: ListingCard;
   isSaved: boolean;
   onSave: (id: string, e: React.MouseEvent) => void;
   canSave: boolean;
-  fulfillment: FulfillmentMode;
 }) {
-  const spotsLow = listing.ordersLeft > 0 && listing.ordersLeft <= 5;
-  const spotsOut = listing.ordersLeft === 0;
-  const schedule = scheduleLine(listing, fulfillment);
-
   return (
     <Link href={`/app/listings/${listing.id}`} className={styles.card}>
       <div className={styles.cardCover}>
-        {listing.deal && (
-          <span className={styles.dealBadge}>{listing.deal.badge}</span>
-        )}
         <Image
-          src={listing.image}
+          src={listing.coverPhotoUrl ?? "/placeholder.jpg"}
           alt={listing.title}
           fill
           className={styles.cardImage}
@@ -110,29 +104,24 @@ function ListingCard({
             />
           </button>
         )}
-        {spotsOut ? (
-          <span className={`${styles.stockPill} ${styles.stockOut}`}>
-            Sold out
-          </span>
-        ) : spotsLow ? (
-          <span className={`${styles.stockPill} ${styles.stockLow}`}>
-            {listing.ordersLeft} left
-          </span>
-        ) : null}
       </div>
 
       <div className={styles.cardBody}>
         <div className={styles.titleRow}>
           <h3 className={styles.cardTitle}>{listing.title}</h3>
-          <span className={styles.rating}>
-            <Star size={12} fill="currentColor" className={styles.star} />
-            <span className={styles.ratingValue}>{cook.rating.toFixed(1)}</span>
-          </span>
         </div>
 
         <p className={styles.metaLine}>
-          {cook.displayName.split(" ")[0]} · {formatDist(listing.distanceKm)} ·{" "}
-          <span className={styles.metaPrice}>From ${listing.priceFrom}</span>
+          {cookDisplayName(listing)}
+          {listing.priceFrom != null && (
+            <>
+              {" "}
+              ·{" "}
+              <span className={styles.metaPrice}>
+                {formatPrice(listing.priceFrom)}
+              </span>
+            </>
+          )}
           {listing.subscriptionEnabled && (
             <span className={styles.subHint}>
               <RefreshCw size={10} />
@@ -142,17 +131,9 @@ function ListingCard({
         </p>
 
         <p className={styles.scheduleLine}>
-          <span
-            className={
-              schedule.urgency !== "normal"
-                ? styles.scheduleUrgent
-                : styles.scheduleMuted
-            }
-          >
-            {schedule.orderBy}
+          <span className={styles.scheduleMuted}>
+            {listing.type === "subscription" ? "Subscription" : "Single order"}
           </span>
-          <span className={styles.scheduleSep}> · </span>
-          <span className={styles.scheduleMuted}>{schedule.receiveOn}</span>
         </p>
       </div>
     </Link>
@@ -170,15 +151,13 @@ function RowSection({
   saved,
   onSave,
   canSave,
-  fulfillment,
 }: {
   title: string;
   subtitle?: string;
-  listings: MockListing[];
+  listings: ListingCard[];
   saved: Set<string>;
   onSave: (id: string, e: React.MouseEvent) => void;
   canSave: boolean;
-  fulfillment: FulfillmentMode;
 }) {
   const outerRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
@@ -252,13 +231,11 @@ function RowSection({
               key={l.id}
               style={{ flex: `0 0 ${cardWidth}px`, maxWidth: `${cardWidth}px` }}
             >
-              <ListingCard
+              <ListingCardItem
                 listing={l}
-                cook={cookFor(l)}
                 isSaved={saved.has(l.id)}
                 onSave={onSave}
                 canSave={canSave}
-                fulfillment={fulfillment}
               />
             </div>
           ))}
@@ -270,7 +247,14 @@ function RowSection({
 
 // ─── Cook Spotlight ───────────────────────────────────────────────────────────
 
-function CookSpotlightSection() {
+function cookInitials(cook: CookSpotlight): string {
+  const first = cook.firstName?.charAt(0) ?? "";
+  const last = cook.lastName?.charAt(0) ?? "";
+  return (first + last).toUpperCase() || "?";
+}
+
+function CookSpotlightSection({ cooks }: { cooks: CookSpotlight[] }) {
+  if (cooks.length === 0) return null;
   return (
     <section className={styles.section}>
       <div className={styles.sectionHead}>
@@ -282,28 +266,27 @@ function CookSpotlightSection() {
         </div>
       </div>
       <div className={styles.strip}>
-        {MOCK_COOKS.map((cook) => (
+        {cooks.map((cook) => (
           <Link
             key={cook.id}
             href={`/app/cooks/${cook.id}`}
             className={styles.cookCard}
           >
-            <div
-              className={styles.cookAvatarLg}
-              style={{ background: cook.gradient }}
-            >
-              {cook.initials}
-            </div>
+            <div className={styles.cookAvatarLg}>{cookInitials(cook)}</div>
             <span className={styles.cookCardName}>
-              {cook.displayName.split(" ")[0]}
+              {cook.firstName ?? "Chef"}
             </span>
-            <span className={styles.cookCardCuisine}>
-              {cook.cuisineTypes[0]}
-            </span>
-            <span className={styles.cookCardRating}>
-              <Star size={11} fill="currentColor" />
-              {cook.rating.toFixed(1)}
-            </span>
+            {cook.neighborhood && (
+              <span className={styles.cookCardCuisine}>
+                {cook.neighborhood}
+              </span>
+            )}
+            {cook.rating != null && (
+              <span className={styles.cookCardRating}>
+                <Star size={11} fill="currentColor" />
+                {cook.rating.toFixed(1)}
+              </span>
+            )}
           </Link>
         ))}
       </div>
@@ -314,52 +297,97 @@ function CookSpotlightSection() {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function BrowsePage() {
-  const { fulfillment, isLoggedIn } = useApp();
+  const { isLoggedIn } = useApp();
+  const [listings, setListings] = useState<ListingCard[]>([]);
+  const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState<Set<string>>(new Set());
+  const [cooks, setCooks] = useState<CookSpotlight[]>([]);
 
-  function toggleSave(id: string, e: React.MouseEvent) {
+  useEffect(() => {
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+    Promise.all([
+      fetch(`${baseUrl}/api/listings`, { cache: "no-store" })
+        .then((r) => r.json())
+        .catch(() => ({ data: [] })),
+      fetch(`${baseUrl}/api/cooks`, { cache: "no-store" })
+        .then((r) => r.json())
+        .catch(() => ({ data: [] })),
+    ])
+      .then(([listingsJson, cooksJson]) => {
+        setListings(Array.isArray(listingsJson.data) ? listingsJson.data : []);
+        setCooks(Array.isArray(cooksJson.data) ? cooksJson.data : []);
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  // Load saved listing IDs — always fire, silently ignore non-200 responses
+  useEffect(() => {
+    fetch("/api/favourites/listings")
+      .then((r) => {
+        if (!r.ok) return null; // silently ignore 401 and other errors
+        return r.json();
+      })
+      .then((json) => {
+        if (json?.success) {
+          setSaved(
+            new Set(
+              (json.data ?? []).map((s: { listingId: string }) => s.listingId),
+            ),
+          );
+        }
+      })
+      .catch(() => {}); // network error — ignore
+  }, []);
+
+  async function toggleSave(id: string, e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
+    const isSaved = saved.has(id);
+    // Optimistic update
     setSaved((prev) => {
-      const n = new Set(prev);
-      n.has(id) ? n.delete(id) : n.add(id);
-      return n;
+      const next = new Set(prev);
+      isSaved ? next.delete(id) : next.add(id);
+      return next;
     });
+    try {
+      if (isSaved) {
+        await fetch(`/api/favourites/listings/${id}`, { method: "DELETE" });
+      } else {
+        await fetch("/api/favourites/listings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ listingId: id }),
+        });
+      }
+    } catch {
+      // Revert optimistic update on failure
+      setSaved((prev) => {
+        const next = new Set(prev);
+        isSaved ? next.add(id) : next.delete(id);
+        return next;
+      });
+    }
   }
 
-  const filtered = useMemo(
-    () => applyFilters(MOCK_LISTINGS, fulfillment),
-    [fulfillment],
+  const subscriptionListings = useMemo(
+    () => listings.filter((l) => l.subscriptionEnabled),
+    [listings],
   );
 
-  const spotlight = useMemo(
-    () => filtered.filter((l) => l.isSpotlight),
-    [filtered],
-  );
-  const deals = useMemo(
-    () => filtered.filter((l) => l.deal !== null),
-    [filtered],
-  );
-  const newListings = useMemo(
-    () => filtered.filter((l) => l.isNew),
-    [filtered],
-  );
-  const fastest = useMemo(
-    () => [...filtered].sort((a, b) => a.distanceKm - b.distanceKm),
-    [filtered],
-  );
-  const highProtein = useMemo(
-    () => filtered.filter((l) => l.niches.includes("high_protein")),
-    [filtered],
-  );
-  const halal = useMemo(
+  const recentListings = useMemo(
     () =>
-      filtered.filter(
-        (l) =>
-          l.dishes.length > 0 &&
-          l.dishes.every((d) => d.badges.includes("halal")),
-      ),
-    [filtered],
+      [...listings]
+        .sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        )
+        .slice(0, 10),
+    [listings],
+  );
+
+  const singleOrderListings = useMemo(
+    () => listings.filter((l) => l.type === "one_time"),
+    [listings],
   );
 
   return (
@@ -390,67 +418,49 @@ export default function BrowsePage() {
 
       {/* Content */}
       <div className={styles.content}>
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className={styles.emptyState}>
+            <p className={styles.emptyTitle}>Loading listings…</p>
+          </div>
+        ) : listings.length === 0 ? (
           <div className={styles.emptyState}>
             <p className={styles.emptyTitle}>No listings available</p>
-            <p className={styles.emptyDesc}>Try switching to Delivery.</p>
+            <p className={styles.emptyDesc}>Check back soon.</p>
           </div>
         ) : (
           <>
             <RowSection
-              title="Spotlight"
-              subtitle="Hand-picked feasts from top cooks near you"
-              listings={spotlight}
+              title="All listings"
+              subtitle="Home-cooked meals near you"
+              listings={listings}
               saved={saved}
               onSave={toggleSave}
               canSave={isLoggedIn}
-              fulfillment={fulfillment}
             />
             <RowSection
-              title="Hot deals"
-              subtitle="Limited-time offers worth grabbing"
-              listings={deals}
+              title="Subscribe & save"
+              subtitle="Weekly meal subscriptions from home cooks"
+              listings={subscriptionListings}
               saved={saved}
               onSave={toggleSave}
               canSave={isLoggedIn}
-              fulfillment={fulfillment}
             />
             <RowSection
-              title="New on 7eats"
-              subtitle="Fresh menus just added"
-              listings={newListings}
+              title="Single orders"
+              subtitle="One-time meals, no commitment"
+              listings={singleOrderListings}
               saved={saved}
               onSave={toggleSave}
               canSave={isLoggedIn}
-              fulfillment={fulfillment}
             />
+            <CookSpotlightSection cooks={cooks} />
             <RowSection
-              title="Fastest near you"
-              subtitle="The shortest trip to a home-cooked meal"
-              listings={fastest}
+              title="Recently added"
+              subtitle="Fresh menus just posted"
+              listings={recentListings}
               saved={saved}
               onSave={toggleSave}
               canSave={isLoggedIn}
-              fulfillment={fulfillment}
-            />
-            <CookSpotlightSection />
-            <RowSection
-              title="High protein"
-              subtitle="Meals built around serious protein"
-              listings={highProtein}
-              saved={saved}
-              onSave={toggleSave}
-              canSave={isLoggedIn}
-              fulfillment={fulfillment}
-            />
-            <RowSection
-              title="Halal picks"
-              subtitle="Certified halal kitchens"
-              listings={halal}
-              saved={saved}
-              onSave={toggleSave}
-              canSave={isLoggedIn}
-              fulfillment={fulfillment}
             />
           </>
         )}

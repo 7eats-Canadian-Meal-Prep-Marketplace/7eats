@@ -1,7 +1,12 @@
-import type { MockListingDeal } from "../../_mock";
+export type ListingDeal = {
+  badge: string;
+  validUntil?: string | null;
+  maxUses?: number | null;
+  usesCount?: number;
+};
 
 /** Human-readable redemption limits for the listing deal card. */
-export function getDealConditions(deal: MockListingDeal): string[] {
+export function getDealConditions(deal: ListingDeal): string[] {
   const lines: string[] = [];
 
   if (deal.validUntil) {

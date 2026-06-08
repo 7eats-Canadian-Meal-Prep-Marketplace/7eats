@@ -153,7 +153,7 @@ describe("POST /api/orders", () => {
     vi.mocked(db.select).mockImplementation(() => {
       call++;
       if (call === 1) return limitChain([]); // listing not found
-      return limitChain([]);
+      return joinLimitChain([{ email: "cook@t.com", firstName: "Cook" }]);
     });
     const res = await POST(makeRequest(VALID_BODY));
     expect(res.status).toBe(404);
@@ -165,7 +165,7 @@ describe("POST /api/orders", () => {
       call++;
       if (call === 1)
         return limitChain([{ ...ACTIVE_LISTING, type: "subscription" }]);
-      return limitChain([]);
+      return joinLimitChain([{ email: "cook@t.com", firstName: "Cook" }]);
     });
     const res = await POST(makeRequest(VALID_BODY));
     expect(res.status).toBe(400);
@@ -199,6 +199,7 @@ describe("POST /api/orders", () => {
             email: "c@t.com",
             firstName: "A",
             lastName: "B",
+            onboardingCompletedAt: new Date(),
           },
         ]);
       // Fire-and-forget cook email lookup (uses innerJoin)
@@ -222,6 +223,31 @@ describe("POST /api/orders", () => {
     );
   });
 
+  it("returns 403 before creating a payment intent when client onboarding is incomplete", async () => {
+    let call = 0;
+    vi.mocked(db.select).mockImplementation(() => {
+      call++;
+      if (call === 1) return limitChain([ACTIVE_LISTING]);
+      if (call === 2) return limitChain([COOK]);
+      if (call === 3)
+        return limitChain([
+          {
+            stripeCustomerId: "cus_existing",
+            email: "c@t.com",
+            firstName: "A",
+            lastName: "B",
+            onboardingCompletedAt: null,
+          },
+        ]);
+      return joinLimitChain([{ email: "cook@t.com", firstName: "Cook" }]);
+    });
+
+    const res = await POST(makeRequest(VALID_BODY));
+
+    expect(res.status).toBe(403);
+    expect(createPiMock).not.toHaveBeenCalled();
+  });
+
   it("sends the order-placed email to the cook on successful creation", async () => {
     let call = 0;
     vi.mocked(db.select).mockImplementation(() => {
@@ -235,6 +261,7 @@ describe("POST /api/orders", () => {
             email: "c@t.com",
             firstName: "A",
             lastName: "B",
+            onboardingCompletedAt: new Date(),
           },
         ]);
       return joinLimitChain([{ email: "cook@t.com", firstName: "Cook" }]);
@@ -266,7 +293,11 @@ describe("POST /api/orders", () => {
       if (call === 2) return limitChain([COOK]);
       if (call === 3)
         return limitChain([
-          { stripeCustomerId: "cus_existing", email: "c@t.com" },
+          {
+            stripeCustomerId: "cus_existing",
+            email: "c@t.com",
+            onboardingCompletedAt: new Date(),
+          },
         ]);
       return limitChain([]);
     });
@@ -293,7 +324,11 @@ describe("POST /api/orders", () => {
       if (call === 2) return limitChain([COOK]);
       if (call === 3)
         return limitChain([
-          { stripeCustomerId: "cus_existing", email: "c@t.com" },
+          {
+            stripeCustomerId: "cus_existing",
+            email: "c@t.com",
+            onboardingCompletedAt: new Date(),
+          },
         ]);
       return limitChain([]);
     });

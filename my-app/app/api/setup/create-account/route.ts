@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { db, dbPool } from "@/db";
 import {
   authUser,
+  authUserTable,
   cookApplications,
   cookProfiles,
   setupTokens,
@@ -81,7 +82,7 @@ export async function POST(req: Request) {
   try {
     await dbPool.transaction(async (tx) => {
       await tx
-        .update(authUser)
+        .update(authUserTable)
         .set({
           role: "cook",
           status: "active",

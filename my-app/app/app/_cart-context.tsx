@@ -7,7 +7,21 @@ import {
   useMemo,
   useState,
 } from "react";
-import type { CartItem } from "./_mock";
+export type CartItem = {
+  dishId: string;
+  dishName: string;
+  dishEmoji: string;
+  listingId: string;
+  listingTitle: string;
+  orderType: "one_time" | "subscription";
+  fulfillmentMode: "pickup" | "delivery";
+  cookId: string;
+  cookName: string;
+  cookInitials: string;
+  cookGradient: string;
+  price: number;
+  quantity: number;
+};
 
 export type CartMode = "one-time" | "subscription" | "mixed";
 

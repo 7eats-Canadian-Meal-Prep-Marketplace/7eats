@@ -3,6 +3,7 @@ import {
   boolean,
   check,
   integer,
+  jsonb,
   numeric,
   pgPolicy,
   pgTable,
@@ -48,7 +49,9 @@ export const orders = pgTable(
     // total_price = unit_price * quantity - COALESCE(discount_amount, 0)
     totalPrice: numeric("total_price", { precision: 10, scale: 2 }).notNull(),
     currency: varchar("currency", { length: 3 }).notNull().default("CAD"),
-    pickupAt: timestamp("pickup_at").notNull(),
+    pickupAt: timestamp("pickup_at"),
+    deliveryAddress: jsonb("delivery_address"),
+    fulfillmentMode: varchar("fulfillment_mode", { length: 20 }),
     fulfilledAt: timestamp("fulfilled_at"),
     cancelledAt: timestamp("cancelled_at"),
     cancelledBy: text("cancelled_by").references(() => authUser.id, {
@@ -107,6 +110,10 @@ export const orders = pgTable(
     check(
       "orders_late_cancel_fee_applied_non_negative",
       sql`${t.lateCancelFeeApplied} IS NULL OR ${t.lateCancelFeeApplied} >= 0`,
+    ),
+    check(
+      "orders_fulfillment_mode_valid",
+      sql`${t.fulfillmentMode} IS NULL OR ${t.fulfillmentMode} IN ('pickup', 'delivery')`,
     ),
     pgPolicy("orders_select_client", {
       for: "select",

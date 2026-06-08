@@ -36,9 +36,7 @@ export default async function DashboardLayout({
         ...(currentStep <= 3
           ? [{ label: "Compliance certificate", step: 3 }]
           : []),
-        ...(currentStep >= 4
-          ? [{ label: "Payment setup & terms", step: 4 }]
-          : []),
+        { label: "Payment setup & terms", step: 4 },
       ];
 
   return (

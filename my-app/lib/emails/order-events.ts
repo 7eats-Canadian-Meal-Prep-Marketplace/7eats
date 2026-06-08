@@ -12,11 +12,15 @@ type OrderEmailData = {
   quantity: number;
   totalPrice: string;
   currency: string;
-  pickupAt: Date | string;
+  pickupAt: Date | string | null;
 };
 
-function formatPickup(pickupAt: Date | string): string {
+function formatPickup(pickupAt: Date | string | null): string {
+  if (!pickupAt) return "TBD";
+
   const date = new Date(pickupAt);
+  if (Number.isNaN(date.getTime())) return "TBD";
+
   const day = date.toLocaleDateString("en-CA", {
     weekday: "long",
     month: "long",

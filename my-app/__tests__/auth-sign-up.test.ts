@@ -14,6 +14,12 @@ vi.mock("@/db/schema", () => ({
     email: "email",
     emailVerified: "email_verified",
   },
+  authUserTable: {
+    id: "id",
+    role: "role",
+    email: "email",
+    emailVerified: "email_verified",
+  },
 }));
 
 import { POST } from "@/app/api/auth/sign-up/route";

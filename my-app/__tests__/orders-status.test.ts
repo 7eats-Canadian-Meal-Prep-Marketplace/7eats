@@ -457,6 +457,36 @@ describe("PATCH /api/business/dashboard/orders/[orderId]/status", () => {
     );
   });
 
+  it("refunds a held subscription payment when cook cancels voluntarily", async () => {
+    const payments = [
+      {
+        id: "pay-subscription",
+        type: "full",
+        status: "held",
+        stripePaymentIntentId: "pi_subscription_paid",
+        totalAmount: "50.00",
+        cookPayoutAmount: "45.00",
+        platformFeePct: "10.00",
+      },
+    ];
+    withOrderForCancel("confirmed", payments);
+    const returning = vi
+      .fn()
+      .mockResolvedValue([{ id: ORDER_ID, status: "cancelled" }]);
+    const where = vi.fn(() => ({ returning }));
+    const set = vi.fn(() => ({ where }));
+    vi.mocked(db.update).mockReturnValue({ set } as never);
+
+    const res = await PATCH(makePatch({ status: "cancelled" }), { params });
+    expect(res.status).toBe(200);
+    expect(refundPaymentIntent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        paymentIntentId: "pi_subscription_paid",
+        idempotencyKey: `cook-cancel-held-refund-${ORDER_ID}-pay-subscription`,
+      }),
+    );
+  });
+
   // ─── Cancel: client no-show ────────────────────────────────────────────────
 
   it("captures authorized payments on client no-show", async () => {

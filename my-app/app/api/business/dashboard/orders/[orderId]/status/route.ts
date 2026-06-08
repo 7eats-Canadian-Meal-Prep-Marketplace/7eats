@@ -22,7 +22,6 @@ import {
 import {
   cancelPaymentIntent,
   capturePaymentIntent,
-  partialCapturePaymentIntent,
   refundPaymentIntent,
 } from "@/lib/stripe-payments";
 
@@ -196,6 +195,19 @@ export async function PATCH(req: NextRequest, { params }: Params) {
               refundedAt: new Date(),
             })
             .where(eq(orderPayments.id, payment.id));
+        } else if (payment.status === "held") {
+          const refundId = await refundPaymentIntent({
+            paymentIntentId: payment.stripePaymentIntentId,
+            idempotencyKey: `cook-cancel-held-refund-${orderId}-${payment.id}`,
+          });
+          await db
+            .update(orderPayments)
+            .set({
+              status: "refunded",
+              stripeRefundId: refundId,
+              refundedAt: new Date(),
+            })
+            .where(eq(orderPayments.id, payment.id));
         }
       }
     }
@@ -209,9 +221,9 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       pickupCodeForEmail = rawCode;
       const hash = createHash("sha256").update(rawCode).digest("hex");
       const minExpiry = new Date(Date.now() + 24 * 3600_000);
-      const pickupBasedExpiry = new Date(
-        order.pickupAt.getTime() + 6 * 3600_000,
-      );
+      const pickupBasedExpiry = order.pickupAt
+        ? new Date(order.pickupAt.getTime() + 6 * 3600_000)
+        : minExpiry;
       const expiry =
         pickupBasedExpiry > minExpiry ? pickupBasedExpiry : minExpiry;
       updateFields.pickupCode = rawCode;
@@ -265,16 +277,16 @@ export async function PATCH(req: NextRequest, { params }: Params) {
         .then(([row]) => {
           if (!row) return;
           const client = {
-            email: row.clientEmail,
-            firstName: row.clientFirstName,
+            email: row.clientEmail as string,
+            firstName: row.clientFirstName as string | null,
           };
           const orderData = {
             id: orderId,
-            listingTitle: row.listingTitle,
+            listingTitle: row.listingTitle ?? "",
             quantity: row.quantity,
             totalPrice: row.totalPrice,
             currency: row.currency,
-            pickupAt: row.pickupAt,
+            pickupAt: row.pickupAt ?? new Date(),
           };
           if (newStatus === "confirmed") {
             return sendOrderConfirmedEmailToClient(

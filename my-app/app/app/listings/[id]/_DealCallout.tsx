@@ -1,8 +1,7 @@
-import type { MockListingDeal } from "../../_mock";
 import styles from "./_DealCallout.module.css";
-import { getDealConditions } from "./_listing-deal";
+import { getDealConditions, type ListingDeal } from "./_listing-deal";
 
-export function DealCallout({ deal }: { deal: MockListingDeal }) {
+export function DealCallout({ deal }: { deal: ListingDeal }) {
   const conditions = getDealConditions(deal);
 
   return (

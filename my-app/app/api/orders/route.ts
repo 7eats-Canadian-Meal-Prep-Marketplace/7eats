@@ -4,6 +4,7 @@ import { z } from "zod";
 import { db, dbPool } from "@/db";
 import {
   authUser,
+  authUserTable,
   cookProfiles,
   dishes,
   listingDishes,
@@ -20,6 +21,38 @@ import {
   createFullPaymentIntent,
 } from "@/lib/stripe-payments";
 import { getOrCreateStripeCustomer } from "@/lib/stripe-subscriptions";
+
+function formatPickupDate(isoString: string): string {
+  const d = new Date(isoString);
+  return d.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+  // Example: "Sat Jun 6"
+}
+
+function formatPickupWindow(isoString: string, windowHours = 2): string {
+  const d = new Date(isoString);
+  const start = d
+    .toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: undefined,
+      hour12: true,
+    })
+    .toLowerCase()
+    .replace(":00", "");
+  const end = new Date(d.getTime() + windowHours * 3600000)
+    .toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: undefined,
+      hour12: true,
+    })
+    .toLowerCase()
+    .replace(":00", "");
+  return `${start} – ${end}`;
+  // Example: "12pm – 2pm"
+}
 
 const VALID_ORDER_STATUSES = [
   "pending",
@@ -88,9 +121,16 @@ export async function GET(req: NextRequest) {
         notes: orders.notes,
         createdAt: orders.createdAt,
         pickupCode: orders.pickupCode,
+        cookFirstName: authUser.firstName,
+        cookLastName: authUser.lastName,
+        listingId: orders.listingId,
+        fulfillmentMode: orders.fulfillmentMode,
+        subscriptionId: orders.subscriptionId,
       })
       .from(orders)
       .leftJoin(listings, eq(orders.listingId, listings.id))
+      .leftJoin(cookProfiles, eq(orders.cookId, cookProfiles.id))
+      .leftJoin(authUser, eq(cookProfiles.userId, authUser.id))
       .where(whereClause)
       .orderBy(desc(orders.createdAt))
       .limit(limit)
@@ -126,22 +166,36 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    const data = rows.map((r) => ({
-      id: r.id,
-      status: r.status,
-      listingTitle: r.listingTitle ?? null,
-      quantity: r.quantity,
-      unitPrice: r.unitPrice,
-      totalPrice: r.totalPrice,
-      currency: r.currency,
-      pickupAt:
-        r.pickupAt instanceof Date ? r.pickupAt.toISOString() : r.pickupAt,
-      notes: r.notes ?? null,
-      createdAt:
-        r.createdAt instanceof Date ? r.createdAt.toISOString() : r.createdAt,
-      pickupCode: r.status === "ready" ? (r.pickupCode ?? null) : null,
-      dishes: dishesByOrderId[r.id] ?? [],
-    }));
+    const data = rows.map((r) => {
+      const pickupAtIso =
+        r.pickupAt instanceof Date ? r.pickupAt.toISOString() : r.pickupAt;
+      return {
+        id: r.id,
+        status: r.status,
+        listingTitle: r.listingTitle ?? null,
+        quantity: r.quantity,
+        unitPrice: r.unitPrice,
+        totalPrice: r.totalPrice,
+        currency: r.currency,
+        pickupAt: pickupAtIso,
+        notes: r.notes ?? null,
+        createdAt:
+          r.createdAt instanceof Date ? r.createdAt.toISOString() : r.createdAt,
+        pickupCode: r.status === "ready" ? (r.pickupCode ?? null) : null,
+        dishes: dishesByOrderId[r.id] ?? [],
+        cookName:
+          [r.cookFirstName, r.cookLastName].filter(Boolean).join(" ") || null,
+        cookInitials:
+          [r.cookFirstName?.[0], r.cookLastName?.[0]]
+            .filter(Boolean)
+            .join("") || null,
+        listingId: r.listingId,
+        fulfillmentMode: r.fulfillmentMode,
+        isSubscription: r.subscriptionId !== null,
+        pickupDate: pickupAtIso ? formatPickupDate(pickupAtIso) : null,
+        pickupWindow: pickupAtIso ? formatPickupWindow(pickupAtIso) : null,
+      };
+    });
 
     return NextResponse.json({
       success: true,
@@ -161,9 +215,19 @@ const createOrderSchema = z.object({
   listingId: z.string().uuid(),
   quantity: z.number().int().min(1),
   paymentMethodId: z.string().min(1),
-  pickupAt: z.string().datetime(), // TODO: make optional once DB column is nullable
+  pickupAt: z.string().datetime().optional(),
   promotionId: z.string().uuid().optional(),
   notes: z.string().max(500).optional(),
+  deliveryAddress: z
+    .object({
+      street: z.string().min(1).max(200),
+      unit: z.string().max(50).optional(),
+      city: z.string().min(1).max(100),
+      province: z.string().length(2),
+      postal: z.string().min(5).max(10),
+    })
+    .optional(),
+  fulfillmentMode: z.enum(["pickup", "delivery"]).optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -349,10 +413,18 @@ export async function POST(req: NextRequest) {
         email: authUser.email,
         firstName: authUser.firstName,
         lastName: authUser.lastName,
+        onboardingCompletedAt: authUser.onboardingCompletedAt,
       })
       .from(authUser)
       .where(eq(authUser.id, session.user.id))
       .limit(1);
+
+    if (!userRow?.onboardingCompletedAt) {
+      return NextResponse.json(
+        { error: "Complete onboarding before placing an order." },
+        { status: 403 },
+      );
+    }
 
     let stripeCustomerId = userRow?.stripeCustomerId ?? null;
     if (!stripeCustomerId) {
@@ -364,7 +436,7 @@ export async function POST(req: NextRequest) {
         name,
       );
       await db
-        .update(authUser)
+        .update(authUserTable)
         .set({ stripeCustomerId })
         .where(eq(authUser.id, session.user.id));
     }
@@ -456,7 +528,9 @@ export async function POST(req: NextRequest) {
             discountAmount > 0 ? String(discountAmount.toFixed(2)) : null,
           totalPrice: String(totalPrice.toFixed(2)),
           currency: "CAD",
-          pickupAt: new Date(pickupAt),
+          pickupAt: pickupAt ? new Date(pickupAt) : null,
+          deliveryAddress: parsed.data.deliveryAddress ?? null,
+          fulfillmentMode: parsed.data.fulfillmentMode ?? null,
           notes: notes ?? null,
           depositEnabled: listing.depositEnabled,
           depositType: listing.depositType ?? null,
@@ -589,7 +663,7 @@ export async function POST(req: NextRequest) {
             quantity,
             totalPrice: totalPrice.toFixed(2),
             currency: "CAD",
-            pickupAt: new Date(pickupAt),
+            pickupAt: pickupAt ? new Date(pickupAt) : "TBD",
           },
         );
       })

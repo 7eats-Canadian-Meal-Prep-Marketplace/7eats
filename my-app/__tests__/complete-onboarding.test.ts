@@ -4,6 +4,7 @@ vi.mock("@/lib/auth", () => ({ auth: { api: { getSession: vi.fn() } } }));
 vi.mock("@/db", () => ({ db: { update: vi.fn(), insert: vi.fn() } }));
 vi.mock("@/db/schema", () => ({
   authUser: { id: "id" },
+  authUserTable: { id: "id" },
   userPreferences: { userId: "user_id" },
 }));
 vi.mock("drizzle-orm", () => ({ eq: vi.fn() }));

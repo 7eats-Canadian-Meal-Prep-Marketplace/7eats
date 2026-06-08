@@ -27,7 +27,7 @@ export async function GET(req: Request) {
 
   const stripe = getStripe();
   const methods = await stripe.paymentMethods.list({
-    customer: user.stripeCustomerId,
+    customer: user.stripeCustomerId as string,
     type: "card",
     limit: 10,
   });

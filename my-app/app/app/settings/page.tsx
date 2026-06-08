@@ -1,17 +1,75 @@
 "use client";
 
-import {
-  Check,
-  CreditCard,
-  Edit3,
-  Plus,
-  RefreshCw,
-  Trash2,
-  X,
-} from "lucide-react";
-import { useState } from "react";
-import { PREFERENCE_QUESTIONS } from "../_mock";
+import { CreditCard, Edit3, Plus, RefreshCw, Trash2, X } from "lucide-react";
+import { useEffect, useState } from "react";
 import styles from "./page.module.css";
+
+type PreferenceQuestion = {
+  id: string;
+  question: string;
+  options: string[];
+  multiSelect: boolean;
+};
+
+const PREFERENCE_QUESTIONS: PreferenceQuestion[] = [
+  {
+    id: "dietary",
+    question: "Dietary needs",
+    options: [
+      "Halal",
+      "Vegan",
+      "Vegetarian",
+      "Gluten-free",
+      "Dairy-free",
+      "Nut-free",
+      "Kosher",
+    ],
+    multiSelect: true,
+  },
+  {
+    id: "allergies",
+    question: "Allergies",
+    options: [
+      "Tree nuts",
+      "Peanuts",
+      "Dairy",
+      "Gluten",
+      "Shellfish",
+      "Eggs",
+      "Soy",
+      "None",
+    ],
+    multiSelect: true,
+  },
+  {
+    id: "goals",
+    question: "Goals & preferences",
+    options: [
+      "High protein",
+      "Weight loss",
+      "Low carb",
+      "Muscle gain",
+      "Heart health",
+      "Comfort food",
+      "Family-friendly",
+      "Balanced",
+    ],
+    multiSelect: true,
+  },
+  {
+    id: "whyMealPrep",
+    question: "Why do you order meal prep?",
+    options: [
+      "Save time cooking",
+      "Eat healthier",
+      "Budget-friendly eating",
+      "Discover new cuisines",
+      "Support local home cooks",
+      "Convenient for my schedule",
+    ],
+    multiSelect: false,
+  },
+];
 
 type Tab =
   | "profile"
@@ -40,53 +98,52 @@ type SavedCard = {
   id: string;
   brand: string;
   last4: string;
-  expMonth: number;
-  expYear: number;
-  isDefault: boolean;
+  expMonth: number | undefined;
+  expYear: number | undefined;
 };
 type ActiveSub = {
   id: string;
-  listingTitle: string;
-  cookName: string;
-  interval: string;
-  price: number;
-  /** Next billing date */
-  nextDate: string;
-  /** Current week's fulfillment date — already paid, still gets fulfilled on cancel */
-  currentFulfillmentDate: string;
-  status: "active" | "cancelled";
+  status: string;
+  cancelAtPeriodEnd: boolean;
+  currentPeriodEnd: string | null;
+  listing: { id: string; title: string };
+  tier: { id: string; interval: string; price: string };
+  cookDisplayName: string;
 };
 
-const MOCK_CARDS: SavedCard[] = [
-  {
-    id: "pm_1",
-    brand: "Visa",
-    last4: "4242",
-    expMonth: 12,
-    expYear: 27,
-    isDefault: true,
+// ─── API types ────────────────────────────────────────────────────────────────
+
+type ProfileData = {
+  firstName: string | null;
+  lastName: string | null;
+  phone: string | null;
+  neighborhood: string | null;
+  dateOfBirth: string | null;
+  email: string;
+};
+
+type NotifPrefs = {
+  notifs: {
+    new_listing: boolean;
+    order_updates: boolean;
+    messages: boolean;
+    marketing: boolean;
+  };
+  channels: {
+    sms: boolean;
+    email: boolean;
+  };
+};
+
+const DEFAULT_NOTIF_PREFS: NotifPrefs = {
+  notifs: {
+    new_listing: true,
+    order_updates: true,
+    messages: true,
+    marketing: false,
   },
-  {
-    id: "pm_2",
-    brand: "Mastercard",
-    last4: "5555",
-    expMonth: 8,
-    expYear: 26,
-    isDefault: false,
-  },
-];
-const MOCK_SUBS: ActiveSub[] = [
-  {
-    id: "sub-1",
-    listingTitle: "Korean Banchan Box",
-    cookName: "Ji-won Park",
-    interval: "Weekly",
-    price: 26,
-    nextDate: "Fri Jun 13",
-    currentFulfillmentDate: "Fri Jun 6",
-    status: "active",
-  },
-];
+  channels: { sms: true, email: true },
+};
 
 // ─── Card helpers ─────────────────────────────────────────────────────────────
 
@@ -142,7 +199,7 @@ function AddCardModal({
   onSave,
   onClose,
 }: {
-  onSave: (card: Omit<SavedCard, "id" | "isDefault">) => void;
+  onSave: (card: Omit<SavedCard, "id">) => void;
   onClose: () => void;
 }) {
   const [number, setNumber] = useState("");
@@ -298,38 +355,108 @@ export default function SettingsPage() {
   const [tab, setTab] = useState<Tab>("profile");
   const [prefAnswers, setPrefAnswers] = useState<PrefAnswers>(DEFAULT_PREFS);
   const [editingPref, setEditingPref] = useState<string | null>(null);
-  const [notifs, setNotifs] = useState({
-    new_listing: true,
-    order_updates: true,
-    messages: true,
-    marketing: false,
-  });
-  const [channels, setChannels] = useState({ sms: true, email: true });
-  const atLeastOneChannel = channels.sms || channels.email;
-  const [profile, setProfile] = useState({
-    firstName: "Jane",
-    lastName: "Doe",
-    email: "jane@example.com",
-    phone: "",
-    neighborhood: "Roncesvalles",
-    dateOfBirth: "1995-03-14",
-  });
+
+  // ── Profile state ──────────────────────────────────────────────────────────
+  const [profile, setProfile] = useState<ProfileData | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [profileError, setProfileError] = useState<string | null>(null);
   const [editingProfile, setEditingProfile] = useState(false);
-  const [profileDraft, setProfileDraft] = useState({
-    firstName: "Jane",
-    lastName: "Doe",
-    email: "jane@example.com",
-    phone: "",
-    neighborhood: "Roncesvalles",
-    dateOfBirth: "1995-03-14",
-  });
-  const [cards, setCards] = useState<SavedCard[]>(MOCK_CARDS);
-  const [subs, setSubs] = useState<ActiveSub[]>(MOCK_SUBS);
+  const [profileDraft, setProfileDraft] = useState<ProfileData | null>(null);
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileSaveError, setProfileSaveError] = useState<string | null>(null);
+
+  // ── Notification state ─────────────────────────────────────────────────────
+  const [notifPrefs, setNotifPrefs] = useState<NotifPrefs>(DEFAULT_NOTIF_PREFS);
+  const [notifLoading, setNotifLoading] = useState(true);
+  const [notifSaving, setNotifSaving] = useState(false);
+  const [notifSaveError, setNotifSaveError] = useState<string | null>(null);
+  const [notifSaveSuccess, setNotifSaveSuccess] = useState(false);
+
+  // ── Card / sub state ───────────────────────────────────────────────────────
+  const [cards, setCards] = useState<SavedCard[]>([]);
+  const [cardsLoading, setCardsLoading] = useState(true);
+  const [subs, setSubs] = useState<ActiveSub[]>([]);
+  const [subsLoading, setSubsLoading] = useState(true);
   const [showAddCard, setShowAddCard] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [confirmCancelSubId, setConfirmCancelSubId] = useState<string | null>(
     null,
   );
+  const [subCancelError, setSubCancelError] = useState<string | null>(null);
+
+  // ── Fetch profile on mount ─────────────────────────────────────────────────
+  useEffect(() => {
+    setProfileLoading(true);
+    fetch("/api/user/profile")
+      .then((r) => {
+        if (r.status === 401) throw new Error("Not authenticated.");
+        return r.json();
+      })
+      .then(
+        (json: { success: boolean; data?: ProfileData; error?: string }) => {
+          if (json.success && json.data) {
+            setProfile(json.data);
+          } else {
+            setProfileError(json.error ?? "Failed to load profile.");
+          }
+        },
+      )
+      .catch((err: unknown) => {
+        setProfileError(
+          err instanceof Error ? err.message : "Failed to load profile.",
+        );
+      })
+      .finally(() => setProfileLoading(false));
+  }, []);
+
+  // ── Fetch notifications on mount ───────────────────────────────────────────
+  useEffect(() => {
+    setNotifLoading(true);
+    fetch("/api/user/notifications")
+      .then((r) => {
+        if (r.status === 401) throw new Error("Not authenticated.");
+        return r.json();
+      })
+      .then((json: { success: boolean; data?: NotifPrefs; error?: string }) => {
+        if (json.success && json.data) {
+          setNotifPrefs(json.data);
+        }
+        // If fetch fails silently, keep DEFAULT_NOTIF_PREFS
+      })
+      .catch(() => {
+        // Keep defaults on error — non-critical
+      })
+      .finally(() => setNotifLoading(false));
+  }, []);
+
+  // ── Fetch cards on mount ───────────────────────────────────────────────────
+  useEffect(() => {
+    setCardsLoading(true);
+    fetch("/api/checkout/payment-methods")
+      .then((r) => r.json())
+      .then((json: { data?: SavedCard[] }) => {
+        if (json.data) setCards(json.data);
+      })
+      .catch(() => {})
+      .finally(() => setCardsLoading(false));
+  }, []);
+
+  // ── Fetch subscriptions on mount ───────────────────────────────────────────
+  useEffect(() => {
+    setSubsLoading(true);
+    fetch("/api/subscriptions")
+      .then((r) => r.json())
+      .then((json: { success?: boolean; data?: ActiveSub[] }) => {
+        if (json.data) setSubs(json.data);
+      })
+      .catch(() => {})
+      .finally(() => setSubsLoading(false));
+  }, []);
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+
+  const atLeastOneChannel =
+    notifPrefs.channels.sms || notifPrefs.channels.email;
 
   const toggleAnswer = (qid: string, option: string, multi: boolean) => {
     setPrefAnswers((prev) => {
@@ -343,44 +470,126 @@ export default function SettingsPage() {
     });
   };
 
-  const addCard = (card: Omit<SavedCard, "id" | "isDefault">) => {
-    setCards((prev) => [
-      ...prev,
-      { ...card, id: `pm_${Date.now()}`, isDefault: prev.length === 0 },
-    ]);
+  const addCard = (card: Omit<SavedCard, "id">) => {
+    setCards((prev) => [...prev, { ...card, id: `pm_${Date.now()}` }]);
   };
 
   const removeCard = (id: string) => {
-    setCards((prev) => {
-      const next = prev.filter((c) => c.id !== id);
-      if (next.length > 0 && !next.some((c) => c.isDefault))
-        next[0] = { ...next[0], isDefault: true };
-      return next;
-    });
+    setCards((prev) => prev.filter((c) => c.id !== id));
     setConfirmDeleteId(null);
   };
 
-  const setDefault = (id: string) =>
-    setCards((prev) => prev.map((c) => ({ ...c, isDefault: c.id === id })));
-  const confirmCancelSub = (id: string) => {
-    setSubs((prev) =>
-      prev.map((s) =>
-        s.id === id ? { ...s, status: "cancelled" as const } : s,
-      ),
-    );
-    setConfirmCancelSubId(null);
+  const confirmCancelSub = async (id: string) => {
+    setSubCancelError(null);
+    try {
+      const res = await fetch(`/api/subscriptions/${id}`, { method: "DELETE" });
+      const json = (await res.json()) as { success?: boolean; error?: string };
+      if (!res.ok) {
+        setSubCancelError(json.error ?? "Failed to cancel subscription.");
+        return;
+      }
+      setSubs((prev) =>
+        prev.map((s) => (s.id === id ? { ...s, cancelAtPeriodEnd: true } : s)),
+      );
+      setConfirmCancelSubId(null);
+    } catch {
+      setSubCancelError("Network error. Please try again.");
+    }
   };
+
+  // ── Profile save ───────────────────────────────────────────────────────────
+
+  const handleProfileSave = async () => {
+    if (!profileDraft) return;
+    setProfileSaving(true);
+    setProfileSaveError(null);
+    try {
+      const res = await fetch("/api/user/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          firstName: profileDraft.firstName,
+          lastName: profileDraft.lastName,
+          phone: profileDraft.phone,
+          neighborhood: profileDraft.neighborhood,
+        }),
+      });
+      const json = (await res.json()) as {
+        success: boolean;
+        data?: ProfileData;
+        error?: string;
+      };
+      if (json.success && json.data) {
+        setProfile(json.data);
+        setEditingProfile(false);
+      } else {
+        setProfileSaveError(json.error ?? "Failed to save profile.");
+      }
+    } catch {
+      setProfileSaveError("Network error. Please try again.");
+    } finally {
+      setProfileSaving(false);
+    }
+  };
+
+  // ── Notifications save ─────────────────────────────────────────────────────
+
+  const handleNotifSave = async (prefs: NotifPrefs) => {
+    setNotifSaving(true);
+    setNotifSaveError(null);
+    setNotifSaveSuccess(false);
+    try {
+      const res = await fetch("/api/user/notifications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(prefs),
+      });
+      const json = (await res.json()) as {
+        success: boolean;
+        data?: NotifPrefs;
+        error?: string;
+      };
+      if (res.status === 400) {
+        setNotifSaveError(
+          json.error ?? "At least one channel must be enabled.",
+        );
+        return;
+      }
+      if (json.success && json.data) {
+        setNotifPrefs(json.data);
+        setNotifSaveSuccess(true);
+        setTimeout(() => setNotifSaveSuccess(false), 2500);
+      } else {
+        setNotifSaveError(
+          json.error ?? "Failed to save notification settings.",
+        );
+      }
+    } catch {
+      setNotifSaveError("Network error. Please try again.");
+    } finally {
+      setNotifSaving(false);
+    }
+  };
+
+  // ── Avatar initials ────────────────────────────────────────────────────────
+
+  const avatarInitials = profile
+    ? `${(profile.firstName ?? "?")[0] ?? "?"}${(profile.lastName ?? "")[0] ?? ""}`.toUpperCase()
+    : "…";
+
+  const displayName = profile
+    ? [profile.firstName, profile.lastName].filter(Boolean).join(" ") ||
+      "Your Account"
+    : "Loading…";
 
   return (
     <div className={styles.page}>
       <div className={styles.inner}>
         <div className={styles.profileCard}>
-          <div className={styles.avatarLg}>JD</div>
+          <div className={styles.avatarLg}>{avatarInitials}</div>
           <div>
-            <div className={styles.profileName}>
-              {profile.firstName} {profile.lastName}
-            </div>
-            <div className={styles.profileEmail}>{profile.email}</div>
+            <div className={styles.profileName}>{displayName}</div>
+            <div className={styles.profileEmail}>{profile?.email ?? ""}</div>
           </div>
         </div>
 
@@ -403,13 +612,14 @@ export default function SettingsPage() {
             <div className={styles.card}>
               <div className={styles.cardTitle}>
                 <span>Personal info</span>
-                {!editingProfile && (
+                {!editingProfile && !profileLoading && (
                   <button
                     type="button"
                     className={styles.editProfileBtn}
                     onClick={() => {
                       setEditingProfile(true);
-                      setProfileDraft({ ...profile });
+                      setProfileDraft(profile ? { ...profile } : null);
+                      setProfileSaveError(null);
                     }}
                   >
                     Edit
@@ -417,12 +627,34 @@ export default function SettingsPage() {
                 )}
               </div>
 
-              {!editingProfile ? (
+              {profileLoading ? (
+                <div className={styles.profileInfoList}>
+                  {[
+                    "First name",
+                    "Last name",
+                    "Phone",
+                    "Neighbourhood",
+                    "Date of birth",
+                  ].map((label) => (
+                    <div key={label} className={styles.profileInfoRow}>
+                      <span className={styles.profileInfoLabel}>{label}</span>
+                      <span
+                        className={styles.profileInfoEmpty}
+                        aria-busy="true"
+                      >
+                        Loading…
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : profileError ? (
+                <p className={styles.channelError}>{profileError}</p>
+              ) : !editingProfile ? (
                 <div className={styles.profileInfoList}>
                   <div className={styles.profileInfoRow}>
                     <span className={styles.profileInfoLabel}>First name</span>
                     <span className={styles.profileInfoVal}>
-                      {profile.firstName || (
+                      {profile?.firstName || (
                         <span className={styles.profileInfoEmpty}>Not set</span>
                       )}
                     </span>
@@ -430,7 +662,7 @@ export default function SettingsPage() {
                   <div className={styles.profileInfoRow}>
                     <span className={styles.profileInfoLabel}>Last name</span>
                     <span className={styles.profileInfoVal}>
-                      {profile.lastName || (
+                      {profile?.lastName || (
                         <span className={styles.profileInfoEmpty}>Not set</span>
                       )}
                     </span>
@@ -438,7 +670,7 @@ export default function SettingsPage() {
                   <div className={styles.profileInfoRow}>
                     <span className={styles.profileInfoLabel}>Phone</span>
                     <span className={styles.profileInfoVal}>
-                      {profile.phone || (
+                      {profile?.phone || (
                         <span className={styles.profileInfoEmpty}>Not set</span>
                       )}
                     </span>
@@ -448,7 +680,7 @@ export default function SettingsPage() {
                       Neighbourhood
                     </span>
                     <span className={styles.profileInfoVal}>
-                      {profile.neighborhood || (
+                      {profile?.neighborhood || (
                         <span className={styles.profileInfoEmpty}>Not set</span>
                       )}
                     </span>
@@ -458,7 +690,7 @@ export default function SettingsPage() {
                       Date of birth
                     </span>
                     <span className={styles.profileInfoVal}>
-                      {profile.dateOfBirth ? (
+                      {profile?.dateOfBirth ? (
                         new Date(profile.dateOfBirth).toLocaleDateString(
                           "en-CA",
                           { year: "numeric", month: "long", day: "numeric" },
@@ -469,7 +701,7 @@ export default function SettingsPage() {
                     </span>
                   </div>
                 </div>
-              ) : (
+              ) : profileDraft ? (
                 <>
                   <div className={styles.formGrid}>
                     <div className={styles.formGroup}>
@@ -479,12 +711,11 @@ export default function SettingsPage() {
                       <input
                         id="fn"
                         className={styles.input}
-                        value={profileDraft.firstName}
+                        value={profileDraft.firstName ?? ""}
                         onChange={(e) =>
-                          setProfileDraft((p) => ({
-                            ...p,
-                            firstName: e.target.value,
-                          }))
+                          setProfileDraft((p) =>
+                            p ? { ...p, firstName: e.target.value } : p,
+                          )
                         }
                       />
                     </div>
@@ -495,12 +726,11 @@ export default function SettingsPage() {
                       <input
                         id="ln"
                         className={styles.input}
-                        value={profileDraft.lastName}
+                        value={profileDraft.lastName ?? ""}
                         onChange={(e) =>
-                          setProfileDraft((p) => ({
-                            ...p,
-                            lastName: e.target.value,
-                          }))
+                          setProfileDraft((p) =>
+                            p ? { ...p, lastName: e.target.value } : p,
+                          )
                         }
                       />
                     </div>
@@ -514,12 +744,11 @@ export default function SettingsPage() {
                       className={styles.input}
                       type="tel"
                       placeholder="+1 (416) 555-0000"
-                      value={profileDraft.phone}
+                      value={profileDraft.phone ?? ""}
                       onChange={(e) =>
-                        setProfileDraft((p) => ({
-                          ...p,
-                          phone: e.target.value,
-                        }))
+                        setProfileDraft((p) =>
+                          p ? { ...p, phone: e.target.value } : p,
+                        )
                       }
                     />
                   </div>
@@ -530,23 +759,26 @@ export default function SettingsPage() {
                     <input
                       id="nb"
                       className={styles.input}
-                      value={profileDraft.neighborhood}
+                      value={profileDraft.neighborhood ?? ""}
                       onChange={(e) =>
-                        setProfileDraft((p) => ({
-                          ...p,
-                          neighborhood: e.target.value,
-                        }))
+                        setProfileDraft((p) =>
+                          p ? { ...p, neighborhood: e.target.value } : p,
+                        )
                       }
                     />
                   </div>
+                  {profileSaveError && (
+                    <p className={styles.channelError}>{profileSaveError}</p>
+                  )}
                   <div className={styles.cardFooter}>
                     <div className={styles.editProfileActions}>
                       <button
                         type="button"
                         className={styles.cancelProfileBtn}
                         onClick={() => {
-                          setProfileDraft({ ...profile });
+                          setProfileDraft(null);
                           setEditingProfile(false);
+                          setProfileSaveError(null);
                         }}
                       >
                         Cancel
@@ -554,23 +786,23 @@ export default function SettingsPage() {
                       <button
                         type="button"
                         className={styles.saveBtn}
-                        onClick={() => {
-                          setProfile(profileDraft);
-                          setEditingProfile(false);
-                        }}
+                        disabled={profileSaving}
+                        onClick={handleProfileSave}
                       >
-                        Save changes
+                        {profileSaving ? "Saving…" : "Save changes"}
                       </button>
                     </div>
                   </div>
                 </>
-              )}
+              ) : null}
             </div>
 
             <div className={styles.card}>
               <div className={styles.cardTitle}>Email address</div>
               <div className={styles.emailReadOnlyBlock}>
-                <span className={styles.emailReadOnlyVal}>{profile.email}</span>
+                <span className={styles.emailReadOnlyVal}>
+                  {profile?.email ?? ""}
+                </span>
                 <span className={styles.emailReadOnlyNote}>
                   To change your email address, contact support.
                 </span>
@@ -706,68 +938,71 @@ export default function SettingsPage() {
                 Cards on file are used for orders and weekly subscriptions.
               </p>
               <div className={styles.cardList}>
-                {cards.map((card) =>
-                  confirmDeleteId === card.id ? (
-                    <div key={card.id} className={styles.deleteConfirmRow}>
-                      <span className={styles.deleteConfirmText}>
-                        Remove {card.brand} ···· {card.last4}?
-                      </span>
-                      <div className={styles.deleteConfirmActions}>
-                        <button
-                          type="button"
-                          className={styles.deleteConfirmCancel}
-                          onClick={() => setConfirmDeleteId(null)}
-                        >
-                          Keep
-                        </button>
-                        <button
-                          type="button"
-                          className={styles.deleteConfirmRemove}
-                          onClick={() => removeCard(card.id)}
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div key={card.id} className={styles.paymentRow}>
-                      <div className={styles.paymentRowLeft}>
-                        <CreditCard size={18} className={styles.paymentIcon} />
-                        <div className={styles.paymentInfo}>
-                          <span className={styles.paymentBrand}>
-                            {card.brand} ···· {card.last4}
-                          </span>
-                          <span className={styles.paymentExp}>
-                            Expires {card.expMonth.toString().padStart(2, "0")}/
-                            {card.expYear.toString().slice(-2)}
-                          </span>
-                        </div>
-                        {card.isDefault && (
-                          <Check size={15} className={styles.defaultCheck} />
-                        )}
-                      </div>
-                      <div className={styles.paymentRowActions}>
-                        {!card.isDefault && (
+                {cardsLoading ? (
+                  <p className={styles.profileInfoEmpty}>Loading…</p>
+                ) : cards.length === 0 ? (
+                  <p className={styles.profileInfoEmpty}>No saved cards.</p>
+                ) : null}
+                {!cardsLoading &&
+                  cards.map((card) =>
+                    confirmDeleteId === card.id ? (
+                      <div key={card.id} className={styles.deleteConfirmRow}>
+                        <span className={styles.deleteConfirmText}>
+                          Remove {card.brand} ···· {card.last4}?
+                        </span>
+                        <div className={styles.deleteConfirmActions}>
                           <button
                             type="button"
-                            className={styles.setDefaultBtn}
-                            onClick={() => setDefault(card.id)}
+                            className={styles.deleteConfirmCancel}
+                            onClick={() => setConfirmDeleteId(null)}
                           >
-                            Set default
+                            Keep
                           </button>
-                        )}
-                        <button
-                          type="button"
-                          className={styles.removeCardBtn}
-                          onClick={() => setConfirmDeleteId(card.id)}
-                          aria-label="Remove card"
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                          <button
+                            type="button"
+                            className={styles.deleteConfirmRemove}
+                            onClick={() => removeCard(card.id)}
+                          >
+                            Remove
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ),
-                )}
+                    ) : (
+                      <div key={card.id} className={styles.paymentRow}>
+                        <div className={styles.paymentRowLeft}>
+                          <CreditCard
+                            size={18}
+                            className={styles.paymentIcon}
+                          />
+                          <div className={styles.paymentInfo}>
+                            <span className={styles.paymentBrand}>
+                              {card.brand} ···· {card.last4}
+                            </span>
+                            <span className={styles.paymentExp}>
+                              Expires{" "}
+                              {card.expMonth
+                                ? card.expMonth.toString().padStart(2, "0")
+                                : "??"}
+                              /
+                              {card.expYear
+                                ? card.expYear.toString().slice(-2)
+                                : "??"}
+                            </span>
+                          </div>
+                        </div>
+                        <div className={styles.paymentRowActions}>
+                          <button
+                            type="button"
+                            className={styles.removeCardBtn}
+                            onClick={() => setConfirmDeleteId(card.id)}
+                            aria-label="Remove card"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    ),
+                  )}
               </div>
               <button
                 type="button"
@@ -784,7 +1019,9 @@ export default function SettingsPage() {
         {/* Subscriptions */}
         {tab === "subscriptions" && (
           <div className={styles.tabContent}>
-            {subs.length === 0 ? (
+            {subsLoading ? (
+              <p className={styles.profileInfoEmpty}>Loading…</p>
+            ) : subs.length === 0 ? (
               <div className={styles.subEmpty}>
                 <RefreshCw size={32} className={styles.subEmptyIcon} />
                 <p className={styles.subEmptyText}>No active subscriptions.</p>
@@ -797,83 +1034,111 @@ export default function SettingsPage() {
                 <p className={styles.prefIntro}>
                   Charges occur automatically each week until you cancel.
                 </p>
-                {subs.map((sub) => (
-                  <div key={sub.id} className={styles.subCard}>
-                    <div className={styles.subCardTop}>
-                      <div className={styles.subCardInfo}>
-                        <div className={styles.subCardTitle}>
-                          {sub.listingTitle}
+                {subCancelError && (
+                  <p className={styles.profileInfoEmpty}>{subCancelError}</p>
+                )}
+                {subs.map((sub) => {
+                  const isActive =
+                    sub.status === "active" && !sub.cancelAtPeriodEnd;
+                  const isCancelling =
+                    sub.status === "active" && sub.cancelAtPeriodEnd;
+                  const nextDateLabel = sub.currentPeriodEnd
+                    ? new Date(sub.currentPeriodEnd).toLocaleDateString(
+                        "en-CA",
+                        { weekday: "short", month: "short", day: "numeric" },
+                      )
+                    : null;
+                  return (
+                    <div key={sub.id} className={styles.subCard}>
+                      <div className={styles.subCardTop}>
+                        <div className={styles.subCardInfo}>
+                          <div className={styles.subCardTitle}>
+                            {sub.listing.title}
+                          </div>
+                          <div className={styles.subCardCook}>
+                            {sub.cookDisplayName}
+                          </div>
                         </div>
-                        <div className={styles.subCardCook}>{sub.cookName}</div>
+                        <div className={styles.subCardRight}>
+                          <span
+                            className={`${styles.subStatus} ${isActive ? styles.subStatusActive : styles.subStatusCancelled}`}
+                          >
+                            {isActive
+                              ? "Active"
+                              : isCancelling
+                                ? "Cancelling"
+                                : "Cancelled"}
+                          </span>
+                          <span className={styles.subPrice}>
+                            ${Number(sub.tier.price)}
+                            <span className={styles.subInterval}>
+                              /{sub.tier.interval}
+                            </span>
+                          </span>
+                        </div>
                       </div>
-                      <div className={styles.subCardRight}>
-                        <span
-                          className={`${styles.subStatus} ${sub.status === "active" ? styles.subStatusActive : styles.subStatusCancelled}`}
-                        >
-                          {sub.status === "active" ? "Active" : "Cancelled"}
-                        </span>
-                        <span className={styles.subPrice}>
-                          ${sub.price}
-                          <span className={styles.subInterval}>/week</span>
-                        </span>
-                      </div>
+                      {/* Cancellation guard — shown when user clicked Cancel */}
+                      {confirmCancelSubId === sub.id ? (
+                        <div className={styles.subCancelConfirm}>
+                          <div className={styles.subCancelConfirmText}>
+                            <span className={styles.subCancelConfirmTitle}>
+                              Cancel this subscription?
+                            </span>
+                            <span className={styles.subCancelConfirmPolicy}>
+                              Your subscription will remain active until{" "}
+                              <strong>
+                                {nextDateLabel ?? "end of period"}
+                              </strong>
+                              . No further charges after that.
+                            </span>
+                          </div>
+                          <div className={styles.subCancelConfirmActions}>
+                            <button
+                              type="button"
+                              className={styles.subCancelKeep}
+                              onClick={() => setConfirmCancelSubId(null)}
+                            >
+                              Keep
+                            </button>
+                            <button
+                              type="button"
+                              className={styles.subCancelConfirmBtn}
+                              onClick={() => confirmCancelSub(sub.id)}
+                            >
+                              Confirm cancellation
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className={styles.subCardFooter}>
+                          {isActive && nextDateLabel ? (
+                            <span className={styles.subNextDate}>
+                              <RefreshCw size={11} />
+                              Next charge · {nextDateLabel}
+                            </span>
+                          ) : isCancelling && nextDateLabel ? (
+                            <span className={styles.subCancelledNote}>
+                              Cancels after <strong>{nextDateLabel}</strong>
+                            </span>
+                          ) : (
+                            <span className={styles.subCancelledNote}>
+                              Cancelled
+                            </span>
+                          )}
+                          {isActive && (
+                            <button
+                              type="button"
+                              className={styles.cancelSubBtn}
+                              onClick={() => setConfirmCancelSubId(sub.id)}
+                            >
+                              Cancel
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    {/* Cancellation guard — shown when user clicked Cancel */}
-                    {confirmCancelSubId === sub.id ? (
-                      <div className={styles.subCancelConfirm}>
-                        <div className={styles.subCancelConfirmText}>
-                          <span className={styles.subCancelConfirmTitle}>
-                            Cancel this subscription?
-                          </span>
-                          <span className={styles.subCancelConfirmPolicy}>
-                            Your <strong>{sub.currentFulfillmentDate}</strong>{" "}
-                            order is already confirmed and will still be
-                            fulfilled. No further charges after cancellation.
-                          </span>
-                        </div>
-                        <div className={styles.subCancelConfirmActions}>
-                          <button
-                            type="button"
-                            className={styles.subCancelKeep}
-                            onClick={() => setConfirmCancelSubId(null)}
-                          >
-                            Keep
-                          </button>
-                          <button
-                            type="button"
-                            className={styles.subCancelConfirmBtn}
-                            onClick={() => confirmCancelSub(sub.id)}
-                          >
-                            Confirm cancellation
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className={styles.subCardFooter}>
-                        {sub.status === "active" ? (
-                          <span className={styles.subNextDate}>
-                            <RefreshCw size={11} />
-                            Next charge · {sub.nextDate}
-                          </span>
-                        ) : (
-                          <span className={styles.subCancelledNote}>
-                            Cancelled · Last order:{" "}
-                            <strong>{sub.currentFulfillmentDate}</strong>
-                          </span>
-                        )}
-                        {sub.status === "active" && (
-                          <button
-                            type="button"
-                            className={styles.cancelSubBtn}
-                            onClick={() => setConfirmCancelSubId(sub.id)}
-                          >
-                            Cancel
-                          </button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </>
             )}
           </div>
@@ -884,47 +1149,54 @@ export default function SettingsPage() {
           <div className={styles.tabContent}>
             <div className={styles.card}>
               <div className={styles.cardTitle}>Notifications</div>
-              {[
-                {
-                  key: "new_listing",
-                  label: "New listings from saved cooks",
-                  desc: "Get notified when a cook you follow posts a new listing.",
-                },
-                {
-                  key: "order_updates",
-                  label: "Order updates",
-                  desc: "Pickup reminders and status changes for your orders.",
-                },
-                {
-                  key: "messages",
-                  label: "Messages",
-                  desc: "Receive notifications when a cook messages you.",
-                },
-                {
-                  key: "marketing",
-                  label: "Tips & updates",
-                  desc: "Occasional emails about new cooks and features.",
-                },
-              ].map(({ key, label, desc }) => {
-                const k = key as keyof typeof notifs;
-                return (
-                  <div key={key} className={styles.notifRow}>
-                    <div className={styles.notifInfo}>
-                      <span className={styles.notifLabel}>{label}</span>
-                      <span className={styles.notifDesc}>{desc}</span>
+              {notifLoading ? (
+                <p className={styles.profileInfoEmpty}>Loading…</p>
+              ) : (
+                [
+                  {
+                    key: "new_listing",
+                    label: "New listings from saved cooks",
+                    desc: "Get notified when a cook you follow posts a new listing.",
+                  },
+                  {
+                    key: "order_updates",
+                    label: "Order updates",
+                    desc: "Pickup reminders and status changes for your orders.",
+                  },
+                  {
+                    key: "messages",
+                    label: "Messages",
+                    desc: "Receive notifications when a cook messages you.",
+                  },
+                  {
+                    key: "marketing",
+                    label: "Tips & updates",
+                    desc: "Occasional emails about new cooks and features.",
+                  },
+                ].map(({ key, label, desc }) => {
+                  const k = key as keyof typeof notifPrefs.notifs;
+                  return (
+                    <div key={key} className={styles.notifRow}>
+                      <div className={styles.notifInfo}>
+                        <span className={styles.notifLabel}>{label}</span>
+                        <span className={styles.notifDesc}>{desc}</span>
+                      </div>
+                      <button
+                        type="button"
+                        className={`${styles.toggle} ${notifPrefs.notifs[k] ? styles.toggleOn : ""}`}
+                        onClick={() =>
+                          setNotifPrefs((prev) => ({
+                            ...prev,
+                            notifs: { ...prev.notifs, [k]: !prev.notifs[k] },
+                          }))
+                        }
+                      >
+                        <span className={styles.toggleKnob} />
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      className={`${styles.toggle} ${notifs[k] ? styles.toggleOn : ""}`}
-                      onClick={() =>
-                        setNotifs((prev) => ({ ...prev, [k]: !prev[k] }))
-                      }
-                    >
-                      <span className={styles.toggleKnob} />
-                    </button>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
 
             {/* Communication channels */}
@@ -934,49 +1206,83 @@ export default function SettingsPage() {
                 You must keep at least one channel enabled to receive order
                 updates.
               </p>
-              {[
-                {
-                  key: "sms" as const,
-                  label: "SMS",
-                  desc: "Text messages to your verified phone number.",
-                },
-                {
-                  key: "email" as const,
-                  label: "Email",
-                  desc: "Notifications sent to your email address.",
-                },
-              ].map(({ key, label, desc }) => {
-                const isOn = channels[key];
-                const wouldDisableLast =
-                  isOn &&
-                  !atLeastOneChannel === false &&
-                  Object.values({ ...channels, [key]: !isOn }).every((v) => !v);
-                return (
-                  <div key={key} className={styles.notifRow}>
-                    <div className={styles.notifInfo}>
-                      <span className={styles.notifLabel}>{label}</span>
-                      <span className={styles.notifDesc}>{desc}</span>
+              {notifLoading ? (
+                <p className={styles.profileInfoEmpty}>Loading…</p>
+              ) : (
+                [
+                  {
+                    key: "sms" as const,
+                    label: "SMS",
+                    desc: "Text messages to your verified phone number.",
+                  },
+                  {
+                    key: "email" as const,
+                    label: "Email",
+                    desc: "Notifications sent to your email address.",
+                  },
+                ].map(({ key, label, desc }) => {
+                  const isOn = notifPrefs.channels[key];
+                  const wouldDisableLast = Object.values({
+                    ...notifPrefs.channels,
+                    [key]: !isOn,
+                  }).every((v) => !v);
+                  return (
+                    <div key={key} className={styles.notifRow}>
+                      <div className={styles.notifInfo}>
+                        <span className={styles.notifLabel}>{label}</span>
+                        <span className={styles.notifDesc}>{desc}</span>
+                      </div>
+                      <button
+                        type="button"
+                        className={`${styles.toggle} ${isOn ? styles.toggleOn : ""} ${wouldDisableLast ? styles.toggleDisabled : ""}`}
+                        disabled={wouldDisableLast}
+                        onClick={() => {
+                          const next = {
+                            ...notifPrefs.channels,
+                            [key]: !isOn,
+                          };
+                          if (next.sms || next.email) {
+                            setNotifPrefs((prev) => ({
+                              ...prev,
+                              channels: next,
+                            }));
+                          }
+                        }}
+                        aria-label={
+                          isOn ? `Disable ${label}` : `Enable ${label}`
+                        }
+                      >
+                        <span className={styles.toggleKnob} />
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      className={`${styles.toggle} ${isOn ? styles.toggleOn : ""} ${wouldDisableLast ? styles.toggleDisabled : ""}`}
-                      disabled={wouldDisableLast}
-                      onClick={() => {
-                        const next = { ...channels, [key]: !isOn };
-                        if (next.sms || next.email) setChannels(next);
-                      }}
-                      aria-label={isOn ? `Disable ${label}` : `Enable ${label}`}
-                    >
-                      <span className={styles.toggleKnob} />
-                    </button>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
               {!atLeastOneChannel && (
                 <p className={styles.channelError}>
                   At least one channel must stay enabled.
                 </p>
               )}
+            </div>
+
+            {/* Save notifications button */}
+            <div className={styles.cardFooter}>
+              {notifSaveError && (
+                <p className={styles.channelError}>{notifSaveError}</p>
+              )}
+              {notifSaveSuccess && (
+                <p className={styles.saveSuccessMsg}>
+                  Notification preferences saved.
+                </p>
+              )}
+              <button
+                type="button"
+                className={styles.saveBtn}
+                disabled={notifSaving || notifLoading}
+                onClick={() => handleNotifSave(notifPrefs)}
+              >
+                {notifSaving ? "Saving…" : "Save notifications"}
+              </button>
             </div>
           </div>
         )}

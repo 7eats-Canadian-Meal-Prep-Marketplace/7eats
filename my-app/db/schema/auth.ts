@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
   boolean,
   date,
+  jsonb,
   pgPolicy,
   pgTable,
   text,
@@ -13,7 +14,10 @@ import { accountStatus, userRole } from "./enums";
 const isAdmin = sql`auth.role() = 'admin'`;
 const isServiceRole = sql`auth.role() = 'service_role'`;
 
-export const authUser = pgTable(
+// enableRLS() uses Object.assign(this, ...) internally, so it mutates the table
+// object in place. We call it for the side effect and export the original reference,
+// which keeps the full PgTableWithColumns type (not the Omit the chained form returns).
+const authUserTable = pgTable(
   "user",
   {
     id: text("id").primaryKey(),
@@ -34,15 +38,32 @@ export const authUser = pgTable(
     onboardingCompletedAt: timestamp("onboarding_completed_at"),
     // Must be >= 16 years old. Set at onboarding, not editable after.
     dateOfBirth: date("date_of_birth"),
+    neighborhood: varchar("neighborhood", { length: 100 }),
+    notificationPreferences: jsonb("notification_preferences").$type<{
+      notifs: {
+        new_listing: boolean;
+        order_updates: boolean;
+        messages: boolean;
+        marketing: boolean;
+      };
+      channels: { sms: boolean; email: boolean };
+    }>(),
   },
   () => [
-    // Public read required: other tables' RLS policies JOIN this table to check
-    // user.status (e.g. cook_profiles_select_active). Restricting select would
-    // silently break anonymous browse flows.
-    pgPolicy("user_select_all", {
+    pgPolicy("user_select_own", {
       for: "select",
       to: "public",
-      using: sql`true`,
+      using: sql`id = auth.uid()`,
+    }),
+    pgPolicy("user_select_admin", {
+      for: "select",
+      to: "public",
+      using: isAdmin,
+    }),
+    pgPolicy("user_select_service", {
+      for: "select",
+      to: "public",
+      using: isServiceRole,
     }),
     pgPolicy("user_insert_service", {
       for: "insert",
@@ -66,7 +87,11 @@ export const authUser = pgTable(
       using: isAdmin,
     }),
   ],
-).enableRLS();
+);
+
+authUserTable.enableRLS();
+export { authUserTable };
+export const authUser = authUserTable;
 
 export const authSession = pgTable(
   "session",

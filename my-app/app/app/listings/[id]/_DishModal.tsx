@@ -2,9 +2,27 @@
 
 import { ChevronLeft, ChevronRight, Minus, Plus, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import type { DietaryBadge, MockDish } from "../../_mock";
 import styles from "./_DishModal.module.css";
 import { DISH_DETAILS } from "./_dish-details";
+
+export type DietaryBadge =
+  | "halal"
+  | "vegan"
+  | "vegetarian"
+  | "gluten-free"
+  | "dairy-free"
+  | "nut-free"
+  | "kosher";
+
+export type Dish = {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  portionSize: string;
+  emoji: string;
+  badges: DietaryBadge[];
+};
 
 const BADGE_LABEL: Record<DietaryBadge, string> = {
   halal: "Halal",
@@ -21,12 +39,12 @@ function dishImages(_dishId: string): string[] {
 }
 
 interface Props {
-  dish: MockDish;
+  dish: Dish;
   quantity: number;
   orderLocked?: boolean;
   onClose: () => void;
-  onAdd: (dish: MockDish) => void;
-  onDecrement: (dish: MockDish) => void;
+  onAdd: (dish: Dish) => void;
+  onDecrement: (dish: Dish) => void;
 }
 
 export default function DishModal({

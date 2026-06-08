@@ -13,6 +13,7 @@ vi.mock("@/db", () => ({
 }));
 vi.mock("@/db/schema", () => ({
   authUser: { id: "id" },
+  authUserTable: { id: "id" },
 }));
 vi.mock("drizzle-orm", () => ({
   eq: vi.fn(),

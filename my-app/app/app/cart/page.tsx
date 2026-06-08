@@ -3,8 +3,7 @@
 import { RefreshCw, ShoppingCart, X } from "lucide-react";
 import Link from "next/link";
 import { useMemo } from "react";
-import { useCart } from "../_cart-context";
-import { type CartItem, MOCK_LISTINGS } from "../_mock";
+import { type CartItem, useCart } from "../_cart-context";
 import { WEEKLY_CHARGE_DISCLAIMER } from "../_subscription-utils";
 import {
   calcOntarioHst,
@@ -62,7 +61,6 @@ export default function CartPage() {
             <div className={styles.listingsCol}>
               {Object.entries(grouped).map(([listingId, listingItems]) => {
                 const first = listingItems[0];
-                const listing = MOCK_LISTINGS.find((l) => l.id === listingId);
                 const listingSubtotal = listingItems.reduce(
                   (sum, i) => sum + i.price * i.quantity,
                   0,
@@ -76,9 +74,9 @@ export default function CartPage() {
                         className={styles.listingHeaderMain}
                       >
                         <div className={styles.listingThumb}>
-                          {/* biome-ignore lint/performance/noImgElement: mock listing cover */}
+                          {/* biome-ignore lint/performance/noImgElement: listing cover */}
                           <img
-                            src={listing?.image ?? "/placeholder.jpg"}
+                            src="/placeholder.jpg"
                             alt=""
                             className={styles.listingThumbImg}
                             width={56}

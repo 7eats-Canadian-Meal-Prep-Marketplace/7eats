@@ -14,9 +14,45 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
-import { use, useState } from "react";
-import { MOCK_ORDERS } from "../../_mock";
+import { useRouter } from "next/navigation";
+import { use, useEffect, useState } from "react";
 import styles from "./page.module.css";
+
+// ─── Types ──────────────────────────────────────────────────────────────────────
+
+type OrderStatus =
+  | "pending"
+  | "confirmed"
+  | "ready"
+  | "fulfilled"
+  | "cancelled";
+
+type ApiDish = {
+  id: string;
+  dishName: string;
+  quantity: number;
+  sortOrder: number;
+};
+
+type ApiOrder = {
+  id: string;
+  status: OrderStatus;
+  listingId: string | null;
+  listingTitle: string | null;
+  totalPrice: string | null;
+  currency: string | null;
+  pickupAt: string | null;
+  pickupDate: string | null;
+  pickupWindow: string | null;
+  pickupCode: string | null;
+  pickupAddress: string | null;
+  fulfillmentMode: "pickup" | "delivery" | null;
+  isSubscription: boolean;
+  cookName: string | null;
+  cookInitials: string | null;
+  dishes: ApiDish[];
+  cancelledAt: string | null;
+};
 
 // ─── Review modal ──────────────────────────────────────────────────────────────
 
@@ -125,7 +161,10 @@ export default function OrderDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const order = MOCK_ORDERS.find((o) => o.id === id) ?? MOCK_ORDERS[0];
+  const router = useRouter();
+
+  const [order, setOrder] = useState<ApiOrder | null>(null);
+  const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [review, setReview] = useState<{
     rating: number;
@@ -133,17 +172,80 @@ export default function OrderDetailPage({
   } | null>(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
 
+  useEffect(() => {
+    fetch(`/api/orders/${id}`)
+      .then((r) => {
+        if (r.status === 401) {
+          router.replace("/app-auth/sign-in");
+          return null;
+        }
+        if (r.status === 404) {
+          router.replace("/app/orders");
+          return null;
+        }
+        return r.json();
+      })
+      .then((json) => {
+        if (json?.data) {
+          setOrder(json.data);
+        }
+      })
+      .catch(() => {
+        router.replace("/app/orders");
+      })
+      .finally(() => setLoading(false));
+  }, [id, router]);
+
+  if (loading) {
+    return (
+      <div className={styles.page}>
+        <div className={styles.inner}>
+          <div className={styles.backRow}>
+            <Link href="/app/orders" className={styles.backBtn}>
+              <ArrowLeft size={16} />
+              All orders
+            </Link>
+          </div>
+          <div
+            className={styles.heroCard}
+            style={{
+              background: "linear-gradient(135deg, #3a3a3a 0%, #1a1a1a 100%)",
+            }}
+          >
+            <div className={styles.heroInitials}>…</div>
+            <div className={styles.heroInfo}>
+              <div className={styles.heroCook}>Loading…</div>
+              <div className={styles.heroTitle}>Loading order</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!order) {
+    return null;
+  }
+
   const copyCode = () => {
-    navigator.clipboard.writeText(order.pickupCode).catch(() => {});
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    if (order.pickupCode) {
+      navigator.clipboard.writeText(order.pickupCode).catch(() => {});
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   const isDelivery = order.fulfillmentMode === "delivery";
+  const isCancelled = order.status === "cancelled";
+  const isDone = order.status === "fulfilled";
+
+  const cookDisplayName = order.cookName ?? "Your cook";
+  const cookInitials = order.cookInitials ?? "?";
+  const listingTitle = order.listingTitle ?? "Order";
 
   const steps = order.isSubscription
     ? [
-        { label: `Auto-confirmed · ${order.pickupDate}`, done: true },
+        { label: `Auto-confirmed · ${order.pickupDate ?? ""}`, done: true },
         {
           label: "Cook is preparing",
           done: ["confirmed", "ready", "fulfilled"].includes(order.status),
@@ -158,6 +260,10 @@ export default function OrderDetailPage({
         },
       ]
     : [
+        {
+          label: "Awaiting confirmation",
+          done: ["confirmed", "ready", "fulfilled"].includes(order.status),
+        },
         { label: "Order placed", done: true },
         {
           label: "Cook is preparing",
@@ -173,9 +279,6 @@ export default function OrderDetailPage({
         },
       ];
 
-  const isCancelled = order.status === "cancelled";
-  const isDone = order.status === "fulfilled";
-
   return (
     <div className={styles.page}>
       <div className={styles.inner}>
@@ -184,44 +287,62 @@ export default function OrderDetailPage({
             <ArrowLeft size={16} />
             All orders
           </Link>
-          <span className={styles.orderId}>#{order.id.toUpperCase()}</span>
+          <span className={styles.orderId}>
+            #{order.id.slice(0, 8).toUpperCase()}
+          </span>
         </div>
 
         {/* Header */}
         <div
           className={styles.heroCard}
-          style={{ background: order.listingGradient }}
+          style={{
+            background: "linear-gradient(135deg, #3a3a3a 0%, #1a1a1a 100%)",
+          }}
         >
           <div className={styles.heroInitials}>
-            {order.cookName
-              .split(" ")
-              .map((n: string) => n[0])
-              .join("")
-              .slice(0, 2)
-              .toUpperCase()}
+            {cookInitials.toUpperCase()}
           </div>
           <div className={styles.heroInfo}>
-            <div className={styles.heroCook}>{order.cookName}</div>
-            <div className={styles.heroTitle}>{order.listingTitle}</div>
+            <div className={styles.heroCook}>{cookDisplayName}</div>
+            <div className={styles.heroTitle}>{listingTitle}</div>
           </div>
         </div>
+
+        {/* Cancellation banner */}
+        {isCancelled && (
+          <div className={styles.cancelledBanner}>
+            <span className={styles.cancelledBannerTitle}>
+              This order was cancelled
+            </span>
+            {order.cancelledAt && (
+              <span className={styles.cancelledBannerDate}>
+                {new Date(order.cancelledAt).toLocaleDateString("en-CA", {
+                  weekday: "long",
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                })}
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Message CTA */}
         {!isCancelled && !isDone && (
           <Link href="/app/inbox" className={styles.messageCta}>
             <MessageSquare size={16} />
-            Message {order.cookName}
+            Message {cookDisplayName}
           </Link>
         )}
 
-        {/* Code card */}
-        {!isCancelled && (
+        {/* Code card — only shown when status is "ready" and a pickup code exists */}
+        {order.status === "ready" && order.pickupCode && (
           <div className={styles.codeCard}>
             <div className={styles.codeLabel}>
               {order.isSubscription
                 ? isDelivery
-                  ? `Weekly delivery code · ${order.pickupDate}`
-                  : `Weekly pickup code · ${order.pickupDate}`
+                  ? `Weekly delivery code · ${order.pickupDate ?? ""}`
+                  : `Weekly pickup code · ${order.pickupDate ?? ""}`
                 : isDelivery
                   ? "Your delivery code"
                   : "Your pickup code"}
@@ -229,8 +350,8 @@ export default function OrderDetailPage({
             <div className={styles.codeDisplay}>{order.pickupCode}</div>
             <p className={styles.codeDesc}>
               {isDelivery
-                ? `Share this code with ${order.cookName} when your order arrives.`
-                : `Show this code to ${order.cookName} when you arrive.`}
+                ? `Share this code with ${cookDisplayName} when your order arrives.`
+                : `Show this code to ${cookDisplayName} when you arrive.`}
               {order.isSubscription &&
                 " Your code renews automatically each week."}
             </p>
@@ -334,28 +455,32 @@ export default function OrderDetailPage({
             <div>
               <div className={styles.detailLabel}>Date & time</div>
               <div className={styles.detailVal}>
-                {order.pickupDate} · {order.pickupWindow}
+                {order.pickupDate && order.pickupWindow
+                  ? `${order.pickupDate} · ${order.pickupWindow}`
+                  : (order.pickupDate ?? order.pickupWindow ?? "TBD")}
               </div>
             </div>
           </div>
-          <div className={styles.detailRow}>
-            {isDelivery ? (
-              <Truck size={15} className={styles.detailIcon} />
-            ) : (
-              <MapPin size={15} className={styles.detailIcon} />
-            )}
-            <div>
-              <div className={styles.detailLabel}>
-                {isDelivery ? "Delivery address" : "Location"}
+          {order.pickupAddress && (
+            <div className={styles.detailRow}>
+              {isDelivery ? (
+                <Truck size={15} className={styles.detailIcon} />
+              ) : (
+                <MapPin size={15} className={styles.detailIcon} />
+              )}
+              <div>
+                <div className={styles.detailLabel}>
+                  {isDelivery ? "Delivery address" : "Location"}
+                </div>
+                <div className={styles.detailVal}>{order.pickupAddress}</div>
               </div>
-              <div className={styles.detailVal}>{order.pickupAddress}</div>
             </div>
-          </div>
+          )}
           <div className={styles.detailRow}>
             <Package size={15} className={styles.detailIcon} />
             <div>
               <div className={styles.detailLabel}>Cook</div>
-              <div className={styles.detailVal}>{order.cookName}</div>
+              <div className={styles.detailVal}>{cookDisplayName}</div>
             </div>
           </div>
         </div>
@@ -364,29 +489,21 @@ export default function OrderDetailPage({
         <div className={styles.itemsCard}>
           <h2 className={styles.sectionTitle}>Items</h2>
           {order.dishes.map((dish) => (
-            <div key={dish.name} className={styles.dishRow}>
+            <div key={dish.id} className={styles.dishRow}>
               <span className={styles.dishQty}>{dish.quantity}×</span>
-              <span className={styles.dishName}>{dish.name}</span>
-              <span className={styles.dishPrice}>
-                ${dish.price * dish.quantity}
-              </span>
+              <span className={styles.dishName}>{dish.dishName}</span>
             </div>
           ))}
           <div className={styles.totalDivider} />
-          <div className={styles.dishRow}>
-            <span className={styles.dishQty} />
-            <span className={styles.summaryLabel}>Subtotal</span>
-            <span className={styles.summaryVal}>${order.subtotal}.00</span>
-          </div>
-          <div className={styles.dishRow}>
-            <span className={styles.dishQty} />
-            <span className={styles.summaryLabel}>Service fee</span>
-            <span className={styles.summaryVal}>${order.serviceFee}.00</span>
-          </div>
           <div className={`${styles.dishRow} ${styles.totalRow}`}>
             <span className={styles.dishQty} />
             <span className={styles.totalLabel}>Total</span>
-            <span className={styles.totalVal}>${order.total}.00</span>
+            <span className={styles.totalVal}>
+              {order.totalPrice
+                ? `$${Number(order.totalPrice).toFixed(2)}`
+                : "—"}
+              {order.currency ? ` ${order.currency}` : ""}
+            </span>
           </div>
         </div>
       </div>
@@ -394,8 +511,8 @@ export default function OrderDetailPage({
       {/* Review modal */}
       {showReviewModal && (
         <ReviewModal
-          cookName={order.cookName}
-          listingTitle={order.listingTitle}
+          cookName={cookDisplayName}
+          listingTitle={listingTitle}
           initial={review ?? undefined}
           onSave={(rating, comment) => setReview({ rating, comment })}
           onClose={() => setShowReviewModal(false)}
