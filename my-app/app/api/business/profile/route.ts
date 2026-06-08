@@ -32,6 +32,10 @@ const PROFILE_FIELDS = {
   lateCancelFeeType: cookProfiles.lateCancelFeeType,
   lateCancelFeeValue: cookProfiles.lateCancelFeeValue,
   lateCancelWindowHours: cookProfiles.lateCancelWindowHours,
+  maxDeliveryKm: cookProfiles.maxDeliveryKm,
+  deliveryRatePerKm: cookProfiles.deliveryRatePerKm,
+  deliveryFlatFee: cookProfiles.deliveryFlatFee,
+  freeDeliveryAbove: cookProfiles.freeDeliveryAbove,
   setupComplete: cookProfiles.setupComplete,
   createdAt: cookProfiles.createdAt,
   updatedAt: cookProfiles.updatedAt,
@@ -60,6 +64,10 @@ const bodySchema = z.object({
   lateCancelFeeType: z.enum(["flat", "percentage"]).optional().nullable(),
   lateCancelFeeValue: z.string().optional().nullable(),
   lateCancelWindowHours: z.number().int().min(1).optional(),
+  maxDeliveryKm: z.number().int().min(1).max(200).nullable().optional(),
+  deliveryRatePerKm: z.number().min(0).max(99.99).nullable().optional(),
+  deliveryFlatFee: z.number().min(0).max(99.99).nullable().optional(),
+  freeDeliveryAbove: z.number().min(0).max(9999.99).nullable().optional(),
 });
 
 export async function GET(req: NextRequest) {

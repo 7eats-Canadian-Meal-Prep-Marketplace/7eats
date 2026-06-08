@@ -42,6 +42,11 @@ type KitchenForm = {
   pickupLng: number | null;
   pickupPlaceId: string | null;
   socialLink: string;
+  delivery: "none" | "self";
+  maxDeliveryKm: number | null;
+  deliveryRatePerKm: number | null;
+  deliveryFlatFee: number | null;
+  freeDeliveryAbove: number | null;
 };
 
 function KitchenSection() {
@@ -57,6 +62,11 @@ function KitchenSection() {
     pickupLng: null,
     pickupPlaceId: null,
     socialLink: "",
+    delivery: "none",
+    maxDeliveryKm: null,
+    deliveryRatePerKm: null,
+    deliveryFlatFee: null,
+    freeDeliveryAbove: null,
   });
   const [loading, setLoading] = useState(true);
   const { saved, triggerSaved } = useSaved();
@@ -78,6 +88,23 @@ function KitchenSection() {
             pickupLng: json.data.pickupLng ?? null,
             pickupPlaceId: json.data.pickupPlaceId ?? null,
             socialLink: json.data.socialLink ?? "",
+            delivery: json.data.delivery ?? "none",
+            maxDeliveryKm:
+              json.data.maxDeliveryKm != null
+                ? Number(json.data.maxDeliveryKm)
+                : null,
+            deliveryRatePerKm:
+              json.data.deliveryRatePerKm != null
+                ? Number(json.data.deliveryRatePerKm)
+                : null,
+            deliveryFlatFee:
+              json.data.deliveryFlatFee != null
+                ? Number(json.data.deliveryFlatFee)
+                : null,
+            freeDeliveryAbove:
+              json.data.freeDeliveryAbove != null
+                ? Number(json.data.freeDeliveryAbove)
+                : null,
           });
         }
       })
@@ -100,6 +127,10 @@ function KitchenSection() {
         pickupLng: form.pickupLng ?? undefined,
         pickupPlaceId: form.pickupPlaceId ?? undefined,
         socialLink: form.socialLink || undefined,
+        maxDeliveryKm: form.maxDeliveryKm,
+        deliveryRatePerKm: form.deliveryRatePerKm,
+        deliveryFlatFee: form.deliveryFlatFee,
+        freeDeliveryAbove: form.freeDeliveryAbove,
       }),
     });
     triggerSaved();
@@ -187,6 +218,101 @@ function KitchenSection() {
             }}
           />
         </div>
+
+        {form.delivery === "self" && (
+          <div className={styles.formGroup}>
+            <span className={styles.formLabel}>Delivery zone</span>
+            <div className={styles.formGroup}>
+              <label htmlFor="maxDeliveryKm" className={styles.formLabel}>
+                Max delivery distance (km)
+              </label>
+              <input
+                id="maxDeliveryKm"
+                type="number"
+                min={1}
+                max={200}
+                className={styles.formInput}
+                value={form.maxDeliveryKm ?? ""}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    maxDeliveryKm: e.target.value
+                      ? Number(e.target.value)
+                      : null,
+                  }))
+                }
+                placeholder="e.g. 10"
+              />
+            </div>
+            <div className={styles.formGroup}>
+              <label htmlFor="deliveryFlatFee" className={styles.formLabel}>
+                Flat delivery fee ($)
+              </label>
+              <input
+                id="deliveryFlatFee"
+                type="number"
+                min={0}
+                step={0.01}
+                className={styles.formInput}
+                value={form.deliveryFlatFee ?? ""}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    deliveryFlatFee: e.target.value
+                      ? Number(e.target.value)
+                      : null,
+                  }))
+                }
+                placeholder="e.g. 3.00"
+              />
+            </div>
+            <div className={styles.formGroup}>
+              <label htmlFor="deliveryRatePerKm" className={styles.formLabel}>
+                Rate per km ($)
+              </label>
+              <input
+                id="deliveryRatePerKm"
+                type="number"
+                min={0}
+                step={0.01}
+                className={styles.formInput}
+                value={form.deliveryRatePerKm ?? ""}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    deliveryRatePerKm: e.target.value
+                      ? Number(e.target.value)
+                      : null,
+                  }))
+                }
+                placeholder="e.g. 1.50"
+              />
+            </div>
+            <div className={styles.formGroup}>
+              <label htmlFor="freeDeliveryAbove" className={styles.formLabel}>
+                Free delivery above subtotal ($){" "}
+                <span className={styles.formLabelOptional}>(optional)</span>
+              </label>
+              <input
+                id="freeDeliveryAbove"
+                type="number"
+                min={0}
+                step={0.01}
+                className={styles.formInput}
+                value={form.freeDeliveryAbove ?? ""}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    freeDeliveryAbove: e.target.value
+                      ? Number(e.target.value)
+                      : null,
+                  }))
+                }
+                placeholder="e.g. 50.00 (leave blank to always charge)"
+              />
+            </div>
+          </div>
+        )}
 
         <div className={styles.formGroup}>
           <label htmlFor="s-social" className={styles.formLabel}>
