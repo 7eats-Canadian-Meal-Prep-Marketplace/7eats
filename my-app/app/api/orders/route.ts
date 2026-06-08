@@ -15,7 +15,9 @@ import {
   orders,
 } from "@/db/schema";
 import { auth } from "@/lib/auth";
+import { calcDeliveryFee } from "@/lib/delivery-fee";
 import { sendOrderPlacedEmailToCook } from "@/lib/emails/order-events";
+import { getDrivingDistanceKm } from "@/lib/mapbox-directions";
 import {
   cancelPaymentIntent,
   createFullPaymentIntent,
@@ -228,6 +230,8 @@ const createOrderSchema = z.object({
     })
     .optional(),
   fulfillmentMode: z.enum(["pickup", "delivery"]).optional(),
+  customerLat: z.number().min(-90).max(90).optional(),
+  customerLng: z.number().min(-180).max(180).optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -308,6 +312,13 @@ export async function POST(req: NextRequest) {
       .select({
         stripeAccountId: cookProfiles.stripeAccountId,
         platformFeePct: cookProfiles.platformFeePct,
+        delivery: cookProfiles.delivery,
+        pickupLat: cookProfiles.pickupLat,
+        pickupLng: cookProfiles.pickupLng,
+        maxDeliveryKm: cookProfiles.maxDeliveryKm,
+        deliveryRatePerKm: cookProfiles.deliveryRatePerKm,
+        deliveryFlatFee: cookProfiles.deliveryFlatFee,
+        freeDeliveryAbove: cookProfiles.freeDeliveryAbove,
       })
       .from(cookProfiles)
       .where(eq(cookProfiles.id, listing.cookId))
@@ -393,6 +404,43 @@ export async function POST(req: NextRequest) {
       (totalPriceCents * platformFeePct) / 100,
     );
     const cookPayoutCents = totalPriceCents - totalPlatformFeeCents;
+
+    // Delivery fee snapshot
+    let deliveryFeeSnapshot = 0;
+    let deliveryDistanceKm = 0;
+    const { customerLat, customerLng } = parsed.data;
+    if (
+      parsed.data.fulfillmentMode === "delivery" &&
+      customerLat != null &&
+      customerLng != null &&
+      cook.delivery === "self" &&
+      cook.pickupLat != null &&
+      cook.pickupLng != null
+    ) {
+      try {
+        const distKm = await getDrivingDistanceKm(
+          cook.pickupLat,
+          cook.pickupLng,
+          customerLat,
+          customerLng,
+        );
+        const feeResult = calcDeliveryFee(
+          {
+            maxDeliveryKm: cook.maxDeliveryKm,
+            deliveryRatePerKm: cook.deliveryRatePerKm,
+            deliveryFlatFee: cook.deliveryFlatFee,
+            freeDeliveryAbove: cook.freeDeliveryAbove,
+          },
+          distKm,
+          totalPrice,
+        );
+        deliveryFeeSnapshot = feeResult.fee;
+        deliveryDistanceKm = Math.round(distKm);
+      } catch (err) {
+        console.error("[orders/POST] delivery fee calc", err);
+        // Non-fatal — snapshot 0 and continue
+      }
+    }
 
     // Deposit
     let depositAmountCents = 0;
@@ -531,6 +579,12 @@ export async function POST(req: NextRequest) {
           pickupAt: pickupAt ? new Date(pickupAt) : null,
           deliveryAddress: parsed.data.deliveryAddress ?? null,
           fulfillmentMode: parsed.data.fulfillmentMode ?? null,
+          deliveryFeeSnapshot:
+            deliveryFeeSnapshot > 0
+              ? String(deliveryFeeSnapshot.toFixed(2))
+              : null,
+          deliveryDistanceKm:
+            deliveryDistanceKm > 0 ? deliveryDistanceKm : null,
           notes: notes ?? null,
           depositEnabled: listing.depositEnabled,
           depositType: listing.depositType ?? null,

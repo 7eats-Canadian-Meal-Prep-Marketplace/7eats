@@ -466,6 +466,32 @@
   box-shadow: 0 4px 14px rgba(214, 64, 69, 0.28);
 }
 
+/* ─── Delivery fee states ────────────────────────────────────────────────────── */
+.deliveryFeeLoading {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--grey-500);
+  font-style: italic;
+}
+
+.deliveryFeeFree {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--green, #16a34a);
+}
+
+.deliveryFeeOutOfRange {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--red);
+}
+
+.deliveryFeeError {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--grey-500);
+}
+
 @media (max-width: 767px) {
   .page {
     padding: 24px 16px 80px;
