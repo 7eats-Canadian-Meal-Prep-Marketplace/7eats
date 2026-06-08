@@ -3,6 +3,8 @@
 import { ArrowLeft, ExternalLink, ImagePlus } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { AddressAutocomplete } from "@/components/AddressAutocomplete";
+import type { NormalizedAddress } from "@/lib/types/address";
 import styles from "./page.module.css";
 
 type SectionId = "kitchen" | "account" | "billing" | "notifications" | "danger";
@@ -31,7 +33,14 @@ function useSaved() {
 type KitchenForm = {
   displayName: string;
   bio: string;
-  pickupAddress: string;
+  pickupStreet: string;
+  pickupUnit: string;
+  pickupCity: string;
+  pickupProvince: string;
+  pickupPostal: string;
+  pickupLat: number | null;
+  pickupLng: number | null;
+  pickupPlaceId: string | null;
   socialLink: string;
 };
 
@@ -39,7 +48,14 @@ function KitchenSection() {
   const [form, setForm] = useState<KitchenForm>({
     displayName: "",
     bio: "",
-    pickupAddress: "",
+    pickupStreet: "",
+    pickupUnit: "",
+    pickupCity: "",
+    pickupProvince: "",
+    pickupPostal: "",
+    pickupLat: null,
+    pickupLng: null,
+    pickupPlaceId: null,
     socialLink: "",
   });
   const [loading, setLoading] = useState(true);
@@ -53,7 +69,14 @@ function KitchenSection() {
           setForm({
             displayName: json.data.displayName ?? "",
             bio: json.data.bio ?? "",
-            pickupAddress: json.data.pickupAddress ?? "",
+            pickupStreet: json.data.pickupStreet ?? "",
+            pickupUnit: json.data.pickupUnit ?? "",
+            pickupCity: json.data.pickupCity ?? "",
+            pickupProvince: json.data.pickupProvince ?? "",
+            pickupPostal: json.data.pickupPostal ?? "",
+            pickupLat: json.data.pickupLat ?? null,
+            pickupLng: json.data.pickupLng ?? null,
+            pickupPlaceId: json.data.pickupPlaceId ?? null,
             socialLink: json.data.socialLink ?? "",
           });
         }
@@ -68,7 +91,14 @@ function KitchenSection() {
       body: JSON.stringify({
         displayName: form.displayName || undefined,
         bio: form.bio || undefined,
-        pickupAddress: form.pickupAddress || undefined,
+        pickupStreet: form.pickupStreet || undefined,
+        pickupUnit: form.pickupUnit || undefined,
+        pickupCity: form.pickupCity || undefined,
+        pickupProvince: form.pickupProvince || undefined,
+        pickupPostal: form.pickupPostal || undefined,
+        pickupLat: form.pickupLat ?? undefined,
+        pickupLng: form.pickupLng ?? undefined,
+        pickupPlaceId: form.pickupPlaceId ?? undefined,
         socialLink: form.socialLink || undefined,
       }),
     });
@@ -129,17 +159,32 @@ function KitchenSection() {
         </div>
 
         <div className={styles.formGroup}>
-          <label htmlFor="s-pickup-address" className={styles.formLabel}>
+          <label htmlFor="pickupAddressInput" className={styles.formLabel}>
             Pickup address
           </label>
-          <input
-            id="s-pickup-address"
-            type="text"
-            className={styles.formInput}
-            value={form.pickupAddress}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, pickupAddress: e.target.value }))
+          <AddressAutocomplete
+            name="pickupAddress"
+            id="pickupAddressInput"
+            placeholder="Street address"
+            initialValue={
+              form.pickupStreet
+                ? `${form.pickupStreet}${form.pickupUnit ? `, ${form.pickupUnit}` : ""}, ${form.pickupCity}, ${form.pickupProvince} ${form.pickupPostal}`
+                : ""
             }
+            inputClassName={styles.formInput}
+            onResolve={(addr: NormalizedAddress) => {
+              setForm((f) => ({
+                ...f,
+                pickupStreet: addr.street,
+                pickupUnit: addr.unit ?? "",
+                pickupCity: addr.city,
+                pickupProvince: addr.province,
+                pickupPostal: addr.postal,
+                pickupLat: addr.lat,
+                pickupLng: addr.lng,
+                pickupPlaceId: addr.placeId,
+              }));
+            }}
           />
         </div>
 
