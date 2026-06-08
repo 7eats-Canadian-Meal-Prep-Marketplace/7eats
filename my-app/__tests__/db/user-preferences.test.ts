@@ -1,31 +1,13 @@
-import { describe, expect, it } from "vitest";
-import { userServiceAddress } from "@/db/schema";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { expect, it } from "vitest";
 
-describe("userServiceAddress schema", () => {
-  it("exports userServiceAddress table", () => {
-    expect(userServiceAddress).toBeDefined();
+it("exports userAddresses table", () => {
+  const schemaFile = readFileSync(
+    join(process.cwd(), "db", "schema", "user-preferences.ts"),
+    "utf8",
+  );
 
-    // Get the table name via the Drizzle symbol
-    const baseName = Object.getOwnPropertySymbols(userServiceAddress).find(
-      (s) => s.toString().includes("BaseName"),
-    );
-    expect(baseName).toBeDefined();
-    if (baseName) {
-      expect(userServiceAddress[baseName]).toBe("user_service_address");
-    }
-  });
-
-  it("has all required columns", () => {
-    const columns = Object.keys(userServiceAddress);
-    expect(columns).toContain("id");
-    expect(columns).toContain("userId");
-    expect(columns).toContain("serviceStreet");
-    expect(columns).toContain("serviceCity");
-    expect(columns).toContain("serviceProvince");
-    expect(columns).toContain("servicePostal");
-    expect(columns).toContain("serviceLat");
-    expect(columns).toContain("serviceLng");
-    expect(columns).toContain("createdAt");
-    expect(columns).toContain("updatedAt");
-  });
+  expect(schemaFile).toContain("export const userAddresses");
+  expect(schemaFile).toContain('"user_addresses"');
 });

@@ -8,8 +8,8 @@ import {
 } from "drizzle-orm/pg-core";
 import { authUser } from "./auth";
 
-export const userServiceAddress = pgTable(
-  "user_service_address",
+export const userAddresses = pgTable(
+  "user_addresses",
   {
     id: text("id").primaryKey(),
     userId: text("user_id")
@@ -31,13 +31,13 @@ export const userServiceAddress = pgTable(
       .$onUpdate(() => new Date()),
   },
   () => [
-    pgPolicy("user_service_address_own", {
+    pgPolicy("user_addresses_own", {
       for: "all",
       to: "public",
       using: sql`user_id = auth.uid()::text`,
       withCheck: sql`user_id = auth.uid()::text`,
     }),
-    pgPolicy("user_service_address_admin", {
+    pgPolicy("user_addresses_admin", {
       for: "all",
       to: "public",
       using: sql`auth.role() = 'admin'`,
