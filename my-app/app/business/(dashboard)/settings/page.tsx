@@ -92,7 +92,7 @@ function KitchenSection() {
         displayName: form.displayName || undefined,
         bio: form.bio || undefined,
         pickupStreet: form.pickupStreet || undefined,
-        pickupUnit: form.pickupUnit || undefined,
+        pickupUnit: form.pickupUnit || null,
         pickupCity: form.pickupCity || undefined,
         pickupProvince: form.pickupProvince || undefined,
         pickupPostal: form.pickupPostal || undefined,
