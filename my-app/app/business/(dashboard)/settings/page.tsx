@@ -127,6 +127,7 @@ function KitchenSection() {
         pickupLng: form.pickupLng ?? undefined,
         pickupPlaceId: form.pickupPlaceId ?? undefined,
         socialLink: form.socialLink || undefined,
+        delivery: form.delivery,
         maxDeliveryKm: form.maxDeliveryKm,
         deliveryRatePerKm: form.deliveryRatePerKm,
         deliveryFlatFee: form.deliveryFlatFee,
@@ -217,6 +218,26 @@ function KitchenSection() {
               }));
             }}
           />
+        </div>
+
+        <div className={styles.formGroup}>
+          <label htmlFor="deliveryMode" className={styles.formLabel}>
+            Delivery
+          </label>
+          <select
+            id="deliveryMode"
+            className={styles.formInput}
+            value={form.delivery}
+            onChange={(e) =>
+              setForm((f) => ({
+                ...f,
+                delivery: e.target.value as "none" | "self",
+              }))
+            }
+          >
+            <option value="none">Pickup only</option>
+            <option value="self">I deliver myself</option>
+          </select>
         </div>
 
         {form.delivery === "self" && (
