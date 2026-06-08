@@ -171,6 +171,7 @@ async function step2(req: Request, userId: string) {
   const pickupPostal = (data.pickupPostal ?? "").trim();
   const pickupLat = typeof data.pickupLat === "number" ? data.pickupLat : null;
   const pickupLng = typeof data.pickupLng === "number" ? data.pickupLng : null;
+  // pickupPlaceId may be null if Mapbox returns empty mapbox_id; downstream distance API must handle null
   const pickupPlaceId = (data.pickupPlaceId ?? "").trim() || null;
 
   if (

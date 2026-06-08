@@ -232,8 +232,17 @@ export default function OnboardingWizard({
       }
     }
     if (step === 2) {
-      if (!form.pickupStreet.trim() || form.pickupLat === null) {
-        setStepError("A valid geocoded pickup address is required.");
+      if (
+        !form.pickupStreet.trim() ||
+        !form.pickupCity.trim() ||
+        !form.pickupProvince.trim() ||
+        !form.pickupPostal.trim() ||
+        form.pickupLat === null ||
+        form.pickupLng === null
+      ) {
+        setStepError(
+          "A valid geocoded pickup address is required. Please select from the suggestions.",
+        );
         return false;
       }
       if (!form.leadTime) {
@@ -697,9 +706,15 @@ function Step2({
             Pickup Address
           </label>
           <AddressAutocomplete
+            id="pickupAddress"
             name="pickupAddress"
             placeholder="Street address"
             inputClassName={styles.input}
+            initialValue={
+              form.pickupStreet
+                ? `${form.pickupStreet}${form.pickupUnit ? `, ${form.pickupUnit}` : ""}, ${form.pickupCity}, ${form.pickupProvince} ${form.pickupPostal}`
+                : ""
+            }
             onResolve={(addr: NormalizedAddress) =>
               setForm((f) => ({
                 ...f,

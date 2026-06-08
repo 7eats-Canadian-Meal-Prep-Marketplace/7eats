@@ -31,6 +31,7 @@ interface Props {
   placeholder?: string;
   inputClassName?: string;
   name?: string;
+  id?: string;
 }
 
 export function AddressAutocomplete({
@@ -39,6 +40,7 @@ export function AddressAutocomplete({
   placeholder = "Start typing your address…",
   inputClassName = "",
   name = "address",
+  id,
 }: Props) {
   const [value, setValue] = useState(initialValue);
 
@@ -76,6 +78,7 @@ export function AddressAutocomplete({
         onRetrieve={handleRetrieve}
       >
         <input
+          id={id}
           type="text"
           name={name}
           value={value}
