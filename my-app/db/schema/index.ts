@@ -13,4 +13,5 @@ export * from "./preferences";
 export * from "./social";
 export * from "./subscriptions";
 export * from "./tags";
+export * from "./user-preferences";
 export * from "./waitlist";
