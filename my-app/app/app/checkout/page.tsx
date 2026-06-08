@@ -15,11 +15,7 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useApp } from "../_app-context";
 import { type CartItem, useCart } from "../_cart-context";
 import { WEEKLY_CHARGE_DISCLAIMER } from "../_subscription-utils";
-import {
-  calcOntarioHst,
-  formatCartMoney,
-  ONTARIO_HST_LABEL,
-} from "../cart/_cart-tax";
+import { calcTax, formatCartMoney, getTaxLabel } from "../cart/_cart-tax";
 import { NewCardForm } from "./_payment-form";
 import styles from "./page.module.css";
 
@@ -87,7 +83,7 @@ function cardBrandLabel(brand: string): string {
 
 function CheckoutInner() {
   const { items, total, clearCart, cartMode, needsDeliveryAddress } = useCart();
-  const { isLoggedIn } = useApp();
+  const { isLoggedIn, province } = useApp();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -204,12 +200,12 @@ function CheckoutInner() {
   }, {});
 
   const { tax, grandTotal } = useMemo(() => {
-    const taxAmount = calcOntarioHst(total);
+    const taxAmount = calcTax(total, province);
     return {
       tax: taxAmount,
       grandTotal: Math.round((total + taxAmount) * 100) / 100,
     };
-  }, [total]);
+  }, [total, province]);
 
   const placeCTACopy = useMemo(() => {
     const amount = `$${formatCartMoney(grandTotal)}`;
@@ -711,7 +707,7 @@ function CheckoutInner() {
                           <strong>
                             $
                             {formatCartMoney(
-                              calcOntarioHst(listingTotal) + listingTotal,
+                              calcTax(listingTotal, province) + listingTotal,
                             )}{" "}
                             every week
                           </strong>{" "}
@@ -772,6 +768,7 @@ function CheckoutInner() {
           tax={tax}
           grandTotal={grandTotal}
           cartMode={cartMode}
+          taxLabel={getTaxLabel(province)}
         />
       </div>
     </div>
@@ -786,12 +783,14 @@ function OrderSummary({
   tax,
   grandTotal,
   cartMode,
+  taxLabel,
 }: {
   items: CartItem[];
   total: number;
   tax: number;
   grandTotal: number;
   cartMode: "one-time" | "subscription" | "mixed";
+  taxLabel: string;
 }) {
   const byListing = items.reduce<Record<string, CartItem[]>>((acc, item) => {
     if (!acc[item.listingId]) acc[item.listingId] = [];
@@ -848,10 +847,7 @@ function OrderSummary({
           </span>
         </div>
         <div className={styles.summaryRow}>
-          <span className={styles.summaryRowLabel}>
-            {ONTARIO_HST_LABEL}
-            <span className={styles.taxNote}>Ontario</span>
-          </span>
+          <span className={styles.summaryRowLabel}>{taxLabel}</span>
           <span className={styles.summaryRowVal}>${formatCartMoney(tax)}</span>
         </div>
       </div>
