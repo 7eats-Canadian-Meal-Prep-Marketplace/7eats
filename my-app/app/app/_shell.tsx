@@ -3,7 +3,6 @@
 import {
   Check,
   ChevronDown,
-  Crosshair,
   Heart,
   LogOut,
   MapPin,
@@ -20,6 +19,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState, useTransition } from "react";
+import { AddressAutocomplete } from "@/components/AddressAutocomplete";
+import type { NormalizedAddress } from "@/lib/types/address";
 import { AppProvider, useApp } from "./_app-context";
 import { CartProvider, useCart } from "./_cart-context";
 import styles from "./_shell.module.css";
@@ -82,11 +83,24 @@ function AddressModal({
   onConfirm,
   onClose,
 }: {
-  current: string;
-  onConfirm: (a: string) => void;
+  current: NormalizedAddress | null;
+  onConfirm: (a: NormalizedAddress) => void;
   onClose: () => void;
 }) {
-  const [val, setVal] = useState(current);
+  const [resolved, setResolved] = useState<NormalizedAddress | null>(current);
+
+  const initialValue = current
+    ? [
+        current.street,
+        current.unit,
+        current.city,
+        current.province,
+        current.postal,
+      ]
+        .filter(Boolean)
+        .join(", ")
+    : "";
+
   return (
     // biome-ignore lint/a11y/useKeyWithClickEvents: modal backdrop dismiss
     // biome-ignore lint/a11y/noStaticElementInteractions: modal backdrop dismiss
@@ -109,30 +123,23 @@ function AddressModal({
           </button>
         </div>
         <div className={styles.addrModalBody}>
-          <input
-            className={styles.addrInput}
-            value={val}
-            onChange={(e) => setVal(e.target.value)}
+          <AddressAutocomplete
+            onResolve={setResolved}
+            initialValue={initialValue}
             placeholder="Enter your address…"
-            // biome-ignore lint/a11y/noAutofocus: intentional focus for modal input
-            autoFocus
+            inputClassName={styles.addrInput}
           />
         </div>
         <div className={styles.addrModalFoot}>
           <button
             type="button"
-            className={styles.locateBtn}
-            aria-label="Use my location"
-            onClick={() => setVal("123 King St W, Toronto")}
-          >
-            <Crosshair size={18} />
-          </button>
-          <button
-            type="button"
             className={styles.addrConfirmBtn}
+            disabled={!resolved}
             onClick={() => {
-              onConfirm(val);
-              onClose();
+              if (resolved) {
+                onConfirm(resolved);
+                onClose();
+              }
             }}
           >
             Confirm address
@@ -278,14 +285,25 @@ function ShellInner({
 }) {
   const pathname = usePathname();
   const { listingCount } = useCart();
-  const [address, setAddress] = useState("123 King St W, Toronto");
+  const [address, setAddress] = useState<NormalizedAddress | null>(null);
   const [showAddress, setShowAddress] = useState(false);
   const [showAddressDropdown, setShowAddressDropdown] = useState(false);
-  const [savedAddresses] = useState([
-    "123 King St W, Toronto",
-    "456 Queen St E, Toronto",
-  ]);
   const addressDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Fetch saved address on mount (only when logged in)
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    fetch("/api/user/address")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.address) {
+          setAddress(data.address as NormalizedAddress);
+        }
+      })
+      .catch(() => {
+        // Non-critical — silently ignore fetch errors
+      });
+  }, [isLoggedIn]);
 
   useEffect(() => {
     if (!showAddressDropdown) return;
@@ -351,44 +369,27 @@ function ShellInner({
               >
                 <MapPin size={14} />
                 <span className={styles.addressChipText}>
-                  {address.split(",")[0]}
+                  {address ? address.street.split(",")[0] : "Add address"}
                 </span>
                 <ChevronDown size={12} className={styles.addressChevron} />
               </button>
 
               {showAddressDropdown && (
                 <div className={styles.addressDropdown}>
-                  {savedAddresses.map((addr) => (
+                  {address && (
                     <button
-                      key={addr}
+                      key={address.placeId}
                       type="button"
-                      className={`${styles.addressOption} ${addr === address ? styles.addressOptionActive : ""}`}
+                      className={`${styles.addressOption} ${styles.addressOptionActive}`}
                       onClick={() => {
-                        setAddress(addr);
                         setShowAddressDropdown(false);
                       }}
                     >
                       <MapPin size={13} className={styles.addressOptionIcon} />
-                      <span>{addr.split(",")[0]}</span>
-                      {addr === address && (
-                        <Check
-                          size={13}
-                          className={styles.addressOptionCheck}
-                        />
-                      )}
+                      <span>{address.street.split(",")[0]}</span>
+                      <Check size={13} className={styles.addressOptionCheck} />
                     </button>
-                  ))}
-                  <button
-                    type="button"
-                    className={styles.addressOption}
-                    onClick={() => {
-                      setShowAddressDropdown(false);
-                      setAddress("Current location");
-                    }}
-                  >
-                    <Crosshair size={13} className={styles.addressOptionIcon} />
-                    <span>Use my location</span>
-                  </button>
+                  )}
                   <div className={styles.addressDropdownDivider} />
                   <button
                     type="button"
@@ -399,7 +400,7 @@ function ShellInner({
                     }}
                   >
                     <Plus size={13} className={styles.addressOptionIcon} />
-                    <span>Add new address</span>
+                    <span>{address ? "Change address" : "Add address"}</span>
                   </button>
                 </div>
               )}
@@ -445,7 +446,18 @@ function ShellInner({
       {showAddress && (
         <AddressModal
           current={address}
-          onConfirm={setAddress}
+          onConfirm={async (newAddress) => {
+            setAddress(newAddress);
+            try {
+              await fetch("/api/user/address", {
+                method: "PUT",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify(newAddress),
+              });
+            } catch {
+              // Non-critical — address is already updated in local state
+            }
+          }}
           onClose={() => setShowAddress(false)}
         />
       )}
