@@ -16,7 +16,7 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline'",
       // React dev mode uses eval for debugging; production builds do not.
       `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
-      "connect-src 'self' https://api.stripe.com",
+      "connect-src 'self' https://api.stripe.com https://api.mapbox.com https://events.mapbox.com",
       "frame-src 'self' https://js.stripe.com https://hooks.stripe.com",
       ...(isDev ? [] : ["upgrade-insecure-requests"]),
     ].join("; "),
