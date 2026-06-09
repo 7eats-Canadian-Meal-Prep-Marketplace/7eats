@@ -51,6 +51,11 @@ export const orders = pgTable(
     currency: varchar("currency", { length: 3 }).notNull().default("CAD"),
     pickupAt: timestamp("pickup_at"),
     deliveryAddress: jsonb("delivery_address"),
+    deliveryFeeSnapshot: numeric("delivery_fee_snapshot", {
+      precision: 8,
+      scale: 2,
+    }),
+    deliveryDistanceKm: integer("delivery_distance_km"),
     fulfillmentMode: varchar("fulfillment_mode", { length: 20 }),
     fulfilledAt: timestamp("fulfilled_at"),
     cancelledAt: timestamp("cancelled_at"),

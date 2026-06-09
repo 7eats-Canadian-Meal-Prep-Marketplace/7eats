@@ -55,7 +55,7 @@ database before calling the task complete. `drizzle.config.ts` requires
 
 ## Frontend-Backend Flow Testing (MANDATORY)
 
-After implementing any API endpoint AND wiring it to the frontend, you MUST test the complete flow using `agent-browser` before reporting the task complete.
+After implementing any API endpoint AND wiring it to the frontend, you MUST test the complete flow using the **Playwright MCP** before reporting the task complete.
 
 ### When this applies
 - You implement a new API route (e.g., `app/api/...`) AND update frontend code to call it
@@ -64,38 +64,44 @@ After implementing any API endpoint AND wiring it to the frontend, you MUST test
 
 ### How to test
 
-1. Start the dev server if not running (port 3000 by default for Next.js)
-2. Use agent-browser to navigate the relevant UI flow:
+1. Start the dev server if not running: `pnpm dev` (port 3000)
+2. Load Playwright tools via ToolSearch, then navigate and interact:
 
-```bash
-agent-browser open http://localhost:3000
-agent-browser snapshot -i
-# Navigate to the relevant page/feature
-# Interact with the UI that triggers the endpoint
-# Verify the data appears correctly in the UI
-agent-browser close
+```
+ToolSearch: "select:mcp__plugin_playwright_playwright__browser_navigate,mcp__plugin_playwright_playwright__browser_snapshot,mcp__plugin_playwright_playwright__browser_take_screenshot,mcp__plugin_playwright_playwright__browser_click,mcp__plugin_playwright_playwright__browser_type,mcp__plugin_playwright_playwright__browser_console_messages,mcp__plugin_playwright_playwright__browser_wait_for"
 ```
 
-3. Check for:
-   - The endpoint returns data (no 500 errors, no empty states)
+3. Navigate to the relevant page and interact with the feature:
+
+```
+browser_navigate: http://localhost:3000/the-relevant-page
+browser_click: the button or input that triggers the endpoint
+browser_wait_for: expected text or element to appear
+browser_take_screenshot: capture result for verification
+browser_console_messages: check for errors
+```
+
+4. Check for:
+   - No 500 errors in console or network
    - The frontend renders the data correctly
-   - No console errors visible in the page
+   - No CSP or auth errors blocking requests
 
-### Quick reference
+### Key Playwright MCP tools
 
-```bash
-# Load full usage guide before running commands
-agent-browser skills get core
+| Tool | Purpose |
+|------|---------|
+| `browser_navigate` | Go to a URL |
+| `browser_snapshot` | Accessibility tree — use for finding element targets |
+| `browser_take_screenshot` | Visual verification |
+| `browser_click` | Click a button or link |
+| `browser_type` | Type into an input (use `slowly: true` for autocomplete) |
+| `browser_wait_for` | Wait for text to appear or a timeout |
+| `browser_console_messages` | Read browser console errors/logs |
+| `browser_fill_form` | Fill multiple form fields at once |
 
-# React app introspection
-agent-browser open --enable react-devtools http://localhost:3000
-agent-browser react tree
-agent-browser vitals http://localhost:3000
+### CSP note
 
-# Screenshot for verification
-agent-browser screenshot verify.png
-agent-browser close
-```
+If Mapbox or other third-party APIs are blocked by CSP, add their domains to `connect-src` in `next.config.ts`. Current allowed origins include `https://api.mapbox.com` and `https://events.mapbox.com`.
 
 ## Database Notes
 
