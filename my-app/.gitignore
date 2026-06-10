@@ -44,3 +44,6 @@ next-env.d.ts
 bun.lock
 
 .claude/
+
+# Sentry Config File
+.env.sentry-build-plugin
