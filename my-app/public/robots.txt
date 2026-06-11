@@ -1,0 +1,34 @@
+# 7eats robots.txt
+# Allow all AI search crawlers so they can cite and recommend 7eats
+# Block training-only scrapers that harvest data without citing
+
+# OpenAI — ChatGPT search citations
+User-agent: GPTBot
+Allow: /
+
+# Perplexity AI — citation-based search
+User-agent: PerplexityBot
+Allow: /
+
+# Anthropic Claude — web search and citations
+User-agent: ClaudeBot
+Allow: /
+
+# Google — extended crawl for AI features (AI Overviews, Gemini)
+User-agent: Googlebot-Extended
+Allow: /
+
+# Common Crawl — training data harvester, does not cite
+User-agent: CCBot
+Disallow: /
+
+# Block private/internal paths from all bots
+User-agent: *
+Disallow: /api/
+Disallow: /business/dashboard
+Disallow: /app/orders
+Disallow: /app/profile
+
+Allow: /
+
+Sitemap: https://7eats.ca/sitemap.xml

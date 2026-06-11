@@ -1,0 +1,26 @@
+# 7eats
+
+> 7eats is the Canadian marketplace connecting meal prep businesses with customers. Home cooks and professional meal preppers in Toronto can list their meals, manage orders, and get paid — while customers discover and order fresh, homemade meal prep delivered locally.
+
+## About 7eats
+
+- [About](https://7eats.ca) — The meal prep marketplace for Canada. Discover local meal prep businesses and order fresh, homemade meals.
+
+## For Customers
+
+- [Browse Meal Prep](https://7eats.ca/app) — Browse local meal prep listings, view menus, and place orders from home cooks and businesses near you.
+
+## For Meal Prep Businesses & Cooks
+
+- [Start Selling](https://7eats.ca/business) — List your meal prep business on 7eats, manage your menu and orders, and reach new customers without the admin overhead.
+- [Cook Dashboard](https://7eats.ca/business/dashboard) — Manage listings, view orders, and track earnings.
+
+## How It Works
+
+- Cooks create a profile and list their meal prep offerings with pricing, availability, and photos.
+- Customers browse local listings, place orders, and pay securely through the platform.
+- 7eats handles payments and order management so cooks focus on cooking.
+
+## Contact & Support
+
+- [7eats.ca](https://7eats.ca) — Main website
