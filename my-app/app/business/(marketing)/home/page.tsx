@@ -56,20 +56,8 @@ const cookPlatformSchema = {
     url: "https://www.7eats.ca",
   },
   areaServed: {
-    "@type": "City",
-    name: "Toronto",
-    addressCountry: "CA",
-    addressRegion: "ON",
-  },
-  hasOfferCatalog: {
-    "@type": "OfferCatalog",
-    name: "Cook Platform Features",
-    itemListElement: FEATURES.map((f, i) => ({
-      "@type": "Offer",
-      position: i + 1,
-      name: f.title,
-      description: f.desc,
-    })),
+    "@type": "AdministrativeArea",
+    name: "Toronto, Ontario, Canada",
   },
 };
 

@@ -26,4 +26,4 @@
 
 ## Team
 
-- [Meet the Team](https://www.7eats.ca/public/team) — The founders behind 7eats.
+- [Meet the Team](https://www.7eats.ca/public/team) — The three co-founders behind 7eats: Hendrik Tebeng (Toronto), Mohamad Addasi (Montreal), and Adnane Bejja (Laval). All software engineering students at Concordia University with experience at CIBC, Autodesk, and Intact Financial Corporation.

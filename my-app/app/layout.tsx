@@ -42,7 +42,7 @@ export const metadata: Metadata = {
     type: "website",
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "7eats - The Canadian Meal Prep Marketplace",
     description:
       "7eats is the marketplace for Toronto's meal prep businesses. Get discovered by new customers, manage orders, and get paid without the admin overhead.",
@@ -52,17 +52,27 @@ export const metadata: Metadata = {
 
 const organizationSchema = {
   "@context": "https://schema.org",
-  "@type": "Organization",
+  "@type": ["Organization", "LocalBusiness"],
   name: "7eats",
   url: "https://www.7eats.ca",
   logo: "https://www.7eats.ca/7eats-icon-full.jpg",
   description:
     "7eats is the marketplace for Toronto's meal prep businesses. Get discovered by new customers, manage orders, and get paid without the admin overhead.",
-  sameAs: [],
+  email: "contact@7eats.ca",
+  address: {
+    "@type": "PostalAddress",
+    addressLocality: "Toronto",
+    addressRegion: "ON",
+    addressCountry: "CA",
+  },
+  areaServed: {
+    "@type": "AdministrativeArea",
+    name: "Toronto, Ontario, Canada",
+  },
   contactPoint: {
     "@type": "ContactPoint",
     contactType: "customer service",
-    url: "https://www.7eats.ca",
+    email: "contact@7eats.ca",
   },
 };
 
@@ -86,7 +96,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={plusJakartaSans.variable}>
+    <html lang="en-CA" className={plusJakartaSans.variable}>
       <head>
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         <link

@@ -2,8 +2,12 @@
 # Allow all AI search crawlers so they can cite and recommend 7eats
 # Block training-only scrapers that harvest data without citing
 
-# OpenAI — ChatGPT search citations
+# OpenAI — ChatGPT training crawler
 User-agent: GPTBot
+Allow: /
+
+# OpenAI — ChatGPT real-time search/retrieval crawler (distinct from GPTBot)
+User-agent: OAI-SearchBot
 Allow: /
 
 # Perplexity AI — citation-based search

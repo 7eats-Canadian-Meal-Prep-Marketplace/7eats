@@ -30,10 +30,8 @@ const marketplaceSchema = {
     url: "https://www.7eats.ca",
   },
   areaServed: {
-    "@type": "City",
-    name: "Toronto",
-    addressCountry: "CA",
-    addressRegion: "ON",
+    "@type": "AdministrativeArea",
+    name: "Toronto, Ontario, Canada",
   },
   offers: {
     "@type": "Offer",
@@ -55,6 +53,25 @@ const faqSchema = {
   })),
 };
 
+const breadcrumbSchema = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    {
+      "@type": "ListItem",
+      position: 1,
+      name: "Home",
+      item: "https://www.7eats.ca",
+    },
+    {
+      "@type": "ListItem",
+      position: 2,
+      name: "Join the Waitlist",
+      item: "https://www.7eats.ca/public/waitlist",
+    },
+  ],
+};
+
 export default function WaitlistPage() {
   return (
     <>
@@ -67,6 +84,11 @@ export default function WaitlistPage() {
         type="application/ld+json"
         // biome-ignore lint/security/noDangerouslySetInnerHtml: JSON-LD structured data, not user input
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: JSON-LD structured data, not user input
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
       />
       {/* HERO */}
       <section className="hero">
