@@ -11,6 +11,9 @@ export const metadata = {
   title: "Cook with 7eats - Join Toronto's meal prep marketplace",
   description:
     "List your menu, take confirmed orders, and get paid without the admin overhead. 7eats is built for Toronto's home cooks and meal prep operators.",
+  alternates: {
+    canonical: "/business/home",
+  },
 };
 
 const FEATURES = [
@@ -40,9 +43,44 @@ const FEATURES = [
   },
 ];
 
+const cookPlatformSchema = {
+  "@context": "https://schema.org",
+  "@type": "Service",
+  name: "7eats Cook Platform",
+  description:
+    "7eats is the marketplace platform for Toronto's home cooks and meal prep operators. List your menu, take confirmed upfront-paid orders, and manage every order, payment, and pickup in one place.",
+  serviceType: "Marketplace Platform for Meal Prep Businesses",
+  provider: {
+    "@type": "Organization",
+    name: "7eats",
+    url: "https://www.7eats.ca",
+  },
+  areaServed: {
+    "@type": "City",
+    name: "Toronto",
+    addressCountry: "CA",
+    addressRegion: "ON",
+  },
+  hasOfferCatalog: {
+    "@type": "OfferCatalog",
+    name: "Cook Platform Features",
+    itemListElement: FEATURES.map((f, i) => ({
+      "@type": "Offer",
+      position: i + 1,
+      name: f.title,
+      description: f.desc,
+    })),
+  },
+};
+
 export default function BusinessHomePage() {
   return (
     <main>
+      <script
+        type="application/ld+json"
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: JSON-LD structured data, not user input
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(cookPlatformSchema) }}
+      />
       {/* HERO — full-bleed video background, content left-aligned */}
       <section className={styles.hero}>
         <div className={styles.heroBg}>

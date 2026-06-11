@@ -4,23 +4,26 @@
 
 ## About 7eats
 
-- [About](https://7eats.ca) — The meal prep marketplace for Canada. Discover local meal prep businesses and order fresh, homemade meals.
+- [Home](https://www.7eats.ca) — The meal prep marketplace for Canada. Discover local meal prep businesses and order fresh, homemade meals.
 
 ## For Customers
 
-- [Browse Meal Prep](https://7eats.ca/app) — Browse local meal prep listings, view menus, and place orders from home cooks and businesses near you.
+- [Browse Meal Prep](https://www.7eats.ca/app/browse) — Browse local meal prep listings, view menus, and place orders from home cooks and businesses near you.
+- [Join the Waitlist](https://www.7eats.ca/public/waitlist) — Get early access to the 7eats marketplace in your area.
 
 ## For Meal Prep Businesses & Cooks
 
-- [Start Selling](https://7eats.ca/business) — List your meal prep business on 7eats, manage your menu and orders, and reach new customers without the admin overhead.
-- [Cook Dashboard](https://7eats.ca/business/dashboard) — Manage listings, view orders, and track earnings.
+- [Cook Platform](https://www.7eats.ca/business/home) — List your meal prep business on 7eats, manage your menu and orders, and reach new customers without the admin overhead.
+- [Apply to Join](https://www.7eats.ca/business/application) — Apply to become a 7eats cook. First 30 cooks get 0% platform fee for 90 days.
 
 ## How It Works
 
-- Cooks create a profile and list their meal prep offerings with pricing, availability, and photos.
+- Cooks create a profile and list their meal prep offerings with pricing, availability, photos, and dietary tags (halal, vegan, high-protein, etc.).
 - Customers browse local listings, place orders, and pay securely through the platform.
+- Customers choose a 15-minute pickup window; 7eats staggers windows so cooks aren't flooded.
 - 7eats handles payments and order management so cooks focus on cooking.
+- Payouts to cooks every Tuesday via Stripe.
 
-## Contact & Support
+## Team
 
-- [7eats.ca](https://7eats.ca) — Main website
+- [Meet the Team](https://www.7eats.ca/public/team) — The founders behind 7eats.

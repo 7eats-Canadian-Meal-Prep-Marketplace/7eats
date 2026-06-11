@@ -14,18 +14,21 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://7eats.ca"),
+  metadataBase: new URL("https://www.7eats.ca"),
   title: "7eats - The Canadian Meal Prep Marketplace",
   description:
     "7eats is the marketplace for Toronto's meal prep businesses. Get discovered by new customers, manage orders, and get paid without the admin overhead.",
   icons: {
     icon: "/favicon.svg",
   },
+  alternates: {
+    canonical: "/",
+  },
   openGraph: {
     title: "7eats - The Canadian Meal Prep Marketplace",
     description:
       "7eats is the marketplace for Toronto's meal prep businesses. Get discovered by new customers, manage orders, and get paid without the admin overhead.",
-    url: "https://7eats.ca",
+    url: "https://www.7eats.ca",
     siteName: "7eats",
     images: [
       {
@@ -51,15 +54,15 @@ const organizationSchema = {
   "@context": "https://schema.org",
   "@type": "Organization",
   name: "7eats",
-  url: "https://7eats.ca",
-  logo: "https://7eats.ca/7eats-icon-full.jpg",
+  url: "https://www.7eats.ca",
+  logo: "https://www.7eats.ca/7eats-icon-full.jpg",
   description:
-    "7eats is the Canadian marketplace connecting meal prep businesses with customers. Home cooks and professional meal preppers in Toronto can list their meals, manage orders, and get paid.",
+    "7eats is the marketplace for Toronto's meal prep businesses. Get discovered by new customers, manage orders, and get paid without the admin overhead.",
   sameAs: [],
   contactPoint: {
     "@type": "ContactPoint",
     contactType: "customer service",
-    url: "https://7eats.ca",
+    url: "https://www.7eats.ca",
   },
 };
 
@@ -67,12 +70,12 @@ const websiteSchema = {
   "@context": "https://schema.org",
   "@type": "WebSite",
   name: "7eats",
-  url: "https://7eats.ca",
+  url: "https://www.7eats.ca",
   description:
-    "The Canadian marketplace for meal prep businesses. Discover local meal prep, manage orders, and get paid without the admin overhead.",
+    "7eats is the marketplace for Toronto's meal prep businesses. List your menu, reach new customers, and get paid without the admin overhead.",
   potentialAction: {
     "@type": "SearchAction",
-    target: "https://7eats.ca/app?q={search_term_string}",
+    target: "https://www.7eats.ca/app/browse?q={search_term_string}",
     "query-input": "required name=search_term_string",
   },
 };

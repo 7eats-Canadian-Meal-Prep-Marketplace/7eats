@@ -28,7 +28,19 @@ Disallow: /api/
 Disallow: /business/dashboard
 Disallow: /app/orders
 Disallow: /app/profile
+Disallow: /app/cart
+Disallow: /app/checkout
+Disallow: /app/inbox
+Disallow: /app/settings
+Disallow: /app/saved
+Disallow: /business/orders
+Disallow: /business/earnings
+Disallow: /business/calendar
+Disallow: /business/inbox
+Disallow: /business/settings
+Disallow: /business/listings
+Disallow: /business-auth/setup
 
 Allow: /
 
-Sitemap: https://7eats.ca/sitemap.xml
+Sitemap: https://www.7eats.ca/sitemap.xml

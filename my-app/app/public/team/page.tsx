@@ -6,6 +6,9 @@ export const metadata = {
   title: "Meet the team - 7eats",
   description:
     "Three people, fifteen years of marketplaces and kitchens between us, and one shared belief: Toronto's meal prep businesses deserve real infrastructure.",
+  alternates: {
+    canonical: "/public/team",
+  },
 };
 
 export default function TeamPage() {
