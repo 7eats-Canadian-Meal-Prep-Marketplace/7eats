@@ -196,6 +196,29 @@
   flex: none;
 }
 
+.prefsBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-left: auto;
+  padding: 7px 13px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  background: none;
+  border: 1.5px solid var(--grey-300);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition:
+    background 0.12s,
+    border-color 0.12s;
+}
+
+.prefsBtn:hover {
+  background: var(--grey-100);
+  border-color: var(--ink);
+}
+
 .backBtn {
   display: none;
   align-items: center;

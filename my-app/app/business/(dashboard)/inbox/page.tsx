@@ -1,8 +1,9 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, Send } from "lucide-react";
+import { ArrowLeft, ArrowRight, ClipboardList, Send } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { PreferenceSheet } from "../_components/PreferenceSheet";
 import styles from "./page.module.css";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -198,6 +199,7 @@ function Thread({
 }) {
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
+  const [prefsOpen, setPrefsOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const name = displayName(conversation);
 
@@ -244,6 +246,14 @@ function Thread({
         )}
         <span className={styles.threadAvatar}>{initials(name)}</span>
         <span className={styles.threadName}>{name}</span>
+        <button
+          type="button"
+          className={styles.prefsBtn}
+          onClick={() => setPrefsOpen(true)}
+        >
+          <ClipboardList size={15} />
+          Preferences
+        </button>
       </div>
 
       {conversation.orderInfo && conversation.orderId && (
@@ -293,6 +303,13 @@ function Thread({
           <Send size={16} />
         </button>
       </div>
+
+      <PreferenceSheet
+        clientId={conversation.clientId}
+        clientName={name}
+        open={prefsOpen}
+        onClose={() => setPrefsOpen(false)}
+      />
     </div>
   );
 }
