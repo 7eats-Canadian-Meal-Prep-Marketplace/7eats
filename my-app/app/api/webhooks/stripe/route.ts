@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
-import Stripe from "stripe";
-import { db } from "@/db";
+import type Stripe from "stripe";
+import { db, dbPool } from "@/db";
 import {
   clientSubscriptions,
   cookPayouts,
@@ -14,53 +14,48 @@ import {
   orders,
   stripeWebhookEvents,
 } from "@/db/schema";
-
-function getStripe(): Stripe | null {
-  const key = process.env.STRIPE_SECRET_KEY;
-  if (!key) return null;
-  return new Stripe(key, { apiVersion: "2026-05-27.dahlia" });
-}
+import { getStripe } from "@/lib/stripe";
 
 export async function POST(req: NextRequest) {
   const rawBody = await req.arrayBuffer();
   const buf = Buffer.from(rawBody);
 
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-  const stripe = getStripe();
+  const platformSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  const connectSecret = process.env.STRIPE_CONNECT_WEBHOOK_SECRET;
 
-  let event: Stripe.Event;
-
-  if (webhookSecret && stripe) {
-    const sig = req.headers.get("stripe-signature");
-    if (!sig) {
-      return NextResponse.json(
-        { error: "Webhook signature verification failed." },
-        { status: 400 },
-      );
-    }
-    try {
-      event = stripe.webhooks.constructEvent(buf, sig, webhookSecret);
-    } catch {
-      return NextResponse.json(
-        { error: "Webhook signature verification failed." },
-        { status: 400 },
-      );
-    }
-  } else if (
-    process.env.NODE_ENV !== "production" &&
-    process.env.STRIPE_WEBHOOK_INSECURE_DEV === "1"
-  ) {
-    console.warn(
-      "[webhook/stripe] STRIPE_WEBHOOK_INSECURE_DEV=1 — parsing unsigned webhook body (dev only)",
-    );
-    event = JSON.parse(buf.toString()) as Stripe.Event;
-  } else {
-    console.error(
-      "[webhook/stripe] missing STRIPE_WEBHOOK_SECRET or STRIPE_SECRET_KEY — refusing to process webhook",
-    );
+  if (!platformSecret && !connectSecret) {
+    console.error("[webhook/stripe] No webhook secrets configured");
     return NextResponse.json(
       { error: "Webhook is not configured." },
       { status: 500 },
+    );
+  }
+
+  const sig = req.headers.get("stripe-signature");
+  if (!sig) {
+    return NextResponse.json(
+      { error: "Webhook signature verification failed." },
+      { status: 400 },
+    );
+  }
+
+  const stripe = getStripe();
+  let event: Stripe.Event | null = null;
+
+  for (const secret of [platformSecret, connectSecret]) {
+    if (!secret) continue;
+    try {
+      event = stripe.webhooks.constructEvent(buf, sig, secret);
+      break;
+    } catch {
+      // try next secret
+    }
+  }
+
+  if (!event) {
+    return NextResponse.json(
+      { error: "Webhook signature verification failed." },
+      { status: 400 },
     );
   }
 
@@ -120,7 +115,11 @@ export async function POST(req: NextRequest) {
           .where(eq(clientSubscriptions.stripeSubscriptionId, subscriptionId))
           .limit(1);
 
-        if (!sub) break;
+        if (!sub) {
+          throw new Error(
+            `Subscription ${subscriptionId} is not ready for invoice ${invoice.id}`,
+          );
+        }
 
         const [tier] = await db
           .select({ price: listingSubscriptionTiers.price })
@@ -128,7 +127,11 @@ export async function POST(req: NextRequest) {
           .where(eq(listingSubscriptionTiers.id, sub.tierId))
           .limit(1);
 
-        if (!tier) break;
+        if (!tier) {
+          throw new Error(
+            `Tier ${sub.tierId} not found for subscription ${sub.id}`,
+          );
+        }
 
         const [cook] = await db
           .select({ platformFeePct: cookProfiles.platformFeePct })
@@ -136,7 +139,11 @@ export async function POST(req: NextRequest) {
           .where(eq(cookProfiles.id, sub.cookId))
           .limit(1);
 
-        if (!cook) break;
+        if (!cook) {
+          throw new Error(
+            `Cook ${sub.cookId} not found for subscription ${sub.id}`,
+          );
+        }
 
         const tierPriceCents = Math.round(Number.parseFloat(tier.price) * 100);
         const totalCents =
@@ -148,49 +155,6 @@ export async function POST(req: NextRequest) {
         const periodEnd = invoice.period_end
           ? new Date(invoice.period_end * 1000)
           : new Date();
-
-        const [order] = await db
-          .insert(orders)
-          .values({
-            clientId: sub.clientId,
-            listingId: sub.listingId,
-            cookId: sub.cookId,
-            subscriptionId: sub.id,
-            status: "pending",
-            quantity: 1,
-            unitPrice,
-            totalPrice,
-            currency: "CAD",
-            pickupAt: periodEnd,
-          })
-          .onConflictDoNothing()
-          .returning();
-
-        if (!order) break;
-
-        // Snapshot the listing's current dishes into order_dishes
-        const listingDishRows = await db
-          .select({
-            dishId: listingDishes.dishId,
-            quantity: listingDishes.quantity,
-            sortOrder: listingDishes.sortOrder,
-            dishName: dishes.name,
-          })
-          .from(listingDishes)
-          .innerJoin(dishes, eq(listingDishes.dishId, dishes.id))
-          .where(eq(listingDishes.listingId, sub.listingId));
-
-        if (listingDishRows.length > 0) {
-          await db.insert(orderDishes).values(
-            listingDishRows.map((d) => ({
-              orderId: order.id,
-              dishId: d.dishId,
-              dishName: d.dishName,
-              quantity: d.quantity,
-              sortOrder: d.sortOrder,
-            })),
-          );
-        }
 
         const feePct = Number.parseFloat(cook.platformFeePct);
         const platformFeeCents = Math.round((totalCents * feePct) / 100);
@@ -211,28 +175,97 @@ export async function POST(req: NextRequest) {
               ? rawPaymentIntent
               : rawPaymentIntent.id;
 
-        await db.insert(orderPayments).values({
-          orderId: order.id,
-          cookId: sub.cookId,
-          clientId: sub.clientId,
-          status: "authorized",
-          totalAmount: totalPrice,
-          platformFeePct: cook.platformFeePct,
-          platformFeeAmount,
-          cookPayoutAmount,
-          currency: "CAD",
-          stripePaymentIntentId: paymentIntentId,
-          authorizedAt: new Date(),
-        });
+        // Retrieve charge ID from the PI so we can store it for dispute/refund webhooks
+        let stripeChargeId: string | null = null;
+        if (paymentIntentId) {
+          try {
+            const stripe = getStripe();
+            const pi = await stripe.paymentIntents.retrieve(paymentIntentId, {
+              expand: ["latest_charge"],
+            });
+            const latestCharge = pi.latest_charge;
+            if (latestCharge && typeof latestCharge === "object") {
+              stripeChargeId = latestCharge.id;
+            }
+          } catch {
+            // non-fatal — chargeId is best-effort
+          }
+        }
 
-        // Sync subscription period dates
-        await db
-          .update(clientSubscriptions)
-          .set({
-            currentPeriodStart: new Date(invoice.period_start * 1000),
-            currentPeriodEnd: periodEnd,
-          })
-          .where(eq(clientSubscriptions.id, sub.id));
+        await dbPool.transaction(async (tx) => {
+          const [order] = await tx
+            .insert(orders)
+            .values({
+              clientId: sub.clientId,
+              listingId: sub.listingId,
+              cookId: sub.cookId,
+              subscriptionId: sub.id,
+              status: "pending",
+              quantity: 1,
+              unitPrice,
+              totalPrice,
+              currency: "CAD",
+              pickupAt: periodEnd,
+            })
+            .onConflictDoNothing()
+            .returning();
+
+          if (!order) {
+            throw new Error(
+              `Subscription order already exists for invoice ${invoice.id}`,
+            );
+          }
+
+          // Snapshot the listing's current dishes into order_dishes
+          const listingDishRows = await tx
+            .select({
+              dishId: listingDishes.dishId,
+              quantity: listingDishes.quantity,
+              sortOrder: listingDishes.sortOrder,
+              dishName: dishes.name,
+            })
+            .from(listingDishes)
+            .innerJoin(dishes, eq(listingDishes.dishId, dishes.id))
+            .where(eq(listingDishes.listingId, sub.listingId));
+
+          if (listingDishRows.length > 0) {
+            await tx.insert(orderDishes).values(
+              listingDishRows.map((d) => ({
+                orderId: order.id,
+                dishId: d.dishId,
+                dishName: d.dishName,
+                quantity: d.quantity,
+                sortOrder: d.sortOrder,
+              })),
+            );
+          }
+
+          await tx.insert(orderPayments).values({
+            orderId: order.id,
+            cookId: sub.cookId,
+            clientId: sub.clientId,
+            type: "full",
+            status: "held",
+            totalAmount: totalPrice,
+            platformFeePct: cook.platformFeePct,
+            platformFeeAmount,
+            cookPayoutAmount,
+            currency: "CAD",
+            stripePaymentIntentId: paymentIntentId,
+            stripeChargeId,
+            authorizedAt: new Date(),
+            heldAt: new Date(),
+          });
+
+          // Sync subscription period dates only after the order/payment rows exist.
+          await tx
+            .update(clientSubscriptions)
+            .set({
+              currentPeriodStart: new Date(invoice.period_start * 1000),
+              currentPeriodEnd: periodEnd,
+            })
+            .where(eq(clientSubscriptions.id, sub.id));
+        });
 
         break;
       }
@@ -286,12 +319,18 @@ export async function POST(req: NextRequest) {
                     : "paused",
             cancelAtPeriodEnd: subscription.cancel_at_period_end,
             currentPeriodStart: new Date(
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              (subscription as any).current_period_start * 1000,
+              (
+                subscription as Stripe.Subscription & {
+                  current_period_start: number;
+                }
+              ).current_period_start * 1000,
             ),
             currentPeriodEnd: new Date(
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              (subscription as any).current_period_end * 1000,
+              (
+                subscription as Stripe.Subscription & {
+                  current_period_end: number;
+                }
+              ).current_period_end * 1000,
             ),
           })
           .where(eq(clientSubscriptions.stripeSubscriptionId, subscription.id));
@@ -353,6 +392,37 @@ export async function POST(req: NextRequest) {
           .update(cookPayouts)
           .set({ status: "cancelled" })
           .where(eq(cookPayouts.stripePayoutId, payout.id));
+        break;
+      }
+
+      case "payment_intent.payment_failed": {
+        const pi = event.data.object as Stripe.PaymentIntent;
+        await db
+          .update(orderPayments)
+          .set({ status: "pending" })
+          .where(eq(orderPayments.stripePaymentIntentId, pi.id));
+        break;
+      }
+
+      case "charge.dispute.created": {
+        const dispute = event.data.object as Stripe.Dispute;
+        const chargeId =
+          typeof dispute.charge === "string"
+            ? dispute.charge
+            : dispute.charge.id;
+        await db
+          .update(orderPayments)
+          .set({ status: "disputed" })
+          .where(eq(orderPayments.stripeChargeId, chargeId));
+        break;
+      }
+
+      case "charge.refunded": {
+        const charge = event.data.object as Stripe.Charge;
+        await db
+          .update(orderPayments)
+          .set({ status: "refunded", refundedAt: new Date() })
+          .where(eq(orderPayments.stripeChargeId, charge.id));
         break;
       }
 

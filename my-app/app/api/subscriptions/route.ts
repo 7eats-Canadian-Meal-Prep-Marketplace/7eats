@@ -4,6 +4,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import {
   authUser,
+  authUserTable,
   clientSubscriptions,
   cookProfiles,
   listingSubscriptionTiers,
@@ -49,6 +50,7 @@ export async function GET(req: NextRequest) {
           interval: listingSubscriptionTiers.interval,
           price: listingSubscriptionTiers.price,
         },
+        cookDisplayName: cookProfiles.displayName,
       })
       .from(clientSubscriptions)
       .innerJoin(listings, eq(clientSubscriptions.listingId, listings.id))
@@ -56,6 +58,7 @@ export async function GET(req: NextRequest) {
         listingSubscriptionTiers,
         eq(clientSubscriptions.tierId, listingSubscriptionTiers.id),
       )
+      .innerJoin(cookProfiles, eq(clientSubscriptions.cookId, cookProfiles.id))
       .where(eq(clientSubscriptions.clientId, session.user.id))
       .orderBy(desc(clientSubscriptions.createdAt));
 
@@ -176,10 +179,18 @@ export async function POST(req: NextRequest) {
         email: authUser.email,
         firstName: authUser.firstName,
         lastName: authUser.lastName,
+        onboardingCompletedAt: authUser.onboardingCompletedAt,
       })
       .from(authUser)
       .where(eq(authUser.id, session.user.id))
       .limit(1);
+
+    if (!userRow?.onboardingCompletedAt) {
+      return NextResponse.json(
+        { error: "Complete onboarding before starting a subscription." },
+        { status: 403 },
+      );
+    }
 
     let stripeCustomerId = userRow?.stripeCustomerId ?? null;
     if (!stripeCustomerId) {
@@ -192,7 +203,7 @@ export async function POST(req: NextRequest) {
       );
 
       await db
-        .update(authUser)
+        .update(authUserTable)
         .set({ stripeCustomerId })
         .where(eq(authUser.id, session.user.id));
     }

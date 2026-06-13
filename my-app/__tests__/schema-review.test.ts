@@ -56,6 +56,15 @@ describe("reviewed database schema safeguards", () => {
     expect(waitlistSchema.match(/\.enableRLS\(\)/g)).toHaveLength(2);
   });
 
+  it("does not expose the auth user table publicly for active cook checks", () => {
+    const authSchema = schemaFile("auth.ts");
+    const cooksSchema = schemaFile("cooks.ts");
+
+    expect(authSchema).not.toContain("user_select_all");
+    expect(authSchema).toContain("user_select_own");
+    expect(cooksSchema).toContain("app_public_user_is_active");
+  });
+
   it("prevents cooks from self-approving certifications or listings", () => {
     const cooksSchema = schemaFile("cooks.ts");
     const listingsSchema = schemaFile("listings.ts");

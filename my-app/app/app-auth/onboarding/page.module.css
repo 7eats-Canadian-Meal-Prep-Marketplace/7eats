@@ -1,0 +1,485 @@
+/* ─── Page — white canvas, matches client auth ─────────────────────────────── */
+.page {
+  min-height: 100svh;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─── Top bar ────────────────────────────────────────────────────────────────── */
+.topBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 24px;
+  background: #ffffff;
+  border-bottom: 1px solid var(--grey-200);
+  flex-shrink: 0;
+}
+
+.stepIndicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stepDot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1.5px solid var(--grey-300);
+  background: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  color: #a1a1aa;
+}
+
+.stepDotActive {
+  border-color: var(--red);
+  background: var(--red);
+  color: #ffffff;
+}
+
+.stepDotDone {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: #ffffff;
+}
+
+.stepLine {
+  width: 24px;
+  height: 1.5px;
+  background: var(--grey-200);
+  border-radius: 1px;
+}
+
+.stepLineDone {
+  background: var(--ink);
+}
+
+/* ─── Progress bar ───────────────────────────────────────────────────────────── */
+.progressBar {
+  height: 2px;
+  background: var(--grey-200);
+  flex-shrink: 0;
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--red);
+  transition: width 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ─── Content ────────────────────────────────────────────────────────────────── */
+.content {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  justify-content: center;
+  background: #ffffff;
+  padding: 0 24px 64px;
+}
+
+.stepContent {
+  width: 100%;
+  max-width: 520px;
+  padding-top: 40px;
+}
+
+/* ─── Step header ────────────────────────────────────────────────────────────── */
+.stepTag {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--red);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  margin-bottom: 14px;
+}
+
+.stepHeading {
+  font-size: clamp(28px, 5vw, 38px);
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.035em;
+  line-height: 1.08;
+  margin-bottom: 10px;
+}
+
+.accent {
+  color: var(--red);
+}
+
+.stepDesc {
+  font-size: 15px;
+  color: #52525b;
+  line-height: 1.6;
+  margin-bottom: 28px;
+}
+
+/* ─── Panels (structure on white) ────────────────────────────────────────────── */
+.panel {
+  background: #ffffff;
+  border: 1px solid var(--grey-200);
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+/* ─── Phone step ─────────────────────────────────────────────────────────────── */
+.phoneBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dobField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dobLabel {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--grey-700);
+}
+
+.dobHint {
+  font-size: 12px;
+  color: var(--grey-500);
+  margin-top: 4px;
+  line-height: 1.5;
+  margin-bottom: 0;
+}
+
+.phoneRow {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.phoneInput {
+  flex: 1;
+  padding: 13px 16px;
+  border: 1.5px solid var(--grey-200);
+  border-radius: var(--radius-sm);
+  background: #ffffff;
+  font-size: 15px;
+  font-family: var(--font);
+  color: var(--ink);
+  outline: none;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+
+.phoneInput:focus {
+  border-color: var(--ink);
+  box-shadow: 0 0 0 3px rgba(15, 15, 15, 0.05);
+}
+
+.phoneInputVerified {
+  border-color: var(--grey-300);
+  background: var(--grey-100);
+  color: var(--ink);
+}
+
+.sendBtn {
+  padding: 13px 20px;
+  background: var(--ink);
+  color: var(--white);
+  font-size: 13.5px;
+  font-weight: 700;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-family: var(--font);
+  white-space: nowrap;
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+}
+
+.sendBtn:hover:not(:disabled) {
+  opacity: 0.88;
+}
+
+.sendBtn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.verifiedBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 16px;
+  background: var(--grey-100);
+  border: 1.5px solid var(--grey-300);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.verifiedBadge svg {
+  color: var(--red);
+}
+
+.codeRow {
+  display: flex;
+  gap: 10px;
+}
+
+.codeInput {
+  flex: 1;
+  padding: 13px 16px;
+  border: 1.5px solid var(--grey-200);
+  border-radius: var(--radius-sm);
+  background: #ffffff;
+  font-size: 22px;
+  font-family: var(--font);
+  letter-spacing: 0.3em;
+  color: var(--ink);
+  outline: none;
+  text-align: center;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+
+.codeInput:focus {
+  border-color: var(--red);
+  box-shadow: 0 0 0 3px rgba(214, 64, 69, 0.1);
+}
+
+.verifyBtn {
+  padding: 13px 22px;
+  background: var(--red);
+  color: var(--white);
+  font-size: 13.5px;
+  font-weight: 700;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-family: var(--font);
+  white-space: nowrap;
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+}
+
+.verifyBtn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.verifyBtn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.codeError {
+  font-size: 12.5px;
+  color: var(--red);
+  margin: 0;
+}
+
+/* ─── Preference sections ────────────────────────────────────────────────────── */
+.prefSections {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.prefSection {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 20px;
+  background: #ffffff;
+  border: 1px solid var(--grey-200);
+  border-radius: 10px;
+}
+
+.prefLabel {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #52525b;
+  margin: 0;
+}
+
+/* ─── Chips ──────────────────────────────────────────────────────────────────── */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 14px;
+  border: 1.5px solid var(--grey-200);
+  border-radius: var(--radius-pill);
+  background: #ffffff;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+  cursor: pointer;
+  font-family: var(--font);
+  transition:
+    border-color 0.12s,
+    background 0.12s,
+    color 0.12s;
+}
+
+.chip:hover {
+  border-color: var(--grey-300);
+  background: var(--grey-100);
+}
+
+.chipSelected {
+  background: var(--red);
+  border-color: var(--red);
+  color: var(--white);
+  font-weight: 600;
+}
+
+.chipSelected:hover {
+  background: var(--red);
+  border-color: var(--red);
+}
+
+.chipCheck {
+  flex-shrink: 0;
+}
+
+/* ─── Why meal prep grid ─────────────────────────────────────────────────────── */
+.whyGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+@media (max-width: 480px) {
+  .whyGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.whyOption {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1.5px solid var(--grey-200);
+  border-radius: var(--radius-sm);
+  background: #ffffff;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+  cursor: pointer;
+  font-family: var(--font);
+  text-align: left;
+  line-height: 1.35;
+  transition:
+    border-color 0.12s,
+    background 0.12s,
+    color 0.12s;
+}
+
+.whyOption:hover {
+  border-color: var(--grey-300);
+  background: var(--grey-100);
+}
+
+.whyOptionSelected {
+  background: #fff5f5;
+  border-color: var(--red);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.whyOptionSelected:hover {
+  background: #fff5f5;
+}
+
+.whyOptionSelected .chipCheck {
+  color: var(--red);
+}
+
+/* ─── Mobile responsive ──────────────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .content {
+    padding: 0 16px 64px;
+  }
+
+  .stepContent {
+    padding-top: 28px;
+  }
+}
+
+/* On very small phones, stack phone input + send button vertically */
+@media (max-width: 360px) {
+  .phoneRow {
+    flex-direction: column;
+  }
+
+  .sendBtn {
+    width: 100%;
+    padding: 13px;
+  }
+
+  .codeRow {
+    flex-direction: column;
+  }
+
+  .verifyBtn {
+    width: 100%;
+    padding: 13px;
+  }
+
+  .verifiedBadge {
+    width: 100%;
+    justify-content: center;
+    padding: 13px;
+  }
+}
+
+/* ─── Buttons ────────────────────────────────────────────────────────────────── */
+.nextBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 15px 28px;
+  background: var(--red);
+  color: var(--white);
+  font-size: 15px;
+  font-weight: 700;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-family: var(--font);
+  transition: opacity 0.15s;
+}
+
+.nextBtn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.nextBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

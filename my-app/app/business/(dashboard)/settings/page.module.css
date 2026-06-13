@@ -600,8 +600,11 @@
     align-items: flex-start;
   }
 
-  .stripeRow {
+  /* stripeStatus is the actual class used in the component */
+  .stripeRow,
+  .stripeStatus {
     flex-direction: column;
     align-items: flex-start;
+    gap: 12px;
   }
 }

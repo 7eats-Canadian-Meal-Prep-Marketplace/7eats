@@ -3,6 +3,7 @@ import {
   boolean,
   check,
   integer,
+  jsonb,
   numeric,
   pgPolicy,
   pgTable,
@@ -48,7 +49,14 @@ export const orders = pgTable(
     // total_price = unit_price * quantity - COALESCE(discount_amount, 0)
     totalPrice: numeric("total_price", { precision: 10, scale: 2 }).notNull(),
     currency: varchar("currency", { length: 3 }).notNull().default("CAD"),
-    pickupAt: timestamp("pickup_at").notNull(),
+    pickupAt: timestamp("pickup_at"),
+    deliveryAddress: jsonb("delivery_address"),
+    deliveryFeeSnapshot: numeric("delivery_fee_snapshot", {
+      precision: 8,
+      scale: 2,
+    }),
+    deliveryDistanceKm: integer("delivery_distance_km"),
+    fulfillmentMode: varchar("fulfillment_mode", { length: 20 }),
     fulfilledAt: timestamp("fulfilled_at"),
     cancelledAt: timestamp("cancelled_at"),
     cancelledBy: text("cancelled_by").references(() => authUser.id, {
@@ -64,6 +72,7 @@ export const orders = pgTable(
     pickupCodeExpiresAt: timestamp("pickup_code_expires_at"),
     pickupCodeVerifiedAt: timestamp("pickup_code_verified_at"),
     pickupCodeAttempts: integer("pickup_code_attempts").notNull().default(0),
+    pickupCode: text("pickup_code"),
     lateCancelFeeEnabled: boolean("late_cancel_fee_enabled")
       .notNull()
       .default(false),
@@ -77,6 +86,10 @@ export const orders = pgTable(
       precision: 10,
       scale: 2,
     }),
+    depositEnabled: boolean("deposit_enabled").notNull().default(false),
+    depositType: lateCancelFeeTypeEnum("deposit_type"),
+    depositValue: numeric("deposit_value", { precision: 10, scale: 2 }),
+    depositAmount: numeric("deposit_amount", { precision: 10, scale: 2 }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at")
       .notNull()
@@ -102,6 +115,10 @@ export const orders = pgTable(
     check(
       "orders_late_cancel_fee_applied_non_negative",
       sql`${t.lateCancelFeeApplied} IS NULL OR ${t.lateCancelFeeApplied} >= 0`,
+    ),
+    check(
+      "orders_fulfillment_mode_valid",
+      sql`${t.fulfillmentMode} IS NULL OR ${t.fulfillmentMode} IN ('pickup', 'delivery')`,
     ),
     pgPolicy("orders_select_client", {
       for: "select",

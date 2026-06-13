@@ -9,6 +9,7 @@
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions
+.playwright-mcp/
 
 # testing
 /coverage
@@ -43,3 +44,6 @@ next-env.d.ts
 bun.lock
 
 .claude/
+
+# Sentry Config File
+.env.sentry-build-plugin

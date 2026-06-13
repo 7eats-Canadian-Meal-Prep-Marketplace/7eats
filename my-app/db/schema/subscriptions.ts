@@ -119,7 +119,7 @@ export const clientSubscriptions = pgTable(
       .defaultNow()
       .$onUpdate(() => new Date()),
   },
-  (t) => [
+  (_t) => [
     pgPolicy("subscriptions_select_client", {
       for: "select",
       to: "public",

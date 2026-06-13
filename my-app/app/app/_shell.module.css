@@ -1,0 +1,752 @@
+/* ─── Shell ────────────────────────────────────────────────────────────────── */
+.shell {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  background: var(--white);
+}
+
+/* ─── Header ───────────────────────────────────────────────────────────────── */
+.header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 200;
+  height: 72px;
+  background: var(--white);
+  border-bottom: 1px solid var(--grey-200);
+}
+
+.headerInner {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  max-width: var(--app-maxw);
+  margin: 0 auto;
+  padding: 0 24px;
+  gap: 14px;
+}
+
+.brandLink {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  transform: translateY(-10px);
+}
+
+/* ─── Desktop nav ───────────────────────────────────────────────────────────── */
+.desktopNav {
+  display: none;
+  align-items: center;
+  gap: 2px;
+}
+
+@media (min-width: 768px) {
+  .desktopNav {
+    display: flex;
+  }
+}
+
+.navLink {
+  padding: 7px 13px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--grey-700);
+  border-radius: var(--radius-sm);
+  transition:
+    color 0.12s,
+    background 0.12s;
+  white-space: nowrap;
+}
+
+.navLink:hover {
+  color: var(--ink);
+  background: var(--grey-100);
+}
+
+.navLinkActive {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+/* ─── Fulfillment segmented control (header) ────────────────────────────────── */
+.segmented {
+  display: inline-flex;
+  background: var(--grey-100);
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-pill);
+  padding: 3px;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.segment {
+  padding: 7px 18px;
+  border-radius: var(--radius-pill);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--grey-700);
+  background: transparent;
+  white-space: nowrap;
+  transition: color 0.15s;
+}
+
+.segment:hover {
+  color: var(--ink);
+}
+
+.segmentActive {
+  background: var(--ink);
+  color: var(--white);
+  box-shadow: 0 1px 3px rgba(15, 15, 15, 0.16);
+}
+
+.segmentActive:hover {
+  color: var(--white);
+}
+
+.headerSegmented {
+  display: none;
+}
+
+@media (min-width: 880px) {
+  .headerSegmented {
+    display: inline-flex;
+  }
+}
+
+/* ─── Header search ─────────────────────────────────────────────────────────── */
+.headerSearch {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  background: var(--grey-100);
+  border: 1.5px solid var(--grey-200);
+  border-radius: var(--radius-pill);
+  transition:
+    border-color 0.12s,
+    background 0.12s;
+}
+
+.headerSearch:focus-within {
+  border-color: var(--grey-500);
+  background: var(--white);
+}
+
+.headerSearchIcon {
+  color: var(--grey-500);
+  flex-shrink: 0;
+}
+
+.headerSearchInput {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 13.5px;
+  font-family: inherit;
+  color: var(--ink);
+  outline: none;
+  min-width: 0;
+}
+
+.headerSearchInput::placeholder {
+  color: var(--grey-500);
+}
+
+.headerSearchFallback {
+  flex: 1;
+  min-width: 0;
+  height: 40px;
+  background: var(--grey-100);
+  border-radius: var(--radius-pill);
+}
+
+@media (max-width: 600px) {
+  .headerSearch {
+    padding: 8px 12px;
+  }
+}
+
+/* ─── Address chip ──────────────────────────────────────────────────────────── */
+.addressChip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 7px 12px 7px 10px;
+  background: var(--grey-100);
+  border: 1.5px solid var(--grey-200);
+  border-radius: var(--radius-pill);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    border-color 0.12s,
+    background 0.12s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.addressChip:hover {
+  border-color: var(--grey-500);
+  background: var(--grey-100);
+}
+
+.addressChipText {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+  .addressChipText {
+    display: none;
+  }
+}
+
+/* On very small screens hide the address chip entirely to prevent header overflow */
+@media (max-width: 360px) {
+  .addressWrap {
+    display: none;
+  }
+}
+
+.addressWrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.addressChipOpen {
+  border-color: var(--grey-500);
+}
+
+.addressChevron {
+  margin-left: 2px;
+  color: var(--grey-500);
+  transition: transform 0.15s;
+}
+
+.addressChipOpen .addressChevron {
+  transform: rotate(180deg);
+}
+
+.addressDropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 240px;
+  background: var(--white);
+  border: 1px solid var(--grey-200);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(15, 15, 15, 0.1);
+  z-index: 200;
+  padding: 4px;
+  animation: dropIn 0.14s ease;
+}
+
+@keyframes dropIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.addressOption {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 9px 12px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--ink);
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition: background 0.1s;
+}
+
+.addressOption:hover {
+  background: var(--grey-100);
+}
+
+.addressOptionActive {
+  font-weight: 700;
+}
+
+.addressOptionIcon {
+  color: var(--grey-500);
+  flex-shrink: 0;
+}
+
+.addressOptionCheck {
+  color: var(--ink);
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.addressOptionAdd {
+  color: var(--grey-700);
+}
+
+.addressDropdownDivider {
+  height: 1px;
+  background: var(--grey-200);
+  margin: 4px 0;
+}
+
+/* ─── Address modal ──────────────────────────────────────────────────────────── */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 15, 15, 0.5);
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.addrModal {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 480px;
+  box-shadow:
+    0 8px 28px rgba(15, 15, 15, 0.12),
+    0 24px 64px rgba(15, 15, 15, 0.16);
+}
+
+@media (max-width: 599px) {
+  .backdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .addrModal {
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    box-shadow: none;
+  }
+}
+
+.addrModalHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--grey-200);
+}
+
+.addrModalTitle {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.addrModalClose {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--grey-100);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--grey-700);
+  transition: background 0.12s;
+}
+
+.addrModalClose:hover {
+  background: var(--grey-200);
+}
+
+.addrModalBody {
+  padding: 20px;
+}
+
+.addrInput {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1.5px solid var(--grey-200);
+  border-radius: var(--radius-md);
+  font-size: 15px;
+  font-family: inherit;
+  color: var(--ink);
+  line-height: 1.4;
+  outline: none;
+  transition: border-color 0.12s;
+  box-sizing: border-box;
+}
+
+.addrInput:focus {
+  border-color: var(--ink);
+}
+
+.addrModalFoot {
+  padding: 16px 20px 20px;
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.locateBtn {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--grey-200);
+  background: var(--white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--ink);
+  transition:
+    border-color 0.12s,
+    background 0.12s;
+}
+
+.locateBtn:hover {
+  border-color: var(--grey-500);
+  background: var(--grey-100);
+}
+
+.addrConfirmBtn {
+  flex: 1;
+  height: 48px;
+  padding: 0 24px;
+  background: var(--red);
+  color: var(--white);
+  font-size: 14px;
+  font-weight: 700;
+  border: none;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    background 0.12s,
+    opacity 0.12s;
+}
+
+.addrConfirmBtn:hover {
+  background: var(--red-deep);
+}
+
+/* ─── Header right ──────────────────────────────────────────────────────────── */
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.cartPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: var(--red);
+  color: var(--white);
+  border-radius: var(--radius-pill);
+  font-size: 14px;
+  font-weight: 800;
+  flex-shrink: 0;
+  transition:
+    background 0.12s,
+    box-shadow 0.12s;
+}
+
+.cartPill:hover {
+  background: var(--red-deep);
+  box-shadow: 0 4px 14px rgba(214, 64, 69, 0.28);
+}
+
+.cartCount {
+  min-width: 1ch;
+  text-align: center;
+  line-height: 1;
+}
+
+.profileWrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.avatarBtn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--white);
+  font-size: 12px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  letter-spacing: 0.02em;
+  border: 2px solid transparent;
+  transition:
+    opacity 0.12s,
+    box-shadow 0.12s;
+}
+
+.avatarBtn:hover {
+  box-shadow: 0 0 0 3px var(--grey-100);
+}
+
+/* ─── Profile dropdown ──────────────────────────────────────────────────────── */
+.menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 248px;
+  background: var(--white);
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-md);
+  box-shadow:
+    0 6px 16px rgba(15, 15, 15, 0.08),
+    0 16px 40px rgba(15, 15, 15, 0.12);
+  padding: 8px;
+  z-index: 300;
+  animation: menuIn 0.15s ease;
+}
+
+@keyframes menuIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.menuHead {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 8px 10px 10px;
+}
+
+.menuAvatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--white);
+  font-size: 13px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.menuIdentity {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.menuName {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+
+.menuEmail {
+  font-size: 12px;
+  color: var(--grey-500);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.menuDivider {
+  height: 1px;
+  background: var(--grey-200);
+  margin: 6px 0;
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 10px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  text-align: left;
+  background: transparent;
+  transition:
+    background 0.12s,
+    color 0.12s;
+}
+
+.menuItem:hover {
+  background: var(--grey-100);
+}
+
+.menuItem:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.menuIcon {
+  color: var(--grey-700);
+  flex-shrink: 0;
+}
+
+.menuItem:hover .menuIcon {
+  color: var(--ink);
+}
+
+/* ─── Guest actions (logged-out header) ─────────────────────────────────────── */
+.guestActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.loginBtn {
+  padding: 7px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  border-radius: var(--radius-sm);
+  transition: background 0.12s;
+  white-space: nowrap;
+}
+
+.loginBtn:hover {
+  background: var(--grey-100);
+}
+
+.signupBtn {
+  padding: 7px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  background: var(--red);
+  color: var(--white);
+  border-radius: var(--radius-sm);
+  transition: opacity 0.12s;
+  white-space: nowrap;
+}
+
+.signupBtn:hover {
+  opacity: 0.88;
+}
+
+/* On very small screens, shrink guest buttons */
+@media (max-width: 400px) {
+  .loginBtn,
+  .signupBtn {
+    padding: 7px 10px;
+    font-size: 13px;
+  }
+}
+
+/* ─── Main ──────────────────────────────────────────────────────────────────── */
+.main {
+  flex: 1;
+  padding-top: 72px;
+  padding-bottom: 64px;
+}
+
+@media (min-width: 768px) {
+  .main {
+    padding-bottom: 0;
+  }
+}
+
+.mainOnboarding {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+/* ─── Bottom nav (mobile only) ──────────────────────────────────────────────── */
+.bottomNav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 200;
+  height: 64px;
+  background: var(--white);
+  border-top: 1px solid var(--grey-200);
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@media (min-width: 768px) {
+  .bottomNav {
+    display: none;
+  }
+}
+
+.bottomNavItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  color: #bbbbc0;
+  transition: color 0.12s;
+  text-decoration: none;
+}
+
+.bottomNavItemActive {
+  color: var(--red);
+}
+
+.bottomNavIconWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bottomNavBadge {
+  position: absolute;
+  top: -5px;
+  right: -7px;
+  min-width: 15px;
+  height: 15px;
+  border-radius: var(--radius-pill);
+  background: var(--red);
+  color: var(--white);
+  font-size: 8.5px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 3px;
+}
+
+.bottomNavLabel {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}

@@ -7,7 +7,8 @@ import { hashIp } from "@/lib/hash";
 import { logAndCheckRateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: Request) {
-  const { email, password } = await req.json();
+  const body = await req.json();
+  const { email, password } = body;
   if (!email || !password) {
     return NextResponse.json(
       { error: "Email and password are required." },
@@ -32,9 +33,16 @@ export async function POST(req: Request) {
   }
 
   const normalizedEmail = (email as string).toLowerCase().trim();
+  const rawAudience = body?.audience;
+  const audience =
+    rawAudience === "client" || rawAudience === "business" ? rawAudience : null;
 
   const [account] = await db
-    .select({ role: authUser.role, emailVerified: authUser.emailVerified })
+    .select({
+      role: authUser.role,
+      emailVerified: authUser.emailVerified,
+      onboardingCompletedAt: authUser.onboardingCompletedAt,
+    })
     .from(authUser)
     .where(eq(authUser.email, normalizedEmail))
     .limit(1);
@@ -44,6 +52,29 @@ export async function POST(req: Request) {
       {
         error:
           "Please confirm your email before signing in. Check your inbox for the link.",
+      },
+      { status: 403 },
+    );
+  }
+
+  const isCookOrAdmin = account?.role === "cook" || account?.role === "admin";
+  const isClient = account?.role === "client";
+
+  if (audience === "client" && isCookOrAdmin) {
+    return NextResponse.json(
+      {
+        error:
+          "This account is registered as a cook. Sign in at the business portal instead.",
+      },
+      { status: 403 },
+    );
+  }
+
+  if (audience === "business" && isClient) {
+    return NextResponse.json(
+      {
+        error:
+          "This account is a customer account. Sign in on the 7eats app instead.",
       },
       { status: 403 },
     );
@@ -62,10 +93,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const redirect =
-    account?.role === "cook" || account?.role === "admin"
-      ? "/business/dashboard"
-      : "/app-auth/account";
+  const redirect = isCookOrAdmin ? "/business/dashboard" : "/app/browse";
 
   const res = NextResponse.json({ redirect });
   for (const cookie of (
@@ -73,5 +101,15 @@ export async function POST(req: Request) {
   ).getSetCookie?.() ?? []) {
     res.headers.append("Set-Cookie", cookie);
   }
+
+  // Re-issue onboarding cookie from DB so it survives new devices/cleared browsers.
+  if (isClient && account?.onboardingCompletedAt != null) {
+    const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
+    res.headers.append(
+      "Set-Cookie",
+      `7eats-onboarded=1; Path=/; HttpOnly; SameSite=Lax; Max-Age=31536000${secure}`,
+    );
+  }
+
   return res;
 }

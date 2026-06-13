@@ -21,6 +21,8 @@ export async function POST(req: Request) {
     asResponse: true,
   });
 
+  const audience = body?.audience === "client" ? "client" : "business";
+
   if (!res.ok) {
     return NextResponse.json(
       {
@@ -31,5 +33,8 @@ export async function POST(req: Request) {
     );
   }
 
-  return NextResponse.json({ redirect: "/business-auth/login" });
+  return NextResponse.json({
+    redirect:
+      audience === "client" ? "/app-auth/login" : "/business-auth/login",
+  });
 }

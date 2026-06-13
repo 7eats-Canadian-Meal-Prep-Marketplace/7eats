@@ -3,6 +3,8 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import SetupSidebar from "@/app/components/SetupSidebar";
+import { AddressAutocomplete } from "@/components/AddressAutocomplete";
+import type { NormalizedAddress } from "@/lib/types/address";
 import styles from "./OnboardingWizard.module.css";
 
 // ── Constants ─────────────────────────────────────────────────
@@ -85,7 +87,14 @@ type FormState = {
   dietaryTags: string[]; // slugs
   socialLink: string;
   // Step 2
-  pickupAddress: string;
+  pickupStreet: string;
+  pickupUnit: string;
+  pickupCity: string;
+  pickupProvince: string;
+  pickupPostal: string;
+  pickupLat: number | null;
+  pickupLng: number | null;
+  pickupPlaceId: string;
   pickupWindows: Record<string, { from: string; to: string }>;
   pickupDays: string[];
   leadTime: string;
@@ -107,7 +116,14 @@ type InitialData = {
   bio: string;
   photoUrl: string | null;
   socialLink: string;
-  pickupAddress: string;
+  pickupStreet?: string;
+  pickupUnit?: string;
+  pickupCity?: string;
+  pickupProvince?: string;
+  pickupPostal?: string;
+  pickupLat?: number | null;
+  pickupLng?: number | null;
+  pickupPlaceId?: string;
   pickupWindows: Array<{ day: string; from: string; to: string }>;
   leadTime: string;
   maxCapacity: string;
@@ -156,7 +172,14 @@ export default function OnboardingWizard({
         allDietarySlugs.includes(s),
       ) ?? [],
     socialLink: initialData?.socialLink ?? "",
-    pickupAddress: initialData?.pickupAddress ?? "",
+    pickupStreet: initialData?.pickupStreet ?? "",
+    pickupUnit: initialData?.pickupUnit ?? "",
+    pickupCity: initialData?.pickupCity ?? "",
+    pickupProvince: initialData?.pickupProvince ?? "",
+    pickupPostal: initialData?.pickupPostal ?? "",
+    pickupLat: initialData?.pickupLat ?? null,
+    pickupLng: initialData?.pickupLng ?? null,
+    pickupPlaceId: initialData?.pickupPlaceId ?? "",
     pickupWindows: Object.fromEntries(
       (initialData?.pickupWindows ?? []).map((w) => [
         w.day,
@@ -209,8 +232,17 @@ export default function OnboardingWizard({
       }
     }
     if (step === 2) {
-      if (!form.pickupAddress.trim()) {
-        setStepError("Pickup address is required.");
+      if (
+        !form.pickupStreet.trim() ||
+        !form.pickupCity.trim() ||
+        !form.pickupProvince.trim() ||
+        !form.pickupPostal.trim() ||
+        form.pickupLat === null ||
+        form.pickupLng === null
+      ) {
+        setStepError(
+          "A valid geocoded pickup address is required. Please select from the suggestions.",
+        );
         return false;
       }
       if (!form.leadTime) {
@@ -280,7 +312,14 @@ export default function OnboardingWizard({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            pickupAddress: form.pickupAddress,
+            pickupStreet: form.pickupStreet,
+            pickupUnit: form.pickupUnit,
+            pickupCity: form.pickupCity,
+            pickupProvince: form.pickupProvince,
+            pickupPostal: form.pickupPostal,
+            pickupLat: form.pickupLat,
+            pickupLng: form.pickupLng,
+            pickupPlaceId: form.pickupPlaceId,
             pickupWindows: Object.entries(form.pickupWindows).map(
               ([day, win]) => ({ day, from: win.from, to: win.to }),
             ),
@@ -664,18 +703,31 @@ function Step2({
       <div className={styles.fields}>
         <div className={styles.field}>
           <label htmlFor="pickupAddress" className={styles.label}>
-            Pickup address
+            Pickup Address
           </label>
-          <input
+          <AddressAutocomplete
             id="pickupAddress"
-            type="text"
-            className={styles.input}
-            value={form.pickupAddress}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, pickupAddress: e.target.value }))
-            }
+            name="pickupAddress"
             placeholder="Street address"
-            autoComplete="street-address"
+            inputClassName={styles.input}
+            initialValue={
+              form.pickupStreet
+                ? `${form.pickupStreet}${form.pickupUnit ? `, ${form.pickupUnit}` : ""}, ${form.pickupCity}, ${form.pickupProvince} ${form.pickupPostal}`
+                : ""
+            }
+            onResolve={(addr: NormalizedAddress) =>
+              setForm((f) => ({
+                ...f,
+                pickupStreet: addr.street,
+                pickupUnit: addr.unit ?? "",
+                pickupCity: addr.city,
+                pickupProvince: addr.province,
+                pickupPostal: addr.postal,
+                pickupLat: addr.lat,
+                pickupLng: addr.lng,
+                pickupPlaceId: addr.placeId,
+              }))
+            }
           />
           <p className={styles.hint}>
             Only revealed to customers after their order is confirmed.

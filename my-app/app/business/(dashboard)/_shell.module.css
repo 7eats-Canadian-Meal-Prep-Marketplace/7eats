@@ -104,6 +104,7 @@
   top: calc(100% + 10px);
   right: 0;
   width: 360px;
+  max-width: calc(100vw - 16px);
   background: var(--white);
   border: 1px solid rgba(0, 0, 0, 0.04);
   border-radius: var(--radius-md);
@@ -485,6 +486,12 @@
   flex-direction: column;
   gap: 24px;
   background: var(--white);
+}
+
+@media (max-width: 1024px) {
+  .main {
+    padding: 24px 24px;
+  }
 }
 
 @media (max-width: 767px) {

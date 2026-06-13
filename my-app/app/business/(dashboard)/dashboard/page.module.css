@@ -416,6 +416,13 @@
   color: var(--ink);
 }
 
+/* ─── Tablet ─────────────────────────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .quickGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 /* ─── Mobile ─────────────────────────────────────────────────────────────────── */
 @media (max-width: 767px) {
   .statsStrip {
@@ -429,5 +436,15 @@
 
   .quickGrid {
     grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .statsStrip {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .statValue {
+    font-size: 22px;
   }
 }

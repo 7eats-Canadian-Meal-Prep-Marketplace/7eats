@@ -85,13 +85,25 @@ describe("POST /api/auth/forgot-password", () => {
     expect(body).toEqual({ success: true });
   });
 
-  it("passes a redirectTo that includes /business-auth/reset-password", async () => {
+  it("passes a redirectTo that includes /business-auth/reset-password for business audience", async () => {
     await POST(makeRequest({ email: "user@example.com" }));
 
     expect(vi.mocked(auth.api.requestPasswordReset)).toHaveBeenCalledWith(
       expect.objectContaining({
         body: expect.objectContaining({
           redirectTo: expect.stringContaining("/business-auth/reset-password"),
+        }),
+      }),
+    );
+  });
+
+  it("passes a redirectTo that includes /app-auth/reset-password for client audience", async () => {
+    await POST(makeRequest({ email: "user@example.com", audience: "client" }));
+
+    expect(vi.mocked(auth.api.requestPasswordReset)).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.objectContaining({
+          redirectTo: expect.stringContaining("/app-auth/reset-password"),
         }),
       }),
     );

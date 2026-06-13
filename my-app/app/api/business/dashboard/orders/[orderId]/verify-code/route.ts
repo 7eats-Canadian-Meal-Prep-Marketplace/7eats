@@ -1,14 +1,17 @@
 import { createHash } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
-import Stripe from "stripe";
 import { z } from "zod";
 import {
   getCookId,
   unauthorized,
 } from "@/app/api/business/listings/_lib/cook-auth";
 import { db } from "@/db";
-import { orderPayments, orders } from "@/db/schema";
+import { cookProfiles, orderPayments, orders } from "@/db/schema";
+import {
+  capturePaymentIntent,
+  createSubscriptionTransfer,
+} from "@/lib/stripe-payments";
 
 export type Params = { params: Promise<{ orderId: string }> };
 
@@ -134,34 +137,70 @@ export async function POST(req: NextRequest, { params }: Params) {
       );
     }
 
-    const stripeKey = process.env.STRIPE_SECRET_KEY;
-    if (stripeKey) {
-      const stripe = new Stripe(stripeKey, { apiVersion: "2026-05-27.dahlia" });
+    // Release payment to cook based on payment type
+    const payments = await db
+      .select({
+        id: orderPayments.id,
+        type: orderPayments.type,
+        status: orderPayments.status,
+        stripePaymentIntentId: orderPayments.stripePaymentIntentId,
+        cookPayoutAmount: orderPayments.cookPayoutAmount,
+      })
+      .from(orderPayments)
+      .where(eq(orderPayments.orderId, orderId));
 
-      const [payment] = await db
-        .select({
-          stripePaymentIntentId: orderPayments.stripePaymentIntentId,
-          status: orderPayments.status,
-        })
-        .from(orderPayments)
-        .where(eq(orderPayments.orderId, orderId))
-        .limit(1);
+    // Load cook's stripeAccountId for subscription transfer
+    const [cookRow] = await db
+      .select({ stripeAccountId: cookProfiles.stripeAccountId })
+      .from(cookProfiles)
+      .where(eq(cookProfiles.id, cookId))
+      .limit(1);
 
-      if (payment?.status === "authorized" && payment.stripePaymentIntentId) {
-        await stripe.paymentIntents.capture(
+    for (const payment of payments) {
+      if (payment.type === "deposit") continue; // deposit released at confirmation — skip
+
+      if (!payment.stripePaymentIntentId) continue;
+
+      if (payment.status === "authorized") {
+        // One-time PI (full or balance) — capture and auto-transfer via transfer_data
+        await capturePaymentIntent(
           payment.stripePaymentIntentId,
-          {},
-          { idempotencyKey: `capture-${orderId}` },
+          `capture-${orderId}-${payment.type}`,
         );
         await db
           .update(orderPayments)
           .set({ status: "released", releasedAt: fulfilledAt })
           .where(
             and(
-              eq(orderPayments.orderId, orderId),
+              eq(orderPayments.id, payment.id),
               eq(orderPayments.status, "authorized"),
             ),
           );
+      } else if (payment.status === "held") {
+        // Subscription payment: funds captured on platform, manually transfer cook's share
+        if (payment.cookPayoutAmount && cookRow?.stripeAccountId) {
+          const payoutCents = Math.round(
+            parseFloat(payment.cookPayoutAmount) * 100,
+          );
+          const transferId = await createSubscriptionTransfer({
+            amountCents: payoutCents,
+            connectedAccountId: cookRow.stripeAccountId,
+            idempotencyKey: `transfer-${orderId}`,
+          });
+          await db
+            .update(orderPayments)
+            .set({
+              status: "released",
+              stripeTransferId: transferId,
+              releasedAt: fulfilledAt,
+            })
+            .where(
+              and(
+                eq(orderPayments.id, payment.id),
+                eq(orderPayments.status, "held"),
+              ),
+            );
+        }
       }
     }
 

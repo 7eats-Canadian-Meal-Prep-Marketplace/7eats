@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
   boolean,
   check,
+  doublePrecision,
   integer,
   numeric,
   pgPolicy,
@@ -41,6 +42,27 @@ export const cookProfiles = pgTable(
     currentSetupStep: integer("current_setup_step").notNull().default(1),
     setupComplete: boolean("setup_complete").notNull().default(false),
     pickupAddress: text("pickup_address"),
+    pickupStreet: text("pickup_street"),
+    pickupUnit: text("pickup_unit"),
+    pickupCity: text("pickup_city"),
+    pickupProvince: text("pickup_province"),
+    pickupPostal: text("pickup_postal"),
+    pickupLat: doublePrecision("pickup_lat"),
+    pickupLng: doublePrecision("pickup_lng"),
+    pickupPlaceId: text("pickup_place_id"),
+    maxDeliveryKm: integer("max_delivery_km"),
+    deliveryRatePerKm: numeric("delivery_rate_per_km", {
+      precision: 6,
+      scale: 2,
+    }),
+    deliveryFlatFee: numeric("delivery_flat_fee", {
+      precision: 6,
+      scale: 2,
+    }).default("0"),
+    freeDeliveryAbove: numeric("free_delivery_above", {
+      precision: 8,
+      scale: 2,
+    }),
     leadTime: leadTimeEnum("lead_time"),
     maxCapacity: integer("max_capacity"),
     delivery: deliveryEnum("delivery"),
@@ -99,7 +121,7 @@ export const cookProfiles = pgTable(
     pgPolicy("cook_profiles_select_active", {
       for: "select",
       to: "public",
-      using: sql`EXISTS (SELECT 1 FROM "user" u WHERE u.id = cook_profiles.user_id AND u.status = 'active')`,
+      using: sql`app_public_user_is_active(cook_profiles.user_id)`,
     }),
     pgPolicy("cook_profiles_update_own", {
       for: "update",

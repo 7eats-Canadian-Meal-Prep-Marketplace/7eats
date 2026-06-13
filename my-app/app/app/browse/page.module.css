@@ -1,0 +1,558 @@
+/* ─── Page ───────────────────────────────────────────────────────────────────── */
+.page {
+  background: var(--white);
+}
+
+/* ─── Filter Bar ─────────────────────────────────────────────────────────────── */
+.filterBar {
+  border-bottom: 1px solid var(--grey-200);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: saturate(180%) blur(12px);
+  -webkit-backdrop-filter: saturate(180%) blur(12px);
+  position: sticky;
+  top: 72px;
+  z-index: 100;
+}
+
+.filterBar::-webkit-scrollbar {
+  display: none;
+}
+
+.filterInner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 24px;
+  max-width: var(--app-maxw);
+  margin: 0 auto;
+}
+
+.mobileToggle {
+  display: none;
+  flex-shrink: 0;
+}
+
+@media (max-width: 879px) {
+  .mobileToggle {
+    display: block;
+  }
+}
+
+.chipScroller {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex: 1;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.chipScroller::-webkit-scrollbar {
+  display: none;
+}
+
+@media (max-width: 879px) {
+  .chipScroller {
+    justify-content: flex-start;
+  }
+}
+
+/* ─── Segmented control (Pickup / Delivery) ──────────────────────────────────── */
+.segmented {
+  display: inline-flex;
+  background: var(--grey-100);
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-pill);
+  padding: 3px;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.segment {
+  padding: 6px 18px;
+  border-radius: var(--radius-pill);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--grey-700);
+  background: transparent;
+  white-space: nowrap;
+  transition: color 0.15s;
+}
+
+.segment:hover {
+  color: var(--ink);
+}
+
+.segmentActive {
+  background: var(--ink);
+  color: var(--white);
+  box-shadow: 0 1px 3px rgba(15, 15, 15, 0.16);
+}
+
+.segmentActive:hover {
+  color: var(--white);
+}
+
+/* ─── Cuisine chips ──────────────────────────────────────────────────────────── */
+.chip {
+  padding: 8px 15px;
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-pill);
+  background: var(--white);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--grey-700);
+  cursor: pointer;
+  white-space: nowrap;
+  text-decoration: none;
+  display: inline-block;
+  transition:
+    border-color 0.15s,
+    color 0.15s,
+    background 0.15s;
+  flex-shrink: 0;
+}
+
+.chip:hover {
+  border-color: var(--grey-500);
+  color: var(--ink);
+}
+
+.filterDivider {
+  width: 1px;
+  height: 22px;
+  background: var(--grey-200);
+  flex-shrink: 0;
+  margin: 0 4px;
+}
+
+/* ─── Content ────────────────────────────────────────────────────────────────── */
+.content {
+  max-width: var(--app-maxw);
+  margin: 0 auto;
+  padding: 36px 24px 80px;
+}
+
+/* ─── Section ────────────────────────────────────────────────────────────────── */
+.section {
+  margin-bottom: 52px;
+}
+
+.sectionHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.sectionHeadText {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.sectionTitle {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+  margin: 0;
+  line-height: 1.08;
+}
+
+.sectionSub {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--grey-500);
+  margin: 0;
+}
+
+/* ─── Arrow controls ─────────────────────────────────────────────────────────── */
+.arrows {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.arrow {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--grey-200);
+  background: var(--white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--ink);
+  box-shadow:
+    0 1px 3px rgba(15, 15, 15, 0.06),
+    0 4px 12px rgba(15, 15, 15, 0.04);
+  transition:
+    border-color 0.15s,
+    background 0.15s,
+    color 0.15s,
+    box-shadow 0.15s,
+    transform 0.15s;
+  flex-shrink: 0;
+}
+
+.arrow:hover:not(:disabled) {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--white);
+  box-shadow: 0 4px 14px rgba(15, 15, 15, 0.18);
+  transform: translateY(-1px);
+}
+
+.arrowOff {
+  opacity: 0.35;
+  cursor: default;
+  box-shadow: none;
+}
+
+/* ─── Carousel ───────────────────────────────────────────────────────────────── */
+.carouselOuter {
+  overflow: hidden;
+}
+
+.carouselTrack {
+  display: flex;
+  gap: 24px;
+  transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* ─── Listing Card (borderless — Airbnb / DoorDash pattern) ─────────────────── */
+.card {
+  display: block;
+  width: 100%;
+  text-decoration: none;
+  color: inherit;
+}
+
+.cardCover {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  background: var(--grey-100);
+  border-radius: var(--radius-lg);
+}
+
+.cardImage {
+  object-fit: cover;
+  transition: transform 0.32s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.card:hover .cardImage {
+  transform: scale(1.04);
+}
+
+.dealBadge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  max-width: calc(100% - 52px);
+  padding: 6px 10px;
+  background: var(--red);
+  color: var(--white);
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: var(--radius-pill);
+  letter-spacing: 0.01em;
+  line-height: 1.25;
+  z-index: 1;
+  box-shadow: 0 2px 8px rgba(214, 64, 69, 0.35);
+}
+
+.heartBtn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--white);
+  border: none;
+  cursor: pointer;
+  filter: drop-shadow(0 1px 3px rgba(15, 15, 15, 0.45));
+  transition:
+    color 0.15s,
+    transform 0.15s;
+  z-index: 1;
+}
+
+.heartBtn:hover {
+  transform: scale(1.1);
+}
+
+.heartBtnActive {
+  color: var(--red);
+  filter: none;
+}
+
+.pickupPill {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  padding: 5px 10px;
+  background: rgba(15, 15, 15, 0.78);
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--white);
+  white-space: nowrap;
+  z-index: 1;
+}
+
+.stockPill {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  padding: 5px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  z-index: 1;
+}
+
+.stockLow {
+  background: var(--white);
+  color: var(--ink);
+  box-shadow: 0 1px 4px rgba(15, 15, 15, 0.12);
+}
+
+.stockOut {
+  background: rgba(15, 15, 15, 0.78);
+  color: var(--white);
+}
+
+/* ─── Card body — 3-line hierarchy ─────────────────────────────────────────── */
+.cardBody {
+  padding: 10px 2px 0;
+}
+
+.titleRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.cardTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: #111111;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+  padding-top: 1px;
+}
+
+.star {
+  color: #a3a3a3;
+}
+
+.ratingValue {
+  font-size: 13px;
+  font-weight: 700;
+  color: #111111;
+  letter-spacing: -0.01em;
+}
+
+.metaLine {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #555555;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.metaPrice {
+  font-weight: 600;
+  color: #111111;
+}
+
+.subHint {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--grey-500);
+  vertical-align: middle;
+}
+
+.scheduleLine {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.scheduleMuted {
+  font-weight: 400;
+  color: #71717a;
+}
+
+.scheduleSep {
+  font-weight: 400;
+  color: #a1a1aa;
+}
+
+.scheduleUrgent {
+  font-weight: 600;
+  color: var(--red);
+}
+
+/* ─── Cook Spotlight (horizontal scroll) ─────────────────────────────────────── */
+.strip {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-bottom: 4px;
+}
+
+.strip::-webkit-scrollbar {
+  display: none;
+}
+
+.cookCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+  width: 120px;
+  padding: 0;
+  background: transparent;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.cookAvatarLg {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--white);
+  margin-bottom: 8px;
+  transition: transform 0.2s ease;
+}
+
+.cookCard:hover .cookAvatarLg {
+  transform: scale(1.04);
+}
+
+.cookCardName {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+  text-align: center;
+}
+
+.cookCardCuisine {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--grey-500);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+
+.cookCardRating {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 6px;
+  padding: 3px 9px;
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+/* ─── Empty State ────────────────────────────────────────────────────────────── */
+.emptyState {
+  text-align: center;
+  padding: 80px 0;
+}
+
+.emptyTitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 8px;
+}
+
+.emptyDesc {
+  font-size: 14px;
+  color: var(--grey-500);
+}
+
+/* ─── Responsive ─────────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .filterInner {
+    padding: 12px 20px;
+  }
+
+  .content {
+    padding: 24px 20px 72px;
+  }
+
+  .sectionTitle {
+    font-size: 22px;
+  }
+
+  /* Hide carousel arrow buttons on touch — native scroll handles it */
+  .arrows {
+    display: none;
+  }
+
+  .section {
+    margin-bottom: 36px;
+  }
+
+  .sectionHead {
+    margin-bottom: 16px;
+  }
+}

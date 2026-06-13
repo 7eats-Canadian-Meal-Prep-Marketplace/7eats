@@ -255,6 +255,22 @@ describe("POST /api/business/listings", () => {
     expect(body.error).toBeDefined();
   });
 
+  it("returns 400 when coverPhotoUrl is not hosted on the listings CDN", async () => {
+    vi.stubEnv("R2_PUBLIC_BUCKET_URL_LISTINGS", "https://cdn.7eats.test");
+    mockSession(USER_ID);
+    mockCookLookup(COOK_ID);
+
+    const res = await POST(
+      makePost({
+        title: "T",
+        basePrice: 10,
+        coverPhotoUrl: "https://tracker.example/pixel.png",
+      }),
+    );
+
+    expect(res.status).toBe(400);
+  });
+
   it("returns 201 on valid body, data matches inserted row", async () => {
     mockSession(USER_ID);
     mockCookLookup(COOK_ID);

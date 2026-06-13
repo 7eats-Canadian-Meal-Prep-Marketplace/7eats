@@ -467,6 +467,18 @@
   cursor: default;
 }
 
+/* ─── Tablet ─────────────────────────────────────────────────────────────────── */
+@media (max-width: 1024px) and (min-width: 768px) {
+  .listPanel {
+    width: 280px;
+  }
+
+  .orderFacts {
+    flex-wrap: wrap;
+    gap: 12px 20px;
+  }
+}
+
 /* ─── Mobile ─────────────────────────────────────────────────────────────────── */
 @media (max-width: 767px) {
   .page {

@@ -16,6 +16,14 @@ vi.mock("@/db/schema", () => ({
     lastName: "lastName",
     phoneVerified: "phoneVerified",
   },
+  authUserTable: {
+    id: "id",
+    role: "role",
+    status: "status",
+    firstName: "firstName",
+    lastName: "lastName",
+    phoneVerified: "phoneVerified",
+  },
   cookApplications: { id: "id" },
   cookProfiles: {
     userId: "userId",

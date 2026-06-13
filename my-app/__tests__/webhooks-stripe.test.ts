@@ -6,6 +6,7 @@ const { constructEventMock } = vi.hoisted(() => ({
 
 vi.mock("@/db", () => ({
   db: { select: vi.fn(), insert: vi.fn(), update: vi.fn(), delete: vi.fn() },
+  dbPool: { transaction: vi.fn() },
 }));
 vi.mock("@/db/schema", () => ({
   clientSubscriptions: {},
@@ -30,13 +31,16 @@ vi.mock("stripe", () => ({
 
 import { NextRequest } from "next/server";
 import { POST } from "@/app/api/webhooks/stripe/route";
-import { db } from "@/db";
+import { db, dbPool } from "@/db";
 
-function makeRequest(event: unknown, signature?: string): NextRequest {
+function makeRequest(
+  event: unknown,
+  signature: string | null = "sig_test",
+): NextRequest {
   const headers: Record<string, string> = {
     "content-type": "application/json",
   };
-  if (signature !== undefined) headers["stripe-signature"] = signature;
+  if (signature !== null) headers["stripe-signature"] = signature;
   return new NextRequest("http://localhost/api/webhooks/stripe", {
     method: "POST",
     body: JSON.stringify(event),
@@ -114,11 +118,18 @@ function paymentSucceededEvent() {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.stubEnv("STRIPE_WEBHOOK_SECRET", "");
-  vi.stubEnv("STRIPE_SECRET_KEY", "");
-  vi.stubEnv("STRIPE_WEBHOOK_INSECURE_DEV", "1");
+  vi.stubEnv("STRIPE_WEBHOOK_SECRET", "whsec_test");
+  vi.stubEnv("STRIPE_SECRET_KEY", "sk_test");
+  constructEventMock.mockImplementation(
+    (_buf: unknown, _sig: unknown, _secret: unknown) => {
+      return JSON.parse(Buffer.from(_buf as ArrayBuffer).toString());
+    },
+  );
   mockUpdate();
   mockDelete();
+  vi.mocked(dbPool.transaction).mockImplementation(async (cb) => {
+    return cb(db as never);
+  });
 });
 
 afterEach(() => {
@@ -127,10 +138,7 @@ afterEach(() => {
 
 describe("Stripe webhook signature verification", () => {
   it("returns 400 when a signing secret is configured but the signature header is missing", async () => {
-    vi.stubEnv("STRIPE_WEBHOOK_SECRET", "whsec_test");
-    vi.stubEnv("STRIPE_SECRET_KEY", "sk_test");
-
-    const res = await POST(makeRequest(paymentSucceededEvent()));
+    const res = await POST(makeRequest(paymentSucceededEvent(), null));
 
     expect(res.status).toBe(400);
     expect(constructEventMock).not.toHaveBeenCalled();
@@ -148,10 +156,8 @@ describe("Stripe webhook signature verification", () => {
     expect(res.status).toBe(400);
   });
 
-  it("fails closed with 500 when no secret is set and the dev bypass is off", async () => {
+  it("returns 500 when STRIPE_WEBHOOK_SECRET is not configured", async () => {
     vi.stubEnv("STRIPE_WEBHOOK_SECRET", "");
-    vi.stubEnv("STRIPE_SECRET_KEY", "");
-    vi.stubEnv("STRIPE_WEBHOOK_INSECURE_DEV", "");
 
     const res = await POST(makeRequest(paymentSucceededEvent()));
 
@@ -204,14 +210,45 @@ describe("invoice.payment_succeeded", () => {
     });
   });
 
-  it("no-ops when the subscription is unknown", async () => {
+  it("returns 500 and removes the event marker when the subscription is not ready yet", async () => {
     vi.mocked(db.select).mockImplementation(() => limitChain([]));
+    mockInsert({ id: "order-1" });
+
+    const res = await POST(
+      makeRequest({
+        id: "evt_subscription_not_ready",
+        ...paymentSucceededEvent(),
+      }),
+    );
+
+    expect(res.status).toBe(500);
+    expect(deleteWhere).toHaveBeenCalled();
+  });
+
+  it("uses a transaction for subscription order, dish snapshot, payment, and period writes", async () => {
+    let call = 0;
+    vi.mocked(db.select).mockImplementation(() => {
+      call++;
+      if (call === 1)
+        return limitChain([
+          {
+            id: "subrow-1",
+            clientId: "client-1",
+            listingId: "listing-1",
+            tierId: "tier-1",
+            cookId: "cook-1",
+          },
+        ]);
+      if (call === 2) return limitChain([{ price: "20.00" }]);
+      if (call === 3) return limitChain([{ platformFeePct: "15.00" }]);
+      return joinChain([]);
+    });
     mockInsert({ id: "order-1" });
 
     const res = await POST(makeRequest(paymentSucceededEvent()));
 
     expect(res.status).toBe(200);
-    expect(db.insert).not.toHaveBeenCalled();
+    expect(dbPool.transaction).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -399,10 +436,51 @@ describe("payout events", () => {
   });
 });
 
+describe("one-time payment event handlers", () => {
+  it("payment_intent.payment_failed sets status to pending", async () => {
+    const res = await POST(
+      makeRequest({
+        type: "payment_intent.payment_failed",
+        data: { object: { id: "pi_1" } },
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(updateSet).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "pending" }),
+    );
+  });
+
+  it("charge.dispute.created sets status to disputed", async () => {
+    const res = await POST(
+      makeRequest({
+        type: "charge.dispute.created",
+        data: { object: { charge: "ch_1" } },
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(updateSet).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "disputed" }),
+    );
+  });
+
+  it("charge.refunded sets status to refunded", async () => {
+    const res = await POST(
+      makeRequest({
+        type: "charge.refunded",
+        data: { object: { id: "ch_1" } },
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(updateSet).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "refunded" }),
+    );
+  });
+});
+
 describe("misc", () => {
   it("acknowledges unknown event types with 200", async () => {
     const res = await POST(
-      makeRequest({ type: "charge.refunded", data: { object: {} } }),
+      makeRequest({ type: "account.updated", data: { object: {} } }),
     );
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -419,10 +497,17 @@ describe("misc", () => {
 });
 
 // Connect events carry an `account` field at the top level of the event.
-function makeRequestWithAccount(event: Record<string, unknown>): NextRequest {
+function makeRequestWithAccount(
+  event: Record<string, unknown>,
+  signature: string | null = "sig_test",
+): NextRequest {
+  const headers: Record<string, string> = {
+    "content-type": "application/json",
+  };
+  if (signature !== null) headers["stripe-signature"] = signature;
   return new NextRequest("http://localhost/api/webhooks/stripe", {
     method: "POST",
     body: JSON.stringify({ ...event, account: "acct_123" }),
-    headers: { "content-type": "application/json" },
+    headers,
   });
 }

@@ -632,6 +632,17 @@
   color: var(--grey-500);
 }
 
+/* ─── Tablet ─────────────────────────────────────────────────────────────────── */
+@media (max-width: 1024px) and (min-width: 768px) {
+  .listPanel {
+    flex: 0 0 340px;
+  }
+
+  .detail {
+    padding: 20px 20px;
+  }
+}
+
 /* ─── Mobile ─────────────────────────────────────────────────────────────────── */
 @media (max-width: 767px) {
   .page {

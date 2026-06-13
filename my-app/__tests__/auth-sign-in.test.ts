@@ -35,7 +35,13 @@ function authResponse(
 
 // Wires up the db.select(...).from(...).where(...).limit(1) chain to resolve to
 // the given account row (or an empty result when null).
-function setAccount(account: { role: string; emailVerified: boolean } | null) {
+function setAccount(
+  account: {
+    role: string;
+    emailVerified: boolean;
+    onboardingCompletedAt?: Date | null;
+  } | null,
+) {
   const limit = vi.fn().mockResolvedValue(account ? [account] : []);
   const where = vi.fn(() => ({ limit }));
   const from = vi.fn(() => ({ where }));
@@ -64,14 +70,14 @@ describe("POST /api/auth/sign-in", () => {
     expect(res.headers.getSetCookie()).toEqual([]);
   });
 
-  it("signs in a verified client and redirects to /account", async () => {
+  it("signs in a verified client and redirects to browse", async () => {
     setAccount({ role: "client", emailVerified: true });
 
     const res = await POST(makeRequest(creds));
     const body = await res.json();
 
     expect(res.status).toBe(200);
-    expect(body).toEqual({ redirect: "/app-auth/account" });
+    expect(body).toEqual({ redirect: "/app/browse" });
     expect(res.headers.getSetCookie()).toContain("sess=1; Path=/");
   });
 
@@ -84,6 +90,24 @@ describe("POST /api/auth/sign-in", () => {
     expect(res.status).toBe(200);
     expect(body).toEqual({ redirect: "/business/dashboard" });
     expect(vi.mocked(auth.api.signInEmail)).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects a cook signing in on the client portal", async () => {
+    setAccount({ role: "cook", emailVerified: true });
+
+    const res = await POST(makeRequest({ ...creds, audience: "client" }));
+
+    expect(res.status).toBe(403);
+    expect(vi.mocked(auth.api.signInEmail)).not.toHaveBeenCalled();
+  });
+
+  it("rejects a client signing in on the business portal", async () => {
+    setAccount({ role: "client", emailVerified: true });
+
+    const res = await POST(makeRequest({ ...creds, audience: "business" }));
+
+    expect(res.status).toBe(403);
+    expect(vi.mocked(auth.api.signInEmail)).not.toHaveBeenCalled();
   });
 
   it("returns 401 on wrong credentials", async () => {
@@ -109,5 +133,29 @@ describe("POST /api/auth/sign-in", () => {
   it("returns 400 when email or password is missing", async () => {
     const res = await POST(makeRequest({ email: "a@b.com" }));
     expect(res.status).toBe(400);
+  });
+
+  it("sets 7eats-onboarded cookie when client has completed onboarding", async () => {
+    setAccount({
+      role: "client",
+      emailVerified: true,
+      onboardingCompletedAt: new Date(),
+    });
+    const res = await POST(makeRequest({ ...creds, audience: "client" }));
+    expect(res.status).toBe(200);
+    const cookies = res.headers.getSetCookie().join(";");
+    expect(cookies).toContain("7eats-onboarded=1");
+  });
+
+  it("does not set 7eats-onboarded cookie when onboarding is incomplete", async () => {
+    setAccount({
+      role: "client",
+      emailVerified: true,
+      onboardingCompletedAt: null,
+    });
+    const res = await POST(makeRequest({ ...creds, audience: "client" }));
+    expect(res.status).toBe(200);
+    const cookies = res.headers.getSetCookie().join(";");
+    expect(cookies).not.toContain("7eats-onboarded=1");
   });
 });

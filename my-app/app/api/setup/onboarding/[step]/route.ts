@@ -164,10 +164,26 @@ type LeadTimeValue = (typeof VALID_LEAD_TIMES)[number];
 
 async function step2(req: Request, userId: string) {
   const data = await req.json();
-  const pickupAddress = (data.pickupAddress ?? "").trim();
-  if (!pickupAddress)
+  const pickupStreet = (data.pickupStreet ?? "").trim();
+  const pickupUnit = (data.pickupUnit ?? "").trim() || null;
+  const pickupCity = (data.pickupCity ?? "").trim();
+  const pickupProvince = (data.pickupProvince ?? "").trim();
+  const pickupPostal = (data.pickupPostal ?? "").trim();
+  const pickupLat = typeof data.pickupLat === "number" ? data.pickupLat : null;
+  const pickupLng = typeof data.pickupLng === "number" ? data.pickupLng : null;
+  // pickupPlaceId may be null if Mapbox returns empty mapbox_id; downstream distance API must handle null
+  const pickupPlaceId = (data.pickupPlaceId ?? "").trim() || null;
+
+  if (
+    !pickupStreet ||
+    !pickupCity ||
+    !pickupProvince ||
+    !pickupPostal ||
+    pickupLat === null ||
+    pickupLng === null
+  )
     return NextResponse.json(
-      { error: "Pickup address is required." },
+      { error: "Complete pickup address with geocoding is required." },
       { status: 400 },
     );
   if (!(VALID_LEAD_TIMES as readonly string[]).includes(data.leadTime))
@@ -202,7 +218,14 @@ async function step2(req: Request, userId: string) {
     await tx
       .update(cookProfiles)
       .set({
-        pickupAddress,
+        pickupStreet,
+        pickupUnit,
+        pickupCity,
+        pickupProvince,
+        pickupPostal,
+        pickupLat,
+        pickupLng,
+        pickupPlaceId,
         leadTime,
         maxCapacity,
         delivery,

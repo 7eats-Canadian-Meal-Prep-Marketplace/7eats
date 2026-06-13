@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  doublePrecision,
   pgPolicy,
   pgTable,
   text,
@@ -23,6 +24,9 @@ export const cookApplications = pgTable(
     city: text("city").notNull(),
     province: text("province").notNull(),
     postalCode: text("postal_code").notNull(),
+    addressLat: doublePrecision("address_lat"),
+    addressLng: doublePrecision("address_lng"),
+    addressPlaceId: text("address_place_id"),
     website: text("website"),
     businessPhone: text("business_phone").notNull(),
     businessEmail: text("business_email").notNull(),

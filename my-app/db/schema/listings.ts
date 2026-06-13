@@ -15,7 +15,13 @@ import {
 import { authUser } from "./auth";
 import { cookProfiles } from "./cooks";
 import { dishes } from "./dishes";
-import { listingStatus, listingType, promotionType } from "./enums";
+import {
+  lateCancelFeeTypeEnum,
+  listingStatus,
+  listingType,
+  promotionType,
+  subscriptionInterval as subscriptionIntervalEnum,
+} from "./enums";
 
 const isAdmin = sql`auth.role() = 'admin'`;
 
@@ -34,11 +40,22 @@ export const listings = pgTable(
       .references(() => cookProfiles.id, { onDelete: "cascade" }),
     title: varchar("title", { length: 255 }).notNull(),
     description: text("description"),
-    // Subscription type: one_time now; subscription reserved for future use.
     type: listingType("type").notNull().default("one_time"),
     status: listingStatus("status").notNull().default("draft"),
     basePrice: numeric("base_price", { precision: 10, scale: 2 }).notNull(),
     currency: varchar("currency", { length: 3 }).notNull().default("CAD"),
+    // How the listing is fulfilled — pickup, delivery, or both.
+    fulfillment: varchar("fulfillment", { length: 20 })
+      .notNull()
+      .default("pickup"),
+    // When true, customers can subscribe to receive this listing every week
+    // automatically. Always weekly — no interval selection needed.
+    subscriptionEnabled: boolean("subscription_enabled")
+      .notNull()
+      .default(false),
+    // Legacy columns kept to match existing DB state — unused by application.
+    subscriptionInterval: subscriptionIntervalEnum("subscription_interval"),
+    commitmentPeriods: integer("commitment_periods"),
     // If null the UI generates a collage from the listing's dish photos.
     coverPhotoUrl: text("cover_photo_url"),
     stripeProductId: text("stripe_product_id"),
@@ -47,6 +64,9 @@ export const listings = pgTable(
     // How many days before the next billing period a client must cancel/pause.
     // null = no restriction.
     cancellationNoticeDays: integer("cancellation_notice_days"),
+    depositEnabled: boolean("deposit_enabled").notNull().default(false),
+    depositType: lateCancelFeeTypeEnum("deposit_type"),
+    depositValue: numeric("deposit_value", { precision: 10, scale: 2 }),
     reviewedAt: timestamp("reviewed_at"),
     reviewedBy: text("reviewed_by").references(() => authUser.id, {
       onDelete: "set null",
@@ -59,6 +79,10 @@ export const listings = pgTable(
       .$onUpdate(() => new Date()),
   },
   (t) => [
+    check(
+      "listings_fulfillment_valid",
+      sql`${t.fulfillment} IN ('pickup', 'delivery', 'both')`,
+    ),
     check("listings_base_price_positive", sql`${t.basePrice} > 0`),
     check("listings_min_order_qty_positive", sql`${t.minOrderQty} >= 1`),
     check(
@@ -68,6 +92,10 @@ export const listings = pgTable(
     check(
       "listings_cancellation_notice_days_non_negative",
       sql`${t.cancellationNoticeDays} IS NULL OR ${t.cancellationNoticeDays} >= 0`,
+    ),
+    check(
+      "listings_deposit_value_positive",
+      sql`${t.depositValue} IS NULL OR ${t.depositValue} > 0`,
     ),
     pgPolicy("listings_select_active", {
       for: "select",
