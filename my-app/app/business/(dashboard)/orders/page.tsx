@@ -1,8 +1,9 @@
 "use client";
 
-import { MessageSquare, X } from "lucide-react";
+import { ClipboardList, MessageSquare, X } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { PreferenceSheet } from "../_components/PreferenceSheet";
 import styles from "./page.module.css";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -25,6 +26,7 @@ type DishSnapshot = {
 type Order = {
   id: string;
   status: OrderStatus;
+  clientId: string | null;
   customerName: string | null;
   customerFirstName: string | null;
   listingTitle: string | null;
@@ -207,6 +209,7 @@ function OrderDetail({
 }) {
   const [cancelConfirm, setCancelConfirm] = useState(false);
   const [mutating, setMutating] = useState(false);
+  const [prefsOpen, setPrefsOpen] = useState(false);
   const canCancel = order.status === "pending" || order.status === "confirmed";
   const canAdvance = order.status === "pending" || order.status === "confirmed";
 
@@ -260,10 +263,20 @@ function OrderDetail({
         </div>
       </div>
 
-      <Link href="/business/inbox" className={styles.chatBtn}>
-        <MessageSquare size={15} />
-        Message customer
-      </Link>
+      <div className={styles.detailActions}>
+        <Link href="/business/inbox" className={styles.chatBtn}>
+          <MessageSquare size={15} />
+          Message customer
+        </Link>
+        <button
+          type="button"
+          className={styles.prefsBtn}
+          onClick={() => setPrefsOpen(true)}
+        >
+          <ClipboardList size={15} />
+          Preferences
+        </button>
+      </div>
 
       <div className={styles.metaBlock}>
         <div className={styles.metaRow}>
@@ -383,6 +396,13 @@ function OrderDetail({
       {order.status === "cancelled" && (
         <div className={styles.statusNote}>This order was cancelled.</div>
       )}
+
+      <PreferenceSheet
+        clientId={order.clientId}
+        clientName={customerDisplay(order)}
+        open={prefsOpen}
+        onClose={() => setPrefsOpen(false)}
+      />
     </div>
   );
 }
