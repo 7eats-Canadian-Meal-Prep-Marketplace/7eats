@@ -6,11 +6,99 @@ export const metadata = {
   title: "Meet the team - 7eats",
   description:
     "Three people, fifteen years of marketplaces and kitchens between us, and one shared belief: Toronto's meal prep businesses deserve real infrastructure.",
+  alternates: {
+    canonical: "/public/team",
+  },
+};
+
+const foundersSchema = [
+  {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    name: "Hendrik Tebeng",
+    jobTitle: "Co-founder",
+    url: "https://www.linkedin.com/in/hendrik-tebeng/",
+    sameAs: ["https://www.linkedin.com/in/hendrik-tebeng/"],
+    worksFor: {
+      "@type": "Organization",
+      name: "7eats",
+      url: "https://www.7eats.ca",
+    },
+    alumniOf: "Concordia University",
+    description:
+      "Software engineering student at Concordia University and intern at CIBC. Co-founder of 7eats.",
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    name: "Mohamad Addasi",
+    jobTitle: "Co-founder",
+    url: "https://www.linkedin.com/in/mohamad-addasi/",
+    sameAs: ["https://www.linkedin.com/in/mohamad-addasi/"],
+    worksFor: {
+      "@type": "Organization",
+      name: "7eats",
+      url: "https://www.7eats.ca",
+    },
+    alumniOf: "Concordia University",
+    description:
+      "Software engineering student at Concordia University and intern at Autodesk. Co-founder of 7eats.",
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    name: "Adnane Bejja",
+    jobTitle: "Co-founder",
+    url: "https://www.linkedin.com/in/adnane-bejja-112398327/",
+    sameAs: ["https://www.linkedin.com/in/adnane-bejja-112398327/"],
+    worksFor: {
+      "@type": "Organization",
+      name: "7eats",
+      url: "https://www.7eats.ca",
+    },
+    alumniOf: "Concordia University",
+    description:
+      "Software engineering student at Concordia University and developer at Intact Financial Corporation. Co-founder of 7eats.",
+  },
+];
+
+const teamBreadcrumbSchema = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    {
+      "@type": "ListItem",
+      position: 1,
+      name: "Home",
+      item: "https://www.7eats.ca",
+    },
+    {
+      "@type": "ListItem",
+      position: 2,
+      name: "Meet the Team",
+      item: "https://www.7eats.ca/public/team",
+    },
+  ],
 };
 
 export default function TeamPage() {
   return (
     <>
+      {foundersSchema.map((schema) => (
+        <script
+          key={schema.name}
+          type="application/ld+json"
+          // biome-ignore lint/security/noDangerouslySetInnerHtml: JSON-LD structured data, not user input
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+        />
+      ))}
+      <script
+        type="application/ld+json"
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: JSON-LD structured data, not user input
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(teamBreadcrumbSchema),
+        }}
+      />
       {/* FOUNDERS */}
       <section className="section founders team-page-opener">
         <div className="wrap">

@@ -5,6 +5,24 @@ export const metadata = {
   title: "Privacy Policy - 7eats",
   description:
     "How 7eats collects, uses, and protects your personal information.",
+  alternates: {
+    canonical: "/privacy",
+  },
+};
+
+const webPageSchema = {
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  name: "Privacy Policy - 7eats",
+  url: "https://www.7eats.ca/privacy",
+  dateModified: "2026-05-17",
+  description:
+    "How 7eats collects, uses, and protects your personal information.",
+  isPartOf: {
+    "@type": "WebSite",
+    name: "7eats",
+    url: "https://www.7eats.ca",
+  },
 };
 
 const SECTIONS = [
@@ -297,6 +315,11 @@ const SECTIONS = [
 export default function PrivacyPage() {
   return (
     <>
+      <script
+        type="application/ld+json"
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: JSON-LD structured data, not user input
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(webPageSchema) }}
+      />
       <Header />
       <main className="policy-page">
         <div className="wrap">

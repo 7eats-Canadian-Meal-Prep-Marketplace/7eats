@@ -1,6 +1,12 @@
 import { eq } from "drizzle-orm";
+import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
+
 import { db } from "@/db";
 import { authUser, cookProfiles } from "@/db/schema";
 import { auth } from "@/lib/auth";

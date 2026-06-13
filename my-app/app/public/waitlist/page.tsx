@@ -6,16 +6,90 @@ import FadeInGroup from "@/app/components/FadeInGroup";
 import FaqAccordion from "@/app/components/FaqAccordion";
 import HowItWorksSection from "@/app/components/HowItWorksSection";
 import StatsSection from "@/app/components/StatsSection";
+import { FAQ_ITEMS } from "@/app/data/faq-items";
 
 export const metadata = {
   title: "7eats - The Canadian Meal Prep Marketplace",
   description:
     "7eats is the marketplace for Toronto's meal prep businesses. List your menu, reach new customers, and get paid without the admin overhead.",
+  alternates: {
+    canonical: "/public/waitlist",
+  },
+};
+
+const marketplaceSchema = {
+  "@context": "https://schema.org",
+  "@type": "Service",
+  name: "7eats Meal Prep Marketplace",
+  description:
+    "7eats is Canada's marketplace for meal prep businesses. Home cooks and operators list their menus, set prices, and get discovered by customers looking for halal, vegan, high-protein, and culturally specific meal prep in Toronto.",
+  serviceType: "Online Marketplace",
+  provider: {
+    "@type": "Organization",
+    name: "7eats",
+    url: "https://www.7eats.ca",
+  },
+  areaServed: {
+    "@type": "AdministrativeArea",
+    name: "Toronto, Ontario, Canada",
+  },
+  offers: {
+    "@type": "Offer",
+    description:
+      "First 30 cooks: 0% platform fee for the first 90 days. Priority listings and lifetime discount on premium tools.",
+  },
+};
+
+const faqSchema = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: FAQ_ITEMS.map((item) => ({
+    "@type": "Question",
+    name: item.question,
+    acceptedAnswer: {
+      "@type": "Answer",
+      text: item.answer,
+    },
+  })),
+};
+
+const breadcrumbSchema = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    {
+      "@type": "ListItem",
+      position: 1,
+      name: "Home",
+      item: "https://www.7eats.ca",
+    },
+    {
+      "@type": "ListItem",
+      position: 2,
+      name: "Join the Waitlist",
+      item: "https://www.7eats.ca/public/waitlist",
+    },
+  ],
 };
 
 export default function WaitlistPage() {
   return (
     <>
+      <script
+        type="application/ld+json"
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: JSON-LD structured data, not user input
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(marketplaceSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: JSON-LD structured data, not user input
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: JSON-LD structured data, not user input
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
       {/* HERO */}
       <section className="hero">
         <div className="wrap">
