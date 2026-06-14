@@ -36,6 +36,7 @@ const authUserTable = pgTable(
     phoneVerified: boolean("phone_verified").notNull().default(false),
     stripeCustomerId: text("stripe_customer_id"),
     onboardingCompletedAt: timestamp("onboarding_completed_at"),
+    isGuestAccount: boolean("is_guest_account").notNull().default(false),
     // Must be >= 16 years old. Set at onboarding, not editable after.
     dateOfBirth: date("date_of_birth"),
     neighborhood: varchar("neighborhood", { length: 100 }),
