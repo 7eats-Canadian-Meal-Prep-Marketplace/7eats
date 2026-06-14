@@ -13,6 +13,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { AddressAutocomplete } from "@/components/AddressAutocomplete";
+import { useGuestAddress } from "@/lib/hooks/use-guest-address";
 import {
   INTERVAL_LABELS,
   INTERVAL_RECURRENCE_PHRASES,
@@ -99,6 +100,15 @@ function CheckoutInner() {
     useState<Partial<NormalizedAddress>>(EMPTY_ADDRESS);
   const [editingAddress, setEditingAddress] = useState(false);
   const [ordered, setOrdered] = useState(false);
+  const [guestCheckoutDone, setGuestCheckoutDone] = useState(false);
+  const [guestCheckoutEmail, setGuestCheckoutEmail] = useState("");
+  const [guestFirstName, setGuestFirstName] = useState("");
+  const [guestLastName, setGuestLastName] = useState("");
+  const [guestEmail, setGuestEmail] = useState("");
+  const [guestPhone, setGuestPhone] = useState("");
+  const [guestSubmitting, setGuestSubmitting] = useState(false);
+  const [guestError, setGuestError] = useState("");
+  const { guestAddress } = useGuestAddress();
 
   // Payment method selection
   const [savedCards, setSavedCards] = useState<SavedCard[]>([]);
@@ -127,7 +137,7 @@ function CheckoutInner() {
 
   // Fetch saved cards when logged-in user reaches payment step.
   useEffect(() => {
-    if (!isLoggedIn || step !== "payment") return;
+    if ((!isLoggedIn && !guestCheckoutDone) || step !== "payment") return;
     setLoadingCards(true);
     fetch("/api/checkout/payment-methods")
       .then((r) => r.json())
@@ -143,7 +153,7 @@ function CheckoutInner() {
       })
       .catch(() => {})
       .finally(() => setLoadingCards(false));
-  }, [isLoggedIn, step]);
+  }, [isLoggedIn, guestCheckoutDone, step]);
 
   // Pre-fill contact from real session + saved address for logged-in users
   useEffect(() => {
@@ -173,6 +183,17 @@ function CheckoutInner() {
       })
       .catch(() => {});
   }, [isLoggedIn]);
+
+  useEffect(() => {
+    if (isLoggedIn || !guestAddress) return;
+    setAddress({
+      street: guestAddress.street || "",
+      unit: guestAddress.unit || "",
+      city: guestAddress.city || "",
+      province: guestAddress.province || "ON",
+      postal: guestAddress.postal || "",
+    });
+  }, [isLoggedIn, guestAddress]);
 
   // Block direct access and redirect when cart empties (unless mid-order or post-order)
   useEffect(() => {
@@ -220,15 +241,30 @@ function CheckoutInner() {
   // ── Validation ────────────────────────────────────────────────────────────────
 
   function validateDetails(): boolean {
-    // Unauthenticated users must sign in before proceeding
-    if (!isLoggedIn) {
-      router.push(
-        `/app-auth/login?next=${encodeURIComponent("/app/checkout?step=payment")}`,
-      );
+    const e: Record<string, string> = {};
+
+    if (isLoggedIn || guestCheckoutDone) {
+      if (needsDeliveryAddress && !editingAddress) {
+        if (!address.street?.trim()) e.street = "Required";
+        if (!address.city?.trim()) e.city = "Required";
+        if (!address.province?.trim()) e.province = "Required";
+        if (!address.postal?.trim()) e.postal = "Required";
+      }
+      setErrors(e);
+      return Object.keys(e).length === 0;
+    }
+
+    if (isSubscriptionCart) {
       return false;
     }
-    const e: Record<string, string> = {};
-    if (needsDeliveryAddress && !editingAddress) {
+
+    if (!guestFirstName.trim()) e.guestFirstName = "Required";
+    if (!guestLastName.trim()) e.guestLastName = "Required";
+    if (!guestEmail.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guestEmail))
+      e.guestEmail = "Valid email required";
+    if (!guestPhone.trim() || guestPhone.replace(/\D/g, "").length < 7)
+      e.guestPhone = "Valid phone required";
+    if (needsDeliveryAddress) {
       if (!address.street?.trim()) e.street = "Required";
       if (!address.city?.trim()) e.city = "Required";
       if (!address.province?.trim()) e.province = "Required";
@@ -236,6 +272,86 @@ function CheckoutInner() {
     }
     setErrors(e);
     return Object.keys(e).length === 0;
+  }
+
+  // ── Guest checkout ─────────────────────────────────────────────────────────
+
+  async function handleGuestCheckout(): Promise<boolean> {
+    setGuestSubmitting(true);
+    setGuestError("");
+
+    try {
+      if (
+        needsDeliveryAddress &&
+        guestAddress?.lat != null &&
+        guestAddress?.lng != null
+      ) {
+        const deliveryItems = items.filter(
+          (i) => i.fulfillmentMode === "delivery",
+        );
+        const uniqueListingIds = [
+          ...new Set(deliveryItems.map((i) => i.listingId)),
+        ];
+
+        for (const listingId of uniqueListingIds) {
+          const checkRes = await fetch(
+            `/api/service-area?lat=${guestAddress.lat}&lng=${guestAddress.lng}&listingId=${encodeURIComponent(listingId)}`,
+          );
+          const checkJson = (await checkRes.json()) as {
+            data?: { inRange: boolean; distanceKm: number | null };
+            error?: string;
+          };
+          if (checkRes.ok && checkJson.data && !checkJson.data.inRange) {
+            const cookItem = items.find((i) => i.listingId === listingId);
+            setGuestError(
+              `Your address is outside ${cookItem?.cookName ?? "this cook"}'s delivery area (${checkJson.data.distanceKm ?? "?"} km away). Try pickup instead.`,
+            );
+            return false;
+          }
+        }
+      }
+
+      const res = await fetch("/api/auth/guest-checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          firstName: guestFirstName.trim(),
+          lastName: guestLastName.trim(),
+          email: guestEmail.trim().toLowerCase(),
+          phone: guestPhone.trim(),
+        }),
+      });
+
+      const json = (await res.json()) as {
+        success?: boolean;
+        needsLogin?: boolean;
+        email?: string;
+        error?: string;
+      };
+
+      if (!res.ok) {
+        setGuestError(
+          json.error ?? "Could not complete guest checkout. Please try again.",
+        );
+        return false;
+      }
+
+      if (json.needsLogin) {
+        router.push(
+          `/app-auth/login?next=${encodeURIComponent("/app/checkout?step=payment")}&email=${encodeURIComponent(json.email ?? "")}`,
+        );
+        return false;
+      }
+
+      setGuestCheckoutDone(true);
+      setGuestCheckoutEmail(json.email ?? guestEmail);
+      return true;
+    } catch {
+      setGuestError("Something went wrong. Please try again.");
+      return false;
+    } finally {
+      setGuestSubmitting(false);
+    }
   }
 
   // ── Place order with a real paymentMethodId ────────────────────────────────
@@ -374,6 +490,10 @@ function CheckoutInner() {
         }
       });
       params.set("count", String(orderEntries.length));
+      if (!isLoggedIn && guestCheckoutDone && guestCheckoutEmail) {
+        params.set("guest", "1");
+        params.set("email", guestCheckoutEmail);
+      }
       router.push(`/app/checkout/confirmation?${params.toString()}`);
     } catch (err) {
       setPlaceError(
@@ -437,31 +557,153 @@ function CheckoutInner() {
               <section className={styles.formSection}>
                 <h2 className={styles.formTitle}>Contact details</h2>
 
-                {/* Logged-in: read-only summary — unauthenticated users are redirected to login by validateDetails() */}
-                {isLoggedIn ? (
+                {isLoggedIn || guestCheckoutDone ? (
                   <div className={styles.contactSummary}>
                     <div className={styles.contactRow}>
                       <span className={styles.contactLabel}>Name</span>
                       <span className={styles.contactValue}>
-                        {contact.firstName} {contact.lastName}
+                        {contact.firstName || guestFirstName}{" "}
+                        {contact.lastName || guestLastName}
                       </span>
                     </div>
                     <div className={styles.contactRow}>
                       <span className={styles.contactLabel}>Email</span>
                       <span className={styles.contactValue}>
-                        {contact.email}
+                        {contact.email || guestCheckoutEmail}
                       </span>
                     </div>
-                    {contact.phone && (
+                    {(contact.phone || guestPhone) && (
                       <div className={styles.contactRow}>
                         <span className={styles.contactLabel}>Phone</span>
                         <span className={styles.contactValue}>
-                          {contact.phone}
+                          {contact.phone || guestPhone}
                         </span>
                       </div>
                     )}
                   </div>
-                ) : null}
+                ) : isSubscriptionCart ? (
+                  <div className={styles.guestBlock}>
+                    <p className={styles.guestBlockMsg}>
+                      Subscription orders require an account.{" "}
+                      <a
+                        href={`/app-auth/login?next=${encodeURIComponent("/app/checkout?step=payment")}`}
+                        className={styles.guestBlockLink}
+                      >
+                        Sign in
+                      </a>{" "}
+                      or{" "}
+                      <a
+                        href="/app-auth/signup"
+                        className={styles.guestBlockLink}
+                      >
+                        create one
+                      </a>
+                      .
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <div className={styles.formRow}>
+                      <div className={styles.formGroup}>
+                        <label
+                          className={styles.label}
+                          htmlFor="guestFirstName"
+                        >
+                          First name
+                        </label>
+                        <input
+                          id="guestFirstName"
+                          type="text"
+                          className={styles.input}
+                          value={guestFirstName}
+                          onChange={(e) => {
+                            setGuestFirstName(e.target.value);
+                            setGuestError("");
+                          }}
+                          autoComplete="given-name"
+                        />
+                        {errors.guestFirstName && (
+                          <p className={styles.fieldError}>
+                            {errors.guestFirstName}
+                          </p>
+                        )}
+                      </div>
+                      <div className={styles.formGroup}>
+                        <label className={styles.label} htmlFor="guestLastName">
+                          Last name
+                        </label>
+                        <input
+                          id="guestLastName"
+                          type="text"
+                          className={styles.input}
+                          value={guestLastName}
+                          onChange={(e) => {
+                            setGuestLastName(e.target.value);
+                            setGuestError("");
+                          }}
+                          autoComplete="family-name"
+                        />
+                        {errors.guestLastName && (
+                          <p className={styles.fieldError}>
+                            {errors.guestLastName}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className={styles.formGroup}>
+                      <label className={styles.label} htmlFor="guestEmail">
+                        Email
+                      </label>
+                      <input
+                        id="guestEmail"
+                        type="email"
+                        className={styles.input}
+                        value={guestEmail}
+                        onChange={(e) => {
+                          setGuestEmail(e.target.value);
+                          setGuestError("");
+                        }}
+                        autoComplete="email"
+                      />
+                      {errors.guestEmail && (
+                        <p className={styles.fieldError}>{errors.guestEmail}</p>
+                      )}
+                    </div>
+                    <div className={styles.formGroup}>
+                      <label className={styles.label} htmlFor="guestPhone">
+                        Phone number
+                      </label>
+                      <input
+                        id="guestPhone"
+                        type="tel"
+                        className={styles.input}
+                        value={guestPhone}
+                        onChange={(e) => {
+                          setGuestPhone(e.target.value);
+                          setGuestError("");
+                        }}
+                        autoComplete="tel"
+                      />
+                      {errors.guestPhone && (
+                        <p className={styles.fieldError}>{errors.guestPhone}</p>
+                      )}
+                    </div>
+                    {guestError && (
+                      <p className={styles.placeError} role="alert">
+                        {guestError}
+                      </p>
+                    )}
+                    <p className={styles.guestNote}>
+                      Already have an account?{" "}
+                      <a
+                        href={`/app-auth/login?next=${encodeURIComponent("/app/checkout?step=payment")}`}
+                        className={styles.guestBlockLink}
+                      >
+                        Sign in
+                      </a>
+                    </p>
+                  </>
+                )}
               </section>
 
               {/* Delivery address — only when at least one item requires delivery */}
@@ -557,13 +799,20 @@ function CheckoutInner() {
               <button
                 type="button"
                 className={styles.primaryBtn}
-                disabled={needsDeliveryAddress && editingAddress}
-                onClick={() => {
-                  if (validateDetails()) setStep("payment");
+                disabled={
+                  (needsDeliveryAddress && editingAddress) || guestSubmitting
+                }
+                onClick={async () => {
+                  if (!validateDetails()) return;
+                  if (!isLoggedIn && !guestCheckoutDone) {
+                    const ok = await handleGuestCheckout();
+                    if (!ok) return;
+                  }
+                  setStep("payment");
                 }}
               >
-                Continue
-                <ArrowRight size={16} />
+                {guestSubmitting ? "Setting up…" : "Continue"}
+                {!guestSubmitting && <ArrowRight size={16} />}
               </button>
             </>
           )}

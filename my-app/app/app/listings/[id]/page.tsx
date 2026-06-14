@@ -769,7 +769,7 @@ export default function ListingPage({
                   ))}
                 <div className={styles.summaryTotal}>
                   <span>Total</span>
-                  <span>${selectionTotal}.00</span>
+                  <span>${selectionTotal.toFixed(2)}</span>
                 </div>
               </div>
             )}
@@ -839,10 +839,10 @@ export default function ListingPage({
                       : !meetsMinUnits
                         ? `Add ${unitsNeeded} more portion${unitsNeeded !== 1 ? "s" : ""}`
                         : isInCart && isModifying
-                          ? `Update cart · $${selectionTotal}.00`
+                          ? `Update cart · $${selectionTotal.toFixed(2)}`
                           : selectedTier
-                            ? `Subscribe ${INTERVAL_LABELS[selectedTier.interval].toLowerCase()} · $${selectionTotal}.00/${INTERVAL_SHORT_LABELS[selectedTier.interval]}`
-                            : `Add to cart · $${selectionTotal}.00`}
+                            ? `Subscribe ${INTERVAL_LABELS[selectedTier.interval].toLowerCase()} · $${selectionTotal.toFixed(2)}/${INTERVAL_SHORT_LABELS[selectedTier.interval]}`
+                            : `Add to cart · $${selectionTotal.toFixed(2)}`}
                   </button>
                   {isInCart && isModifying && (
                     <button
@@ -953,7 +953,7 @@ export default function ListingPage({
               <>
                 <span className={styles.mobileBarCount}>In cart</span>
                 <span className={styles.mobileBarTotal}>
-                  ${selectionTotal}.00
+                  ${selectionTotal.toFixed(2)}
                 </span>
               </>
             ) : (
@@ -962,7 +962,7 @@ export default function ListingPage({
                   {selectionCount} portion{selectionCount !== 1 ? "s" : ""}
                 </span>
                 <span className={styles.mobileBarTotal}>
-                  ${selectionTotal}.00
+                  ${selectionTotal.toFixed(2)}
                 </span>
               </>
             )}
