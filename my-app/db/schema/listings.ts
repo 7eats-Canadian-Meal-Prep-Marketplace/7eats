@@ -237,11 +237,8 @@ export const listingPromotions = pgTable(
       .notNull()
       .references(() => listings.id, { onDelete: "cascade" }),
     type: promotionType("type").notNull(),
-    // percentage_off: 1–100. fixed_off: positive dollar amount. null for buy_x_get_y.
+    // percentage_off: 1–100. fixed_off: positive dollar amount.
     value: numeric("value", { precision: 10, scale: 2 }),
-    // buy_x_get_y only
-    buyQty: integer("buy_qty"),
-    getQty: integer("get_qty"),
     // Minimum order quantity to qualify for this promotion
     minimumQty: integer("minimum_qty").notNull().default(1),
     // null = unlimited redemptions
@@ -266,13 +263,6 @@ export const listingPromotions = pgTable(
     check(
       "promo_fixed_requires_value",
       sql`${t.type} != 'fixed_off' OR ${t.value} IS NOT NULL`,
-    ),
-    check(
-      "promo_bxgy_fields",
-      sql`${t.type} != 'buy_x_get_y' OR (
-        ${t.buyQty} IS NOT NULL AND ${t.getQty} IS NOT NULL
-        AND ${t.buyQty} >= 1 AND ${t.getQty} >= 1
-      )`,
     ),
     check("promo_minimum_qty_positive", sql`${t.minimumQty} >= 1`),
     check(

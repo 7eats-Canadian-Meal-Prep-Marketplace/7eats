@@ -4,15 +4,28 @@ import { Bell, CheckCircle2, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo } from "react";
+import {
+  INTERVAL_LABELS,
+  INTERVAL_RECURRENCE_PHRASES,
+  type SubscriptionInterval,
+} from "@/lib/subscription-schedule";
 import styles from "./page.module.css";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function nextWeeklyDates(count = 4): { label: string; day: string }[] {
+function nextChargeDates(
+  interval: SubscriptionInterval,
+  count = 4,
+): { label: string; day: string }[] {
   const now = new Date();
   return Array.from({ length: count }, (_, i) => {
     const d = new Date(now);
-    d.setDate(d.getDate() + 7 * (i + 1));
+    if (interval === "monthly") {
+      d.setMonth(d.getMonth() + (i + 1));
+    } else {
+      const stepDays = interval === "biweekly" ? 14 : 7;
+      d.setDate(d.getDate() + stepDays * (i + 1));
+    }
     return {
       label: d.toLocaleDateString("en-CA", { month: "short", day: "numeric" }),
       day: d.toLocaleDateString("en-CA", { weekday: "long" }),
@@ -25,6 +38,7 @@ type OrderEntry = {
   cookName: string;
   fulfillmentMode: "pickup" | "delivery";
   hasSubscription: boolean;
+  subscriptionInterval?: SubscriptionInterval;
 };
 
 // ─── Confirmation inner ───────────────────────────────────────────────────────
@@ -41,6 +55,9 @@ function ConfirmationInner() {
     if (count === 0) return [];
     const entries: OrderEntry[] = [];
     for (let i = 0; i < count; i++) {
+      const subscriptionInterval = searchParams.get(
+        `subint${i}`,
+      ) as SubscriptionInterval | null;
       entries.push({
         orderId: searchParams.get(`oid${i}`) ?? `ORD-${i}`,
         cookName: searchParams.get(`cook${i}`) ?? "Your cook",
@@ -48,6 +65,7 @@ function ConfirmationInner() {
           | "pickup"
           | "delivery",
         hasSubscription: searchParams.get(`sub${i}`) === "1",
+        subscriptionInterval: subscriptionInterval ?? undefined,
       });
     }
     return entries;
@@ -60,9 +78,12 @@ function ConfirmationInner() {
 
   if (count === 0) return null;
 
-  const hasAnySubscription = orders.some((o) => o.hasSubscription);
-  const chargeDates = hasAnySubscription ? nextWeeklyDates(4) : [];
-  const chargeDay = chargeDates[0]?.day ?? "weekly";
+  const subscriptionOrder = orders.find((o) => o.hasSubscription);
+  const subscriptionInterval = subscriptionOrder?.subscriptionInterval ?? null;
+  const chargeDates = subscriptionInterval
+    ? nextChargeDates(subscriptionInterval, 4)
+    : [];
+  const chargeDay = chargeDates[0]?.day ?? "day";
 
   return (
     <div className={styles.page}>
@@ -90,9 +111,10 @@ function ConfirmationInner() {
                 <span className={styles.cookLabel}>{o.cookName}</span>
                 <span className={styles.fulfillmentLabel}>
                   {o.fulfillmentMode === "delivery" ? "Delivery" : "Pickup"}
-                  {o.hasSubscription && (
+                  {o.hasSubscription && o.subscriptionInterval && (
                     <span className={styles.subTag}>
-                      <RefreshCw size={10} /> Weekly
+                      <RefreshCw size={10} />{" "}
+                      {INTERVAL_LABELS[o.subscriptionInterval]}
                     </span>
                   )}
                 </span>
@@ -103,15 +125,25 @@ function ConfirmationInner() {
         </div>
 
         {/* Subscription section */}
-        {hasAnySubscription && (
+        {subscriptionInterval && (
           <>
             <div className={styles.subSection}>
               <div className={styles.subHeader}>
                 <RefreshCw size={14} />
-                <span>Weekly subscription active</span>
+                <span>
+                  {INTERVAL_LABELS[subscriptionInterval]} subscription active
+                </span>
               </div>
               <p className={styles.subNote}>
-                Your card will be charged every <strong>{chargeDay}</strong>.
+                {subscriptionInterval === "monthly" ? (
+                  "Your card will be charged monthly."
+                ) : (
+                  <>
+                    Your card will be charged{" "}
+                    {INTERVAL_RECURRENCE_PHRASES[subscriptionInterval]}, every{" "}
+                    <strong>{chargeDay}</strong>.
+                  </>
+                )}{" "}
                 Here are your upcoming payment dates:
               </p>
               <div className={styles.chargeDates}>
@@ -132,7 +164,7 @@ function ConfirmationInner() {
             <div className={styles.notifBanner}>
               <Bell size={14} className={styles.notifIcon} />
               <p className={styles.notifText}>
-                You'll receive a reminder notification before each weekly{" "}
+                You'll receive a reminder notification before each{" "}
                 {orders.some(
                   (o) => o.hasSubscription && o.fulfillmentMode === "delivery",
                 )
@@ -145,11 +177,12 @@ function ConfirmationInner() {
         )}
 
         {/* FTC disclosure for subscriptions */}
-        {hasAnySubscription && (
+        {subscriptionInterval && (
           <p className={styles.legalNote}>
-            Recurring charges will appear on your card statement every week
-            until you cancel. Cancellation takes effect at the end of the
-            current billing cycle.
+            Recurring charges will appear on your card statement{" "}
+            {INTERVAL_RECURRENCE_PHRASES[subscriptionInterval]} until you
+            cancel. Cancellation takes effect at the end of the current billing
+            cycle.
           </p>
         )}
 

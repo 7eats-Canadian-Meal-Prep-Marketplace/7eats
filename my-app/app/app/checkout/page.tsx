@@ -12,10 +12,17 @@ import {
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
+import { AddressAutocomplete } from "@/components/AddressAutocomplete";
 import { useGuestAddress } from "@/lib/hooks/use-guest-address";
+import {
+  INTERVAL_LABELS,
+  INTERVAL_RECURRENCE_PHRASES,
+  type SubscriptionInterval,
+} from "@/lib/subscription-schedule";
+import type { NormalizedAddress } from "@/lib/types/address";
 import { useApp } from "../_app-context";
 import { type CartItem, useCart } from "../_cart-context";
-import { WEEKLY_CHARGE_DISCLAIMER } from "../_subscription-utils";
+import { getChargeDisclaimer } from "../_subscription-utils";
 import { calcTax, formatCartMoney, getTaxLabel } from "../cart/_cart-tax";
 import { NewCardForm } from "./_payment-form";
 import styles from "./page.module.css";
@@ -37,14 +44,6 @@ type ContactForm = {
   phone: string;
 };
 
-type DeliveryAddress = {
-  street: string;
-  unit: string;
-  city: string;
-  province: string;
-  postal: string;
-};
-
 type SavedCard = {
   id: string;
   brand: string;
@@ -60,12 +59,8 @@ const EMPTY_CONTACT: ContactForm = {
   phone: "",
 };
 
-const EMPTY_ADDRESS: DeliveryAddress = {
-  street: "",
-  unit: "",
-  city: "",
+const EMPTY_ADDRESS: Partial<NormalizedAddress> = {
   province: "ON",
-  postal: "",
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -101,7 +96,8 @@ function CheckoutInner() {
   const [placeError, setPlaceError] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [contact, setContact] = useState<ContactForm>(EMPTY_CONTACT);
-  const [address, setAddress] = useState<DeliveryAddress>(EMPTY_ADDRESS);
+  const [address, setAddress] =
+    useState<Partial<NormalizedAddress>>(EMPTY_ADDRESS);
   const [editingAddress, setEditingAddress] = useState(false);
   const [ordered, setOrdered] = useState(false);
   const [guestCheckoutDone, setGuestCheckoutDone] = useState(false);
@@ -179,14 +175,13 @@ function CheckoutInner() {
         });
       })
       .catch(() => {});
-    // Delivery address: set from user's saved address once address book is wired
-    setAddress({
-      street: "123 King St W",
-      unit: "Apt 4B",
-      city: "Toronto",
-      province: "ON",
-      postal: "M5H 1A1",
-    });
+    // Pre-fill delivery address from the user's saved address book entry, if any
+    fetch("/api/user/address")
+      .then((r) => r.json())
+      .then((data: { address?: NormalizedAddress | null }) => {
+        if (data.address) setAddress(data.address);
+      })
+      .catch(() => {});
   }, [isLoggedIn]);
 
   useEffect(() => {
@@ -250,9 +245,10 @@ function CheckoutInner() {
 
     if (isLoggedIn || guestCheckoutDone) {
       if (needsDeliveryAddress && !editingAddress) {
-        if (!address.street.trim()) e.street = "Required";
-        if (!address.city.trim()) e.city = "Required";
-        if (!address.postal.trim()) e.postal = "Required";
+        if (!address.street?.trim()) e.street = "Required";
+        if (!address.city?.trim()) e.city = "Required";
+        if (!address.province?.trim()) e.province = "Required";
+        if (!address.postal?.trim()) e.postal = "Required";
       }
       setErrors(e);
       return Object.keys(e).length === 0;
@@ -269,9 +265,10 @@ function CheckoutInner() {
     if (!guestPhone.trim() || guestPhone.replace(/\D/g, "").length < 7)
       e.guestPhone = "Valid phone required";
     if (needsDeliveryAddress) {
-      if (!address.street.trim()) e.street = "Street address required";
-      if (!address.city.trim()) e.city = "City required";
-      if (!address.postal.trim()) e.postal = "Postal code required";
+      if (!address.street?.trim()) e.street = "Required";
+      if (!address.city?.trim()) e.city = "Required";
+      if (!address.province?.trim()) e.province = "Required";
+      if (!address.postal?.trim()) e.postal = "Required";
     }
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -370,13 +367,15 @@ function CheckoutInner() {
     setPlacing(true);
     setPlaceError("");
 
-    // One order per cook group — collect results for confirmation page
+    // One order (or subscription) per cook group — collect results for the
+    // confirmation page
     const cookGroups = Object.entries(grouped);
     const orderEntries: Array<{
       orderId: string;
       cookName: string;
       fulfillmentMode: "pickup" | "delivery";
       hasSubscription: boolean;
+      subscriptionInterval?: SubscriptionInterval;
     }> = [];
 
     try {
@@ -393,6 +392,39 @@ function CheckoutInner() {
 
         for (const [listingId, listingItems] of Object.entries(byListing)) {
           const first = listingItems[0];
+
+          if (first.orderType === "subscription" && first.tierId) {
+            const res = await fetch("/api/subscriptions", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                listingId,
+                tierId: first.tierId,
+                paymentMethodId,
+              }),
+            });
+
+            const json = await res.json();
+
+            if (!res.ok) {
+              throw new Error(
+                (json as { error?: string }).error ??
+                  "Subscription creation failed.",
+              );
+            }
+
+            const subscriptionId = (json as { data: { id: string } }).data.id;
+
+            orderEntries.push({
+              orderId: subscriptionId,
+              cookName: first.cookName,
+              fulfillmentMode: first.fulfillmentMode,
+              hasSubscription: true,
+              subscriptionInterval: first.subscriptionInterval,
+            });
+            continue;
+          }
+
           const quantity = listingItems.reduce((sum, i) => sum + i.quantity, 0);
 
           const body: Record<string, unknown> = {
@@ -404,12 +436,16 @@ function CheckoutInner() {
 
           if (needsDeliveryAddress && first.fulfillmentMode === "delivery") {
             body.deliveryAddress = {
-              street: address.street,
+              street: address.street ?? "",
               unit: address.unit || undefined,
-              city: address.city,
-              province: address.province,
-              postal: address.postal,
+              city: address.city ?? "",
+              province: address.province ?? "",
+              postal: address.postal ?? "",
             };
+            if (address.lat != null && address.lng != null) {
+              body.customerLat = address.lat;
+              body.customerLng = address.lng;
+            }
           }
 
           const res = await fetch("/api/orders", {
@@ -432,9 +468,7 @@ function CheckoutInner() {
             orderId,
             cookName: first.cookName,
             fulfillmentMode: first.fulfillmentMode,
-            hasSubscription: listingItems.some(
-              (i) => i.orderType === "subscription",
-            ),
+            hasSubscription: false,
           });
         }
       }
@@ -448,7 +482,12 @@ function CheckoutInner() {
         params.set(`oid${i}`, o.orderId);
         params.set(`cook${i}`, o.cookName);
         params.set(`mode${i}`, o.fulfillmentMode);
-        if (o.hasSubscription) params.set(`sub${i}`, "1");
+        if (o.hasSubscription) {
+          params.set(`sub${i}`, "1");
+          if (o.subscriptionInterval) {
+            params.set(`subint${i}`, o.subscriptionInterval);
+          }
+        }
       });
       params.set("count", String(orderEntries.length));
       if (!isLoggedIn && guestCheckoutDone && guestCheckoutEmail) {
@@ -699,85 +738,18 @@ function CheckoutInner() {
                   ) : (
                     /* Guest or logged-in editing — full form */
                     <>
-                      <div className={styles.formGroup}>
-                        <label className={styles.label} htmlFor="street">
-                          Street address
-                        </label>
-                        <input
-                          id="street"
-                          type="text"
-                          className={styles.input}
-                          value={address.street}
-                          onChange={(e) =>
-                            setAddress((a) => ({
-                              ...a,
-                              street: e.target.value,
-                            }))
-                          }
-                        />
-                        {errors.street && (
-                          <p className={styles.fieldError}>{errors.street}</p>
-                        )}
-                      </div>
-                      <div className={styles.formRow}>
-                        <div className={styles.formGroup}>
-                          <label className={styles.label} htmlFor="unit">
-                            Apt / Unit{" "}
-                            <span className={styles.optionalLabel}>
-                              (optional)
-                            </span>
-                          </label>
-                          <input
-                            id="unit"
-                            type="text"
-                            className={styles.input}
-                            value={address.unit}
-                            onChange={(e) =>
-                              setAddress((a) => ({
-                                ...a,
-                                unit: e.target.value,
-                              }))
-                            }
-                          />
-                        </div>
-                        <div className={styles.formGroup}>
-                          <label className={styles.label} htmlFor="postal">
-                            Postal code
-                          </label>
-                          <input
-                            id="postal"
-                            type="text"
-                            className={styles.input}
-                            value={address.postal}
-                            onChange={(e) =>
-                              setAddress((a) => ({
-                                ...a,
-                                postal: e.target.value,
-                              }))
-                            }
-                          />
-                          {errors.postal && (
-                            <p className={styles.fieldError}>{errors.postal}</p>
-                          )}
-                        </div>
-                      </div>
-                      <div className={styles.formGroup}>
-                        <label className={styles.label} htmlFor="city">
-                          City
-                        </label>
-                        <input
-                          id="city"
-                          type="text"
-                          className={styles.input}
-                          value={address.city}
-                          onChange={(e) =>
-                            setAddress((a) => ({ ...a, city: e.target.value }))
-                          }
-                        />
-                        {errors.city && (
-                          <p className={styles.fieldError}>{errors.city}</p>
-                        )}
-                      </div>
+                      <AddressAutocomplete
+                        value={address}
+                        onChange={setAddress}
+                        errors={{
+                          street: errors.street,
+                          city: errors.city,
+                          province: errors.province,
+                          postal: errors.postal,
+                        }}
+                        idPrefix="checkout-address"
+                        inputClassName={styles.input}
+                      />
                       {isLoggedIn && editingAddress && (
                         <button
                           type="button"
@@ -930,7 +902,8 @@ function CheckoutInner() {
                     const listing = items.find(
                       (i) => i.listingId === listingId,
                     );
-                    if (!listing) return null;
+                    if (!listing?.subscriptionInterval) return null;
+                    const interval = listing.subscriptionInterval;
                     const listingTotal = items
                       .filter((i) => i.listingId === listingId)
                       .reduce((s, i) => s + i.price * i.quantity, 0);
@@ -957,10 +930,10 @@ function CheckoutInner() {
                             {formatCartMoney(
                               calcTax(listingTotal, province) + listingTotal,
                             )}{" "}
-                            every week
+                            {INTERVAL_RECURRENCE_PHRASES[interval]}
                           </strong>{" "}
                           for <strong>{listing.listingTitle}</strong> until I
-                          unsubscribe. {WEEKLY_CHARGE_DISCLAIMER}
+                          unsubscribe. {getChargeDisclaimer(interval)}
                         </span>
                       </label>
                     );
@@ -1063,12 +1036,13 @@ function OrderSummary({
                 <span className={styles.summaryGroupCook}>
                   {first.cookName}
                 </span>
-                {first.orderType === "subscription" && (
-                  <span className={styles.subscriptionBadge}>
-                    <RefreshCw size={10} />
-                    Weekly
-                  </span>
-                )}
+                {first.orderType === "subscription" &&
+                  first.subscriptionInterval && (
+                    <span className={styles.subscriptionBadge}>
+                      <RefreshCw size={10} />
+                      {INTERVAL_LABELS[first.subscriptionInterval]}
+                    </span>
+                  )}
               </div>
               <ul className={styles.summaryGroupList}>
                 {lines.map((item) => (

@@ -81,7 +81,7 @@ describe("POST /api/subscriptions", () => {
       call++;
       if (call === 1)
         return limitChain([
-          { id: LISTING_ID, cookId: "cook-1", type: "subscription" },
+          { id: LISTING_ID, cookId: "cook-1", subscriptionEnabled: true },
         ]);
       if (call === 2)
         return limitChain([

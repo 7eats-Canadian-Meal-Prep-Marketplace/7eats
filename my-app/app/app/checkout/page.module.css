@@ -288,29 +288,6 @@
   margin: -10px 0 18px;
 }
 
-.formRow {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
-}
-
-.formGroup {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-bottom: 14px;
-}
-
-.formGroup:last-child {
-  margin-bottom: 0;
-}
-
-.label {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--grey-700);
-}
-
 .input {
   padding: 12px 14px;
   border: 1.5px solid var(--grey-200);
@@ -329,12 +306,6 @@
 
 .input:focus {
   border-color: var(--ink);
-}
-
-.fieldError {
-  font-size: 12px;
-  color: var(--red);
-  margin-top: 2px;
 }
 
 /* Pickup card */
@@ -719,15 +690,6 @@
   text-underline-offset: 2px;
 }
 
-/* ─── Optional label ────────────────────────────────────────────────────────── */
-.optionalLabel {
-  font-weight: 500;
-  color: var(--grey-500);
-  font-size: 11px;
-  text-transform: none;
-  letter-spacing: 0;
-}
-
 /* ─── Subscription account notice ───────────────────────────────────────────── */
 .subAccountNotice {
   display: flex;
@@ -940,12 +902,6 @@
 @media (max-width: 768px) {
   .page {
     padding: 20px 16px 80px;
-  }
-
-  /* Collapse 2-col name grid to single column */
-  .formRow {
-    grid-template-columns: 1fr;
-    gap: 0;
   }
 
   /* Wallet rows: ensure minimum 44px tap target */

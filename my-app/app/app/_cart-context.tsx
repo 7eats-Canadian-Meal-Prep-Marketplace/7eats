@@ -7,6 +7,8 @@ import {
   useMemo,
   useState,
 } from "react";
+import type { SubscriptionInterval } from "@/lib/subscription-schedule";
+
 export type CartItem = {
   dishId: string;
   dishName: string;
@@ -14,6 +16,9 @@ export type CartItem = {
   listingId: string;
   listingTitle: string;
   orderType: "one_time" | "subscription";
+  /** Selected subscription tier, set when orderType is "subscription". */
+  tierId?: string;
+  subscriptionInterval?: SubscriptionInterval;
   fulfillmentMode: "pickup" | "delivery";
   cookId: string;
   cookName: string;

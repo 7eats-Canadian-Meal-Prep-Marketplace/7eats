@@ -3,10 +3,11 @@
 import { RefreshCw, ShoppingCart, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { INTERVAL_LABELS } from "@/lib/subscription-schedule";
 import type { NormalizedAddress } from "@/lib/types/address";
 import { useApp } from "../_app-context";
 import { type CartItem, useCart } from "../_cart-context";
-import { WEEKLY_CHARGE_DISCLAIMER } from "../_subscription-utils";
+import { getChargeDisclaimer } from "../_subscription-utils";
 import { calcTax, formatCartMoney, getTaxLabel } from "./_cart-tax";
 import styles from "./page.module.css";
 
@@ -210,16 +211,20 @@ export default function CartPage() {
                       ))}
                     </ul>
 
-                    {/* Weekly subscription notice */}
-                    {first.orderType === "subscription" && (
-                      <div className={styles.subscriptionNotice}>
-                        <RefreshCw size={12} />
-                        <span>
-                          <strong>Weekly subscription</strong> ·{" "}
-                          {WEEKLY_CHARGE_DISCLAIMER}
-                        </span>
-                      </div>
-                    )}
+                    {/* Subscription notice */}
+                    {first.orderType === "subscription" &&
+                      first.subscriptionInterval && (
+                        <div className={styles.subscriptionNotice}>
+                          <RefreshCw size={12} />
+                          <span>
+                            <strong>
+                              {INTERVAL_LABELS[first.subscriptionInterval]}{" "}
+                              subscription
+                            </strong>{" "}
+                            · {getChargeDisclaimer(first.subscriptionInterval)}
+                          </span>
+                        </div>
+                      )}
 
                     <div className={styles.listingSubtotal}>
                       <span>Listing subtotal</span>

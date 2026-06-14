@@ -81,7 +81,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     const [listing] = await db
       .select({
         id: listings.id,
-        type: listings.type,
+        subscriptionEnabled: listings.subscriptionEnabled,
         title: listings.title,
         stripeProductId: listings.stripeProductId,
       })
@@ -91,9 +91,9 @@ export async function POST(req: NextRequest, { params }: Params) {
 
     if (!listing) return notFound("Listing");
 
-    if (listing.type !== "subscription") {
+    if (!listing.subscriptionEnabled) {
       return NextResponse.json(
-        { error: "Tiers can only be added to subscription listings." },
+        { error: "Enable subscriptions for this listing before adding tiers." },
         { status: 400 },
       );
     }

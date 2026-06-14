@@ -4,7 +4,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import SetupSidebar from "@/app/components/SetupSidebar";
 import { AddressAutocomplete } from "@/components/AddressAutocomplete";
-import type { NormalizedAddress } from "@/lib/types/address";
 import styles from "./OnboardingWizard.module.css";
 
 // ── Constants ─────────────────────────────────────────────────
@@ -702,32 +701,33 @@ function Step2({
 
       <div className={styles.fields}>
         <div className={styles.field}>
-          <label htmlFor="pickupAddress" className={styles.label}>
-            Pickup Address
-          </label>
+          <span className={styles.label}>Pickup Address</span>
           <AddressAutocomplete
-            id="pickupAddress"
-            name="pickupAddress"
-            placeholder="Street address"
-            inputClassName={styles.input}
-            initialValue={
-              form.pickupStreet
-                ? `${form.pickupStreet}${form.pickupUnit ? `, ${form.pickupUnit}` : ""}, ${form.pickupCity}, ${form.pickupProvince} ${form.pickupPostal}`
-                : ""
-            }
-            onResolve={(addr: NormalizedAddress) =>
+            value={{
+              street: form.pickupStreet,
+              unit: form.pickupUnit || undefined,
+              city: form.pickupCity,
+              province: form.pickupProvince,
+              postal: form.pickupPostal,
+              lat: form.pickupLat ?? undefined,
+              lng: form.pickupLng ?? undefined,
+              placeId: form.pickupPlaceId || undefined,
+            }}
+            onChange={(addr) =>
               setForm((f) => ({
                 ...f,
-                pickupStreet: addr.street,
+                pickupStreet: addr.street ?? "",
                 pickupUnit: addr.unit ?? "",
-                pickupCity: addr.city,
-                pickupProvince: addr.province,
-                pickupPostal: addr.postal,
-                pickupLat: addr.lat,
-                pickupLng: addr.lng,
-                pickupPlaceId: addr.placeId,
+                pickupCity: addr.city ?? "",
+                pickupProvince: addr.province ?? "",
+                pickupPostal: addr.postal ?? "",
+                pickupLat: addr.lat ?? null,
+                pickupLng: addr.lng ?? null,
+                pickupPlaceId: addr.placeId ?? "",
               }))
             }
+            idPrefix="onboarding-pickup"
+            inputClassName={styles.input}
           />
           <p className={styles.hint}>
             Only revealed to customers after their order is confirmed.

@@ -257,6 +257,7 @@
 /* ─── Order mode toggle (once vs subscribe weekly) ───────────────────────────── */
 .orderModeToggle {
   display: flex;
+  flex-wrap: wrap;
   width: 100%;
   background: var(--grey-100);
   border: 1px solid var(--grey-200);
@@ -267,7 +268,8 @@
 }
 
 .orderModeBtn {
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 80px;
   display: flex;
   align-items: center;
   justify-content: center;

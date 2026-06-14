@@ -1,7 +1,10 @@
 import dynamic from "next/dynamic";
-import type { AddressAutocompleteProps } from "./_component";
+import type {
+  AddressAutocompleteErrors,
+  AddressAutocompleteProps,
+} from "./_component";
 
-export type { AddressAutocompleteProps };
+export type { AddressAutocompleteErrors, AddressAutocompleteProps };
 
 export const AddressAutocomplete = dynamic(
   () =>
