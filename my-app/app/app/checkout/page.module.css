@@ -961,24 +961,24 @@
 
 .guestBlock {
   padding: 16px;
-  background: var(--color-surface, #f8f7f4);
+  background: var(--grey-100);
   border-radius: 10px;
-  border: 1px solid var(--color-border, #e8e5e0);
+  border: 1px solid var(--grey-200);
 }
 
 .guestBlockMsg {
   margin: 0;
   font-size: 0.9rem;
-  color: var(--color-text-secondary, #6b6460);
+  color: var(--grey-700);
 }
 
 .guestBlockLink {
-  color: var(--color-accent, #e85d26);
+  color: var(--red);
   text-decoration: underline;
 }
 
 .guestNote {
   font-size: 0.8125rem;
-  color: var(--color-text-secondary, #6b6460);
+  color: var(--grey-700);
   margin: 4px 0 0;
 }

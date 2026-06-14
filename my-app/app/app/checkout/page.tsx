@@ -259,9 +259,6 @@ function CheckoutInner() {
     }
 
     if (isSubscriptionCart) {
-      setGuestError(
-        "Subscription orders require an account. Please sign in or create one.",
-      );
       return false;
     }
 
@@ -580,7 +577,10 @@ function CheckoutInner() {
                           type="text"
                           className={styles.input}
                           value={guestFirstName}
-                          onChange={(e) => setGuestFirstName(e.target.value)}
+                          onChange={(e) => {
+                            setGuestFirstName(e.target.value);
+                            setGuestError("");
+                          }}
                           autoComplete="given-name"
                         />
                         {errors.guestFirstName && (
@@ -598,7 +598,10 @@ function CheckoutInner() {
                           type="text"
                           className={styles.input}
                           value={guestLastName}
-                          onChange={(e) => setGuestLastName(e.target.value)}
+                          onChange={(e) => {
+                            setGuestLastName(e.target.value);
+                            setGuestError("");
+                          }}
                           autoComplete="family-name"
                         />
                         {errors.guestLastName && (
@@ -617,7 +620,10 @@ function CheckoutInner() {
                         type="email"
                         className={styles.input}
                         value={guestEmail}
-                        onChange={(e) => setGuestEmail(e.target.value)}
+                        onChange={(e) => {
+                          setGuestEmail(e.target.value);
+                          setGuestError("");
+                        }}
                         autoComplete="email"
                       />
                       {errors.guestEmail && (
@@ -633,7 +639,10 @@ function CheckoutInner() {
                         type="tel"
                         className={styles.input}
                         value={guestPhone}
-                        onChange={(e) => setGuestPhone(e.target.value)}
+                        onChange={(e) => {
+                          setGuestPhone(e.target.value);
+                          setGuestError("");
+                        }}
                         autoComplete="tel"
                       />
                       {errors.guestPhone && (
