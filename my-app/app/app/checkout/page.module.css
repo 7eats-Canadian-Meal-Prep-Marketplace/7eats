@@ -958,3 +958,27 @@
     font-size: 12px;
   }
 }
+
+.guestBlock {
+  padding: 16px;
+  background: var(--color-surface, #f8f7f4);
+  border-radius: 10px;
+  border: 1px solid var(--color-border, #e8e5e0);
+}
+
+.guestBlockMsg {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--color-text-secondary, #6b6460);
+}
+
+.guestBlockLink {
+  color: var(--color-accent, #e85d26);
+  text-decoration: underline;
+}
+
+.guestNote {
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary, #6b6460);
+  margin: 4px 0 0;
+}
