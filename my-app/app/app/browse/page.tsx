@@ -12,6 +12,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useApp } from "../_app-context";
 import { FulfillmentToggle } from "../_shell";
+import { AddressBar } from "./_address-bar";
 import styles from "./page.module.css";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -392,6 +393,7 @@ export default function BrowsePage() {
 
   return (
     <div className={styles.page}>
+      <AddressBar isLoggedIn={isLoggedIn} />
       {/* Sticky bar: fulfillment toggle + cuisine chips */}
       <div className={styles.filterBar}>
         <div className={styles.filterInner}>
