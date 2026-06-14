@@ -4,6 +4,10 @@ import { Package, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
+import {
+  INTERVAL_LABELS,
+  type SubscriptionInterval,
+} from "@/lib/subscription-schedule";
 import styles from "./page.module.css";
 
 type OrderStatus =
@@ -23,6 +27,7 @@ type ApiOrder = {
   pickupWindow: string | null;
   fulfillmentMode: "pickup" | "delivery" | null;
   isSubscription: boolean;
+  subscriptionInterval: SubscriptionInterval | null;
   cookName: string | null;
   cookInitials: string | null;
 };
@@ -155,7 +160,9 @@ function OrdersContent() {
                       {order.isSubscription && (
                         <span className={styles.subscriptionTag}>
                           <RefreshCw size={10} />
-                          Weekly subscription
+                          {order.subscriptionInterval
+                            ? `${INTERVAL_LABELS[order.subscriptionInterval]} subscription`
+                            : "Subscription"}
                         </span>
                       )}
                     </div>

@@ -314,30 +314,6 @@ describe("POST /api/business/listings/[listingId]/promotions", () => {
     expect(body.error).toBeDefined();
   });
 
-  it("returns 400 for buy_x_get_y missing buyQty", async () => {
-    mockSession(USER_ID);
-    let callCount = 0;
-    vi.mocked(db.select).mockImplementation(() => {
-      callCount++;
-      if (callCount === 1) {
-        const limit = vi.fn().mockResolvedValue([{ id: COOK_ID }]);
-        const where = vi.fn(() => ({ limit }));
-        const from = vi.fn(() => ({ where }));
-        return { from } as never;
-      }
-      const limit = vi.fn().mockResolvedValue([{ id: LISTING_ID }]);
-      const where = vi.fn(() => ({ limit }));
-      const from = vi.fn(() => ({ where }));
-      return { from } as never;
-    });
-    const res = await POST(makePost({ type: "buy_x_get_y", getQty: 1 }), {
-      params,
-    });
-    expect(res.status).toBe(400);
-    const body = await res.json();
-    expect(body.error).toBeDefined();
-  });
-
   it("returns 400 when validUntil is before validFrom", async () => {
     mockSession(USER_ID);
     let callCount = 0;
@@ -417,41 +393,6 @@ describe("POST /api/business/listings/[listingId]/promotions", () => {
     const res = await POST(makePost({ type: "percentage_off", value: 20 }), {
       params,
     });
-    expect(res.status).toBe(201);
-    const body = await res.json();
-    expect(body.success).toBe(true);
-    expect(body.data).toEqual(inserted);
-  });
-
-  it("returns 201 on valid buy_x_get_y body", async () => {
-    mockSession(USER_ID);
-    let callCount = 0;
-    vi.mocked(db.select).mockImplementation(() => {
-      callCount++;
-      if (callCount === 1) {
-        const limit = vi.fn().mockResolvedValue([{ id: COOK_ID }]);
-        const where = vi.fn(() => ({ limit }));
-        const from = vi.fn(() => ({ where }));
-        return { from } as never;
-      }
-      const limit = vi.fn().mockResolvedValue([{ id: LISTING_ID }]);
-      const where = vi.fn(() => ({ limit }));
-      const from = vi.fn(() => ({ where }));
-      return { from } as never;
-    });
-    const inserted = {
-      id: "promo-2",
-      listingId: LISTING_ID,
-      type: "buy_x_get_y",
-      buyQty: 2,
-      getQty: 1,
-    };
-    mockInsert(inserted);
-
-    const res = await POST(
-      makePost({ type: "buy_x_get_y", buyQty: 2, getQty: 1 }),
-      { params },
-    );
     expect(res.status).toBe(201);
     const body = await res.json();
     expect(body.success).toBe(true);

@@ -8,6 +8,7 @@ import {
   listingBundles,
   listingDishes,
   listingPromotions,
+  listingSubscriptionTiers,
   listings,
 } from "@/db/schema";
 
@@ -102,6 +103,26 @@ export async function GET(_req: NextRequest, { params }: RouteContext) {
       )
       .orderBy(asc(listingBundles.quantity));
 
+    // Fetch active subscription tiers
+    const tierRows = row.subscriptionEnabled
+      ? await db
+          .select({
+            id: listingSubscriptionTiers.id,
+            interval: listingSubscriptionTiers.interval,
+            price: listingSubscriptionTiers.price,
+          })
+          .from(listingSubscriptionTiers)
+          .where(
+            and(
+              eq(listingSubscriptionTiers.listingId, listingId),
+              eq(listingSubscriptionTiers.isActive, true),
+            ),
+          )
+          .orderBy(
+            sql`CASE ${listingSubscriptionTiers.interval} WHEN 'weekly' THEN 1 WHEN 'biweekly' THEN 2 WHEN 'monthly' THEN 3 END`,
+          )
+      : [];
+
     const data = {
       id: row.id,
       title: row.title,
@@ -157,6 +178,11 @@ export async function GET(_req: NextRequest, { params }: RouteContext) {
         price: Number.parseFloat(b.price),
         label: b.label ?? null,
       })),
+      tiers: tierRows.map((t) => ({
+        id: t.id,
+        interval: t.interval,
+        price: Number.parseFloat(t.price),
+      })),
     };
 
     return NextResponse.json({ success: true, data });
@@ -175,9 +201,6 @@ function buildPromoBadge(type: string, value: number | null): string {
   }
   if (type === "fixed_off" && value !== null) {
     return `$${value} off`;
-  }
-  if (type === "buy_x_get_y") {
-    return "Buy X Get Y";
   }
   return "Promo";
 }

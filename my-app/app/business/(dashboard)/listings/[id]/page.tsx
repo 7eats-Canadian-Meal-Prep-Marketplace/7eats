@@ -11,6 +11,11 @@ import {
 } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import {
+  INTERVAL_LABELS,
+  SUBSCRIPTION_INTERVALS,
+  type SubscriptionInterval,
+} from "@/lib/subscription-schedule";
 import { BackToListings } from "../_back-link";
 import {
   type AvailableDish,
@@ -31,8 +36,7 @@ type Tab = "overview" | "dishes" | "deals" | "orders" | "reviews";
 
 function formatDeal(deal: ListingDeal): string {
   if (deal.type === "percentage_off") return `${deal.value}% off`;
-  if (deal.type === "fixed_off") return `$${deal.value} off`;
-  return `Buy ${deal.buyQty}, get ${deal.getQty} free`;
+  return `$${deal.value} off`;
 }
 
 function daysLeft(validUntil: string | null): number | null {
@@ -91,8 +95,28 @@ function StatusBadge({ status }: { status: ListingOrder["status"] }) {
 
 // ─── Overview tab ─────────────────────────────────────────────────────────────
 
+type SubscriptionTierInput = { enabled: boolean; price: string };
+type SubscriptionTierInputs = Record<
+  SubscriptionInterval,
+  SubscriptionTierInput
+>;
+
+const EMPTY_TIER_INPUTS: SubscriptionTierInputs = {
+  weekly: { enabled: false, price: "" },
+  biweekly: { enabled: false, price: "" },
+  monthly: { enabled: false, price: "" },
+};
+
 function OverviewTab() {
-  const { stats, listing, bundles, saveOverview, loading } = useListingDetail();
+  const {
+    stats,
+    listing,
+    bundles,
+    subscriptionTiers,
+    saveOverview,
+    saveSubscriptionTiers,
+    loading,
+  } = useListingDetail();
   const [form, setForm] = useState({
     title: "",
     description: "",
@@ -104,6 +128,8 @@ function OverviewTab() {
   });
   const [subscriptionEnabled, setSubscriptionEnabled] = useState(false);
   const [tiers, setTiers] = useState<PricingTier[]>([]);
+  const [tierInputs, setTierInputs] =
+    useState<SubscriptionTierInputs>(EMPTY_TIER_INPUTS);
   const [saved, setSaved] = useState(false);
   const [initialized, setInitialized] = useState(false);
 
@@ -120,9 +146,21 @@ function OverviewTab() {
       });
       setSubscriptionEnabled(listing.subscriptionEnabled ?? false);
       setTiers(bundles.map(bundleToTier));
+      const nextTierInputs: SubscriptionTierInputs = {
+        weekly: { enabled: false, price: "" },
+        biweekly: { enabled: false, price: "" },
+        monthly: { enabled: false, price: "" },
+      };
+      for (const tier of subscriptionTiers) {
+        nextTierInputs[tier.interval] = {
+          enabled: tier.isActive,
+          price: tier.price,
+        };
+      }
+      setTierInputs(nextTierInputs);
       setInitialized(true);
     }
-  }, [loading, listing, bundles, initialized]);
+  }, [loading, listing, bundles, subscriptionTiers, initialized]);
 
   function addTier() {
     const nextQty =
@@ -169,6 +207,16 @@ function OverviewTab() {
     );
   }
 
+  function setSubscriptionTierInput(
+    interval: SubscriptionInterval,
+    update: Partial<SubscriptionTierInput>,
+  ) {
+    setTierInputs((prev) => ({
+      ...prev,
+      [interval]: { ...prev[interval], ...update },
+    }));
+  }
+
   async function handleSave() {
     const ok = await saveOverview({
       ...form,
@@ -177,6 +225,15 @@ function OverviewTab() {
       subscriptionEnabled,
     });
     if (!ok) return;
+    if (subscriptionEnabled) {
+      await saveSubscriptionTiers(
+        SUBSCRIPTION_INTERVALS.map((interval) => ({
+          interval,
+          price: tierInputs[interval].price,
+          enabled: tierInputs[interval].enabled,
+        })),
+      );
+    }
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   }
@@ -361,15 +418,13 @@ function OverviewTab() {
             </button>
           </div>
 
-          {/* Weekly subscription toggle */}
+          {/* Subscription toggle */}
           <div className={styles.subscriptionToggleRow}>
             <div className={styles.subscriptionToggleInfo}>
-              <span className={styles.formLabel}>
-                Accept weekly subscriptions
-              </span>
+              <span className={styles.formLabel}>Accept subscriptions</span>
               <span className={styles.subscriptionToggleDesc}>
-                Let customers subscribe and get this listing automatically every
-                week. They can cancel any time.
+                Let customers subscribe and get this listing automatically on a
+                recurring basis. They can cancel any time.
               </span>
             </div>
             <button
@@ -378,14 +433,54 @@ function OverviewTab() {
               onClick={() => setSubscriptionEnabled((v) => !v)}
               aria-label={
                 subscriptionEnabled
-                  ? "Disable weekly subscriptions"
-                  : "Enable weekly subscriptions"
+                  ? "Disable subscriptions"
+                  : "Enable subscriptions"
               }
               aria-pressed={subscriptionEnabled}
             >
               <span className={styles.toggleKnob} />
             </button>
           </div>
+
+          {subscriptionEnabled && (
+            <div className={styles.formGroup}>
+              <span className={styles.formLabel}>Subscription pricing</span>
+              <div className={styles.subscriptionTiersBlock}>
+                {SUBSCRIPTION_INTERVALS.map((interval) => (
+                  <div key={interval} className={styles.subscriptionTierRow}>
+                    <label className={styles.subscriptionTierCheck}>
+                      <input
+                        type="checkbox"
+                        checked={tierInputs[interval].enabled}
+                        onChange={(e) =>
+                          setSubscriptionTierInput(interval, {
+                            enabled: e.target.checked,
+                          })
+                        }
+                      />
+                      <span>{INTERVAL_LABELS[interval]}</span>
+                    </label>
+                    <div className={styles.priceWrap}>
+                      <span className={styles.pricePre}>$</span>
+                      <input
+                        type="text"
+                        aria-label={`${INTERVAL_LABELS[interval]} price`}
+                        className={`${styles.formInput} ${styles.priceInput}`}
+                        value={tierInputs[interval].price}
+                        placeholder="0.00"
+                        disabled={!tierInputs[interval].enabled}
+                        onChange={(e) =>
+                          setSubscriptionTierInput(interval, {
+                            price: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className={styles.formActions}>
             <button
@@ -610,7 +705,6 @@ function DishesTab() {
 const DEAL_TYPE_LABELS: [UiDealType, string][] = [
   ["percentage_off", "% Off"],
   ["fixed_off", "$ Off"],
-  ["bogo", "Buy X Get Y"],
 ];
 
 function DealsTab() {
@@ -619,8 +713,6 @@ function DealsTab() {
   const [newDeal, setNewDeal] = useState({
     type: "percentage_off" as UiDealType,
     value: "",
-    buyQty: "",
-    getQty: "",
     validFrom: "",
     validUntil: "",
     maxUses: "",
@@ -649,8 +741,6 @@ function DealsTab() {
     setNewDeal({
       type: "percentage_off",
       value: "",
-      buyQty: "",
-      getQty: "",
       validFrom: "",
       validUntil: "",
       maxUses: "",
@@ -688,64 +778,23 @@ function DealsTab() {
             </div>
           </div>
 
-          {newDeal.type !== "bogo" && (
-            <div className={styles.formGroup}>
-              <label htmlFor="f-deal-value" className={styles.formLabel}>
-                {newDeal.type === "percentage_off"
-                  ? "Discount %"
-                  : "Discount $"}
-              </label>
-              <input
-                id="f-deal-value"
-                type="number"
-                min={1}
-                max={newDeal.type === "percentage_off" ? 100 : undefined}
-                className={styles.formInput}
-                value={newDeal.value}
-                onChange={(e) =>
-                  setNewDeal((f) => ({ ...f, value: e.target.value }))
-                }
-                required
-              />
-            </div>
-          )}
-
-          {newDeal.type === "bogo" && (
-            <div className={styles.formRow}>
-              <div className={styles.formGroup}>
-                <label htmlFor="f-deal-buy-qty" className={styles.formLabel}>
-                  Buy qty
-                </label>
-                <input
-                  id="f-deal-buy-qty"
-                  type="number"
-                  min={1}
-                  className={styles.formInput}
-                  value={newDeal.buyQty}
-                  onChange={(e) =>
-                    setNewDeal((f) => ({ ...f, buyQty: e.target.value }))
-                  }
-                  required
-                />
-              </div>
-              <div className={styles.formGroup}>
-                <label htmlFor="f-deal-get-qty" className={styles.formLabel}>
-                  Get qty
-                </label>
-                <input
-                  id="f-deal-get-qty"
-                  type="number"
-                  min={1}
-                  className={styles.formInput}
-                  value={newDeal.getQty}
-                  onChange={(e) =>
-                    setNewDeal((f) => ({ ...f, getQty: e.target.value }))
-                  }
-                  required
-                />
-              </div>
-            </div>
-          )}
+          <div className={styles.formGroup}>
+            <label htmlFor="f-deal-value" className={styles.formLabel}>
+              {newDeal.type === "percentage_off" ? "Discount %" : "Discount $"}
+            </label>
+            <input
+              id="f-deal-value"
+              type="number"
+              min={1}
+              max={newDeal.type === "percentage_off" ? 100 : undefined}
+              className={styles.formInput}
+              value={newDeal.value}
+              onChange={(e) =>
+                setNewDeal((f) => ({ ...f, value: e.target.value }))
+              }
+              required
+            />
+          </div>
 
           <div className={styles.formRow}>
             <div className={styles.formGroup}>

@@ -101,15 +101,19 @@ export async function POST(req: NextRequest) {
   const { listingId, tierId, paymentMethodId } = parsed.data;
 
   try {
-    // Verify listing is active + subscription type
+    // Verify listing is active + supports subscriptions
     const [listing] = await db
-      .select({ id: listings.id, cookId: listings.cookId, type: listings.type })
+      .select({
+        id: listings.id,
+        cookId: listings.cookId,
+        subscriptionEnabled: listings.subscriptionEnabled,
+      })
       .from(listings)
       .where(and(eq(listings.id, listingId), eq(listings.status, "active")))
       .limit(1);
 
     if (!listing) return notFound("Listing");
-    if (listing.type !== "subscription") {
+    if (!listing.subscriptionEnabled) {
       return NextResponse.json(
         { error: "This listing does not support subscriptions." },
         { status: 400 },

@@ -8,9 +8,10 @@ import {
   useMemo,
   useState,
 } from "react";
+import type { SubscriptionInterval } from "@/lib/subscription-schedule";
 
 export type ListingStatus = "active" | "draft" | "archived";
-export type UiDealType = "percentage_off" | "fixed_off" | "bogo";
+export type UiDealType = "percentage_off" | "fixed_off";
 
 export type PricingTier = {
   id: string;
@@ -36,8 +37,6 @@ export type ListingDeal = {
   id: string;
   type: UiDealType;
   value: number;
-  buyQty: number | null;
-  getQty: number | null;
   isActive: boolean;
   validFrom: string | null;
   validUntil: string | null;
@@ -68,19 +67,40 @@ export type ListingStats = {
   avgOrderValue: number;
 };
 
+export type SubscriptionTier = {
+  id: string;
+  interval: SubscriptionInterval;
+  price: string;
+  isActive: boolean;
+};
+
+type ApiTier = {
+  id: string;
+  interval: SubscriptionInterval;
+  price: string;
+  isActive: boolean;
+};
+
 type ApiBundle = { id: string; quantity: number; price: string };
 type ApiDeal = {
   id: string;
   type: string;
   value: string | null;
-  buyQty: number | null;
-  getQty: number | null;
   validFrom: string | Date | null;
   validUntil: string | Date | null;
   maxUses: number | null;
   usesCount: number;
   isActive: boolean;
 };
+
+function mapSubscriptionTier(t: ApiTier): SubscriptionTier {
+  return {
+    id: t.id,
+    interval: t.interval,
+    price: t.price,
+    isActive: t.isActive,
+  };
+}
 
 function bundleToTier(b: ApiBundle): PricingTier {
   const qty = b.quantity;
@@ -92,14 +112,6 @@ function bundleToTier(b: ApiBundle): PricingTier {
   };
 }
 
-function apiDealType(type: string): UiDealType {
-  return type === "buy_x_get_y" ? "bogo" : (type as UiDealType);
-}
-
-function uiDealType(type: UiDealType): string {
-  return type === "bogo" ? "buy_x_get_y" : type;
-}
-
 function toIsoDate(date: string | Date | null): string | null {
   if (!date) return null;
   return typeof date === "string" ? date : date.toISOString();
@@ -108,10 +120,8 @@ function toIsoDate(date: string | Date | null): string | null {
 function mapDeal(d: ApiDeal): ListingDeal {
   return {
     id: d.id,
-    type: apiDealType(d.type),
+    type: d.type as UiDealType,
     value: d.value != null ? Number(d.value) : 0,
-    buyQty: d.buyQty,
-    getQty: d.getQty,
     isActive: d.isActive,
     validFrom: toIsoDate(d.validFrom),
     validUntil: toIsoDate(d.validUntil),
@@ -138,6 +148,7 @@ type ListingDetailContextValue = {
   stats: ListingStats;
   listing: ListingMeta | null;
   bundles: ApiBundle[];
+  subscriptionTiers: SubscriptionTier[];
   hasActiveOrders: boolean;
   dishes: ListingDish[];
   setDishes: React.Dispatch<React.SetStateAction<ListingDish[]>>;
@@ -157,14 +168,19 @@ type ListingDetailContextValue = {
     tiers: PricingTier[];
     subscriptionEnabled: boolean;
   }) => Promise<boolean>;
+  saveSubscriptionTiers: (
+    tiers: {
+      interval: SubscriptionInterval;
+      price: string;
+      enabled: boolean;
+    }[],
+  ) => Promise<void>;
   addDish: (dish: AvailableDish) => Promise<boolean>;
   removeDish: (dish: ListingDish) => Promise<boolean>;
   persistDishOrder: (ordered: ListingDish[]) => Promise<void>;
   createDeal: (deal: {
     type: UiDealType;
     value: string;
-    buyQty: string;
-    getQty: string;
     validFrom: string;
     validUntil: string;
     maxUses: string;
@@ -208,6 +224,9 @@ export function ListingDetailProvider({
   const [orders, setOrders] = useState<ListingOrder[]>([]);
   const [reviews, setReviews] = useState<ListingReview[]>([]);
   const [bundles, setBundles] = useState<ApiBundle[]>([]);
+  const [subscriptionTiers, setSubscriptionTiers] = useState<
+    SubscriptionTier[]
+  >([]);
   const [listingMeta, setListingMeta] = useState<ListingMeta | null>(null);
 
   const load = useCallback(async () => {
@@ -258,6 +277,9 @@ export function ListingDetailProvider({
         status: listing.status as ListingStatus,
         subscriptionEnabled: listing.subscriptionEnabled ?? false,
       });
+      setSubscriptionTiers(
+        ((listing.tiers ?? []) as ApiTier[]).map(mapSubscriptionTier),
+      );
       setDishes(
         (listing.dishes ?? []).map(
           (d: {
@@ -454,6 +476,63 @@ export function ListingDetailProvider({
     [bundles, listingId, load],
   );
 
+  const saveSubscriptionTiers = useCallback(
+    async (
+      tierInputs: {
+        interval: SubscriptionInterval;
+        price: string;
+        enabled: boolean;
+      }[],
+    ) => {
+      for (const input of tierInputs) {
+        const existing = subscriptionTiers.find(
+          (t) => t.interval === input.interval,
+        );
+        const priceNum = Number(input.price);
+
+        if (input.enabled) {
+          if (!input.price || Number.isNaN(priceNum) || priceNum <= 0) {
+            continue;
+          }
+
+          if (!existing) {
+            await fetch(`/api/business/listings/${listingId}/tiers`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                interval: input.interval,
+                price: priceNum,
+              }),
+            });
+            continue;
+          }
+
+          const updates: { isActive?: boolean; price?: number } = {};
+          if (!existing.isActive) updates.isActive = true;
+          if (Number(existing.price) !== priceNum) updates.price = priceNum;
+          if (Object.keys(updates).length > 0) {
+            await fetch(
+              `/api/business/listings/${listingId}/tiers/${existing.id}`,
+              {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(updates),
+              },
+            );
+          }
+        } else if (existing?.isActive) {
+          await fetch(
+            `/api/business/listings/${listingId}/tiers/${existing.id}`,
+            { method: "DELETE" },
+          );
+        }
+      }
+
+      await load();
+    },
+    [subscriptionTiers, listingId, load],
+  );
+
   const addDish = useCallback(
     async (dish: AvailableDish) => {
       const res = await fetch(`/api/business/listings/${listingId}/dishes`, {
@@ -505,23 +584,16 @@ export function ListingDetailProvider({
     async (deal: {
       type: UiDealType;
       value: string;
-      buyQty: string;
-      getQty: string;
       validFrom: string;
       validUntil: string;
       maxUses: string;
     }) => {
       const body: Record<string, unknown> = {
-        type: uiDealType(deal.type),
+        type: deal.type,
+        value: Number(deal.value),
         minimumQty: 1,
         isActive: true,
       };
-      if (deal.type === "bogo") {
-        body.buyQty = Number(deal.buyQty);
-        body.getQty = Number(deal.getQty);
-      } else {
-        body.value = Number(deal.value);
-      }
       if (deal.validFrom) {
         body.validFrom = `${deal.validFrom}T12:00:00.000Z`;
       }
@@ -570,6 +642,7 @@ export function ListingDetailProvider({
       stats,
       listing: listingMeta,
       bundles,
+      subscriptionTiers,
       hasActiveOrders,
       dishes,
       setDishes,
@@ -579,6 +652,7 @@ export function ListingDetailProvider({
       orders,
       reviews,
       saveOverview,
+      saveSubscriptionTiers,
       addDish,
       removeDish,
       persistDishOrder,
@@ -593,6 +667,7 @@ export function ListingDetailProvider({
       stats,
       listingMeta,
       bundles,
+      subscriptionTiers,
       hasActiveOrders,
       dishes,
       availableDishes,
@@ -600,6 +675,7 @@ export function ListingDetailProvider({
       orders,
       reviews,
       saveOverview,
+      saveSubscriptionTiers,
       addDish,
       removeDish,
       persistDishOrder,

@@ -13,10 +13,8 @@ type Params = { params: Promise<{ listingId: string; promotionId: string }> };
 
 const updatePromotionSchema = z
   .object({
-    type: z.enum(["percentage_off", "fixed_off", "buy_x_get_y"]),
+    type: z.enum(["percentage_off", "fixed_off"]),
     value: z.number().positive().nullable(),
-    buyQty: z.number().int().min(1).nullable(),
-    getQty: z.number().int().min(1).nullable(),
     minimumQty: z.number().int().min(1),
     maxUses: z.number().int().min(1).nullable(),
     isActive: z.boolean(),

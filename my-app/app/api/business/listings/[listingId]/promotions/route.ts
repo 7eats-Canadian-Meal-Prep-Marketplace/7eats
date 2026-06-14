@@ -30,12 +30,6 @@ const createPromotionSchema = z.discriminatedUnion("type", [
     value: z.number().positive(),
     ...baseFields,
   }),
-  z.object({
-    type: z.literal("buy_x_get_y"),
-    buyQty: z.number().int().min(1),
-    getQty: z.number().int().min(1),
-    ...baseFields,
-  }),
 ]);
 
 export async function GET(req: NextRequest, { params }: Params) {
@@ -114,11 +108,9 @@ export async function POST(req: NextRequest, { params }: Params) {
       .values({
         listingId,
         type: parsed.data.type,
+        value: String(parsed.data.value),
         minimumQty: parsed.data.minimumQty,
         isActive: parsed.data.isActive,
-        ...("value" in parsed.data ? { value: String(parsed.data.value) } : {}),
-        ...("buyQty" in parsed.data ? { buyQty: parsed.data.buyQty } : {}),
-        ...("getQty" in parsed.data ? { getQty: parsed.data.getQty } : {}),
         ...(parsed.data.maxUses !== undefined
           ? { maxUses: parsed.data.maxUses }
           : {}),

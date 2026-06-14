@@ -5,10 +5,12 @@ import { db, dbPool } from "@/db";
 import {
   authUser,
   authUserTable,
+  clientSubscriptions,
   cookProfiles,
   dishes,
   listingDishes,
   listingPromotions,
+  listingSubscriptionTiers,
   listings,
   orderDishes,
   orderPayments,
@@ -128,11 +130,20 @@ export async function GET(req: NextRequest) {
         listingId: orders.listingId,
         fulfillmentMode: orders.fulfillmentMode,
         subscriptionId: orders.subscriptionId,
+        subscriptionInterval: listingSubscriptionTiers.interval,
       })
       .from(orders)
       .leftJoin(listings, eq(orders.listingId, listings.id))
       .leftJoin(cookProfiles, eq(orders.cookId, cookProfiles.id))
       .leftJoin(authUser, eq(cookProfiles.userId, authUser.id))
+      .leftJoin(
+        clientSubscriptions,
+        eq(orders.subscriptionId, clientSubscriptions.id),
+      )
+      .leftJoin(
+        listingSubscriptionTiers,
+        eq(clientSubscriptions.tierId, listingSubscriptionTiers.id),
+      )
       .where(whereClause)
       .orderBy(desc(orders.createdAt))
       .limit(limit)
@@ -194,6 +205,7 @@ export async function GET(req: NextRequest) {
         listingId: r.listingId,
         fulfillmentMode: r.fulfillmentMode,
         isSubscription: r.subscriptionId !== null,
+        subscriptionInterval: r.subscriptionInterval ?? null,
         pickupDate: pickupAtIso ? formatPickupDate(pickupAtIso) : null,
         pickupWindow: pickupAtIso ? formatPickupWindow(pickupAtIso) : null,
       };

@@ -9,6 +9,7 @@ import {
   MessageSquare,
   Package,
   Plus,
+  RefreshCw,
   Search,
   Settings,
   ShoppingCart,
@@ -87,19 +88,16 @@ function AddressModal({
   onConfirm: (a: NormalizedAddress) => void;
   onClose: () => void;
 }) {
-  const [resolved, setResolved] = useState<NormalizedAddress | null>(current);
+  const [draft, setDraft] = useState<Partial<NormalizedAddress>>(current ?? {});
 
-  const initialValue = current
-    ? [
-        current.street,
-        current.unit,
-        current.city,
-        current.province,
-        current.postal,
-      ]
-        .filter(Boolean)
-        .join(", ")
-    : "";
+  const isComplete =
+    !!draft.street &&
+    !!draft.city &&
+    !!draft.province &&
+    !!draft.postal &&
+    draft.lat != null &&
+    draft.lng != null &&
+    !!draft.placeId;
 
   return (
     // biome-ignore lint/a11y/useKeyWithClickEvents: modal backdrop dismiss
@@ -124,9 +122,9 @@ function AddressModal({
         </div>
         <div className={styles.addrModalBody}>
           <AddressAutocomplete
-            onResolve={setResolved}
-            initialValue={initialValue}
-            placeholder="Enter your address…"
+            value={draft}
+            onChange={setDraft}
+            idPrefix="shell-address"
             inputClassName={styles.addrInput}
           />
         </div>
@@ -134,10 +132,10 @@ function AddressModal({
           <button
             type="button"
             className={styles.addrConfirmBtn}
-            disabled={!resolved}
+            disabled={!isComplete}
             onClick={() => {
-              if (resolved) {
-                onConfirm(resolved);
+              if (isComplete) {
+                onConfirm(draft as NormalizedAddress);
                 onClose();
               }
             }}
@@ -154,6 +152,7 @@ const MENU_LINKS = [
   { href: "/app/search", label: "Search", Icon: Search },
   { href: "/app/saved", label: "Favourites", Icon: Heart },
   { href: "/app/orders", label: "Orders", Icon: Package },
+  { href: "/app/subscriptions", label: "Subscriptions", Icon: RefreshCw },
   { href: "/app/inbox", label: "Inbox", Icon: MessageSquare },
   { href: "/app/settings", label: "Account", Icon: Settings },
 ];

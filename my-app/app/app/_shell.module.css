@@ -377,6 +377,8 @@
 
 .addrModalBody {
   padding: 20px;
+  max-height: 60vh;
+  overflow-y: auto;
 }
 
 .addrInput {
