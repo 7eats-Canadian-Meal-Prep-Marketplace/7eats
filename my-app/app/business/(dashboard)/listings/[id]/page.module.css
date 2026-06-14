@@ -175,6 +175,41 @@
   transform: translateX(18px);
 }
 
+/* ─── Subscription tiers ───────────────────────────────────────────────────── */
+.subscriptionTiersBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: var(--grey-50, #fafafa);
+  border: 1px solid var(--grey-200);
+  border-radius: 8px;
+}
+
+.subscriptionTierRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.subscriptionTierCheck {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #444444;
+  cursor: pointer;
+}
+
+.subscriptionTierCheck input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--red);
+  cursor: pointer;
+}
+
 /* ─── Shared buttons ───────────────────────────────────────────────────────── */
 .saveBtn {
   padding: 10px 22px;

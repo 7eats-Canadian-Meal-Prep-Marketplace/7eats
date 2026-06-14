@@ -17,7 +17,13 @@ import {
 import Link from "next/link";
 import { notFound, useRouter } from "next/navigation";
 import { use, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  INTERVAL_LABELS,
+  INTERVAL_SHORT_LABELS,
+  type SubscriptionInterval,
+} from "@/lib/subscription-schedule";
 import { useCart } from "../../_cart-context";
+import { getChargeShort } from "../../_subscription-utils";
 import { DealCallout } from "./_DealCallout";
 import type { Dish } from "./_DishModal";
 import DishModal from "./_DishModal";
@@ -47,6 +53,12 @@ type ApiBundle = {
   label: string | null;
 };
 
+type ApiTier = {
+  id: string;
+  interval: SubscriptionInterval;
+  price: number;
+};
+
 type ApiCook = {
   id: string;
   name: string;
@@ -73,6 +85,7 @@ type ApiListing = {
   dishes: ApiDish[];
   promotion: ApiPromotion | null;
   bundles: ApiBundle[];
+  tiers: ApiTier[];
 };
 
 type ApiReview = {
@@ -111,6 +124,13 @@ function nameInitials(name: string): string {
   const parts = name.trim().split(/\s+/);
   if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
   return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+}
+
+/** Join items into a human-readable list: "a", "a or b", "a, b, or c" */
+function joinWithOr(items: string[]): string {
+  if (items.length <= 1) return items.join("");
+  if (items.length === 2) return `${items[0]} or ${items[1]}`;
+  return `${items.slice(0, -1).join(", ")}, or ${items[items.length - 1]}`;
 }
 
 // ── Page ─────────────────────────────────────────────────────────────────────
@@ -171,7 +191,9 @@ export default function ListingPage({
   }, [id]);
 
   // ── Subscribe mode ─────────────────────────────────────────────────────────
-  const [subscribeMode, setSubscribeMode] = useState(false);
+  // `selectedTierId === null` means "order once"; otherwise the chosen
+  // subscription tier's id.
+  const [selectedTierId, setSelectedTierId] = useState<string | null>(null);
   const [localFulfillment, setLocalFulfillment] = useState<
     "pickup" | "delivery"
   >("pickup");
@@ -186,6 +208,7 @@ export default function ListingPage({
     setQuantities({});
     setSelectedDish(null);
     setIsModifying(false);
+    setSelectedTierId(null);
   }, [id]);
 
   const isInCart = useMemo(
@@ -204,13 +227,13 @@ export default function ListingPage({
       const next: Record<string, number> = {};
       for (const line of fromCart) next[line.dishId] = line.quantity;
       setQuantities(next);
-      setSubscribeMode(fromCart[0].orderType === "subscription");
+      setSelectedTierId(fromCart[0].tierId ?? null);
       wasInCartRef.current = true;
       return;
     }
     if (wasInCartRef.current) {
       setQuantities({});
-      setSubscribeMode(false);
+      setSelectedTierId(null);
       setLocalFulfillment("pickup");
       wasInCartRef.current = false;
       setIsModifying(false);
@@ -223,10 +246,20 @@ export default function ListingPage({
     const next: Record<string, number> = {};
     for (const line of fromCart) next[line.dishId] = line.quantity;
     if (fromCart.length > 0) {
-      setSubscribeMode(fromCart[0].orderType === "subscription");
+      setSelectedTierId(fromCart[0].tierId ?? null);
     }
     setQuantities(next);
   }, [listing, items]);
+
+  const selectedTier = useMemo(
+    () => listing?.tiers.find((t) => t.id === selectedTierId) ?? null,
+    [listing, selectedTierId],
+  );
+
+  const unitPrice = useCallback(
+    (dish: ApiDish) => selectedTier?.price ?? dish.price,
+    [selectedTier],
+  );
 
   const selectionCount = useMemo(
     () => Object.values(quantities).reduce((sum, q) => sum + q, 0),
@@ -263,10 +296,10 @@ export default function ListingPage({
   const selectionTotal = useMemo(() => {
     if (!listing) return 0;
     return listing.dishes.reduce(
-      (sum, dish) => sum + dish.price * (quantities[dish.id] ?? 0),
+      (sum, dish) => sum + unitPrice(dish) * (quantities[dish.id] ?? 0),
       0,
     );
-  }, [listing, quantities]);
+  }, [listing, quantities, unitPrice]);
 
   const hasSelection = selectionCount > 0;
   const meetsMinUnits =
@@ -293,15 +326,17 @@ export default function ListingPage({
         dishEmoji: "🍽️",
         listingId: listing.id,
         listingTitle: listing.title,
-        orderType: (subscribeMode ? "subscription" : "one_time") as
+        orderType: (selectedTier ? "subscription" : "one_time") as
           | "one_time"
           | "subscription",
+        tierId: selectedTier?.id,
+        subscriptionInterval: selectedTier?.interval,
         fulfillmentMode: localFulfillment,
         cookId,
         cookName,
         cookInitials,
         cookGradient: "linear-gradient(135deg, #6b6b6b 0%, #3a3a3a 100%)",
-        price: dish.price,
+        price: unitPrice(dish),
         quantity: getQty(dish.id),
       }));
   };
@@ -432,16 +467,21 @@ export default function ListingPage({
           <p className={styles.desc}>{listing.description}</p>
 
           {/* Subscription availability banner */}
-          {listing.subscriptionEnabled && (
+          {listing.subscriptionEnabled && listing.tiers.length > 0 && (
             <div className={styles.subscriptionInfo}>
               <RefreshCw size={14} className={styles.subscriptionIcon} />
               <div>
                 <span className={styles.subscriptionTitle}>
-                  Weekly subscriptions available
+                  Subscriptions available
                 </span>
                 <span className={styles.subscriptionDetail}>
-                  Subscribe and get this automatically every week. Cancel any
-                  time.
+                  Subscribe{" "}
+                  {joinWithOr(
+                    listing.tiers.map((t) =>
+                      INTERVAL_LABELS[t.interval].toLowerCase(),
+                    ),
+                  )}{" "}
+                  and get this automatically. Cancel any time.
                 </span>
               </div>
             </div>
@@ -723,7 +763,7 @@ export default function ListingPage({
                         {getQty(dish.id)}× {dish.name}
                       </span>
                       <span className={styles.summaryPrice}>
-                        ${dish.price * getQty(dish.id)}
+                        ${unitPrice(dish) * getQty(dish.id)}
                       </span>
                     </div>
                   ))}
@@ -735,30 +775,35 @@ export default function ListingPage({
             )}
 
             <div className={styles.ctaWrap}>
-              {listing.subscriptionEnabled && (!isInCart || isModifying) && (
-                <div className={styles.orderModeToggle}>
-                  <button
-                    type="button"
-                    className={`${styles.orderModeBtn} ${!subscribeMode ? styles.orderModeBtnActive : ""}`}
-                    onClick={() => setSubscribeMode(false)}
-                  >
-                    Order once
-                  </button>
-                  <button
-                    type="button"
-                    className={`${styles.orderModeBtn} ${subscribeMode ? styles.orderModeBtnActive : ""}`}
-                    onClick={() => setSubscribeMode(true)}
-                  >
-                    <RefreshCw size={11} />
-                    Subscribe weekly
-                  </button>
-                </div>
-              )}
+              {listing.subscriptionEnabled &&
+                listing.tiers.length > 0 &&
+                (!isInCart || isModifying) && (
+                  <div className={styles.orderModeToggle}>
+                    <button
+                      type="button"
+                      className={`${styles.orderModeBtn} ${!selectedTier ? styles.orderModeBtnActive : ""}`}
+                      onClick={() => setSelectedTierId(null)}
+                    >
+                      Order once
+                    </button>
+                    {listing.tiers.map((tier) => (
+                      <button
+                        key={tier.id}
+                        type="button"
+                        className={`${styles.orderModeBtn} ${selectedTierId === tier.id ? styles.orderModeBtnActive : ""}`}
+                        onClick={() => setSelectedTierId(tier.id)}
+                      >
+                        <RefreshCw size={11} />
+                        {INTERVAL_LABELS[tier.interval]}
+                      </button>
+                    ))}
+                  </div>
+                )}
 
-              {subscribeMode && (
+              {selectedTier && (
                 <p className={styles.weeklyNote}>
                   <RefreshCw size={11} />
-                  Charged every week · cancel any time
+                  {getChargeShort(selectedTier.interval)}
                 </p>
               )}
 
@@ -795,8 +840,8 @@ export default function ListingPage({
                         ? `Add ${unitsNeeded} more portion${unitsNeeded !== 1 ? "s" : ""}`
                         : isInCart && isModifying
                           ? `Update cart · $${selectionTotal}.00`
-                          : subscribeMode
-                            ? `Subscribe weekly · $${selectionTotal}.00/wk`
+                          : selectedTier
+                            ? `Subscribe ${INTERVAL_LABELS[selectedTier.interval].toLowerCase()} · $${selectionTotal}.00/${INTERVAL_SHORT_LABELS[selectedTier.interval]}`
                             : `Add to cart · $${selectionTotal}.00`}
                   </button>
                   {isInCart && isModifying && (

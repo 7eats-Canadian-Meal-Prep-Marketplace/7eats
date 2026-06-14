@@ -7,11 +7,13 @@ vi.mock("@/db", () => ({
 
 vi.mock("@/db/schema", () => ({
   authUser: {},
+  clientSubscriptions: {},
   cookProfiles: {},
   dishes: {},
   listingDishes: {},
   listingPromotions: {},
   listings: {},
+  listingSubscriptionTiers: {},
   orderDishes: {},
   orderPayments: {},
   orders: {},
@@ -84,15 +86,23 @@ function buildCountChain(total: number) {
   return { from: fromFn } as never;
 }
 
-// Chain for data query: db.select({...}).from(...).leftJoin(...).leftJoin(...).leftJoin(...).where(...).orderBy(...).limit(...).offset(...) => resolves
-// The route now has 3 leftJoin calls: listings, cookProfiles, authUser
+// Chain for data query: db.select({...}).from(...).leftJoin(...).leftJoin(...).leftJoin(...).leftJoin(...).leftJoin(...).where(...).orderBy(...).limit(...).offset(...) => resolves
+// The route now has 5 leftJoin calls: listings, cookProfiles, authUser, clientSubscriptions, listingSubscriptionTiers
 function buildDataChain(finalValue: unknown) {
   const offsetFn = vi.fn().mockResolvedValue(finalValue);
   const limitFn = vi.fn(() => ({ offset: offsetFn }));
   const orderByFn = vi.fn(() => ({ limit: limitFn }));
   const whereFn = vi.fn(() => ({ orderBy: orderByFn }));
   // Each leftJoin returns an object that has both leftJoin (for chaining) and where
-  const thirdLeftJoinFn = vi.fn(() => ({ where: whereFn }));
+  const fifthLeftJoinFn = vi.fn(() => ({ where: whereFn }));
+  const fourthLeftJoinFn = vi.fn(() => ({
+    leftJoin: fifthLeftJoinFn,
+    where: whereFn,
+  }));
+  const thirdLeftJoinFn = vi.fn(() => ({
+    leftJoin: fourthLeftJoinFn,
+    where: whereFn,
+  }));
   const secondLeftJoinFn = vi.fn(() => ({
     leftJoin: thirdLeftJoinFn,
     where: whereFn,

@@ -1,5 +1,14 @@
-/** Weekly charge disclaimer shown on listing, cart, and checkout pages. */
-export const WEEKLY_CHARGE_DISCLAIMER =
-  "You'll be charged automatically every week until you unsubscribe. Cancel any time from Account → Subscriptions.";
+import {
+  INTERVAL_RECURRENCE_PHRASES,
+  type SubscriptionInterval,
+} from "@/lib/subscription-schedule";
 
-export const WEEKLY_CHARGE_SHORT = "Charged weekly · cancel any time";
+/** Charge disclaimer shown on listing, cart, and checkout pages. */
+export function getChargeDisclaimer(interval: SubscriptionInterval): string {
+  return `You'll be charged automatically ${INTERVAL_RECURRENCE_PHRASES[interval]} until you unsubscribe. Cancel any time from Account → Subscriptions.`;
+}
+
+/** Short inline charge note shown near order controls. */
+export function getChargeShort(interval: SubscriptionInterval): string {
+  return `Charged ${INTERVAL_RECURRENCE_PHRASES[interval]} · cancel any time`;
+}

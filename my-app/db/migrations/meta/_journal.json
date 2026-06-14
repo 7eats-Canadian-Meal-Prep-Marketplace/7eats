@@ -78,6 +78,13 @@
       "when": 1780787040000,
       "tag": "0010_lock_down_auth_user_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1781409600000,
+      "tag": "0011_remove_bogo_promotion",
+      "breakpoints": true
     }
   ]
 }

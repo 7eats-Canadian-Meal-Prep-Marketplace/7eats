@@ -56,7 +56,6 @@ export const listingType = pgEnum("listing_type", ["one_time", "subscription"]);
 export const promotionType = pgEnum("promotion_type", [
   "percentage_off",
   "fixed_off",
-  "buy_x_get_y",
 ]);
 export const paymentStatus = pgEnum("payment_status", [
   "pending",

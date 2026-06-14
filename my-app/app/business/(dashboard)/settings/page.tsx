@@ -4,7 +4,6 @@ import { ArrowLeft, ExternalLink, ImagePlus } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { AddressAutocomplete } from "@/components/AddressAutocomplete";
-import type { NormalizedAddress } from "@/lib/types/address";
 import styles from "./page.module.css";
 
 type SectionId = "kitchen" | "account" | "billing" | "notifications" | "danger";
@@ -191,32 +190,33 @@ function KitchenSection() {
         </div>
 
         <div className={styles.formGroup}>
-          <label htmlFor="pickupAddressInput" className={styles.formLabel}>
-            Pickup address
-          </label>
+          <span className={styles.formLabel}>Pickup address</span>
           <AddressAutocomplete
-            name="pickupAddress"
-            id="pickupAddressInput"
-            placeholder="Street address"
-            initialValue={
-              form.pickupStreet
-                ? `${form.pickupStreet}${form.pickupUnit ? `, ${form.pickupUnit}` : ""}, ${form.pickupCity}, ${form.pickupProvince} ${form.pickupPostal}`
-                : ""
-            }
-            inputClassName={styles.formInput}
-            onResolve={(addr: NormalizedAddress) => {
+            value={{
+              street: form.pickupStreet,
+              unit: form.pickupUnit || undefined,
+              city: form.pickupCity,
+              province: form.pickupProvince,
+              postal: form.pickupPostal,
+              lat: form.pickupLat ?? undefined,
+              lng: form.pickupLng ?? undefined,
+              placeId: form.pickupPlaceId ?? undefined,
+            }}
+            onChange={(addr) =>
               setForm((f) => ({
                 ...f,
-                pickupStreet: addr.street,
+                pickupStreet: addr.street ?? "",
                 pickupUnit: addr.unit ?? "",
-                pickupCity: addr.city,
-                pickupProvince: addr.province,
-                pickupPostal: addr.postal,
-                pickupLat: addr.lat,
-                pickupLng: addr.lng,
-                pickupPlaceId: addr.placeId,
-              }));
-            }}
+                pickupCity: addr.city ?? "",
+                pickupProvince: addr.province ?? "",
+                pickupPostal: addr.postal ?? "",
+                pickupLat: addr.lat ?? null,
+                pickupLng: addr.lng ?? null,
+                pickupPlaceId: addr.placeId ?? null,
+              }))
+            }
+            idPrefix="settings-pickup"
+            inputClassName={styles.formInput}
           />
         </div>
 

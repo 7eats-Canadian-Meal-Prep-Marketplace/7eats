@@ -1,0 +1,279 @@
+/* ─── Canvas ─────────────────────────────────────────────────────────────────── */
+.page {
+  background: #fafafa;
+  min-height: 100%;
+}
+
+.inner {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 44px 32px 96px;
+}
+
+/* ─── Heading ────────────────────────────────────────────────────────────────── */
+.heading {
+  font-size: 30px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.035em;
+  margin: 0 0 40px;
+}
+
+/* ─── Loading / error ────────────────────────────────────────────────────────── */
+.loading {
+  font-size: 14px;
+  color: var(--grey-500);
+}
+
+.error {
+  background: var(--white);
+  border-left: 3px solid var(--red);
+  padding: 14px 20px;
+  margin-bottom: 24px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--red);
+  line-height: 1.5;
+  border-radius: 0 8px 8px 0;
+}
+
+/* ─── List ───────────────────────────────────────────────────────────────────── */
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ─── Subscription card ──────────────────────────────────────────────────────── */
+.card {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 20px;
+  background: var(--white);
+  border-radius: 12px;
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.02),
+    0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.cardMain {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cookName {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.listingTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: #111111;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  text-decoration: none;
+}
+
+.listingTitle:hover {
+  color: var(--red);
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+.intervalTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--red);
+}
+
+.price {
+  font-size: 13px;
+  color: #4b5563;
+}
+
+.nextBilling {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--grey-500);
+  margin: 4px 0 0;
+}
+
+/* ─── Right column ───────────────────────────────────────────────────────────── */
+.cardRight {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+/* ─── Status badges ──────────────────────────────────────────────────────────── */
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+  border: 1.5px solid transparent;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+}
+
+.statusActive {
+  background: #ecfdf5;
+  color: #065f46;
+}
+
+.statusPending {
+  background: transparent;
+  color: #92400e;
+  border: 1.5px solid #d97706;
+}
+
+.statusPastDue {
+  background: transparent;
+  color: var(--red);
+  border: 1.5px solid var(--red);
+}
+
+.statusCancelled {
+  background: transparent;
+  color: var(--grey-500);
+  border: 1.5px solid var(--grey-300);
+}
+
+/* ─── Cancel button ──────────────────────────────────────────────────────────── */
+.cancelBtn {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 14px;
+  border: 1px solid #e4e4e7;
+  border-radius: 8px;
+  background: var(--white);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #3f3f46;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
+}
+
+.cancelBtn:hover:not(:disabled) {
+  background: var(--red);
+  border-color: var(--red);
+  color: var(--white);
+}
+
+.cancelBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ─── Empty state ────────────────────────────────────────────────────────────── */
+.empty {
+  text-align: center;
+  padding: 80px 0 48px;
+}
+
+.emptyIcon {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--white);
+  border: 1px solid var(--grey-200);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--grey-400, #c0c0c0);
+  margin: 0 auto 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.emptyTitle {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.025em;
+  margin: 0 0 8px;
+}
+
+.emptyDesc {
+  font-size: 15px;
+  color: var(--grey-500);
+  line-height: 1.6;
+  max-width: 30ch;
+  margin: 0 auto 28px;
+}
+
+.browseBtn {
+  display: inline-flex;
+  align-items: center;
+  padding: 12px 28px;
+  background: var(--red);
+  color: var(--white);
+  font-size: 14px;
+  font-weight: 700;
+  border-radius: var(--radius-pill);
+  text-decoration: none;
+  transition:
+    background 0.15s,
+    box-shadow 0.15s;
+}
+
+.browseBtn:hover {
+  background: var(--red-deep);
+  box-shadow: 0 6px 20px rgba(214, 64, 69, 0.3);
+}
+
+/* ─── Responsive ─────────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .inner {
+    padding: 28px 16px 80px;
+  }
+
+  .heading {
+    font-size: 24px;
+    margin-bottom: 28px;
+  }
+
+  .card {
+    flex-wrap: wrap;
+    gap: 14px;
+    padding: 16px;
+  }
+
+  .cardRight {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    border-top: 1px solid var(--grey-100);
+    padding-top: 12px;
+  }
+}
