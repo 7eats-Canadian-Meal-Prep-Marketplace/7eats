@@ -2,10 +2,11 @@ import { eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/db";
-import { authUser, authUserTable } from "@/db/schema";
+import { authUser, authUserTable, legalAcceptances } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { sendGuestActivationEmail } from "@/lib/emails/guest-checkout";
 import { hashIp } from "@/lib/hash";
+import { GUEST_CHECKOUT_DOCS, LEGAL_VERSION } from "@/lib/legal";
 import { logAndCheckRateLimit } from "@/lib/rate-limit";
 
 const schema = z.object({
@@ -13,6 +14,8 @@ const schema = z.object({
   lastName: z.string().trim().min(1).max(100),
   email: z.string().trim().email().max(255),
   phone: z.string().trim().min(7).max(20),
+  // Clickwrap: the guest checkout form blocks submit until this is true.
+  acceptedTerms: z.literal(true),
 });
 
 export async function POST(req: NextRequest) {
@@ -111,6 +114,20 @@ export async function POST(req: NextRequest) {
       onboardingCompletedAt: new Date(),
     })
     .where(eq(authUser.id, userId));
+
+  // Record the clickwrap acceptance. Best-effort — never block the checkout.
+  try {
+    await db.insert(legalAcceptances).values({
+      userId,
+      context: "guest_checkout",
+      version: LEGAL_VERSION,
+      documents: [...GUEST_CHECKOUT_DOCS],
+      ipHash: ip === "unknown" ? null : hashIp(ip),
+      userAgent: req.headers.get("user-agent"),
+    });
+  } catch (err) {
+    console.error("[guest-checkout] legal acceptance record failed:", err);
+  }
 
   // Sign in — emailVerified is now true so Better Auth will allow this.
   const signInRes = await auth.api.signInEmail({

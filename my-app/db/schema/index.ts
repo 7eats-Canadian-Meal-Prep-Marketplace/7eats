@@ -4,6 +4,7 @@ export * from "./cook_pickup_windows";
 export * from "./cooks";
 export * from "./dishes";
 export * from "./enums";
+export * from "./legal";
 export * from "./listings";
 export * from "./messaging";
 export * from "./notifications";

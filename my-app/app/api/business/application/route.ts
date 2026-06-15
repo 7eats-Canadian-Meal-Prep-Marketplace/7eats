@@ -2,8 +2,10 @@ import { NextResponse } from "next/server";
 import { Resend } from "resend";
 import { z } from "zod";
 import { db } from "@/db";
-import { cookApplications } from "@/db/schema";
+import { cookApplications, legalAcceptances } from "@/db/schema";
 import { generateSignedValue } from "@/lib/cookie";
+import { hashIp } from "@/lib/hash";
+import { COOK_APPLICATION_DOCS, LEGAL_VERSION } from "@/lib/legal";
 
 const schema = z.object({
   kitchenName: z.string().min(1),
@@ -37,6 +39,8 @@ const schema = z.object({
     .string()
     .email()
     .transform((v) => v.toLowerCase()),
+  // Clickwrap: the application form blocks submit until this is true.
+  acceptedTerms: z.literal(true),
 });
 
 export async function POST(req: Request) {
@@ -58,24 +62,47 @@ export async function POST(req: Request) {
 
   const v = parsed.data;
 
+  const ip =
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    req.headers.get("x-real-ip") ??
+    "unknown";
+
   try {
-    await db.insert(cookApplications).values({
-      kitchenName: v.kitchenName,
-      kitchenType: v.kitchenType,
-      yearsOperating: v.yearsOperating,
-      streetAddress: v.streetAddress,
-      city: v.city,
-      province: v.province,
-      postalCode: v.postalCode,
-      website: v.website,
-      businessPhone: v.businessPhone,
-      businessEmail: v.businessEmail,
-      contactFirstName: v.contactFirstName,
-      contactLastName: v.contactLastName,
-      contactRole: v.contactRole,
-      contactPhone: v.contactPhone,
-      contactEmail: v.contactEmail,
-    });
+    const [application] = await db
+      .insert(cookApplications)
+      .values({
+        kitchenName: v.kitchenName,
+        kitchenType: v.kitchenType,
+        yearsOperating: v.yearsOperating,
+        streetAddress: v.streetAddress,
+        city: v.city,
+        province: v.province,
+        postalCode: v.postalCode,
+        website: v.website,
+        businessPhone: v.businessPhone,
+        businessEmail: v.businessEmail,
+        contactFirstName: v.contactFirstName,
+        contactLastName: v.contactLastName,
+        contactRole: v.contactRole,
+        contactPhone: v.contactPhone,
+        contactEmail: v.contactEmail,
+      })
+      .returning({ id: cookApplications.id });
+
+    // Record the clickwrap acceptance against the application (no user account
+    // exists yet at this stage). Best-effort — never block the application.
+    try {
+      await db.insert(legalAcceptances).values({
+        applicationId: application.id,
+        context: "cook_application",
+        version: LEGAL_VERSION,
+        documents: [...COOK_APPLICATION_DOCS],
+        ipHash: ip === "unknown" ? null : hashIp(ip),
+        userAgent: req.headers.get("user-agent"),
+      });
+    } catch (err) {
+      console.error("[application] legal acceptance record failed:", err);
+    }
   } catch (err) {
     if ((err as { code?: string }).code === "23505") {
       return NextResponse.json(
