@@ -1,5 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+const s3ClientConstructor = vi.hoisted(() =>
+  vi.fn(function MockS3Client() {
+    return {};
+  }),
+);
+
+vi.mock("@aws-sdk/client-s3", () => ({
+  S3Client: s3ClientConstructor,
+}));
+
 const ALL_ENV_VARS: Record<string, string> = {
   R2_ACCOUNT_ID: "test-account-id",
   R2_ACCESS_KEY_ID: "test-access-key",

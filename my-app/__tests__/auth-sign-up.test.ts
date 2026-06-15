@@ -6,7 +6,9 @@ vi.mock("@/lib/auth", () => ({
   auth: { api: { signUpEmail: vi.fn(), sendVerificationEmail: vi.fn() } },
 }));
 vi.mock("drizzle-orm", () => ({ eq: vi.fn() }));
-vi.mock("@/db", () => ({ db: { select: vi.fn(), update: vi.fn() } }));
+vi.mock("@/db", () => ({
+  db: { insert: vi.fn(), select: vi.fn(), update: vi.fn() },
+}));
 vi.mock("@/db/schema", () => ({
   authUser: {
     id: "id",
@@ -20,6 +22,7 @@ vi.mock("@/db/schema", () => ({
     email: "email",
     emailVerified: "email_verified",
   },
+  legalAcceptances: {},
 }));
 
 import { POST } from "@/app/api/auth/sign-up/route";
@@ -66,6 +69,7 @@ const validBody = {
   lastName: "Lovelace",
   email: "Ada@Example.com",
   password: "supersecret",
+  acceptedTerms: true,
 };
 
 let setSpy: ReturnType<typeof vi.fn>;
@@ -80,6 +84,9 @@ describe("POST /api/auth/sign-up", () => {
     whereSpy = vi.fn().mockResolvedValue(undefined);
     setSpy = vi.fn(() => ({ where: whereSpy }));
     vi.mocked(db.update).mockReturnValue({ set: setSpy } as never);
+    vi.mocked(db.insert).mockReturnValue({
+      values: vi.fn().mockResolvedValue(undefined),
+    } as never);
     vi.mocked(auth.api.signUpEmail).mockResolvedValue(
       authResponse(true, 200, { user: { id: "user_123" } }),
     );
