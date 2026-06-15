@@ -9,11 +9,22 @@ vi.mock("@/lib/rate-limit", () => ({
 // Mock the DB so the route never opens a Neon connection.
 vi.mock("@/db", () => ({
   db: {
+    insert: vi.fn(),
     select: vi.fn().mockReturnThis(),
+    update: vi.fn(),
     from: vi.fn().mockReturnThis(),
     where: vi.fn().mockReturnThis(),
     limit: vi.fn().mockResolvedValue([]),
   },
+}));
+vi.mock("@/db/schema", () => ({
+  authUser: {
+    id: "id",
+    email: "email",
+    isGuestAccount: "is_guest_account",
+  },
+  authUserTable: {},
+  legalAcceptances: {},
 }));
 
 // Mock Better Auth so sign-up/sign-in calls don't fire.
@@ -46,6 +57,7 @@ describe("POST /api/auth/guest-checkout — validation (no DB)", () => {
         firstName: "Jane",
         lastName: "Doe",
         phone: "6471234567",
+        acceptedTerms: true,
       }),
     });
     const res = await POST(req as unknown as import("next/server").NextRequest);
@@ -61,6 +73,7 @@ describe("POST /api/auth/guest-checkout — validation (no DB)", () => {
         firstName: "Jane",
         lastName: "Doe",
         email: "jane@example.com",
+        acceptedTerms: true,
       }),
     });
     const res = await POST(req as unknown as import("next/server").NextRequest);
@@ -76,6 +89,7 @@ describe("POST /api/auth/guest-checkout — validation (no DB)", () => {
         lastName: "Doe",
         email: "jane@example.com",
         phone: "6471234567",
+        acceptedTerms: true,
       }),
     });
     const res = await POST(req as unknown as import("next/server").NextRequest);

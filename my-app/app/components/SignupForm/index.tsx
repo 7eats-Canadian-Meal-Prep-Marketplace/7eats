@@ -56,6 +56,7 @@ export default function SignupForm({
   });
   const [errors, setErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState("");
+  const [agreed, setAgreed] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -74,6 +75,10 @@ export default function SignupForm({
       setErrors(found);
       return;
     }
+    if (!agreed) {
+      setFormError("Please agree to the Terms of Service and Privacy Policy.");
+      return;
+    }
     setErrors({});
     setFormError("");
     startTransition(async () => {
@@ -85,6 +90,7 @@ export default function SignupForm({
           lastName: values.lastName.trim(),
           email: values.email.trim(),
           password: values.password,
+          acceptedTerms: true,
         }),
       });
       const data = await res.json();
@@ -219,12 +225,36 @@ export default function SignupForm({
           )}
         </div>
 
+        <label className={styles.consent}>
+          <input
+            type="checkbox"
+            className={styles.consentCheckbox}
+            checked={agreed}
+            onChange={(e) => setAgreed(e.target.checked)}
+          />
+          <span className={styles.consentText}>
+            I agree to the{" "}
+            <Link href="/terms" target="_blank" className={styles.consentLink}>
+              Terms of Service
+            </Link>{" "}
+            and{" "}
+            <Link
+              href="/privacy"
+              target="_blank"
+              className={styles.consentLink}
+            >
+              Privacy Policy
+            </Link>
+            .
+          </span>
+        </label>
+
         {formError && <p className={styles.error}>{formError}</p>}
 
         <button
           type="submit"
           className={`btn btn-primary ${styles.submit}`}
-          disabled={isPending}
+          disabled={isPending || !agreed}
         >
           {isPending ? "Creating account…" : "Create account"}
         </button>

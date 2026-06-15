@@ -1,1 +1,0 @@
-CREATE UNIQUE INDEX "orders_subscription_period_uidx" ON "orders" USING btree ("subscription_id","pickup_at");

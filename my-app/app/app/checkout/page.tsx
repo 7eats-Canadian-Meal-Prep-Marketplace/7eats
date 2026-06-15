@@ -108,6 +108,7 @@ function CheckoutInner() {
   const [guestPhone, setGuestPhone] = useState("");
   const [guestSubmitting, setGuestSubmitting] = useState(false);
   const [guestError, setGuestError] = useState("");
+  const [guestAgreed, setGuestAgreed] = useState(false);
   const { guestAddress } = useGuestAddress();
 
   // Payment method selection
@@ -264,6 +265,7 @@ function CheckoutInner() {
       e.guestEmail = "Valid email required";
     if (!guestPhone.trim() || guestPhone.replace(/\D/g, "").length < 7)
       e.guestPhone = "Valid phone required";
+    if (!guestAgreed) e.guestConsent = "Please agree to the terms to continue.";
     if (needsDeliveryAddress) {
       if (!address.street?.trim()) e.street = "Required";
       if (!address.city?.trim()) e.city = "Required";
@@ -319,6 +321,7 @@ function CheckoutInner() {
           lastName: guestLastName.trim(),
           email: guestEmail.trim().toLowerCase(),
           phone: guestPhone.trim(),
+          acceptedTerms: true,
         }),
       });
 
@@ -688,6 +691,51 @@ function CheckoutInner() {
                         <p className={styles.fieldError}>{errors.guestPhone}</p>
                       )}
                     </div>
+                    <label className={styles.consentBox}>
+                      <input
+                        type="checkbox"
+                        checked={guestAgreed}
+                        onChange={(e) => {
+                          setGuestAgreed(e.target.checked);
+                          if (e.target.checked)
+                            setErrors((prev) => ({
+                              ...prev,
+                              guestConsent: "",
+                            }));
+                        }}
+                        className={styles.consentCheckbox}
+                      />
+                      <span className={styles.consentText}>
+                        I agree to the{" "}
+                        <a
+                          href="/terms"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Terms of Service
+                        </a>
+                        ,{" "}
+                        <a
+                          href="/privacy"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Privacy Policy
+                        </a>
+                        , and{" "}
+                        <a
+                          href="/refund-policy"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Refund Policy
+                        </a>
+                        .
+                      </span>
+                    </label>
+                    {errors.guestConsent && (
+                      <p className={styles.fieldError}>{errors.guestConsent}</p>
+                    )}
                     {guestError && (
                       <p className={styles.placeError} role="alert">
                         {guestError}

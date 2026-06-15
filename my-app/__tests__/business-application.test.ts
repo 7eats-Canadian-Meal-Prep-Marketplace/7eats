@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/db", () => ({ db: { insert: vi.fn() } }));
-vi.mock("@/db/schema", () => ({ cookApplications: {} }));
+vi.mock("@/db/schema", () => ({
+  cookApplications: { id: "id" },
+  legalAcceptances: {},
+}));
 vi.mock("@/lib/cookie", () => ({
   generateSignedValue: vi.fn(() => "signed-cookie-value"),
 }));
@@ -13,6 +16,7 @@ vi.mock("resend", () => ({
 
 import { POST } from "@/app/api/business/application/route";
 import { db } from "@/db";
+import { cookApplications } from "@/db/schema";
 
 function makeRequest(body: unknown): Request {
   return new Request("http://localhost/api/business/application", {
@@ -37,15 +41,26 @@ const validBody = {
   role: "Owner",
   phone: "(416) 555-0101",
   email: "jane@mamas.ca",
+  acceptedTerms: true,
 };
 
 let valuesSpy: ReturnType<typeof vi.fn>;
+let returningSpy: ReturnType<typeof vi.fn>;
 
 describe("POST /api/business/application", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    valuesSpy = vi.fn().mockResolvedValue(undefined);
-    vi.mocked(db.insert).mockReturnValue({ values: valuesSpy } as never);
+    returningSpy = vi.fn().mockResolvedValue([{ id: "application_123" }]);
+    valuesSpy = vi.fn(() => ({
+      returning: returningSpy,
+    }));
+    const legalValuesSpy = vi.fn().mockResolvedValue(undefined);
+    vi.mocked(db.insert).mockImplementation((table) => {
+      if (table === cookApplications) {
+        return { values: valuesSpy } as never;
+      }
+      return { values: legalValuesSpy } as never;
+    });
   });
 
   it("returns 200 with redirect on a valid body", async () => {
@@ -128,7 +143,7 @@ describe("POST /api/business/application", () => {
     const uniqueViolation = Object.assign(new Error("duplicate key"), {
       code: "23505",
     });
-    valuesSpy.mockRejectedValue(uniqueViolation);
+    returningSpy.mockRejectedValue(uniqueViolation);
 
     const res = await POST(makeRequest(validBody));
     const body = await res.json();
@@ -138,7 +153,7 @@ describe("POST /api/business/application", () => {
   });
 
   it("returns 500 on an unexpected DB error", async () => {
-    valuesSpy.mockRejectedValue(new Error("connection reset"));
+    returningSpy.mockRejectedValue(new Error("connection reset"));
 
     const res = await POST(makeRequest(validBody));
     expect(res.status).toBe(500);

@@ -57,11 +57,33 @@ export default function Footer() {
               </li>
             </ul>
           </div>
+          <div className="footer-col">
+            <h4>Legal</h4>
+            <ul>
+              <li>
+                <Link href="/terms">Terms of Service</Link>
+              </li>
+              <li>
+                <Link href="/cook-terms">Cook terms</Link>
+              </li>
+              <li>
+                <Link href="/privacy">Privacy policy</Link>
+              </li>
+              <li>
+                <Link href="/food-safety">Food safety</Link>
+              </li>
+              <li>
+                <Link href="/refund-policy">Refunds &amp; cancellations</Link>
+              </li>
+              <li>
+                <Link href="/community-guidelines">Community guidelines</Link>
+              </li>
+            </ul>
+          </div>
         </div>
         <div className="footer-bottom">
           <span>&copy; 2026 7eats Inc. &middot; Toronto, ON</span>
           <div className="footer-legal">
-            <a href="/privacy">Privacy policy</a>
             <CookiePreferencesLink />
           </div>
         </div>

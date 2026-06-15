@@ -101,3 +101,10 @@ export const paymentTypeEnum = pgEnum("payment_type", [
   "deposit",
   "balance",
 ]);
+
+// Entry points where a user explicitly accepts the 7eats legal policies.
+export const legalAcceptanceContext = pgEnum("legal_acceptance_context", [
+  "client_signup",
+  "guest_checkout",
+  "cook_application",
+]);

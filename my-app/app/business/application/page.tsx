@@ -5,6 +5,12 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import styles from "./page.module.css";
 
+const LEGAL_LINK_PROPS = {
+  target: "_blank",
+  rel: "noopener noreferrer",
+  className: styles.consentLink,
+} as const;
+
 const PROVINCES = [
   "Alberta",
   "British Columbia",
@@ -81,6 +87,7 @@ export default function ApplicationPage() {
   const [step, setStep] = useState(1);
   const [error, setError] = useState<string | null>(null);
   const [step1Attempted, setStep1Attempted] = useState(false);
+  const [agreed, setAgreed] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [form, setForm] = useState<FormState>({
     kitchenName: "",
@@ -117,12 +124,16 @@ export default function ApplicationPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!agreed) {
+      setError("Please agree to the Cook Terms and related policies.");
+      return;
+    }
     setError(null);
     startTransition(async () => {
       const res = await fetch("/api/business/application", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, acceptedTerms: true }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -480,11 +491,35 @@ export default function ApplicationPage() {
                   />
                 </div>
 
+                <label className={styles.consent}>
+                  <input
+                    type="checkbox"
+                    className={styles.consentCheckbox}
+                    checked={agreed}
+                    onChange={(e) => setAgreed(e.target.checked)}
+                  />
+                  <span className={styles.consentText}>
+                    I have read and agree to the{" "}
+                    <Link href="/cook-terms" {...LEGAL_LINK_PROPS}>
+                      Cook Terms
+                    </Link>
+                    ,{" "}
+                    <Link href="/terms" {...LEGAL_LINK_PROPS}>
+                      Terms of Service
+                    </Link>
+                    , and{" "}
+                    <Link href="/privacy" {...LEGAL_LINK_PROPS}>
+                      Privacy Policy
+                    </Link>
+                    .
+                  </span>
+                </label>
+
                 {error && <p className={styles.errorMsg}>{error}</p>}
                 <button
                   type="submit"
                   className={`btn btn-primary ${styles.ctaBtn}`}
-                  disabled={isPending}
+                  disabled={isPending || !agreed}
                 >
                   {isPending ? "Submitting…" : "Submit application"}
                 </button>

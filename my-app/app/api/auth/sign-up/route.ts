@@ -2,9 +2,10 @@ import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/db";
-import { authUser, authUserTable } from "@/db/schema";
+import { authUser, authUserTable, legalAcceptances } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { hashIp } from "@/lib/hash";
+import { CLIENT_SIGNUP_DOCS, LEGAL_VERSION } from "@/lib/legal";
 import { logAndCheckRateLimit } from "@/lib/rate-limit";
 
 // Self-serve account creation for clients (consumers). Cooks never reach this
@@ -18,6 +19,8 @@ const signUpSchema = z
     lastName: z.string().trim().min(1).max(100),
     email: z.string().trim().email().max(255),
     password: z.string().min(8).max(128),
+    // Clickwrap: the signup form blocks submit until this is true.
+    acceptedTerms: z.literal(true),
   })
   .strict();
 
@@ -117,6 +120,21 @@ export async function POST(req: Request) {
     .update(authUserTable)
     .set({ role: "client", status: "active", firstName, lastName })
     .where(eq(authUser.id, userId));
+
+  // Record the clickwrap acceptance as an audit trail. Best-effort: a failure
+  // here must not block account creation, which has already succeeded.
+  try {
+    await db.insert(legalAcceptances).values({
+      userId,
+      context: "client_signup",
+      version: LEGAL_VERSION,
+      documents: [...CLIENT_SIGNUP_DOCS],
+      ipHash: ip === "unknown" ? null : hashIp(ip),
+      userAgent: req.headers.get("user-agent"),
+    });
+  } catch (err) {
+    console.error("[sign-up] legal acceptance record failed:", err);
+  }
 
   // Send the verification email with the correct callbackURL. Better Auth's
   // auto-send is disabled (sendOnSignUp: false) so this is the only send.
