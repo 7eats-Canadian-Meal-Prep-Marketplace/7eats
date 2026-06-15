@@ -35,7 +35,32 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.5,
     },
     {
+      url: `${BASE}/terms`,
+      changeFrequency: "yearly",
+      priority: 0.3,
+    },
+    {
+      url: `${BASE}/cook-terms`,
+      changeFrequency: "yearly",
+      priority: 0.3,
+    },
+    {
       url: `${BASE}/privacy`,
+      changeFrequency: "yearly",
+      priority: 0.3,
+    },
+    {
+      url: `${BASE}/food-safety`,
+      changeFrequency: "yearly",
+      priority: 0.3,
+    },
+    {
+      url: `${BASE}/refund-policy`,
+      changeFrequency: "yearly",
+      priority: 0.3,
+    },
+    {
+      url: `${BASE}/community-guidelines`,
       changeFrequency: "yearly",
       priority: 0.3,
     },

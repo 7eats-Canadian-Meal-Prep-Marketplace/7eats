@@ -44,8 +44,9 @@ export default function CookieBanner() {
     <section className="cookie-banner" aria-label="Cookie consent">
       <div className="cookie-banner-inner">
         <p className="cookie-banner-text">
-          This site uses essential cookies only. We do not use analytics or
-          tracking cookies.{" "}
+          7eats uses cookies and local storage for core features like sign-in,
+          checkout, security, and remembering your preferences. We do not
+          currently use advertising or behavioural tracking cookies.{" "}
           <Link href="/privacy" className="cookie-banner-link">
             Privacy Policy
           </Link>
@@ -53,24 +54,10 @@ export default function CookieBanner() {
         <div className="cookie-banner-actions">
           <button
             type="button"
-            className="cookie-btn cookie-btn-ghost"
-            onClick={() => dismiss("refused")}
-          >
-            Refuse all
-          </button>
-          <button
-            type="button"
-            className="cookie-btn cookie-btn-secondary"
-            onClick={() => dismiss("essential")}
-          >
-            Essential only
-          </button>
-          <button
-            type="button"
             className="cookie-btn cookie-btn-primary"
-            onClick={() => dismiss("accepted")}
+            onClick={() => dismiss("acknowledged")}
           >
-            Accept all
+            Got it
           </button>
         </div>
       </div>
