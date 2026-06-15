@@ -18,6 +18,59 @@ CREATE TYPE "public"."promotion_type" AS ENUM('percentage_off', 'fixed_off');-->
 CREATE TYPE "public"."subscription_interval" AS ENUM('weekly', 'biweekly', 'monthly');--> statement-breakpoint
 CREATE TYPE "public"."subscription_status" AS ENUM('active', 'paused', 'cancelled', 'past_due');--> statement-breakpoint
 CREATE TYPE "public"."user_role" AS ENUM('client', 'cook', 'admin');--> statement-breakpoint
+CREATE TABLE "admin_account" (
+	"id" text PRIMARY KEY NOT NULL,
+	"account_id" text NOT NULL,
+	"provider_id" text NOT NULL,
+	"user_id" text NOT NULL,
+	"access_token" text,
+	"refresh_token" text,
+	"id_token" text,
+	"access_token_expires_at" timestamp,
+	"refresh_token_expires_at" timestamp,
+	"scope" text,
+	"password" text,
+	"created_at" timestamp NOT NULL,
+	"updated_at" timestamp NOT NULL
+);
+--> statement-breakpoint
+ALTER TABLE "admin_account" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+CREATE TABLE "admin_session" (
+	"id" text PRIMARY KEY NOT NULL,
+	"expires_at" timestamp NOT NULL,
+	"token" text NOT NULL,
+	"created_at" timestamp NOT NULL,
+	"updated_at" timestamp NOT NULL,
+	"ip_address" text,
+	"user_agent" text,
+	"user_id" text NOT NULL,
+	CONSTRAINT "admin_session_token_key" UNIQUE("token")
+);
+--> statement-breakpoint
+ALTER TABLE "admin_session" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+CREATE TABLE "admin_user" (
+	"id" text PRIMARY KEY NOT NULL,
+	"name" text NOT NULL,
+	"email" text NOT NULL,
+	"email_verified" boolean NOT NULL,
+	"image" text,
+	"created_at" timestamp NOT NULL,
+	"updated_at" timestamp NOT NULL,
+	"role" text DEFAULT 'admin' NOT NULL,
+	CONSTRAINT "admin_user_email_key" UNIQUE("email")
+);
+--> statement-breakpoint
+ALTER TABLE "admin_user" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+CREATE TABLE "admin_verification" (
+	"id" text PRIMARY KEY NOT NULL,
+	"identifier" text NOT NULL,
+	"value" text NOT NULL,
+	"expires_at" timestamp NOT NULL,
+	"created_at" timestamp,
+	"updated_at" timestamp
+);
+--> statement-breakpoint
+ALTER TABLE "admin_verification" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 CREATE TABLE "cook_applications" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"kitchen_name" text NOT NULL,
@@ -651,6 +704,8 @@ CREATE TABLE "waitlist" (
 );
 --> statement-breakpoint
 ALTER TABLE "waitlist" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "admin_account" ADD CONSTRAINT "admin_account_user_id_admin_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."admin_user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "admin_session" ADD CONSTRAINT "admin_session_user_id_admin_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."admin_user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "setup_tokens" ADD CONSTRAINT "setup_tokens_application_id_cook_applications_id_fk" FOREIGN KEY ("application_id") REFERENCES "public"."cook_applications"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "account" ADD CONSTRAINT "account_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "session" ADD CONSTRAINT "session_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -727,6 +782,10 @@ CREATE UNIQUE INDEX "order_payments_order_type_uidx" ON "order_payments" USING b
 CREATE UNIQUE INDEX "followed_cooks_user_cook_uidx" ON "followed_cooks" USING btree ("user_id","cook_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "saved_listings_user_listing_uidx" ON "saved_listings" USING btree ("user_id","listing_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "listing_interval_uidx" ON "listing_subscription_tiers" USING btree ("listing_id","interval");--> statement-breakpoint
+CREATE POLICY "service_only" ON "admin_account" AS PERMISSIVE FOR ALL TO public USING (auth.role() = 'service_role') WITH CHECK (auth.role() = 'service_role');--> statement-breakpoint
+CREATE POLICY "service_only" ON "admin_session" AS PERMISSIVE FOR ALL TO public USING (auth.role() = 'service_role') WITH CHECK (auth.role() = 'service_role');--> statement-breakpoint
+CREATE POLICY "service_only" ON "admin_user" AS PERMISSIVE FOR ALL TO public USING (auth.role() = 'service_role') WITH CHECK (auth.role() = 'service_role');--> statement-breakpoint
+CREATE POLICY "service_only" ON "admin_verification" AS PERMISSIVE FOR ALL TO public USING (auth.role() = 'service_role') WITH CHECK (auth.role() = 'service_role');--> statement-breakpoint
 CREATE POLICY "applications_insert_service" ON "cook_applications" AS PERMISSIVE FOR INSERT TO public WITH CHECK (auth.role() = 'service_role');--> statement-breakpoint
 CREATE POLICY "applications_select_admin" ON "cook_applications" AS PERMISSIVE FOR SELECT TO public USING (auth.role() = 'admin');--> statement-breakpoint
 CREATE POLICY "applications_select_service" ON "cook_applications" AS PERMISSIVE FOR SELECT TO public USING (auth.role() = 'service_role');--> statement-breakpoint
