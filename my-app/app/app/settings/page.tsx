@@ -1,6 +1,15 @@
 "use client";
 
-import { CreditCard, Edit3, Plus, RefreshCw, Trash2, X } from "lucide-react";
+import {
+  CreditCard,
+  Edit3,
+  Eye,
+  EyeOff,
+  Plus,
+  RefreshCw,
+  Trash2,
+  X,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import styles from "./page.module.css";
 
@@ -353,6 +362,8 @@ function AddCardModal({
 
 export default function SettingsPage() {
   const [tab, setTab] = useState<Tab>("profile");
+  const [showCurrentPw, setShowCurrentPw] = useState(false);
+  const [showNewPw, setShowNewPw] = useState(false);
   const [prefAnswers, setPrefAnswers] = useState<PrefAnswers>(DEFAULT_PREFS);
   const [editingPref, setEditingPref] = useState<string | null>(null);
 
@@ -815,23 +826,45 @@ export default function SettingsPage() {
                 <label className={styles.label} htmlFor="cp">
                   Current password
                 </label>
-                <input
-                  id="cp"
-                  className={styles.input}
-                  type="password"
-                  placeholder="••••••••"
-                />
+                <div className={styles.pwInputWrap}>
+                  <input
+                    id="cp"
+                    className={styles.input}
+                    type={showCurrentPw ? "text" : "password"}
+                    placeholder="••••••••"
+                  />
+                  <button
+                    type="button"
+                    className={styles.pwEyeBtn}
+                    onClick={() => setShowCurrentPw((s) => !s)}
+                    aria-label={
+                      showCurrentPw ? "Hide password" : "Show password"
+                    }
+                  >
+                    {showCurrentPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
               </div>
               <div className={styles.formGroup}>
                 <label className={styles.label} htmlFor="np">
                   New password
                 </label>
-                <input
-                  id="np"
-                  className={styles.input}
-                  type="password"
-                  placeholder="••••••••"
-                />
+                <div className={styles.pwInputWrap}>
+                  <input
+                    id="np"
+                    className={styles.input}
+                    type={showNewPw ? "text" : "password"}
+                    placeholder="••••••••"
+                  />
+                  <button
+                    type="button"
+                    className={styles.pwEyeBtn}
+                    onClick={() => setShowNewPw((s) => !s)}
+                    aria-label={showNewPw ? "Hide password" : "Show password"}
+                  >
+                    {showNewPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
               </div>
               <div className={styles.cardFooter}>
                 <button type="button" className={styles.saveBtn}>

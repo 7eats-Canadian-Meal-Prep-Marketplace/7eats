@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, ExternalLink, ImagePlus } from "lucide-react";
+import { ArrowLeft, ExternalLink, Eye, EyeOff, ImagePlus } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { AddressAutocomplete } from "@/components/AddressAutocomplete";
@@ -378,6 +378,8 @@ function AccountSection() {
   });
   const [loading, setLoading] = useState(true);
   const [showPwForm, setShowPwForm] = useState(false);
+  const [showPwNew, setShowPwNew] = useState(false);
+  const [showPwConfirm, setShowPwConfirm] = useState(false);
   const { saved, triggerSaved } = useSaved();
 
   useEffect(() => {
@@ -500,22 +502,44 @@ function AccountSection() {
                 <label htmlFor="s-pw-new" className={styles.formLabel}>
                   New password
                 </label>
-                <input
-                  id="s-pw-new"
-                  type="password"
-                  className={styles.formInput}
-                  placeholder="Min. 8 characters"
-                />
+                <div className={styles.pwInputWrap}>
+                  <input
+                    id="s-pw-new"
+                    type={showPwNew ? "text" : "password"}
+                    className={styles.formInput}
+                    placeholder="Min. 8 characters"
+                  />
+                  <button
+                    type="button"
+                    className={styles.pwEyeBtn}
+                    onClick={() => setShowPwNew((s) => !s)}
+                    aria-label={showPwNew ? "Hide password" : "Show password"}
+                  >
+                    {showPwNew ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
               </div>
               <div className={styles.formGroup}>
                 <label htmlFor="s-pw-confirm" className={styles.formLabel}>
                   Confirm password
                 </label>
-                <input
-                  id="s-pw-confirm"
-                  type="password"
-                  className={styles.formInput}
-                />
+                <div className={styles.pwInputWrap}>
+                  <input
+                    id="s-pw-confirm"
+                    type={showPwConfirm ? "text" : "password"}
+                    className={styles.formInput}
+                  />
+                  <button
+                    type="button"
+                    className={styles.pwEyeBtn}
+                    onClick={() => setShowPwConfirm((s) => !s)}
+                    aria-label={
+                      showPwConfirm ? "Hide password" : "Show password"
+                    }
+                  >
+                    {showPwConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
               </div>
             </div>
             <button

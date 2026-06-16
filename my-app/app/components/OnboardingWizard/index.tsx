@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import SetupSidebar from "@/app/components/SetupSidebar";
 import { AddressAutocomplete } from "@/components/AddressAutocomplete";
 import styles from "./OnboardingWizard.module.css";
@@ -221,7 +221,7 @@ export default function OnboardingWizard({
         setStepError("Display name is required.");
         return false;
       }
-      if (form.bio.length < 100) {
+      if (form.bio.trim().length < 100) {
         setStepError("Bio must be at least 100 characters.");
         return false;
       }
@@ -475,9 +475,19 @@ function Step1({
   photoFileRef: React.MutableRefObject<File | null>;
 }) {
   const photoInputRef = useRef<HTMLInputElement>(null);
-  const bioLen = form.bio.length;
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const bioLen = form.bio.trim().length;
   const bioOk = bioLen >= 100 && bioLen <= 500;
   const hasPhoto = form.photoFileName || form.existingPhotoUrl;
+  const previewSrc = photoPreview ?? form.existingPhotoUrl;
+
+  // Revoke the previous object URL whenever the preview changes or unmounts so
+  // selecting several photos in a row doesn't leak blob URLs.
+  useEffect(() => {
+    return () => {
+      if (photoPreview) URL.revokeObjectURL(photoPreview);
+    };
+  }, [photoPreview]);
 
   return (
     <div className={styles.stepContent}>
@@ -512,18 +522,27 @@ function Step1({
           <span className={styles.label}>Profile photo</span>
           <div className={styles.photoWrap}>
             <div className={styles.photoPlaceholder}>
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                aria-hidden="true"
-              >
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                <circle cx="12" cy="7" r="4" />
-              </svg>
+              {previewSrc ? (
+                // biome-ignore lint/performance/noImgElement: blob/object-URL preview, next/image adds no value here
+                <img
+                  src={previewSrc}
+                  alt="Profile preview"
+                  className={styles.photoPreviewImg}
+                />
+              ) : (
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  aria-hidden="true"
+                >
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+              )}
             </div>
             <div className={styles.photoActions}>
               <input
@@ -535,6 +554,7 @@ function Step1({
                   const file = e.target.files?.[0] ?? null;
                   photoFileRef.current = file;
                   set("photoFileName", file?.name ?? "");
+                  setPhotoPreview(file ? URL.createObjectURL(file) : null);
                 }}
               />
               <button
@@ -965,25 +985,27 @@ function Step3({
             Photo of certificate{" "}
             <span className={styles.labelNote}>(optional)</span>
           </span>
+          {/* Keep the input a sibling (not a child) of the button: a nested
+              input makes the programmatic .click() bubble back to the button,
+              re-opening the file dialog and forcing a second selection. */}
+          <input
+            ref={certInputRef}
+            type="file"
+            accept=".pdf,.jpg,.jpeg,.png"
+            style={{ display: "none" }}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) {
+                certFileRef.current = file;
+                set("certPhotoFileName", file.name);
+              }
+            }}
+          />
           <button
             type="button"
             className={`${styles.uploadZone} ${form.certPhotoFileName ? styles.uploadZoneHasFile : ""}`}
             onClick={() => certInputRef.current?.click()}
           >
-            <input
-              ref={certInputRef}
-              type="file"
-              accept=".pdf,.jpg,.jpeg,.png"
-              className={styles.uploadInput}
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) {
-                  certFileRef.current = file;
-                  set("certPhotoFileName", file.name);
-                }
-              }}
-              tabIndex={-1}
-            />
             {form.certPhotoFileName ? (
               <>
                 <span className={styles.uploadIcon}>✓</span>

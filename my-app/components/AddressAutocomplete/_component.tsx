@@ -1,6 +1,6 @@
 "use client";
 import { AddressAutofill } from "@mapbox/search-js-react";
-import type { ComponentProps } from "react";
+import { type ComponentProps, useRef } from "react";
 import type { NormalizedAddress } from "@/lib/types/address";
 import styles from "./_component.module.css";
 
@@ -67,6 +67,20 @@ export function AddressAutocomplete({
   idPrefix = "address",
   inputClassName = "",
 }: AddressAutocompleteProps) {
+  // Keep the freshest value in a ref. When a Mapbox suggestion is selected the
+  // wrapped street input also fires a native change event; without this ref that
+  // handler would merge against a stale `value` snapshot (captured before the
+  // retrieve), wiping the just-set lat/lng back to null and forcing the user to
+  // pick the address a second time.
+  const valueRef = useRef(value);
+  valueRef.current = value;
+
+  const update = (patch: Partial<NormalizedAddress>) => {
+    const next = { ...valueRef.current, ...patch };
+    valueRef.current = next;
+    onChange(next);
+  };
+
   function handleRetrieve(res: AddressAutofillRetrieveResponse) {
     const feature = res.features[0];
     if (!feature) return;
@@ -74,7 +88,7 @@ export function AddressAutocomplete({
     const coords = geometry.coordinates as [number, number];
     const rawProvince = properties.address_level1 ?? "";
     const province = PROVINCE_NAME_TO_CODE[rawProvince] ?? rawProvince;
-    onChange({
+    const next: Partial<NormalizedAddress> = {
       street: properties.address_line1 ?? "",
       unit: properties.address_line2 || undefined,
       city: properties.address_level2 ?? "",
@@ -83,7 +97,9 @@ export function AddressAutocomplete({
       lat: coords[1],
       lng: coords[0],
       placeId: properties.mapbox_id ?? "",
-    });
+    };
+    valueRef.current = next;
+    onChange(next);
   }
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
@@ -114,7 +130,7 @@ export function AddressAutocomplete({
               placeholder="Start typing your address…"
               className={inputCls}
               value={value.street ?? ""}
-              onChange={(e) => onChange({ ...value, street: e.target.value })}
+              onChange={(e) => update({ street: e.target.value })}
             />
           </AddressAutofill>
         </form>
@@ -133,7 +149,7 @@ export function AddressAutocomplete({
             autoComplete="address-line2"
             className={inputCls}
             value={value.unit ?? ""}
-            onChange={(e) => onChange({ ...value, unit: e.target.value })}
+            onChange={(e) => update({ unit: e.target.value })}
           />
         </div>
         <div className={styles.field}>
@@ -147,7 +163,7 @@ export function AddressAutocomplete({
             autoComplete="postal-code"
             className={inputCls}
             value={value.postal ?? ""}
-            onChange={(e) => onChange({ ...value, postal: e.target.value })}
+            onChange={(e) => update({ postal: e.target.value })}
           />
           {errors?.postal && <p className={styles.error}>{errors.postal}</p>}
         </div>
@@ -165,7 +181,7 @@ export function AddressAutocomplete({
             autoComplete="address-level2"
             className={inputCls}
             value={value.city ?? ""}
-            onChange={(e) => onChange({ ...value, city: e.target.value })}
+            onChange={(e) => update({ city: e.target.value })}
           />
           {errors?.city && <p className={styles.error}>{errors.city}</p>}
         </div>
@@ -179,7 +195,7 @@ export function AddressAutocomplete({
             autoComplete="address-level1"
             className={inputCls}
             value={value.province ?? ""}
-            onChange={(e) => onChange({ ...value, province: e.target.value })}
+            onChange={(e) => update({ province: e.target.value })}
           >
             <option value="" disabled>
               Select…
