@@ -1,5 +1,6 @@
 "use client";
 
+import { Eye, EyeOff } from "lucide-react";
 import { useState, useTransition } from "react";
 import styles from "./CreatePasswordForm.module.css";
 
@@ -7,6 +8,8 @@ export default function CreatePasswordForm({ token }: { token: string }) {
   const [isPending, startTransition] = useTransition();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -50,38 +53,58 @@ export default function CreatePasswordForm({ token }: { token: string }) {
           <label htmlFor="password" className={styles.label}>
             Password
           </label>
-          <input
-            id="password"
-            type="password"
-            className={styles.input}
-            value={password}
-            onChange={(e) => {
-              setPassword(e.target.value);
-              setError("");
-            }}
-            placeholder="8+ characters"
-            autoComplete="new-password"
-            required
-          />
+          <div className={styles.inputWrap}>
+            <input
+              id="password"
+              type={showPassword ? "text" : "password"}
+              className={styles.input}
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                setError("");
+              }}
+              placeholder="8+ characters"
+              autoComplete="new-password"
+              required
+            />
+            <button
+              type="button"
+              className={styles.eyeBtn}
+              onClick={() => setShowPassword((s) => !s)}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
+          </div>
         </div>
 
         <div className={styles.field}>
           <label htmlFor="confirm" className={styles.label}>
             Confirm password
           </label>
-          <input
-            id="confirm"
-            type="password"
-            className={styles.input}
-            value={confirm}
-            onChange={(e) => {
-              setConfirm(e.target.value);
-              setError("");
-            }}
-            placeholder="Re-enter your password"
-            autoComplete="new-password"
-            required
-          />
+          <div className={styles.inputWrap}>
+            <input
+              id="confirm"
+              type={showConfirm ? "text" : "password"}
+              className={styles.input}
+              value={confirm}
+              onChange={(e) => {
+                setConfirm(e.target.value);
+                setError("");
+              }}
+              placeholder="Re-enter your password"
+              autoComplete="new-password"
+              required
+            />
+            <button
+              type="button"
+              className={styles.eyeBtn}
+              onClick={() => setShowConfirm((s) => !s)}
+              aria-label={showConfirm ? "Hide password" : "Show password"}
+            >
+              {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
+          </div>
         </div>
 
         {error && <p className={styles.fieldError}>{error}</p>}

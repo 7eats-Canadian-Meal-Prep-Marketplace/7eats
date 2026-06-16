@@ -75,21 +75,23 @@ function EmptyState({
   title,
   desc,
   actionLabel,
+  actionHref,
 }: {
   icon: React.ReactNode;
   title: string;
   desc: string;
   actionLabel: string;
+  actionHref: string;
 }) {
   return (
     <div className={styles.empty}>
       <div className={styles.emptyIcon}>{icon}</div>
       <p className={styles.emptyTitle}>{title}</p>
       <p className={styles.emptyDesc}>{desc}</p>
-      <button type="button" className={styles.emptyBtn}>
+      <Link href={actionHref} className={styles.emptyBtn}>
         <Plus size={13} />
         {actionLabel}
-      </button>
+      </Link>
     </div>
   );
 }
@@ -123,6 +125,7 @@ function ListingsContent({
         title="No listings yet"
         desc="Bundle your dishes into packages clients can browse and order."
         actionLabel="New Listing"
+        actionHref="/business/listings/new"
       />
     );
   }
@@ -210,6 +213,7 @@ function DishesContent({
         title="No dishes yet"
         desc="Add dishes — the building blocks of every listing."
         actionLabel="New Dish"
+        actionHref="/business/listings/dishes/new"
       />
     );
   }
@@ -343,10 +347,17 @@ export default function ListingsPage() {
             </button>
           ))}
         </div>
-        <button type="button" className={styles.newBtn}>
+        <Link
+          href={
+            tab === "listings"
+              ? "/business/listings/new"
+              : "/business/listings/dishes/new"
+          }
+          className={styles.newBtn}
+        >
           <Plus size={14} />
           {NEW_LABEL[tab]}
-        </button>
+        </Link>
       </div>
 
       <div className={styles.content} key={`${tab}-${filter}`}>

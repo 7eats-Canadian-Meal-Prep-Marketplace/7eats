@@ -9,6 +9,7 @@ import {
   authVerification,
 } from "@/db/schema/auth";
 import { sendMail } from "@/lib/email";
+import { htmlEmail, paragraph } from "@/lib/emails/base";
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
@@ -84,6 +85,21 @@ export const auth = betterAuth({
           "",
           "— The 7eats team",
         ].join("\n"),
+        html: htmlEmail({
+          title: "Confirm your email",
+          preheader:
+            "Confirm your email address to activate your 7eats account.",
+          bodyHtml:
+            paragraph("Welcome to 7eats!") +
+            paragraph(
+              "Tap the button below to confirm your email address and activate your account. This link expires in 24 hours.",
+            ) +
+            paragraph(
+              "If you didn't create a 7eats account, you can safely ignore this email.",
+            ),
+          ctaLabel: "Confirm email",
+          ctaUrl: url,
+        }),
       });
     },
   },
