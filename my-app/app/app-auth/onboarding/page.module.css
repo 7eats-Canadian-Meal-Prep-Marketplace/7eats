@@ -61,6 +61,23 @@
   background: var(--ink);
 }
 
+.skipBtn {
+  background: none;
+  border: none;
+  padding: 6px 2px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #71717a;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  white-space: nowrap;
+}
+
+.skipBtn:hover {
+  color: var(--ink);
+}
+
 /* ─── Progress bar ───────────────────────────────────────────────────────────── */
 .progressBar {
   height: 2px;
