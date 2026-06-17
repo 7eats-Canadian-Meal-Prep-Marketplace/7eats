@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { authUser, authUserTable } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { verifySignedPhone } from "@/lib/cookie";
+import { DEV_OTP_CODE, OTP_DEV_BYPASS } from "@/lib/otp-dev";
 import { logAndCheckRateLimit } from "@/lib/rate-limit";
 
 function twilioClient() {
@@ -60,21 +61,25 @@ export async function POST(req: Request) {
     );
   }
 
-  let status: string;
-  try {
-    const check = await twilioClient()
-      .verify.v2.services(verifyServiceSid())
-      .verificationChecks.create({ to: phone, code });
-    status = check.status;
-  } catch (err) {
-    console.error("[verify-otp]", err);
-    return NextResponse.json(
-      { error: "Verification failed. Please try again." },
-      { status: 500 },
-    );
+  let approved: boolean;
+  if (OTP_DEV_BYPASS) {
+    approved = code === DEV_OTP_CODE;
+  } else {
+    try {
+      const check = await twilioClient()
+        .verify.v2.services(verifyServiceSid())
+        .verificationChecks.create({ to: phone, code });
+      approved = check.status === "approved";
+    } catch (err) {
+      console.error("[verify-otp]", err);
+      return NextResponse.json(
+        { error: "Verification failed. Please try again." },
+        { status: 500 },
+      );
+    }
   }
 
-  if (status !== "approved") {
+  if (!approved) {
     return NextResponse.json(
       { error: "Incorrect code. Try again." },
       { status: 400 },
