@@ -23,7 +23,9 @@ export async function uploadAvatar(
 export function getAvatarUrl(key: string): string {
   const base = BUCKET_CONFIG[BUCKETS.AVATARS].cdnBaseUrl;
   if (!base) throw new Error("R2_PUBLIC_BUCKET_URL_AVATARS is not configured");
-  return `${base}/${key}`;
+  // Strip any trailing slash so a configured base like ".../" doesn't produce a
+  // double slash, which R2 treats as a different (missing) object key → 404.
+  return `${base.replace(/\/+$/, "")}/${key}`;
 }
 
 export async function deleteAvatar(key: string): Promise<void> {

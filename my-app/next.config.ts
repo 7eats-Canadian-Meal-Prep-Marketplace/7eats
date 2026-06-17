@@ -36,7 +36,29 @@ const securityHeaders = [
   },
 ];
 
+// Allow next/image to optimize the public R2 buckets that host listing covers
+// and cook avatars. Derived from the same env vars the storage layer uses so the
+// allowlist stays in sync if the buckets change.
+const r2ImageHosts = [
+  process.env.R2_PUBLIC_BUCKET_URL_LISTINGS,
+  process.env.R2_PUBLIC_BUCKET_URL_AVATARS,
+]
+  .map((url) => {
+    try {
+      return url ? new URL(url).hostname : null;
+    } catch {
+      return null;
+    }
+  })
+  .filter((host): host is string => Boolean(host));
+
 const nextConfig: NextConfig = {
+  images: {
+    remotePatterns: r2ImageHosts.map((hostname) => ({
+      protocol: "https" as const,
+      hostname,
+    })),
+  },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

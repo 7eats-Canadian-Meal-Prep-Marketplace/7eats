@@ -23,7 +23,9 @@ export async function uploadListingPhoto(
 export function getListingPhotoUrl(key: string): string {
   const base = BUCKET_CONFIG[BUCKETS.LISTINGS].cdnBaseUrl;
   if (!base) throw new Error("R2_PUBLIC_BUCKET_URL_LISTINGS is not configured");
-  return `${base}/${key}`;
+  // Strip any trailing slash so a configured base like ".../" doesn't produce a
+  // double slash, which R2 treats as a different (missing) object key → 404.
+  return `${base.replace(/\/+$/, "")}/${key}`;
 }
 
 export function isListingPhotoUrl(url: string): boolean {

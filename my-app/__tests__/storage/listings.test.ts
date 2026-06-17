@@ -76,6 +76,22 @@ describe("listings", () => {
         "https://listings.example.com/listings/listing-456/photo.jpg",
       );
     });
+
+    it("does not double up the slash when the base has a trailing slash", async () => {
+      const { BUCKET_CONFIG } = await import("@/lib/storage/buckets");
+      const original = BUCKET_CONFIG["homecook-listings-public"].cdnBaseUrl;
+      BUCKET_CONFIG["homecook-listings-public"].cdnBaseUrl =
+        "https://listings.example.com/";
+      try {
+        const url = getListingPhotoUrl("listings/listing-456/photo.jpg");
+        expect(url).toBe(
+          "https://listings.example.com/listings/listing-456/photo.jpg",
+        );
+        expect(url).not.toContain(".com//");
+      } finally {
+        BUCKET_CONFIG["homecook-listings-public"].cdnBaseUrl = original;
+      }
+    });
   });
 
   describe("deleteListingPhoto", () => {

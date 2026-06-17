@@ -3,7 +3,7 @@
 import { ArrowLeft, Check, Plus, Trash2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import styles from "./page.module.css";
 
 // ─── Constants ──────────────────────────────────────────────────────────────────
@@ -47,6 +47,26 @@ export default function NewDishPage() {
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [nutrition, setNutrition] = useState(EMPTY_NUTRITION);
   const [allergens, setAllergens] = useState<string[]>([]);
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Release the object URL when it changes or the component unmounts.
+  useEffect(() => {
+    return () => {
+      if (coverPreview) URL.revokeObjectURL(coverPreview);
+    };
+  }, [coverPreview]);
+
+  function handleCoverSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCoverPreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return URL.createObjectURL(file);
+    });
+    // Allow re-selecting the same file later (onChange won't fire otherwise).
+    e.target.value = "";
+  }
 
   function addIngredient() {
     setIngredients((prev) => [
@@ -87,6 +107,10 @@ export default function NewDishPage() {
     setIngredients([]);
     setNutrition(EMPTY_NUTRITION);
     setAllergens([]);
+    setCoverPreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
     setStep(1);
   }
 
@@ -199,15 +223,37 @@ export default function NewDishPage() {
               <span className={styles.formLabel}>Cover photo</span>
               <div className={styles.coverWrap}>
                 <div className={styles.coverImgWrap}>
-                  <Image
-                    src="/placeholder.jpg"
-                    alt="Cover"
-                    fill
-                    className={styles.coverImg}
-                  />
+                  {coverPreview ? (
+                    // Object-URL preview — plain <img> since next/image can't
+                    // optimize blob: URLs.
+                    // biome-ignore lint/performance/noImgElement: local file preview, not a remote asset
+                    <img
+                      src={coverPreview}
+                      alt="Cover preview"
+                      className={styles.coverImg}
+                    />
+                  ) : (
+                    <Image
+                      src="/placeholder.jpg"
+                      alt="Cover"
+                      fill
+                      className={styles.coverImg}
+                    />
+                  )}
                 </div>
-                <button type="button" className={styles.coverUploadBtn}>
-                  Upload photo
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  onChange={handleCoverSelect}
+                />
+                <button
+                  type="button"
+                  className={styles.coverUploadBtn}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {coverPreview ? "Change photo" : "Upload photo"}
                 </button>
               </div>
             </div>
