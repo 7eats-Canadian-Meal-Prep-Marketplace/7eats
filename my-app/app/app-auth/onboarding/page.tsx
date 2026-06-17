@@ -486,6 +486,23 @@ export default function OnboardingPage() {
     router.push("/app/browse");
   }
 
+  // Escape hatch: onboarding preferences are optional, so let users bail out to
+  // the app instead of being trapped here on every visit. We mark onboarding
+  // complete with empty preferences (which sets the 7eats-onboarded cookie the
+  // proxy gates on) so they aren't bounced straight back.
+  async function handleSkip() {
+    try {
+      await fetch("/api/auth/complete-onboarding", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ dietary: [], allergies: [], goals: [] }),
+      });
+    } catch {
+      // Best-effort — navigate regardless.
+    }
+    router.push("/app/browse");
+  }
+
   // Avoid hydration mismatch — step determined client-side from session.
   if (step === null) return null;
 
@@ -514,6 +531,9 @@ export default function OnboardingPage() {
             2
           </span>
         </nav>
+        <button type="button" className={styles.skipBtn} onClick={handleSkip}>
+          Skip for now
+        </button>
       </div>
 
       <div className={styles.progressBar}>

@@ -10,13 +10,14 @@ import {
   X,
 } from "lucide-react";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   INTERVAL_LABELS,
   SUBSCRIPTION_INTERVALS,
   type SubscriptionInterval,
 } from "@/lib/subscription-schedule";
 import { BackToListings } from "../_back-link";
+import { CoverCropModal } from "./_cover-crop-modal";
 import {
   type AvailableDish,
   bundleToTier,
@@ -107,8 +108,12 @@ const EMPTY_TIER_INPUTS: SubscriptionTierInputs = {
   monthly: { enabled: false, price: "" },
 };
 
+const COVER_ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const COVER_MAX_BYTES = 5 * 1024 * 1024;
+
 function OverviewTab() {
   const {
+    listingId,
     stats,
     listing,
     bundles,
@@ -132,6 +137,19 @@ function OverviewTab() {
     useState<SubscriptionTierInputs>(EMPTY_TIER_INPUTS);
   const [saved, setSaved] = useState(false);
   const [initialized, setInitialized] = useState(false);
+  const [coverUrl, setCoverUrl] = useState<string | null>(null);
+  const [coverError, setCoverError] = useState("");
+  const [uploadingCover, setUploadingCover] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
+  const [cropName, setCropName] = useState("");
+  const coverInputRef = useRef<HTMLInputElement>(null);
+
+  // Release the cropper's object URL when it changes or the tab unmounts.
+  useEffect(() => {
+    if (!cropSrc) return;
+    return () => URL.revokeObjectURL(cropSrc);
+  }, [cropSrc]);
 
   useEffect(() => {
     if (!loading && listing && !initialized) {
@@ -145,6 +163,7 @@ function OverviewTab() {
         status: listing.status,
       });
       setSubscriptionEnabled(listing.subscriptionEnabled ?? false);
+      setCoverUrl(listing.coverPhotoUrl ?? null);
       setTiers(bundles.map(bundleToTier));
       const nextTierInputs: SubscriptionTierInputs = {
         weekly: { enabled: false, price: "" },
@@ -215,6 +234,72 @@ function OverviewTab() {
       ...prev,
       [interval]: { ...prev[interval], ...update },
     }));
+  }
+
+  async function uploadCover(file: File) {
+    setCoverError("");
+    if (!COVER_ACCEPTED_TYPES.includes(file.type)) {
+      setCoverError("Use a JPEG, PNG, or WEBP image.");
+      return;
+    }
+    if (file.size > COVER_MAX_BYTES) {
+      setCoverError("Image must be smaller than 5 MB.");
+      return;
+    }
+    setUploadingCover(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch(`/api/business/listings/${listingId}/cover`, {
+        method: "POST",
+        body: fd,
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setCoverError(json.error ?? "Upload failed. Please try again.");
+        return;
+      }
+      setCoverUrl(json.data.coverPhotoUrl);
+    } catch {
+      setCoverError("Network error. Please try again.");
+    } finally {
+      setUploadingCover(false);
+    }
+  }
+
+  // Open the crop/zoom modal for a freshly chosen image instead of uploading
+  // straight away, so the cook can frame the part of the photo that shows.
+  // The object URL is released by the effect below when cropSrc changes/unmounts.
+  function openCropper(file: File) {
+    if (!COVER_ACCEPTED_TYPES.includes(file.type)) {
+      setCoverError("Use a JPEG, PNG, or WEBP image.");
+      return;
+    }
+    setCoverError("");
+    setCropName(file.name);
+    setCropSrc(URL.createObjectURL(file));
+  }
+
+  function closeCropper() {
+    setCropSrc(null);
+  }
+
+  async function handleCropApply(cropped: File) {
+    closeCropper();
+    await uploadCover(cropped);
+  }
+
+  function handleCoverInput(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) openCropper(file);
+    e.target.value = "";
+  }
+
+  function handleCoverDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setDragActive(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) openCropper(file);
   }
 
   async function handleSave() {
@@ -497,17 +582,71 @@ function OverviewTab() {
         <div className={styles.overviewRight}>
           <div className={styles.formGroup}>
             <span className={styles.formLabel}>Cover photo</span>
-            <div className={styles.dropzone}>
-              <Camera size={20} className={styles.dropzoneIcon} />
-              <span className={styles.dropzoneText}>
-                Drag & drop, or{" "}
-                <span className={styles.dropzoneBrowse}>browse</span>
-              </span>
-              <span className={styles.dropzoneSub}>
-                JPEG, PNG or WEBP · Max 5 MB
-              </span>
-            </div>
+            <input
+              ref={coverInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              hidden
+              onChange={handleCoverInput}
+            />
+            <button
+              type="button"
+              className={`${styles.dropzone} ${coverUrl ? styles.dropzoneFilled : ""} ${
+                dragActive ? styles.dropzoneActive : ""
+              }`}
+              onClick={() => coverInputRef.current?.click()}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragActive(true);
+              }}
+              onDragLeave={() => setDragActive(false)}
+              onDrop={handleCoverDrop}
+              disabled={uploadingCover}
+            >
+              {coverUrl ? (
+                <>
+                  {/* biome-ignore lint/performance/noImgElement: remote R2 preview, not a static asset */}
+                  <img
+                    src={coverUrl}
+                    alt="Listing cover"
+                    className={styles.dropzonePreview}
+                  />
+                  <span className={styles.dropzoneOverlay}>
+                    {uploadingCover ? "Uploading…" : "Change photo"}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <Camera size={20} className={styles.dropzoneIcon} />
+                  <span className={styles.dropzoneText}>
+                    {uploadingCover ? (
+                      "Uploading…"
+                    ) : (
+                      <>
+                        Drag &amp; drop, or{" "}
+                        <span className={styles.dropzoneBrowse}>browse</span>
+                      </>
+                    )}
+                  </span>
+                  <span className={styles.dropzoneSub}>
+                    JPEG, PNG or WEBP · Max 5 MB
+                  </span>
+                </>
+              )}
+            </button>
+            {coverError && (
+              <span className={styles.dropzoneError}>{coverError}</span>
+            )}
           </div>
+
+          {cropSrc && (
+            <CoverCropModal
+              src={cropSrc}
+              fileName={cropName}
+              onCancel={closeCropper}
+              onApply={handleCropApply}
+            />
+          )}
 
           <div className={styles.formRowSnug}>
             <div className={styles.formGroup}>

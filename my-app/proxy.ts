@@ -198,12 +198,13 @@ export async function proxy(req: NextRequest) {
   // ── Business login ────────────────────────────────────────────────────────
   if (pathname === "/business-auth/login") {
     const session = await getSession(req);
-    if (session) {
-      if (session.user.role === "client") {
-        return NextResponse.redirect(new URL("/business/home", req.url));
-      }
+    if (session && session.user.role !== "client") {
+      // Cooks/admins are already authenticated for the business portal.
       return NextResponse.redirect(new URL("/business/dashboard", req.url));
     }
+    // Guests AND logged-in clients can reach the form: a client may keep a
+    // separate cook account, so bouncing them away leaves the "Log in" button
+    // looking dead. Signing in here swaps their session to the cook account.
     return NextResponse.next();
   }
 

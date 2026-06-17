@@ -139,6 +139,7 @@ type ListingMeta = {
   maxOrderQty: number | null;
   status: ListingStatus;
   subscriptionEnabled: boolean;
+  coverPhotoUrl: string | null;
 };
 
 type ListingDetailContextValue = {
@@ -276,6 +277,7 @@ export function ListingDetailProvider({
         maxOrderQty: listing.maxOrderQty,
         status: listing.status as ListingStatus,
         subscriptionEnabled: listing.subscriptionEnabled ?? false,
+        coverPhotoUrl: listing.coverPhotoUrl ?? null,
       });
       setSubscriptionTiers(
         ((listing.tiers ?? []) as ApiTier[]).map(mapSubscriptionTier),

@@ -27,6 +27,9 @@ export default function LoginForm({
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  // Set when the account belongs to the other portal — drives the "go to the
+  // correct portal" link rendered under the error message.
+  const [wrongPortal, setWrongPortal] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const forgotPasswordHref =
@@ -34,9 +37,18 @@ export default function LoginForm({
       ? "/app-auth/forgot-password"
       : "/business-auth/forgot-password";
 
+  // The portal this account should actually use.
+  const otherPortalHref =
+    audience === "client" ? "/business-auth/login" : "/app-auth/login";
+  const otherPortalLabel =
+    audience === "client"
+      ? "Go to the business portal →"
+      : "Go to the 7eats app →";
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setWrongPortal(false);
     startTransition(async () => {
       const res = await fetch("/api/auth/sign-in", {
         method: "POST",
@@ -46,6 +58,7 @@ export default function LoginForm({
       const data = await res.json();
       if (!res.ok) {
         setError(data.error ?? "Something went wrong.");
+        if (data.code === "wrong_portal") setWrongPortal(true);
         return;
       }
       const next = searchParams.get("next");
@@ -59,6 +72,7 @@ export default function LoginForm({
         (audience === "business" && destination.startsWith("/app"))
       ) {
         setError(data.error ?? "This account cannot sign in here.");
+        setWrongPortal(true);
         return;
       }
       router.push(destination);
@@ -119,7 +133,16 @@ export default function LoginForm({
           </div>
         </div>
 
-        {error && <p className={styles.error}>{error}</p>}
+        {error && (
+          <p className={styles.error}>
+            {error}
+            {wrongPortal && (
+              <Link href={otherPortalHref} className={styles.errorLink}>
+                {otherPortalLabel}
+              </Link>
+            )}
+          </p>
+        )}
 
         <button
           type="submit"

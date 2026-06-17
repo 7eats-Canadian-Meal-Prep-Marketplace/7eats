@@ -124,6 +124,19 @@
   margin: 0;
 }
 
+.errorLink {
+  display: block;
+  margin-top: 6px;
+  font-weight: 700;
+  color: var(--red);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.errorLink:hover {
+  color: var(--red-deep, var(--ink));
+}
+
 /* ── Submit ─────────────────────────────────────────────────────────────────── */
 .submit {
   width: 100%;

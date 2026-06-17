@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import twilio from "twilio";
 import { auth } from "@/lib/auth";
 import { generateSignedPhone } from "@/lib/cookie";
+import { DEV_OTP_CODE, OTP_DEV_BYPASS } from "@/lib/otp-dev";
 import { logAndCheckRateLimit } from "@/lib/rate-limit";
 
 function twilioClient() {
@@ -50,16 +51,23 @@ export async function POST(req: Request) {
     );
   }
 
-  try {
-    await twilioClient()
-      .verify.v2.services(verifyServiceSid())
-      .verifications.create({ to: e164, channel: "sms" });
-  } catch (err) {
-    console.error("[client/send-otp]", err);
-    return NextResponse.json(
-      { error: "Could not send code. Please try again." },
-      { status: 500 },
+  // Dev bypass: skip the SMS entirely and accept DEV_OTP_CODE at verification.
+  if (OTP_DEV_BYPASS) {
+    console.log(
+      `[client/send-otp] dev bypass — enter code ${DEV_OTP_CODE} to verify ${e164}`,
     );
+  } else {
+    try {
+      await twilioClient()
+        .verify.v2.services(verifyServiceSid())
+        .verifications.create({ to: e164, channel: "sms" });
+    } catch (err) {
+      console.error("[client/send-otp]", err);
+      return NextResponse.json(
+        { error: "Could not send code. Please try again." },
+        { status: 500 },
+      );
+    }
   }
 
   const res = NextResponse.json({ success: true });

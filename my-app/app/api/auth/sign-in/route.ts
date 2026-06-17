@@ -65,6 +65,7 @@ export async function POST(req: Request) {
       {
         error:
           "This account is registered as a cook. Sign in at the business portal instead.",
+        code: "wrong_portal",
       },
       { status: 403 },
     );
@@ -75,6 +76,7 @@ export async function POST(req: Request) {
       {
         error:
           "This account is a customer account. Sign in on the 7eats app instead.",
+        code: "wrong_portal",
       },
       { status: 403 },
     );
