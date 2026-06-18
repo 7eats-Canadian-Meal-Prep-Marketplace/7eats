@@ -623,6 +623,11 @@ export async function POST(req: NextRequest) {
               dishId: d.dishId,
               dishName: d.dishName,
               quantity: d.quantity,
+              // Bridge: this listing-based POST handler is fully replaced by the
+              // multi-dish order creation task. Zero placeholders satisfy the new
+              // NOT NULL per-dish pricing columns until then.
+              priceSnapshot: "0",
+              lineTotal: "0",
               sortOrder: d.sortOrder,
             })),
           );

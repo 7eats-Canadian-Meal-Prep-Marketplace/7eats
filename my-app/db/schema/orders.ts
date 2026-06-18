@@ -15,10 +15,9 @@ import {
 } from "drizzle-orm/pg-core";
 import { authUser } from "./auth";
 import { cookProfiles } from "./cooks";
-import { dishes } from "./dishes";
+import { dishes, dishPromotions } from "./dishes";
 import { lateCancelFeeTypeEnum, orderStatus } from "./enums";
-import { listingPromotions, listings } from "./listings";
-import { clientSubscriptions } from "./subscriptions";
+import { listings } from "./listings";
 
 const isAdmin = sql`auth.role() = 'admin'`;
 const currentCookOwnsOrder = sql`cook_id IN (SELECT id FROM cook_profiles WHERE user_id = auth.uid())`;
@@ -30,22 +29,25 @@ export const orders = pgTable(
     clientId: text("client_id")
       .notNull()
       .references(() => authUser.id, { onDelete: "restrict" }),
-    listingId: uuid("listing_id")
-      .notNull()
-      .references(() => listings.id, { onDelete: "restrict" }),
+    // Deprecated: orders no longer reference listings. Nullable set-null so the
+    // listings table can eventually be dropped. Retained for historical orders.
+    listingId: uuid("listing_id").references(() => listings.id, {
+      onDelete: "set null",
+    }),
     cookId: uuid("cook_id")
       .notNull()
       .references(() => cookProfiles.id, { onDelete: "restrict" }),
     status: orderStatus("status").notNull().default("pending"),
-    quantity: integer("quantity").notNull().default(1),
-    // Price of one listing unit at time of order — immutable after insert
-    unitPrice: numeric("unit_price", { precision: 10, scale: 2 }).notNull(),
-    // Promotion applied at time of order (null = no promotion)
-    promotionId: uuid("promotion_id").references(() => listingPromotions.id, {
-      onDelete: "set null",
-    }),
+    // Deprecated single-line fields — per-dish pricing now lives in order_dishes.
+    quantity: integer("quantity"),
+    unitPrice: numeric("unit_price", { precision: 10, scale: 2 }),
+    promotionId: uuid("promotion_id"),
     // Dollar amount discounted; null when no promotion applied
     discountAmount: numeric("discount_amount", { precision: 10, scale: 2 }),
+    // Snapshot of the cook's cancellation policy at order time.
+    cancellationAllowed: boolean("cancellation_allowed")
+      .notNull()
+      .default(false),
     // total_price = unit_price * quantity - COALESCE(discount_amount, 0)
     totalPrice: numeric("total_price", { precision: 10, scale: 2 }).notNull(),
     currency: varchar("currency", { length: 3 }).notNull().default("CAD"),
@@ -64,10 +66,8 @@ export const orders = pgTable(
     }),
     lateCancelFee: numeric("late_cancel_fee", { precision: 10, scale: 2 }),
     notes: text("notes"),
-    subscriptionId: uuid("subscription_id").references(
-      () => clientSubscriptions.id,
-      { onDelete: "set null" },
-    ),
+    // Deprecated: subscriptions removed for launch. Plain uuid kept for history.
+    subscriptionId: uuid("subscription_id"),
     pickupCodeHash: text("pickup_code_hash"),
     pickupCodeExpiresAt: timestamp("pickup_code_expires_at"),
     pickupCodeVerifiedAt: timestamp("pickup_code_verified_at"),
@@ -97,12 +97,6 @@ export const orders = pgTable(
       .$onUpdate(() => new Date()),
   },
   (t) => [
-    uniqueIndex("orders_subscription_period_uidx").on(
-      t.subscriptionId,
-      t.pickupAt,
-    ),
-    check("orders_quantity_positive", sql`${t.quantity} >= 1`),
-    check("orders_unit_price_positive", sql`${t.unitPrice} > 0`),
     check(
       "orders_discount_non_negative",
       sql`${t.discountAmount} IS NULL OR ${t.discountAmount} >= 0`,
@@ -138,31 +132,9 @@ export const orders = pgTable(
     pgPolicy("orders_insert_client", {
       for: "insert",
       to: "public",
-      withCheck: sql`
-        client_id = auth.uid()
-        AND status = 'pending'
-        AND EXISTS (
-          SELECT 1
-          FROM listings l
-          WHERE l.id = orders.listing_id
-            AND l.status = 'active'
-            AND l.cook_id = orders.cook_id
-            AND l.base_price = orders.unit_price
-        )
-        AND orders.total_price = orders.unit_price * orders.quantity - COALESCE(orders.discount_amount, 0)
-        AND (
-          orders.promotion_id IS NULL
-          OR EXISTS (
-            SELECT 1 FROM listing_promotions lp
-            WHERE lp.id = orders.promotion_id
-              AND lp.listing_id = orders.listing_id
-              AND lp.is_active = TRUE
-              AND (lp.valid_from IS NULL OR lp.valid_from <= NOW())
-              AND (lp.valid_until IS NULL OR lp.valid_until > NOW())
-              AND (lp.max_uses IS NULL OR lp.uses_count < lp.max_uses)
-          )
-        )
-      `,
+      // Structural check only — pricing/promotion validation is done in the
+      // service_role order-creation transaction, not trusted from the client.
+      withCheck: sql`client_id = auth.uid() AND status = 'pending'`,
     }),
     pgPolicy("orders_update_client", {
       for: "update",
@@ -203,12 +175,29 @@ export const orderDishes = pgTable(
     // Snapshot of dish name at order time — preserved if dish is later renamed
     dishName: varchar("dish_name", { length: 255 }).notNull(),
     quantity: integer("quantity").notNull(),
+    // Per-dish price snapshot at order time — immutable after insert.
+    priceSnapshot: numeric("price_snapshot", {
+      precision: 10,
+      scale: 2,
+    }).notNull(),
+    // Promotion applied to this line (null = none). Set-null preserves history.
+    promotionId: uuid("promotion_id").references(() => dishPromotions.id, {
+      onDelete: "set null",
+    }),
+    discountAmount: numeric("discount_amount", { precision: 10, scale: 2 }),
+    // line_total = price_snapshot * quantity - COALESCE(discount_amount, 0)
+    lineTotal: numeric("line_total", { precision: 10, scale: 2 }).notNull(),
     sortOrder: integer("sort_order").notNull().default(0),
   },
   (t) => [
     // A dish can only appear once per order snapshot
     uniqueIndex("order_dishes_order_dish_uidx").on(t.orderId, t.dishId),
     check("order_dishes_quantity_positive", sql`${t.quantity} >= 1`),
+    check(
+      "order_dishes_discount_non_negative",
+      sql`${t.discountAmount} IS NULL OR ${t.discountAmount} >= 0`,
+    ),
+    check("order_dishes_line_total_non_negative", sql`${t.lineTotal} >= 0`),
     pgPolicy("order_dishes_select_client", {
       for: "select",
       to: "public",
@@ -254,9 +243,11 @@ export const reviews = pgTable(
     cookId: uuid("cook_id")
       .notNull()
       .references(() => cookProfiles.id, { onDelete: "restrict" }),
-    listingId: uuid("listing_id")
-      .notNull()
-      .references(() => listings.id, { onDelete: "restrict" }),
+    // Deprecated: reviews are on the cook now. Nullable set-null; dish context
+    // is derived from the order via order_dishes.
+    listingId: uuid("listing_id").references(() => listings.id, {
+      onDelete: "set null",
+    }),
     rating: integer("rating").notNull(),
     comment: text("comment"),
     cookResponse: text("cook_response"),
@@ -297,7 +288,6 @@ export const reviews = pgTable(
             AND o.client_id = auth.uid()
             AND o.status = 'fulfilled'
             AND o.cook_id = reviews.cook_id
-            AND o.listing_id = reviews.listing_id
         )
       `,
     }),

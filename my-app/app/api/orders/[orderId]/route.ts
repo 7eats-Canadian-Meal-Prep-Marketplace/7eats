@@ -382,7 +382,7 @@ export async function DELETE(req: NextRequest, { params }: Params) {
     })
       .from(cookProfiles)
       .innerJoin(authUser, eq(cookProfiles.userId, authUser.id))
-      .innerJoin(listings, eq(listings.id, order.listingId))
+      .innerJoin(listings, eq(listings.id, order.listingId ?? ""))
       .where(eq(cookProfiles.id, order.cookId))
       .limit(1)
       .then(([row]) => {
@@ -399,7 +399,7 @@ export async function DELETE(req: NextRequest, { params }: Params) {
           {
             id: order.id,
             listingTitle: row.listingTitle,
-            quantity: order.quantity,
+            quantity: order.quantity ?? 1,
             totalPrice: order.totalPrice,
             currency: order.currency,
             pickupAt: order.pickupAt,

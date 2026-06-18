@@ -283,7 +283,9 @@ export async function PATCH(req: NextRequest, { params }: Params) {
           const orderData = {
             id: orderId,
             listingTitle: row.listingTitle ?? "",
-            quantity: row.quantity,
+            // quantity is nullable on new dish-orders; legacy emails expect a
+            // number. Order-email reshape to dish names is a later task.
+            quantity: row.quantity ?? 1,
             totalPrice: row.totalPrice,
             currency: row.currency,
             pickupAt: row.pickupAt ?? new Date(),

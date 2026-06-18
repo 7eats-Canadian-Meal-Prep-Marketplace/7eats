@@ -91,19 +91,35 @@ describe("reviewed database schema safeguards", () => {
     );
   });
 
-  it("validates order insert pricing and review order consistency", () => {
+  it("uses a structural client order-insert check (pricing is service-role)", () => {
     const ordersSchema = schemaFile("orders.ts");
 
-    expect(ordersSchema).toContain("l.id = orders.listing_id");
-    expect(ordersSchema).toContain("l.status = 'active'");
-    expect(ordersSchema).toContain("l.cook_id = orders.cook_id");
-    expect(ordersSchema).toContain("l.base_price = orders.unit_price");
-    expect(ordersSchema).toContain(
+    // Listings-based pricing validation was removed from RLS — financial logic
+    // now lives in the service_role order-creation transaction.
+    expect(ordersSchema).not.toContain("l.base_price = orders.unit_price");
+    expect(ordersSchema).not.toContain(
       "orders.total_price = orders.unit_price * orders.quantity",
     );
+    expect(ordersSchema).toContain(
+      "client_id = auth.uid() AND status = 'pending'",
+    );
+  });
+
+  it("keeps reviews tied to fulfilled orders without a listing reference", () => {
+    const ordersSchema = schemaFile("orders.ts");
 
     expect(ordersSchema).toContain("o.id = reviews.order_id");
     expect(ordersSchema).toContain("o.cook_id = reviews.cook_id");
-    expect(ordersSchema).toContain("o.listing_id = reviews.listing_id");
+    expect(ordersSchema).toContain("o.status = 'fulfilled'");
+    // listing_id was dropped from review validation
+    expect(ordersSchema).not.toContain("o.listing_id = reviews.listing_id");
+  });
+
+  it("records per-dish pricing on order_dishes", () => {
+    const ordersSchema = schemaFile("orders.ts");
+
+    expect(ordersSchema).toContain("price_snapshot");
+    expect(ordersSchema).toContain("line_total");
+    expect(ordersSchema).toContain("order_dishes_line_total_non_negative");
   });
 });

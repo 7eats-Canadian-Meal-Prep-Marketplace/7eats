@@ -125,16 +125,19 @@ export async function GET(req: NextRequest) {
       summaryGross += gross;
       summaryOrderCount += 1;
 
-      const existing = listingMap.get(row.listingId);
+      // listingId is deprecated (nullable on new dish-orders). Group legacy
+      // listing-based orders by their id; new orders fall under one bucket.
+      const listingKey = row.listingId ?? "";
+      const existing = listingMap.get(listingKey);
       if (existing) {
-        listingMap.set(row.listingId, {
+        listingMap.set(listingKey, {
           ...existing,
           orderCount: existing.orderCount + 1,
           gross: existing.gross + gross,
         });
       } else {
-        listingMap.set(row.listingId, {
-          listingId: row.listingId,
+        listingMap.set(listingKey, {
+          listingId: listingKey,
           listingTitle: row.listingTitle,
           orderCount: 1,
           gross,

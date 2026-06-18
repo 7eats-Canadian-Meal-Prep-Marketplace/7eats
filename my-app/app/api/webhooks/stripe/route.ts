@@ -235,6 +235,13 @@ export async function POST(req: NextRequest) {
                 dishId: d.dishId,
                 dishName: d.dishName,
                 quantity: d.quantity,
+                // Deprecated subscription-renewal path (subscriptions disabled
+                // for launch). order_dishes now requires per-dish pricing; this
+                // legacy listing-based snapshot has none, so zero placeholders
+                // keep the NOT NULL columns satisfied. This branch does not run
+                // while subscriptions are off.
+                priceSnapshot: "0",
+                lineTotal: "0",
                 sortOrder: d.sortOrder,
               })),
             );
