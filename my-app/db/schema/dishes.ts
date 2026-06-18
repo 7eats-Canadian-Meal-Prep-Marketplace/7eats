@@ -397,10 +397,11 @@ export const dishPromotions = pgTable(
     pgPolicy("dish_promotions_select_own", {
       for: "select",
       to: "public",
+      // cook_profiles.user_id is text; auth.uid() is uuid — cast to compare.
       using: sql`dish_id IN (
         SELECT d.id FROM dishes d
         JOIN cook_profiles cp ON d.cook_id = cp.id
-        WHERE cp.user_id = auth.uid()
+        WHERE cp.user_id = auth.uid()::text
       )`,
     }),
     pgPolicy("dish_promotions_select_admin", {
@@ -414,7 +415,7 @@ export const dishPromotions = pgTable(
       withCheck: sql`dish_id IN (
         SELECT d.id FROM dishes d
         JOIN cook_profiles cp ON d.cook_id = cp.id
-        WHERE cp.user_id = auth.uid()
+        WHERE cp.user_id = auth.uid()::text
       )`,
     }),
     pgPolicy("dish_promotions_update_own", {
@@ -423,12 +424,12 @@ export const dishPromotions = pgTable(
       using: sql`dish_id IN (
         SELECT d.id FROM dishes d
         JOIN cook_profiles cp ON d.cook_id = cp.id
-        WHERE cp.user_id = auth.uid()
+        WHERE cp.user_id = auth.uid()::text
       )`,
       withCheck: sql`dish_id IN (
         SELECT d.id FROM dishes d
         JOIN cook_profiles cp ON d.cook_id = cp.id
-        WHERE cp.user_id = auth.uid()
+        WHERE cp.user_id = auth.uid()::text
       )`,
     }),
     pgPolicy("dish_promotions_update_service", {
@@ -442,7 +443,7 @@ export const dishPromotions = pgTable(
       using: sql`dish_id IN (
         SELECT d.id FROM dishes d
         JOIN cook_profiles cp ON d.cook_id = cp.id
-        WHERE cp.user_id = auth.uid()
+        WHERE cp.user_id = auth.uid()::text
       )`,
     }),
   ],
