@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
   boolean,
   check,
+  index,
   integer,
   numeric,
   pgPolicy,
@@ -76,6 +77,7 @@ export const dishes = pgTable(
       .$onUpdate(() => new Date()),
   },
   (t) => [
+    index("dishes_cook_id_idx").on(t.cookId),
     check("dishes_price_positive", sql`${t.price} > 0`),
     // Public: dish is active
     pgPolicy("dishes_select_public", {

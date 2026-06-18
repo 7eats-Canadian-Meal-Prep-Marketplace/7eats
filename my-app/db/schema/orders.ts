@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
   boolean,
   check,
+  index,
   integer,
   jsonb,
   numeric,
@@ -97,6 +98,9 @@ export const orders = pgTable(
       .$onUpdate(() => new Date()),
   },
   (t) => [
+    // Hot-path indexes: client order list + cook dashboard/earnings.
+    index("orders_client_id_idx").on(t.clientId),
+    index("orders_cook_id_idx").on(t.cookId),
     check(
       "orders_discount_non_negative",
       sql`${t.discountAmount} IS NULL OR ${t.discountAmount} >= 0`,
@@ -260,6 +264,7 @@ export const reviews = pgTable(
       .$onUpdate(() => new Date()),
   },
   (table) => [
+    index("reviews_cook_id_idx").on(table.cookId),
     check("reviews_rating_range", sql`${table.rating} BETWEEN 1 AND 5`),
     pgPolicy("reviews_select_visible", {
       for: "select",
