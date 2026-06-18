@@ -19,18 +19,10 @@ const CLIENT_PUBLIC_EXACT = new Set([
   "/app/cart",
   "/app/checkout",
 ]);
-const CLIENT_PUBLIC_PREFIXES = [
-  "/app/listings/",
-  "/app/cooks/",
-  "/app/checkout/",
-];
+const CLIENT_PUBLIC_PREFIXES = ["/app/cooks/", "/app/checkout/"];
 
 /** Consumer routes that require a verified client account. */
-const CLIENT_PROTECTED_EXACT = new Set([
-  "/app/inbox",
-  "/app/saved",
-  "/app/settings",
-]);
+const CLIENT_PROTECTED_EXACT = new Set(["/app/inbox", "/app/settings"]);
 const CLIENT_PROTECTED_PREFIXES = ["/app/orders"];
 
 function isClientPublicRoute(pathname: string): boolean {
@@ -75,6 +67,16 @@ export async function proxy(req: NextRequest) {
       return NextResponse.redirect(new URL("/business/dashboard", req.url));
     }
     return NextResponse.redirect(new URL("/app", req.url));
+  }
+
+  // ── Legacy listing routes → browse ───────────────────────────────────────
+  // Listings were removed in the dishes redesign; bounce any old links.
+  if (pathname === "/app/listings" || pathname.startsWith("/app/listings/")) {
+    return NextResponse.redirect(new URL("/app/browse", req.url));
+  }
+  // Saved listings are retired for launch.
+  if (pathname === "/app/saved") {
+    return NextResponse.redirect(new URL("/app/browse", req.url));
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
