@@ -7,7 +7,7 @@ import { db } from "@/db";
 import {
   authUser,
   cookProfiles,
-  listings,
+  orderDishes,
   orderPayments,
   orders,
 } from "@/db/schema";
@@ -258,8 +258,6 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       db.select({
         clientEmail: authUser.email,
         clientFirstName: authUser.firstName,
-        listingTitle: listings.title,
-        quantity: orders.quantity,
         totalPrice: orders.totalPrice,
         currency: orders.currency,
         pickupAt: orders.pickupAt,
@@ -267,22 +265,26 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       })
         .from(orders)
         .innerJoin(authUser, eq(orders.clientId, authUser.id))
-        .innerJoin(listings, eq(orders.listingId, listings.id))
         .innerJoin(cookProfiles, eq(orders.cookId, cookProfiles.id))
         .where(eq(orders.id, orderId))
         .limit(1)
-        .then(([row]) => {
+        .then(async ([row]) => {
           if (!row) return;
+          const dishRows = await db
+            .select({
+              name: orderDishes.dishName,
+              quantity: orderDishes.quantity,
+            })
+            .from(orderDishes)
+            .where(eq(orderDishes.orderId, orderId));
           const client = {
             email: row.clientEmail as string,
             firstName: row.clientFirstName as string | null,
           };
           const orderData = {
             id: orderId,
-            listingTitle: row.listingTitle ?? "",
-            // quantity is nullable on new dish-orders; legacy emails expect a
-            // number. Order-email reshape to dish names is a later task.
-            quantity: row.quantity ?? 1,
+            listingTitle: dishRows.map((d) => d.name).join(", "),
+            quantity: dishRows.reduce((s, d) => s + d.quantity, 0),
             totalPrice: row.totalPrice,
             currency: row.currency,
             pickupAt: row.pickupAt ?? new Date(),

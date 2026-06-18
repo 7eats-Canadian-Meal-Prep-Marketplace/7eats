@@ -68,10 +68,6 @@ function DetailsTab() {
           <span className={styles.statVal}>{stats.totalOrders}</span>
         </div>
         <div className={styles.statCard}>
-          <span className={styles.statLabel}>In listings</span>
-          <span className={styles.statVal}>{stats.listingCount}</span>
-        </div>
-        <div className={styles.statCard}>
           <span className={styles.statLabel}>Avg qty / order</span>
           <span className={styles.statVal}>
             {stats.avgQtyPerOrder.toFixed(1)}
@@ -208,21 +204,8 @@ function DetailsTab() {
                 <option value="draft">Draft</option>
               )}
               <option value="active">Active</option>
-              <option value="archived" disabled={stats.listingCount > 0}>
-                Archived
-              </option>
+              <option value="archived">Archived</option>
             </select>
-            {stats.listingCount > 0 && (
-              <div className={styles.listingBlock}>
-                <span className={styles.listingBlockCount}>
-                  In {stats.listingCount} listing
-                  {stats.listingCount !== 1 ? "s" : ""}
-                </span>
-                <span className={styles.listingBlockDesc}>
-                  Remove from all listings to archive this dish.
-                </span>
-              </div>
-            )}
           </div>
         </div>
       </div>

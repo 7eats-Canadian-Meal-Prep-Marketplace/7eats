@@ -3,7 +3,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getCookId, unauthorized } from "@/app/api/business/_lib/cook-auth";
 import { db } from "@/db";
-import { cookProfiles, listings, orders } from "@/db/schema";
+import { cookProfiles, orderDishes, orders } from "@/db/schema";
 
 const now = new Date();
 const currentYear = now.getFullYear();
@@ -76,21 +76,34 @@ export async function GET(req: NextRequest) {
 
   try {
     // Fetch platform fee and fulfilled orders with listing titles in parallel
-    const [cookProfile, rawOrders] = await Promise.all([
+    const [cookProfile, rawOrders, dishLines] = await Promise.all([
       db
         .select({ platformFeePct: cookProfiles.platformFeePct })
         .from(cookProfiles)
         .where(eq(cookProfiles.id, cookId))
         .limit(1),
 
+      // Order-level totals (the real money, including any delivery fee).
+      db
+        .select({ id: orders.id, totalPrice: orders.totalPrice })
+        .from(orders)
+        .where(
+          and(
+            eq(orders.cookId, cookId),
+            eq(orders.status, "fulfilled"),
+            gte(orders.pickupAt, startDate),
+            lte(orders.pickupAt, endDate),
+          ),
+        ),
+
+      // Per-dish breakdown from the order line items.
       db
         .select({
-          listingId: orders.listingId,
-          listingTitle: listings.title,
-          totalPrice: orders.totalPrice,
+          dishName: orderDishes.dishName,
+          lineTotal: orderDishes.lineTotal,
         })
-        .from(orders)
-        .innerJoin(listings, eq(orders.listingId, listings.id))
+        .from(orderDishes)
+        .innerJoin(orders, eq(orderDishes.orderId, orders.id))
         .where(
           and(
             eq(orders.cookId, cookId),
@@ -103,39 +116,24 @@ export async function GET(req: NextRequest) {
 
     const platformFeePct = Number(cookProfile[0]?.platformFeePct ?? 0);
 
-    // Aggregate by listing in TypeScript
-    const listingMap = new Map<
-      string,
-      {
-        listingId: string;
-        listingTitle: string;
-        orderCount: number;
-        gross: number;
-      }
-    >();
-
     let summaryGross = 0;
-    let summaryOrderCount = 0;
+    for (const o of rawOrders) summaryGross += Number(o.totalPrice);
+    const summaryOrderCount = rawOrders.length;
 
-    for (const row of rawOrders) {
-      const gross = Number(row.totalPrice);
-      summaryGross += gross;
-      summaryOrderCount += 1;
-
-      // listingId is deprecated (nullable on new dish-orders). Group legacy
-      // listing-based orders by their id; new orders fall under one bucket.
-      const listingKey = row.listingId ?? "";
-      const existing = listingMap.get(listingKey);
+    // Aggregate the breakdown by dish name.
+    const dishMap = new Map<
+      string,
+      { dishName: string; orderCount: number; gross: number }
+    >();
+    for (const row of dishLines) {
+      const gross = Number(row.lineTotal);
+      const existing = dishMap.get(row.dishName);
       if (existing) {
-        listingMap.set(listingKey, {
-          ...existing,
-          orderCount: existing.orderCount + 1,
-          gross: existing.gross + gross,
-        });
+        existing.orderCount += 1;
+        existing.gross += gross;
       } else {
-        listingMap.set(listingKey, {
-          listingId: listingKey,
-          listingTitle: row.listingTitle,
+        dishMap.set(row.dishName, {
+          dishName: row.dishName,
           orderCount: 1,
           gross,
         });
@@ -145,12 +143,14 @@ export async function GET(req: NextRequest) {
     const summaryPlatformFee = summaryGross * (platformFeePct / 100);
     const summaryNet = summaryGross - summaryPlatformFee;
 
-    const byListing = Array.from(listingMap.values()).map((entry) => {
+    // Response key kept as `byListing` for the existing earnings UI; entries now
+    // describe dishes (listingTitle = dish name).
+    const byListing = Array.from(dishMap.values()).map((entry) => {
       const platformFee = entry.gross * (platformFeePct / 100);
       const net = entry.gross - platformFee;
       return {
-        listingId: entry.listingId,
-        listingTitle: entry.listingTitle,
+        listingId: entry.dishName,
+        listingTitle: entry.dishName,
         orderCount: entry.orderCount,
         gross: entry.gross,
         platformFee,
