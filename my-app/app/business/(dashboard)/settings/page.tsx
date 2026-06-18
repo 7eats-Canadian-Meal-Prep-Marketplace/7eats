@@ -685,6 +685,148 @@ function Toggle({
   );
 }
 
+function OrderRulesSection() {
+  const [minOrderQty, setMinOrderQty] = useState("1");
+  const [maxOrderQty, setMaxOrderQty] = useState("");
+  const [cancellationAllowed, setCancellationAllowed] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [savedMsg, setSavedMsg] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/business/dashboard/settings")
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.success) {
+          setMinOrderQty(String(json.data.minOrderQty ?? 1));
+          setMaxOrderQty(
+            json.data.maxOrderQty != null ? String(json.data.maxOrderQty) : "",
+          );
+          setCancellationAllowed(Boolean(json.data.cancellationAllowed));
+        }
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  async function save() {
+    setError(null);
+    setSavedMsg(null);
+    const min = Number(minOrderQty);
+    const max = maxOrderQty === "" ? null : Number(maxOrderQty);
+    if (!Number.isInteger(min) || min < 1) {
+      setError("Minimum order must be a whole number of at least 1.");
+      return;
+    }
+    if (max != null && (!Number.isInteger(max) || max < min)) {
+      setError("Maximum order must be a whole number at least the minimum.");
+      return;
+    }
+    const res = await fetch("/api/business/dashboard/settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        minOrderQty: min,
+        maxOrderQty: max,
+        cancellationAllowed,
+      }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error ?? "Could not save order rules.");
+      return;
+    }
+    setSavedMsg("Saved");
+    setTimeout(() => setSavedMsg(null), 2000);
+  }
+
+  if (loading) {
+    return (
+      <div className={styles.card}>
+        <div style={{ padding: "1rem", color: "var(--muted)" }}>Loading…</div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={styles.card}
+      style={{
+        padding: "1rem",
+        display: "flex",
+        flexDirection: "column",
+        gap: 16,
+      }}
+    >
+      <div className={styles.notifRow}>
+        <div className={styles.notifInfo}>
+          <span className={styles.notifLabel}>Minimum order quantity</span>
+          <span className={styles.notifDesc}>
+            Fewest items a customer must order.
+          </span>
+        </div>
+        <input
+          type="number"
+          min="1"
+          step="1"
+          value={minOrderQty}
+          onChange={(e) => setMinOrderQty(e.target.value)}
+          style={{
+            width: 90,
+            padding: 8,
+            borderRadius: 8,
+            border: "1px solid var(--grey-300, #d1d5db)",
+          }}
+        />
+      </div>
+
+      <div className={styles.notifRow}>
+        <div className={styles.notifInfo}>
+          <span className={styles.notifLabel}>Maximum order quantity</span>
+          <span className={styles.notifDesc}>Leave blank for no cap.</span>
+        </div>
+        <input
+          type="number"
+          min="1"
+          step="1"
+          placeholder="No cap"
+          value={maxOrderQty}
+          onChange={(e) => setMaxOrderQty(e.target.value)}
+          style={{
+            width: 90,
+            padding: 8,
+            borderRadius: 8,
+            border: "1px solid var(--grey-300, #d1d5db)",
+          }}
+        />
+      </div>
+
+      <div className={styles.notifRow}>
+        <div className={styles.notifInfo}>
+          <span className={styles.notifLabel}>Allow cancellations</span>
+          <span className={styles.notifDesc}>
+            Let clients cancel before the lead date for a full refund.
+          </span>
+        </div>
+        <Toggle
+          on={cancellationAllowed}
+          onToggle={() => setCancellationAllowed((v) => !v)}
+          label="Allow cancellations"
+        />
+      </div>
+
+      {error && <p style={{ color: "var(--red, #e23744)" }}>{error}</p>}
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <button type="button" className={styles.saveBtn} onClick={save}>
+          Save order rules
+        </button>
+        {savedMsg && (
+          <span style={{ color: "var(--green, #16a34a)" }}>{savedMsg}</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function NotificationsSection() {
   const [settings, setSettings] = useState<NotifSettings>({
     emailNotificationsNewOrder: true,
@@ -867,6 +1009,11 @@ export default function SettingsPage() {
           <div id="billing" ref={billingRef} className={styles.section}>
             <h2 className={styles.sectionTitle}>Billing</h2>
             <BillingSection />
+          </div>
+
+          <div className={styles.section}>
+            <h2 className={styles.sectionTitle}>Order rules</h2>
+            <OrderRulesSection />
           </div>
 
           <div id="notifications" ref={notifRef} className={styles.section}>
