@@ -8,20 +8,37 @@ const { createPiMock, cancelPiMock } = vi.hoisted(() => ({
 vi.mock("@/db", () => ({
   db: { select: vi.fn(), insert: vi.fn(), update: vi.fn() },
   dbPool: {
-    transaction: vi.fn(
-      async (fn: (tx: unknown) => Promise<unknown>) =>
-        await fn({
-          insert: vi.fn().mockReturnValue({
-            values: vi.fn().mockResolvedValue([]),
-          }),
-          update: vi.fn().mockReturnValue({
-            set: vi.fn().mockReturnValue({
-              where: vi.fn().mockResolvedValue([]),
-            }),
-          }),
-          select: vi.fn(),
+    transaction: vi.fn(async (fn: (tx: unknown) => Promise<unknown>) => {
+      // tx.select(...).for("update") re-lock returns a still-valid promo row.
+      const lockChain: unknown = new Proxy(() => {}, {
+        get(_t, prop) {
+          if (prop === "then") {
+            return (resolve: (v: unknown) => void) =>
+              resolve([
+                {
+                  isActive: true,
+                  validFrom: null,
+                  validUntil: null,
+                  maxUses: null,
+                  usesCount: 0,
+                },
+              ]);
+          }
+          return () => lockChain;
+        },
+      });
+      return await fn({
+        insert: vi.fn().mockReturnValue({
+          values: vi.fn().mockResolvedValue([]),
         }),
-    ),
+        update: vi.fn().mockReturnValue({
+          set: vi.fn().mockReturnValue({
+            where: vi.fn().mockResolvedValue([]),
+          }),
+        }),
+        select: vi.fn(() => lockChain),
+      });
+    }),
   },
 }));
 
@@ -204,5 +221,95 @@ describe("POST /api/orders", () => {
     expect(body.success).toBe(true);
     expect(body.data.orderId).toBeDefined();
     expect(createPiMock).toHaveBeenCalledOnce();
+  });
+
+  it("applies a valid promotion and creates the order", async () => {
+    asClient();
+    const PROMO_ID = "d4e5f6a7-b8c9-4d0e-8f1a-2b3c4d5e6f70";
+    vi.mocked(db.select).mockImplementation(
+      selectQueue([
+        [COOK_ROW], // cook
+        [{ id: DISH_ID, name: "Jollof Rice", price: "12.00" }], // dishes
+        [
+          {
+            onboardingCompletedAt: new Date(),
+            stripeCustomerId: "cus_test",
+            email: "c@test.com",
+            firstName: "C",
+            lastName: "L",
+          },
+        ], // user
+        [
+          {
+            id: PROMO_ID,
+            type: "percentage_off",
+            value: "10",
+            isActive: true,
+            validFrom: null,
+            validUntil: null,
+            maxUses: null,
+            usesCount: 0,
+          },
+        ], // optimistic promo read
+        [{ email: "cook@test.com", firstName: "Cook" }], // email
+      ]),
+    );
+
+    const res = await POST(
+      makePost({
+        ...validBody,
+        dishes: [{ dishId: DISH_ID, quantity: 2, promotionId: PROMO_ID }],
+      }),
+    );
+    expect(res.status).toBe(201);
+    expect(createPiMock).toHaveBeenCalledOnce();
+  });
+
+  it("rejects an invalid promotion with 422 and never charges", async () => {
+    asClient();
+    const PROMO_ID = "d4e5f6a7-b8c9-4d0e-8f1a-2b3c4d5e6f70";
+    vi.mocked(db.select).mockImplementation(
+      selectQueue([
+        [COOK_ROW],
+        [{ id: DISH_ID, name: "Jollof Rice", price: "12.00" }],
+        [{ onboardingCompletedAt: new Date(), stripeCustomerId: "cus_test" }],
+        [
+          {
+            id: PROMO_ID,
+            type: "percentage_off",
+            value: "10",
+            isActive: false, // expired/inactive
+            validFrom: null,
+            validUntil: null,
+            maxUses: null,
+            usesCount: 0,
+          },
+        ],
+      ]),
+    );
+
+    const res = await POST(
+      makePost({
+        ...validBody,
+        dishes: [{ dishId: DISH_ID, quantity: 1, promotionId: PROMO_ID }],
+      }),
+    );
+    expect(res.status).toBe(422);
+    expect(createPiMock).not.toHaveBeenCalled();
+  });
+
+  it("returns 502 and persists nothing when payment authorization fails", async () => {
+    asClient();
+    createPiMock.mockRejectedValueOnce(new Error("stripe down"));
+    vi.mocked(db.select).mockImplementation(
+      selectQueue([
+        [COOK_ROW],
+        [{ id: DISH_ID, name: "Jollof Rice", price: "12.00" }],
+        [{ onboardingCompletedAt: new Date(), stripeCustomerId: "cus_test" }],
+      ]),
+    );
+
+    const res = await POST(makePost(validBody));
+    expect(res.status).toBe(502);
   });
 });
