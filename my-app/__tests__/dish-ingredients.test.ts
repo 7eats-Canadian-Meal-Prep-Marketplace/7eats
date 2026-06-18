@@ -19,8 +19,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   DELETE,
   PATCH,
-} from "@/app/api/business/listings/dishes/[dishId]/ingredients/[ingredientId]/route";
-import { POST } from "@/app/api/business/listings/dishes/[dishId]/ingredients/route";
+} from "@/app/api/business/dishes/[dishId]/ingredients/[ingredientId]/route";
+import { POST } from "@/app/api/business/dishes/[dishId]/ingredients/route";
 import { db } from "@/db";
 import { auth } from "@/lib/auth";
 

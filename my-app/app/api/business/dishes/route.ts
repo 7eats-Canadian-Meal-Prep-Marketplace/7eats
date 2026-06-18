@@ -1,10 +1,7 @@
-import { and, desc, eq, getTableColumns, sql } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import {
-  getCookId,
-  unauthorized,
-} from "@/app/api/business/listings/_lib/cook-auth";
+import { getCookId, unauthorized } from "@/app/api/business/_lib/cook-auth";
 import { db } from "@/db";
 import { dishes } from "@/db/schema";
 
@@ -13,8 +10,7 @@ type DishStatus = (typeof VALID_STATUSES)[number];
 
 const createDishSchema = z.object({
   name: z.string().min(1).max(255),
-  // dishes.price is NOT NULL — required since the listings→dishes redesign.
-  // (This route is deprecated and relocated to /api/business/dishes.)
+  // dishes.price is NOT NULL — each dish carries its own price.
   price: z.number().positive().multipleOf(0.01),
   description: z.string().max(2000).optional(),
   cuisine: z.string().max(100).optional(),
@@ -47,13 +43,7 @@ export async function GET(req: NextRequest) {
       : eq(dishes.cookId, cookId);
 
     const rows = await db
-      .select({
-        ...getTableColumns(dishes),
-        listingCount:
-          sql<number>`(SELECT COUNT(*) FROM listing_dishes WHERE dish_id = ${dishes.id})`.as(
-            "listing_count",
-          ),
-      })
+      .select()
       .from(dishes)
       .where(conditions)
       .orderBy(desc(dishes.createdAt));

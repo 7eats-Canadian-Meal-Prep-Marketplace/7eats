@@ -16,7 +16,7 @@ vi.mock("drizzle-orm", () => ({
 
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { PUT } from "@/app/api/business/listings/dishes/[dishId]/nutrition/route";
+import { PUT } from "@/app/api/business/dishes/[dishId]/nutrition/route";
 import { db } from "@/db";
 import { auth } from "@/lib/auth";
 

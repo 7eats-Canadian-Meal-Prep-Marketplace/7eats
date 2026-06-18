@@ -5,7 +5,7 @@ import {
   getCookId,
   notFound,
   unauthorized,
-} from "@/app/api/business/listings/_lib/cook-auth";
+} from "@/app/api/business/_lib/cook-auth";
 import { db } from "@/db";
 import {
   dishes,
@@ -21,6 +21,7 @@ export type Params = { params: Promise<{ dishId: string }> };
 const updateDishSchema = z
   .object({
     name: z.string().min(1).max(255),
+    price: z.number().positive().multipleOf(0.01),
     description: z.string().max(2000).optional(),
     cuisine: z.string().max(100).optional(),
     categories: z.array(z.string()).optional().default([]),
@@ -148,7 +149,12 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     );
   }
 
-  const fields = parsed.data;
+  // price is numeric in the DB — stringify it; pass the rest through.
+  const { price, ...rest } = parsed.data;
+  const fields: Record<string, unknown> = {
+    ...rest,
+    ...(price !== undefined ? { price: String(price) } : {}),
+  };
   if (Object.keys(fields).length === 0) {
     return NextResponse.json(
       { error: "No fields to update." },

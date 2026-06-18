@@ -1601,3 +1601,14 @@ Summarize: gates status, screenshots, any deviations. Do **not** commit a final 
 **Type consistency:** `computeLineTotal` and `LEAD_TIME_HOURS` live in `my-app/lib/order-pricing.ts` and are shared by Tasks 13 and 14. `validatePromotionWindow` lives in `promotions/_validate.ts`, imported by Tasks 8 and 9. Dish name is `name` everywhere; promo fields exposed publicly are `id,type,value,validUntil,maxUses,usesCount` consistently in Tasks 8, 12, 17.
 
 **Security:** Every new/modified route in Phase 2–3 begins with session/role/ownership checks and Zod validation; financial mutation (Task 13) is service_role + transaction + `FOR UPDATE`; client never supplies price. RLS rewritten in Phase 1 backs the API.
+
+---
+
+## Deferred (post-launch) — discovered during execution
+
+Phase 1 made `orders.quantity`/`orders.unitPrice` nullable and added NOT NULL pricing to `order_dishes`. Two legacy consumers were not in the original modify list and now run on temporary type-bridges (committed in the Task 4 commit). They produce **degraded but non-crashing** output for new dish-orders and are deferred to post-launch by decision:
+
+- **D1 — Earnings dashboard (`app/api/business/dashboard/earnings/route.ts`):** revenue is grouped by `listingId`; new dish-orders have `listingId = null` and bucket together under an empty key. Reshape to group by dish (or drop the per-listing breakdown). Bridge: null-coalesces the key.
+- **D2 — Cook order-status emails (`app/api/business/dashboard/orders/[orderId]/status/route.ts`):** confirm/ready/cancelled emails to the client print per-listing `quantity` and `listingTitle`; these are now defaulted (`quantity ?? 1`). Reshape to list dish names/quantities. Bridge: defaults the values.
+
+Both bridges are marked with code comments. Remove them when D1/D2 are implemented.

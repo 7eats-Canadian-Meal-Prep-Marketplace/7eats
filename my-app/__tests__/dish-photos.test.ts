@@ -20,8 +20,8 @@ vi.mock("drizzle-orm", () => ({
 import {
   DELETE,
   PATCH,
-} from "@/app/api/business/listings/dishes/[dishId]/photos/[photoId]/route";
-import { POST } from "@/app/api/business/listings/dishes/[dishId]/photos/route";
+} from "@/app/api/business/dishes/[dishId]/photos/[photoId]/route";
+import { POST } from "@/app/api/business/dishes/[dishId]/photos/route";
 import { db, dbPool } from "@/db";
 import { auth } from "@/lib/auth";
 

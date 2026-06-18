@@ -5,20 +5,17 @@ import {
   getCookId,
   notFound,
   unauthorized,
-} from "@/app/api/business/listings/_lib/cook-auth";
+} from "@/app/api/business/_lib/cook-auth";
 import { db } from "@/db";
-import { dishes, dishIngredients } from "@/db/schema";
+import { dishes, dishTags, tags } from "@/db/schema";
 
-type Params = { params: Promise<{ dishId: string }> };
-
-const addIngredientSchema = z
+const attachTagSchema = z
   .object({
-    name: z.string().min(1).max(255),
-    quantity: z.string().max(100).optional(),
-    isAllergen: z.boolean().optional().default(false),
-    sortOrder: z.number().int().optional().default(0),
+    tagId: z.uuid(),
   })
   .strict();
+
+type Params = { params: Promise<{ dishId: string }> };
 
 export async function POST(req: NextRequest, { params }: Params) {
   const cookId = await getCookId(req.headers);
@@ -44,7 +41,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     );
   }
 
-  const parsed = addIngredientSchema.safeParse(body);
+  const parsed = attachTagSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
       { error: parsed.error.issues[0]?.message ?? "Validation failed." },
@@ -52,26 +49,35 @@ export async function POST(req: NextRequest, { params }: Params) {
     );
   }
 
-  try {
-    const [ingredient] = await db
-      .insert(dishIngredients)
-      .values({
-        dishId,
-        name: parsed.data.name,
-        quantity: parsed.data.quantity ?? null,
-        isAllergen: parsed.data.isAllergen,
-        sortOrder: parsed.data.sortOrder,
-      })
-      .returning();
+  const { tagId } = parsed.data;
 
-    return NextResponse.json(
-      { success: true, data: ingredient },
-      { status: 201 },
-    );
+  const [tag] = await db
+    .select({ id: tags.id })
+    .from(tags)
+    .where(eq(tags.id, tagId))
+    .limit(1);
+
+  if (!tag) return notFound("Tag");
+
+  try {
+    await db.insert(dishTags).values({ dishId, tagId });
+
+    return NextResponse.json({ success: true }, { status: 201 });
   } catch (err) {
-    console.error("[dishes/ingredients]", err);
+    if (
+      typeof err === "object" &&
+      err !== null &&
+      "code" in err &&
+      (err as { code: string }).code === "23505"
+    ) {
+      return NextResponse.json(
+        { error: "Tag already attached." },
+        { status: 409 },
+      );
+    }
+    console.error("[dishes/tags]", err);
     return NextResponse.json(
-      { error: "Failed to add ingredient." },
+      { error: "Failed to attach tag." },
       { status: 500 },
     );
   }
