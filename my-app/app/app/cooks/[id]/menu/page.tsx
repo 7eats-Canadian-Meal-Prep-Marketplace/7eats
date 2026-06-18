@@ -4,6 +4,7 @@ import { Minus, Plus, Star } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { refundPolicyText } from "@/lib/refund-policy";
 import { buildCartItem, useCart } from "../../../_cart-context";
 import styles from "./page.module.css";
 
@@ -116,6 +117,8 @@ export default function CookMenuPage() {
         cookName: data.cook.displayName ?? "Cook",
         minOrderQty: data.cook.minOrderQty,
         maxOrderQty: data.cook.maxOrderQty,
+        leadTime: data.cook.leadTime,
+        cancellationAllowed: data.cook.cancellationAllowed,
         item,
       });
       return;
@@ -125,6 +128,8 @@ export default function CookMenuPage() {
       cookName: data.cook.displayName ?? "Cook",
       minOrderQty: data.cook.minOrderQty,
       maxOrderQty: data.cook.maxOrderQty,
+      leadTime: data.cook.leadTime,
+      cancellationAllowed: data.cook.cancellationAllowed,
       item,
     });
   }
@@ -285,9 +290,11 @@ export default function CookMenuPage() {
                 {cook.maxOrderQty ? ` · Max: ${cook.maxOrderQty}` : ""}
               </p>
               <p>
-                {cook.cancellationAllowed
-                  ? "Free cancellation before the lead time"
-                  : "No cancellations"}
+                {refundPolicyText(
+                  cook.cancellationAllowed,
+                  cart.pickupAt,
+                  cook.leadTime,
+                )}
               </p>
             </div>
 

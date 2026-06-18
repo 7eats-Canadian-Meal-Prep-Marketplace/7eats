@@ -37,6 +37,8 @@ type AddItemInput = {
   cookName: string;
   minOrderQty: number;
   maxOrderQty: number | null;
+  leadTime: string | null;
+  cancellationAllowed: boolean;
   item: CartItem;
 };
 
@@ -45,6 +47,8 @@ type CartContextType = {
   cookName: string | null;
   minOrderQty: number;
   maxOrderQty: number | null;
+  leadTime: string | null;
+  cancellationAllowed: boolean;
   items: CartItem[];
   fulfillmentMode: "pickup" | "delivery";
   pickupAt: string | null;
@@ -63,7 +67,6 @@ type CartContextType = {
    */
   addItem: (input: AddItemInput) => { conflict: boolean };
   clearAndAdd: (input: AddItemInput) => void;
-  setQuantity: (dishId: string, quantity: number) => void;
   removeItem: (dishId: string) => void;
   clearCart: () => void;
   setFulfillment: (mode: "pickup" | "delivery") => void;
@@ -85,6 +88,8 @@ type CookMeta = {
   cookName: string;
   minOrderQty: number;
   maxOrderQty: number | null;
+  leadTime: string | null;
+  cancellationAllowed: boolean;
 };
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
@@ -117,6 +122,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           cookName: input.cookName,
           minOrderQty: input.minOrderQty,
           maxOrderQty: input.maxOrderQty,
+          leadTime: input.leadTime,
+          cancellationAllowed: input.cancellationAllowed,
         },
         input.item,
       );
@@ -134,22 +141,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           cookName: input.cookName,
           minOrderQty: input.minOrderQty,
           maxOrderQty: input.maxOrderQty,
+          leadTime: input.leadTime,
+          cancellationAllowed: input.cancellationAllowed,
         },
         input.item,
       );
     },
     [upsert],
   );
-
-  const setQuantity = useCallback((dishId: string, quantity: number) => {
-    setItems((prev) =>
-      prev
-        .map((i) =>
-          i.dishId === dishId ? recomputeLine({ ...i, quantity }) : i,
-        )
-        .filter((i) => i.quantity > 0),
-    );
-  }, []);
 
   const removeItem = useCallback((dishId: string) => {
     setItems((prev) => prev.filter((i) => i.dishId !== dishId));
@@ -183,6 +182,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     cookName: cook?.cookName ?? null,
     minOrderQty,
     maxOrderQty,
+    leadTime: cook?.leadTime ?? null,
+    cancellationAllowed: cook?.cancellationAllowed ?? false,
     items,
     fulfillmentMode,
     pickupAt,
@@ -194,7 +195,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     withinMaximum,
     addItem,
     clearAndAdd,
-    setQuantity,
     removeItem,
     clearCart,
     setFulfillment: setFulfillmentMode,
@@ -204,24 +204,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   };
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
-}
-
-/** Recompute discount + line total when quantity changes (promo value is fixed). */
-function recomputeLine(item: CartItem): CartItem {
-  const gross = item.price * item.quantity;
-  // The per-unit discount rate is preserved from the original line.
-  const unitDiscount =
-    item.quantity > 0 ? item.discountAmount / Math.max(1, item.quantity) : 0;
-  // discountAmount scales with quantity only for fixed-per-unit promos; for the
-  // cart we keep the simple model of discount proportional to quantity.
-  const discountAmount = Math.min(
-    Math.round(unitDiscount * item.quantity * 100) / 100,
-    gross,
-  );
-  return {
-    ...item,
-    lineTotal: Math.round((gross - discountAmount) * 100) / 100,
-  };
 }
 
 /** Build a CartItem with discount + line total from a dish + optional promo. */

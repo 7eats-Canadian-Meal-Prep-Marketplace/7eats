@@ -5,6 +5,7 @@ import { loadStripe } from "@stripe/stripe-js";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { refundPolicyText } from "@/lib/refund-policy";
 import type { NormalizedAddress } from "@/lib/types/address";
 import { useApp } from "../_app-context";
 import { useCart } from "../_cart-context";
@@ -30,9 +31,12 @@ export default function CheckoutPage() {
     pickupAt,
     deliveryAddress,
     notes,
+    cancellationAllowed,
+    leadTime,
     clearCart,
   } = useCart();
 
+  const [agreedPolicy, setAgreedPolicy] = useState(false);
   const [placing, setPlacing] = useState(false);
   const [ordered, setOrdered] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -100,6 +104,12 @@ export default function CheckoutPage() {
     if (!cookId) return;
     if (!pickupAt) {
       setError("Please choose a pickup time on the menu before checking out.");
+      return;
+    }
+    if (!agreedPolicy) {
+      setError(
+        "Please confirm you understand this cook's cancellation policy.",
+      );
       return;
     }
     setPlacing(true);
@@ -173,6 +183,46 @@ export default function CheckoutPage() {
                 </li>
               ))}
             </ul>
+
+            <h2 className={styles.sectionTitle}>Cancellation policy</h2>
+            <div
+              style={{
+                border: "1px solid var(--grey-200, #e5e7eb)",
+                borderRadius: 10,
+                padding: "12px 14px",
+                marginBottom: 16,
+                background: cancellationAllowed
+                  ? "var(--white, #fff)"
+                  : "#fff5f5",
+              }}
+            >
+              <p style={{ margin: "0 0 10px", fontSize: 14 }}>
+                {refundPolicyText(cancellationAllowed, pickupAt, leadTime)}
+              </p>
+              <label
+                style={{
+                  display: "flex",
+                  gap: 8,
+                  alignItems: "flex-start",
+                  fontSize: 14,
+                  cursor: "pointer",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={agreedPolicy}
+                  onChange={(e) => setAgreedPolicy(e.target.checked)}
+                  style={{ marginTop: 3 }}
+                />
+                <span>
+                  I understand{cookName ? ` ${cookName}'s` : ""} cancellation
+                  policy{" "}
+                  {cancellationAllowed
+                    ? "and refund window."
+                    : "and that this sale is final."}
+                </span>
+              </label>
+            </div>
 
             <h2 className={styles.sectionTitle}>Payment</h2>
             {!meetsMinimum && (
