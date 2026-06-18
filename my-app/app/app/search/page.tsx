@@ -4,6 +4,7 @@ import { Search, Star } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
+import { Skeleton } from "../_skeleton";
 import styles from "../browse/page.module.css";
 
 type CookCard = {
@@ -94,9 +95,29 @@ function SearchContent() {
 
       <div className={styles.content}>
         {loading ? (
-          <div className={styles.emptyState}>
-            <p className={styles.emptyTitle}>Searching…</p>
-          </div>
+          <section className={styles.section}>
+            <div className={styles.grid}>
+              {[0, 1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className={styles.card} aria-hidden="true">
+                  <div className={styles.cardCover}>
+                    <Skeleton
+                      style={{ position: "absolute", inset: 0 }}
+                      radius={0}
+                    />
+                  </div>
+                  <div style={{ padding: "10px 12px" }}>
+                    <Skeleton width="70%" height={15} radius={6} />
+                    <Skeleton
+                      width="45%"
+                      height={12}
+                      radius={6}
+                      style={{ marginTop: 8 }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
         ) : results.length === 0 ? (
           <div className={styles.emptyState}>
             <p className={styles.emptyTitle}>No kitchens found</p>

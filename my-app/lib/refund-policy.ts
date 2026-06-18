@@ -9,6 +9,18 @@ export const LEAD_TIME_HOURS_MAP: Record<string, number> = {
   "5_days": 120,
 };
 
+// Whole days of notice a cook requires before a pickup. Lead time is counted in
+// calendar days (order Monday with a 3-day lead → eligible from Thursday),
+// not rolling hours. Mirror of LEAD_TIME_DAYS in lib/order-pricing.ts.
+export const LEAD_TIME_DAYS_MAP: Record<string, number> = {
+  same_day: 0,
+  "1_day": 1,
+  "2_days": 2,
+  "3_days": 3,
+  "4_days": 4,
+  "5_days": 5,
+};
+
 const LEAD_TIME_LABELS: Record<string, string> = {
   same_day: "Same day",
   "1_day": "1 day",
@@ -29,8 +41,8 @@ export function formatLeadTime(leadTime: string | null): string | null {
 }
 
 /**
- * The latest moment a client can cancel for a refund: pickupAt minus the cook's
- * lead time. Returns null when there is no pickup time yet.
+ * The latest moment a client can cancel for a refund. Lead time is counted in
+ * whole calendar days before the pickup day (mirrors earliestPickup / slot picker).
  */
 export function cancelByDate(
   pickupAtIso: string | null,
@@ -39,8 +51,18 @@ export function cancelByDate(
   if (!pickupAtIso) return null;
   const pickup = new Date(pickupAtIso);
   if (Number.isNaN(pickup.getTime())) return null;
-  const hours = leadTime ? (LEAD_TIME_HOURS_MAP[leadTime] ?? 0) : 0;
-  return new Date(pickup.getTime() - hours * 3600_000);
+  const days = leadTime ? (LEAD_TIME_DAYS_MAP[leadTime] ?? 0) : 0;
+  const pickupDay = new Date(
+    pickup.getFullYear(),
+    pickup.getMonth(),
+    pickup.getDate(),
+  );
+  const exclusive = new Date(
+    pickupDay.getFullYear(),
+    pickupDay.getMonth(),
+    pickupDay.getDate() - days + 1,
+  );
+  return new Date(exclusive.getTime() - 1);
 }
 
 function formatDateTime(d: Date): string {

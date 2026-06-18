@@ -23,16 +23,10 @@ vi.mock("@/lib/stripe-payments", () => ({
   refundPaymentIntent: refundPiMock,
   capturePaymentIntent: captureMock,
 }));
-vi.mock("@/lib/order-pricing", () => ({
-  LEAD_TIME_HOURS: {
-    same_day: 0,
-    "1_day": 24,
-    "2_days": 48,
-    "3_days": 72,
-    "4_days": 96,
-    "5_days": 120,
-  },
-}));
+vi.mock("@/lib/order-pricing", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/order-pricing")>();
+  return { ...actual };
+});
 vi.mock("@/lib/auth", () => ({ auth: { api: { getSession: vi.fn() } } }));
 vi.mock("@/lib/emails/order-events", () => ({
   sendOrderCancelledByClientEmailToCook: vi.fn().mockResolvedValue(undefined),

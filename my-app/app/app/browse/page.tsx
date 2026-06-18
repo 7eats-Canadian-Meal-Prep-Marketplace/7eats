@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useApp } from "../_app-context";
 import { FulfillmentToggle } from "../_shell";
+import { Skeleton } from "../_skeleton";
 import { AddressBar } from "./_address-bar";
 import styles from "./page.module.css";
 
@@ -90,9 +91,40 @@ export default function BrowsePage() {
 
       <div className={styles.content}>
         {loading ? (
-          <div className={styles.emptyState}>
-            <p className={styles.emptyTitle}>Loading cooks…</p>
-          </div>
+          <section className={styles.section}>
+            <div className={styles.sectionHead}>
+              <div className={styles.sectionHeadText}>
+                <Skeleton width={160} height={20} radius={6} />
+                <Skeleton
+                  width={220}
+                  height={13}
+                  radius={6}
+                  style={{ marginTop: 8 }}
+                />
+              </div>
+            </div>
+            <div className={styles.grid}>
+              {[0, 1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className={styles.card}>
+                  <div className={styles.cardCover}>
+                    <Skeleton
+                      style={{ position: "absolute", inset: 0 }}
+                      radius={0}
+                    />
+                  </div>
+                  <div style={{ padding: "10px 12px" }}>
+                    <Skeleton width="70%" height={15} radius={6} />
+                    <Skeleton
+                      width="45%"
+                      height={12}
+                      radius={6}
+                      style={{ marginTop: 8 }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
         ) : cooks.length === 0 ? (
           <div className={styles.emptyState}>
             <p className={styles.emptyTitle}>No cooks nearby yet</p>

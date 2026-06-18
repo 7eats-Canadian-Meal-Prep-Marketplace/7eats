@@ -4,6 +4,7 @@ import { Package } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
+import { Skeleton } from "../_skeleton";
 import styles from "./page.module.css";
 
 type OrderStatus =
@@ -99,12 +100,39 @@ function OrdersContent() {
       <div className={styles.page}>
         <div className={styles.inner}>
           <h1 className={styles.heading}>Your orders</h1>
-          <div className={styles.empty}>
-            <div className={styles.emptyIcon}>
-              <Package size={40} />
+          <section className={styles.section}>
+            <Skeleton width={56} height={11} radius={4} />
+            <div className={styles.orderList} style={{ marginTop: 16 }}>
+              {[0, 1, 2].map((i) => (
+                <div key={i} className={styles.orderCard} aria-hidden="true">
+                  <Skeleton circle width={56} height={56} />
+                  <div
+                    style={{
+                      flex: 1,
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 8,
+                    }}
+                  >
+                    <Skeleton width="40%" height={13} radius={6} />
+                    <Skeleton width="65%" height={18} radius={6} />
+                    <Skeleton width="50%" height={12} radius={6} />
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "flex-end",
+                      gap: 8,
+                    }}
+                  >
+                    <Skeleton width={72} height={24} radius={12} />
+                    <Skeleton width={48} height={16} radius={6} />
+                  </div>
+                </div>
+              ))}
             </div>
-            <p className={styles.emptyDesc}>Loading your orders…</p>
-          </div>
+          </section>
         </div>
       </div>
     );

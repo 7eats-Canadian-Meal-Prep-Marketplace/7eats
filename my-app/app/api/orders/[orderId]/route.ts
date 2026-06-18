@@ -11,7 +11,7 @@ import {
 } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { sendOrderCancelledByClientEmailToCook } from "@/lib/emails/order-events";
-import { LEAD_TIME_HOURS } from "@/lib/order-pricing";
+import { isRefundEligible } from "@/lib/order-pricing";
 import {
   cancelPaymentIntent,
   capturePaymentIntent,
@@ -131,16 +131,11 @@ export async function GET(req: NextRequest, { params }: Params) {
       pickupAddress = row.cookPickupAddress ?? row.cookNeighborhood ?? null;
     }
 
-    // The client may cancel for a refund only while the lead-time window is open.
-    const leadHours = row.cookLeadTime ? LEAD_TIME_HOURS[row.cookLeadTime] : 0;
-    const refundCutoff =
-      row.pickupAt instanceof Date
-        ? new Date(row.pickupAt.getTime() - leadHours * 3600_000)
-        : null;
-    const refundEligible =
-      row.cancellationAllowed &&
-      refundCutoff != null &&
-      new Date() < refundCutoff;
+    const refundEligible = isRefundEligible(
+      row.pickupAt instanceof Date ? row.pickupAt : null,
+      row.cookLeadTime,
+      row.cancellationAllowed,
+    );
     const cancellable =
       ["pending", "confirmed"].includes(row.status) && row.pickupAt != null;
 
@@ -231,17 +226,11 @@ export async function DELETE(req: NextRequest, { params }: Params) {
       );
     }
 
-    const leadHours = order.cookLeadTime
-      ? LEAD_TIME_HOURS[order.cookLeadTime]
-      : 0;
-    const refundCutoff =
-      order.pickupAt instanceof Date
-        ? new Date(order.pickupAt.getTime() - leadHours * 3600_000)
-        : null;
-    const refundEligible =
-      order.cancellationAllowed &&
-      refundCutoff != null &&
-      new Date() < refundCutoff;
+    const refundEligible = isRefundEligible(
+      order.pickupAt instanceof Date ? order.pickupAt : null,
+      order.cookLeadTime,
+      order.cancellationAllowed,
+    );
 
     const payments = await db
       .select({

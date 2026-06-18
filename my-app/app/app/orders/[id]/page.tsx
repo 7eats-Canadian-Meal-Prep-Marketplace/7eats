@@ -16,6 +16,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { use, useEffect, useState } from "react";
+import { Skeleton } from "../../_skeleton";
 import styles from "./page.module.css";
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
@@ -245,6 +246,7 @@ export default function OrderDetailPage({
               <ArrowLeft size={16} />
               All orders
             </Link>
+            <Skeleton width={72} height={12} radius={4} />
           </div>
           <div
             className={styles.heroCard}
@@ -252,11 +254,27 @@ export default function OrderDetailPage({
               background: "linear-gradient(135deg, #3a3a3a 0%, #1a1a1a 100%)",
             }}
           >
-            <div className={styles.heroInitials}>…</div>
-            <div className={styles.heroInfo}>
-              <div className={styles.heroCook}>Loading…</div>
-              <div className={styles.heroTitle}>Loading order</div>
+            <Skeleton circle width={56} height={56} />
+            <div
+              className={styles.heroInfo}
+              style={{ display: "flex", flexDirection: "column", gap: 8 }}
+            >
+              <Skeleton width="45%" height={14} radius={6} />
+              <Skeleton width="70%" height={22} radius={6} />
             </div>
+          </div>
+          <div
+            style={{
+              marginTop: 24,
+              display: "flex",
+              flexDirection: "column",
+              gap: 16,
+            }}
+          >
+            <Skeleton width="100%" height={48} radius={10} />
+            {[0, 1, 2].map((i) => (
+              <Skeleton key={i} width="100%" height={72} radius={12} />
+            ))}
           </div>
         </div>
       </div>

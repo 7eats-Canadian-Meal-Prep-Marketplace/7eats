@@ -12,6 +12,7 @@ import Link from "next/link";
 import { notFound, useRouter } from "next/navigation";
 import { use, useEffect, useState } from "react";
 import { formatLeadTime } from "@/lib/refund-policy";
+import { Skeleton } from "../../_skeleton";
 import styles from "./page.module.css";
 
 // ── API types ─────────────────────────────────────────────────────────────────
@@ -136,8 +137,48 @@ export default function CookProfilePage({
   if (!cook) {
     return (
       <div className={styles.page}>
-        <div style={{ padding: "2rem", textAlign: "center", color: "#666" }}>
-          Loading…
+        <div className={styles.headerCard}>
+          <div className={styles.headerTop}>
+            <Skeleton circle width={64} height={64} />
+            <div
+              style={{
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                gap: 8,
+              }}
+            >
+              <Skeleton width="55%" height={22} radius={6} />
+              <Skeleton width="35%" height={14} radius={6} />
+            </div>
+            <Skeleton width={84} height={32} radius={16} />
+          </div>
+          <div style={{ marginTop: 16, display: "flex", gap: 10 }}>
+            <Skeleton width={120} height={14} radius={6} />
+            <Skeleton width={90} height={14} radius={6} />
+          </div>
+          <div style={{ marginTop: 18, display: "flex", gap: 24 }}>
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                style={{ display: "flex", flexDirection: "column", gap: 6 }}
+              >
+                <Skeleton width={40} height={20} radius={6} />
+                <Skeleton width={64} height={12} radius={6} />
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className={styles.body}>
+          <div className={styles.section}>
+            <Skeleton width="100%" height={14} radius={6} />
+            <Skeleton
+              width="80%"
+              height={14}
+              radius={6}
+              style={{ marginTop: 8 }}
+            />
+          </div>
         </div>
       </div>
     );

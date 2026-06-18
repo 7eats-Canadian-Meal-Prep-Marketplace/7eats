@@ -4,8 +4,9 @@ import { Minus, Plus, Star } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { LEAD_TIME_HOURS_MAP, refundPolicyText } from "@/lib/refund-policy";
+import { LEAD_TIME_DAYS_MAP, refundPolicyText } from "@/lib/refund-policy";
 import { buildCartItem, useCart } from "../../../_cart-context";
+import { Skeleton } from "../../../_skeleton";
 import styles from "./page.module.css";
 
 // Pickup-slot generation ------------------------------------------------------
@@ -26,7 +27,9 @@ type PickupWindow = { dayOfWeek: string; fromTime: string; toTime: string };
 
 /**
  * Expand a cook's weekly pickup windows into concrete, selectable slots over the
- * next two weeks, dropping any slot that falls inside the cook's lead time.
+ * next two weeks. Lead time is counted in whole calendar days: a 3-day-lead cook
+ * ordered from on Monday is pickable from Thursday, so this-week days that fall
+ * inside the lead window are skipped and roll to the following week.
  */
 function generatePickupSlots(
   windows: PickupWindow[],
@@ -34,12 +37,13 @@ function generatePickupSlots(
   now: Date,
 ): { iso: string; label: string }[] {
   if (windows.length === 0) return [];
-  const leadHours = leadTime ? (LEAD_TIME_HOURS_MAP[leadTime] ?? 0) : 0;
-  const earliest = new Date(now.getTime() + leadHours * 3600_000);
+  const leadDays = leadTime ? (LEAD_TIME_DAYS_MAP[leadTime] ?? 0) : 0;
   const byDay = new Map(windows.map((w) => [w.dayOfWeek, w]));
 
   const slots: { iso: string; label: string }[] = [];
   for (let d = 0; d < PICKUP_DAYS_AHEAD; d++) {
+    // Need at least `leadDays` calendar days of notice for this pickup day.
+    if (d < leadDays) continue;
     const day = new Date(now.getFullYear(), now.getMonth(), now.getDate() + d);
     const win = byDay.get(DAY_NAMES[day.getDay()]);
     if (!win) continue;
@@ -54,7 +58,8 @@ function generatePickupSlots(
       t < end;
       t = new Date(t.getTime() + SLOT_INTERVAL_MIN * 60_000)
     ) {
-      if (t < earliest) continue;
+      // Never offer a time already in the past (matters only for same-day).
+      if (t <= now) continue;
       slots.push({
         iso: t.toISOString(),
         label: t.toLocaleString("en-CA", {
@@ -210,7 +215,50 @@ export default function CookMenuPage() {
   }
 
   if (loading) {
-    return <div className={styles.state}>Loading menu…</div>;
+    return (
+      <div className={styles.page}>
+        <div className={styles.layout}>
+          <main className={styles.menuCol}>
+            <header className={styles.cookHeader}>
+              <Skeleton circle width={56} height={56} />
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 8,
+                  flex: 1,
+                }}
+              >
+                <Skeleton width="50%" height={20} radius={6} />
+                <Skeleton width="30%" height={13} radius={6} />
+              </div>
+            </header>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              {[0, 1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  style={{ display: "flex", gap: 12, alignItems: "center" }}
+                >
+                  <Skeleton width={72} height={72} radius={12} />
+                  <div
+                    style={{
+                      flex: 1,
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 8,
+                    }}
+                  >
+                    <Skeleton width="60%" height={16} radius={6} />
+                    <Skeleton width="85%" height={12} radius={6} />
+                    <Skeleton width={56} height={14} radius={6} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </main>
+        </div>
+      </div>
+    );
   }
   if (notFound || !data) {
     return (
