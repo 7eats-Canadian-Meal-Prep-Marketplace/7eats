@@ -69,6 +69,11 @@ export const cookProfiles = pgTable(
     acceptsSpecialRequests: boolean("accepts_special_requests")
       .notNull()
       .default(false),
+    minOrderQty: integer("min_order_qty").notNull().default(1),
+    maxOrderQty: integer("max_order_qty"),
+    cancellationAllowed: boolean("cancellation_allowed")
+      .notNull()
+      .default(false),
     stripeAccountId: text("stripe_account_id"),
     platformFeePct: numeric("platform_fee_pct", { precision: 5, scale: 2 })
       .notNull()
@@ -114,9 +119,10 @@ export const cookProfiles = pgTable(
       "cook_profiles_late_cancel_fee_positive",
       sql`${t.lateCancelFeeValue} IS NULL OR ${t.lateCancelFeeValue} > 0`,
     ),
+    check("cook_profiles_min_order_qty_positive", sql`${t.minOrderQty} >= 1`),
     check(
-      "cook_profiles_late_cancel_window_positive",
-      sql`${t.lateCancelWindowHours} >= 1`,
+      "cook_profiles_max_order_qty_valid",
+      sql`${t.maxOrderQty} IS NULL OR ${t.maxOrderQty} >= ${t.minOrderQty}`,
     ),
     pgPolicy("cook_profiles_select_active", {
       for: "select",
