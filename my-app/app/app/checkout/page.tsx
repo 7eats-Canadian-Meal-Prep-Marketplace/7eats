@@ -159,119 +159,115 @@ export default function CheckoutPage() {
 
   return (
     <div className={styles.page}>
+      <header className={styles.pageHeader}>
+        <h1 className={styles.heading}>Checkout</h1>
+        <p className={styles.subheading}>
+          {cookName ? `Order from ${cookName}` : "Review and pay"}
+        </p>
+      </header>
+
       <div className={styles.inner}>
-        <header className={styles.pageHeader}>
-          <h1 className={styles.heading}>Checkout</h1>
-          <p className={styles.subheading}>
-            {cookName ? `Order from ${cookName}` : "Review and pay"}
-          </p>
-        </header>
+        <section className={styles.mainCol}>
+          <h2 className={styles.sectionTitle}>Your items</h2>
+          <ul className={styles.itemList}>
+            {items.map((item) => (
+              <li key={item.dishId} className={styles.item}>
+                <span>
+                  {item.quantity}× {item.name}
+                  {item.discountAmount > 0 && (
+                    <span> (−${formatCartMoney(item.discountAmount)})</span>
+                  )}
+                </span>
+                <span>${formatCartMoney(item.lineTotal)}</span>
+              </li>
+            ))}
+          </ul>
 
-        <div className={styles.bodyRow}>
-          <section className={styles.mainCol}>
-            <h2 className={styles.sectionTitle}>Your items</h2>
-            <ul className={styles.itemList}>
-              {items.map((item) => (
-                <li key={item.dishId} className={styles.item}>
-                  <span>
-                    {item.quantity}× {item.name}
-                    {item.discountAmount > 0 && (
-                      <span> (−${formatCartMoney(item.discountAmount)})</span>
-                    )}
-                  </span>
-                  <span>${formatCartMoney(item.lineTotal)}</span>
-                </li>
-              ))}
-            </ul>
-
-            <h2 className={styles.sectionTitle}>Cancellation policy</h2>
-            <div
+          <h2 className={styles.sectionTitle}>Cancellation policy</h2>
+          <div
+            style={{
+              border: "1px solid var(--grey-200, #e5e7eb)",
+              borderRadius: 10,
+              padding: "12px 14px",
+              marginBottom: 16,
+              background: cancellationAllowed
+                ? "var(--white, #fff)"
+                : "#fff5f5",
+            }}
+          >
+            <p style={{ margin: "0 0 10px", fontSize: 14 }}>
+              {refundPolicyText(cancellationAllowed, pickupAt, leadTime)}
+            </p>
+            <label
               style={{
-                border: "1px solid var(--grey-200, #e5e7eb)",
-                borderRadius: 10,
-                padding: "12px 14px",
-                marginBottom: 16,
-                background: cancellationAllowed
-                  ? "var(--white, #fff)"
-                  : "#fff5f5",
+                display: "flex",
+                gap: 8,
+                alignItems: "flex-start",
+                fontSize: 14,
+                cursor: "pointer",
               }}
             >
-              <p style={{ margin: "0 0 10px", fontSize: 14 }}>
-                {refundPolicyText(cancellationAllowed, pickupAt, leadTime)}
-              </p>
-              <label
-                style={{
-                  display: "flex",
-                  gap: 8,
-                  alignItems: "flex-start",
-                  fontSize: 14,
-                  cursor: "pointer",
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={agreedPolicy}
-                  onChange={(e) => setAgreedPolicy(e.target.checked)}
-                  style={{ marginTop: 3 }}
-                />
-                <span>
-                  I understand{cookName ? ` ${cookName}'s` : ""} cancellation
-                  policy{" "}
-                  {cancellationAllowed
-                    ? "and refund window."
-                    : "and that this sale is final."}
-                </span>
-              </label>
-            </div>
+              <input
+                type="checkbox"
+                checked={agreedPolicy}
+                onChange={(e) => setAgreedPolicy(e.target.checked)}
+                style={{ marginTop: 3 }}
+              />
+              <span>
+                I understand{cookName ? ` ${cookName}'s` : ""} cancellation
+                policy{" "}
+                {cancellationAllowed
+                  ? "and refund window."
+                  : "and that this sale is final."}
+              </span>
+            </label>
+          </div>
 
-            <h2 className={styles.sectionTitle}>Payment</h2>
-            {!meetsMinimum && (
-              <p className={styles.fieldError}>
-                Your cart no longer meets the minimum order. Please return to
-                the menu.
-              </p>
-            )}
-            {error && (
-              <p className={styles.fieldError} role="alert">
-                {error}
-              </p>
-            )}
-            <Elements stripe={stripePromise}>
-              <NewCardForm onTokenized={placeOrder} loading={placing} />
-            </Elements>
-            <Link href="/app/cart" className={styles.backLink}>
-              ← Back to cart
-            </Link>
-          </section>
+          <h2 className={styles.sectionTitle}>Payment</h2>
+          {!meetsMinimum && (
+            <p className={styles.fieldError}>
+              Your cart no longer meets the minimum order. Please return to the
+              menu.
+            </p>
+          )}
+          {error && (
+            <p className={styles.fieldError} role="alert">
+              {error}
+            </p>
+          )}
+          <Elements stripe={stripePromise}>
+            <NewCardForm onTokenized={placeOrder} loading={placing} />
+          </Elements>
+          <Link href="/app/cart" className={styles.backLink}>
+            ← Back to cart
+          </Link>
+        </section>
 
-          <aside className={styles.summaryCol}>
-            <div className={styles.summary}>
-              <h2 className={styles.summaryTitle}>Order summary</h2>
-              <div className={styles.summaryRow}>
-                <span>Subtotal ({totalQuantity})</span>
-                <span>${formatCartMoney(subtotal)}</span>
-              </div>
-              <div className={styles.summaryRow}>
-                <span>Delivery</span>
-                <span>
-                  {isDelivery
-                    ? deliveryFee > 0
-                      ? `$${formatCartMoney(deliveryFee)}`
-                      : "Free"
-                    : "Free (Pickup)"}
-                </span>
-              </div>
-              <div className={styles.summaryRow}>
-                <span>{taxLabel}</span>
-                <span>${formatCartMoney(tax)}</span>
-              </div>
-              <div className={styles.summaryTotal}>
-                <span>Total</span>
-                <span>${formatCartMoney(grandTotal)}</span>
-              </div>
-            </div>
-          </aside>
-        </div>
+        <aside className={styles.summary}>
+          <h2 className={styles.summaryTitle}>Order summary</h2>
+          <div className={styles.summaryRow}>
+            <span>Subtotal ({totalQuantity})</span>
+            <span>${formatCartMoney(subtotal)}</span>
+          </div>
+          <div className={styles.summaryRow}>
+            <span>Delivery</span>
+            <span>
+              {isDelivery
+                ? deliveryFee > 0
+                  ? `$${formatCartMoney(deliveryFee)}`
+                  : "Free"
+                : "Free (Pickup)"}
+            </span>
+          </div>
+          <div className={styles.summaryRow}>
+            <span>{taxLabel}</span>
+            <span>${formatCartMoney(tax)}</span>
+          </div>
+          <div className={styles.summaryTotal}>
+            <span>Total</span>
+            <span>${formatCartMoney(grandTotal)}</span>
+          </div>
+        </aside>
       </div>
     </div>
   );

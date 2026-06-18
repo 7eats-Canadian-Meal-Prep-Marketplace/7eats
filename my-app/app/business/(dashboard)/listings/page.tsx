@@ -31,7 +31,7 @@ function StatusPill({ status }: { status: DishStatus }) {
   const label =
     status === "active" ? "Active" : status === "draft" ? "Draft" : "Archived";
   return (
-    <span className={styles.imgPill}>
+    <span className={styles.statusBadge}>
       <span className={`${styles.pillDot} ${dotCls}`} />
       {label}
     </span>
@@ -107,17 +107,16 @@ export default function MealsPage() {
                 href={`/business/listings/dishes/${dish.id}`}
                 className={styles.card}
               >
-                <div className={styles.cardImg}>
-                  <StatusPill status={dish.status} />
-                </div>
                 <div className={styles.cardBody}>
-                  <h3 className={styles.cardTitle}>{dish.name}</h3>
+                  <div className={styles.cardTopRow}>
+                    <h3 className={styles.cardTitle}>{dish.name}</h3>
+                    <StatusPill status={dish.status} />
+                  </div>
                   {dish.cuisine && (
                     <p className={styles.cardSub}>{dish.cuisine}</p>
                   )}
-                  <p className={styles.priceTag}>
-                    <span className={styles.priceTagCurr}>$</span>
-                    {Number(dish.price).toFixed(2)}
+                  <p className={styles.mealPrice}>
+                    ${Number(dish.price).toFixed(2)}
                   </p>
                 </div>
               </Link>

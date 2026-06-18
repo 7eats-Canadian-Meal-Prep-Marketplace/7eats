@@ -11,6 +11,10 @@
   align-items: start;
 }
 
+.menuCol {
+  min-width: 0;
+}
+
 .state {
   padding: 64px 20px;
   text-align: center;
