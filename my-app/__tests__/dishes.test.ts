@@ -212,7 +212,7 @@ describe("POST /api/business/listings/dishes", () => {
 
   it("returns 401 when unauthenticated", async () => {
     mockSession(null);
-    const res = await POST(makePost({ name: "Test Dish" }));
+    const res = await POST(makePost({ name: "Test Dish", price: 12.5 }));
     expect(res.status).toBe(401);
   });
 
@@ -259,7 +259,7 @@ describe("POST /api/business/listings/dishes", () => {
     };
     mockInsert(inserted);
 
-    const res = await POST(makePost({ name: "Test Dish" }));
+    const res = await POST(makePost({ name: "Test Dish", price: 12.5 }));
     expect(res.status).toBe(201);
     const body = await res.json();
     expect(body.success).toBe(true);
@@ -277,7 +277,7 @@ describe("POST /api/business/listings/dishes", () => {
     };
     mockInsert(inserted);
 
-    await POST(makePost({ name: "Test Dish" }));
+    await POST(makePost({ name: "Test Dish", price: 12.5 }));
 
     const valuesMock = vi.mocked(db.insert).mock.results[0]?.value as {
       values: ReturnType<typeof vi.fn>;
@@ -300,7 +300,7 @@ describe("POST /api/business/listings/dishes", () => {
     const values = vi.fn(() => ({ returning }));
     vi.mocked(db.insert).mockReturnValue({ values } as never);
 
-    const res = await POST(makePost({ name: "Test Dish" }));
+    const res = await POST(makePost({ name: "Test Dish", price: 12.5 }));
     expect(res.status).toBe(409);
     const body = await res.json();
     expect(body.error).toBeDefined();
@@ -314,7 +314,7 @@ describe("POST /api/business/listings/dishes", () => {
     const values = vi.fn(() => ({ returning }));
     vi.mocked(db.insert).mockReturnValue({ values } as never);
 
-    const res = await POST(makePost({ name: "Test Dish" }));
+    const res = await POST(makePost({ name: "Test Dish", price: 12.5 }));
     expect(res.status).toBe(500);
     const body = await res.json();
     expect(body.error).toBeDefined();

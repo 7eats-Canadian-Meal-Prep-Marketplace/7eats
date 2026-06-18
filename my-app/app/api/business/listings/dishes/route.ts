@@ -13,6 +13,9 @@ type DishStatus = (typeof VALID_STATUSES)[number];
 
 const createDishSchema = z.object({
   name: z.string().min(1).max(255),
+  // dishes.price is NOT NULL — required since the listings→dishes redesign.
+  // (This route is deprecated and relocated to /api/business/dishes.)
+  price: z.number().positive().multipleOf(0.01),
   description: z.string().max(2000).optional(),
   cuisine: z.string().max(100).optional(),
   categories: z.array(z.string()).optional().default([]),
@@ -88,11 +91,13 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    const { price, ...rest } = parsed.data;
     const [inserted] = await db
       .insert(dishes)
       .values({
         cookId,
-        ...parsed.data,
+        ...rest,
+        price: String(price),
         status: "draft",
       })
       .returning();
