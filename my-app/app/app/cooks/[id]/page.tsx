@@ -11,6 +11,7 @@ import {
 import Link from "next/link";
 import { notFound, useRouter } from "next/navigation";
 import { use, useEffect, useState } from "react";
+import { formatLeadTime } from "@/lib/refund-policy";
 import styles from "./page.module.css";
 
 // ── API types ─────────────────────────────────────────────────────────────────
@@ -19,6 +20,7 @@ type ApiCook = {
   id: string;
   userId: string;
   name: string;
+  photoUrl: string | null;
   firstName: string | null;
   lastName: string | null;
   bio: string | null;
@@ -162,20 +164,30 @@ export default function CookProfilePage({
         {/* Top row: avatar · name · follow */}
         <div className={styles.headerTop}>
           <div className={styles.avatarWrap}>
-            <div
-              className={styles.avatarImg}
-              style={{
-                background: "linear-gradient(135deg, #6b6b6b 0%, #3a3a3a 100%)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#fff",
-                fontWeight: 600,
-                fontSize: "1.25rem",
-              }}
-            >
-              {cookInitials}
-            </div>
+            {cook.photoUrl ? (
+              // biome-ignore lint/performance/noImgElement: avatar
+              <img
+                src={cook.photoUrl}
+                alt={cook.name}
+                className={styles.avatarImg}
+              />
+            ) : (
+              <div
+                className={styles.avatarImg}
+                style={{
+                  background:
+                    "linear-gradient(135deg, #6b6b6b 0%, #3a3a3a 100%)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#fff",
+                  fontWeight: 600,
+                  fontSize: "1.25rem",
+                }}
+              >
+                {cookInitials}
+              </div>
+            )}
           </div>
           <div className={styles.nameBlock}>
             <h1 className={styles.name}>{cook.name}</h1>
@@ -263,7 +275,7 @@ export default function CookProfilePage({
               <div className={styles.leadTimeWrap}>
                 <span className={styles.leadTimeBadge}>
                   <Clock size={11} />
-                  {cook.leadTime}
+                  {formatLeadTime(cook.leadTime)} notice
                 </span>
               </div>
             )}

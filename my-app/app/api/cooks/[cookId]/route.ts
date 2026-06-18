@@ -1,7 +1,14 @@
-import { avg, count, eq, sql } from "drizzle-orm";
+import { and, avg, count, eq, sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { authUser, cookProfiles, orders, reviews } from "@/db/schema";
+import {
+  authUser,
+  cookProfiles,
+  cookProfileTags,
+  orders,
+  reviews,
+  tags,
+} from "@/db/schema";
 
 export async function GET(
   _req: NextRequest,
@@ -16,6 +23,7 @@ export async function GET(
         id: cookProfiles.id,
         userId: authUser.id,
         displayName: cookProfiles.displayName,
+        photoUrl: cookProfiles.photoUrl,
         firstName: authUser.firstName,
         lastName: authUser.lastName,
         bio: cookProfiles.bio,
@@ -55,6 +63,19 @@ export async function GET(
         sql`${reviews.cookId} = ${cookId} AND ${reviews.isVisible} = TRUE`,
       );
 
+    // Cuisine tags (category = 'cuisine') for the profile subtitle.
+    const cuisineRows = await db
+      .select({ label: tags.label })
+      .from(cookProfileTags)
+      .innerJoin(tags, eq(cookProfileTags.tagId, tags.id))
+      .where(
+        and(
+          eq(cookProfileTags.cookProfileId, cookId),
+          eq(tags.category, "cuisine"),
+        ),
+      );
+    const cuisineTypes = cuisineRows.map((t) => t.label);
+
     const name =
       [row.firstName, row.lastName].filter(Boolean).join(" ") || "Unknown Cook";
 
@@ -71,10 +92,11 @@ export async function GET(
         userId: row.userId,
         name,
         displayName: row.displayName ?? null,
+        photoUrl: row.photoUrl ?? null,
         firstName: row.firstName ?? null,
         lastName: row.lastName ?? null,
         bio: row.bio ?? null,
-        cuisineTypes: [],
+        cuisineTypes,
         neighborhood: row.neighborhood ?? null,
         rating: rating != null ? Math.round(rating * 10) / 10 : null,
         reviewCount: Number(reviewCount),

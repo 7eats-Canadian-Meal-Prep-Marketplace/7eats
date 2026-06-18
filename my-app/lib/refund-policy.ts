@@ -9,6 +9,25 @@ export const LEAD_TIME_HOURS_MAP: Record<string, number> = {
   "5_days": 120,
 };
 
+const LEAD_TIME_LABELS: Record<string, string> = {
+  same_day: "Same day",
+  "1_day": "1 day",
+  "2_days": "2 days",
+  "3_days": "3 days",
+  "4_days": "4 days",
+  "5_days": "5 days",
+};
+
+/**
+ * Human-readable label for a cook's lead-time enum value (e.g. "2_days" →
+ * "2 days"). Falls back to a de-underscored version for any unmapped value so
+ * raw enum keys are never shown to a customer.
+ */
+export function formatLeadTime(leadTime: string | null): string | null {
+  if (!leadTime) return null;
+  return LEAD_TIME_LABELS[leadTime] ?? leadTime.replace(/_/g, " ");
+}
+
 /**
  * The latest moment a client can cancel for a refund: pickupAt minus the cook's
  * lead time. Returns null when there is no pickup time yet.

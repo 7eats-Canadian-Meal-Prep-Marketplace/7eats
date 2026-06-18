@@ -4,9 +4,71 @@ import { Minus, Plus, Star } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { refundPolicyText } from "@/lib/refund-policy";
+import { LEAD_TIME_HOURS_MAP, refundPolicyText } from "@/lib/refund-policy";
 import { buildCartItem, useCart } from "../../../_cart-context";
 import styles from "./page.module.css";
+
+// Pickup-slot generation ------------------------------------------------------
+// getDay() is 0=Sunday..6=Saturday; windows store lowercase day names.
+const DAY_NAMES = [
+  "sunday",
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+] as const;
+const SLOT_INTERVAL_MIN = 30;
+const PICKUP_DAYS_AHEAD = 14;
+
+type PickupWindow = { dayOfWeek: string; fromTime: string; toTime: string };
+
+/**
+ * Expand a cook's weekly pickup windows into concrete, selectable slots over the
+ * next two weeks, dropping any slot that falls inside the cook's lead time.
+ */
+function generatePickupSlots(
+  windows: PickupWindow[],
+  leadTime: string | null,
+  now: Date,
+): { iso: string; label: string }[] {
+  if (windows.length === 0) return [];
+  const leadHours = leadTime ? (LEAD_TIME_HOURS_MAP[leadTime] ?? 0) : 0;
+  const earliest = new Date(now.getTime() + leadHours * 3600_000);
+  const byDay = new Map(windows.map((w) => [w.dayOfWeek, w]));
+
+  const slots: { iso: string; label: string }[] = [];
+  for (let d = 0; d < PICKUP_DAYS_AHEAD; d++) {
+    const day = new Date(now.getFullYear(), now.getMonth(), now.getDate() + d);
+    const win = byDay.get(DAY_NAMES[day.getDay()]);
+    if (!win) continue;
+    const [fh, fm] = win.fromTime.split(":").map(Number);
+    const [th, tm] = win.toTime.split(":").map(Number);
+    const start = new Date(day);
+    start.setHours(fh, fm, 0, 0);
+    const end = new Date(day);
+    end.setHours(th, tm, 0, 0);
+    for (
+      let t = start;
+      t < end;
+      t = new Date(t.getTime() + SLOT_INTERVAL_MIN * 60_000)
+    ) {
+      if (t < earliest) continue;
+      slots.push({
+        iso: t.toISOString(),
+        label: t.toLocaleString("en-CA", {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+        }),
+      });
+    }
+  }
+  return slots;
+}
 
 type Promotion = {
   id: string;
@@ -91,6 +153,19 @@ export default function CookMenuPage() {
     }
     return map;
   }, [cart.cookId, cart.items, cookId]);
+
+  // Concrete pickup slots from the cook's weekly windows (lead time applied).
+  const pickupSlots = useMemo(
+    () =>
+      data
+        ? generatePickupSlots(
+            data.cook.pickupWindows,
+            data.cook.leadTime,
+            new Date(),
+          )
+        : [],
+    [data],
+  );
 
   function changeQty(dish: Dish, nextQty: number) {
     const promo = dish.promotion
@@ -325,19 +400,32 @@ export default function CookMenuPage() {
             <label className={styles.summaryLabel} htmlFor="pickup-at">
               Pickup time
             </label>
-            <input
-              id="pickup-at"
-              type="datetime-local"
-              className={styles.input}
-              value={cart.pickupAt ?? ""}
-              onChange={(e) =>
-                cart.setPickupAt(
-                  e.target.value
-                    ? new Date(e.target.value).toISOString()
-                    : null,
-                )
-              }
-            />
+            {pickupSlots.length === 0 ? (
+              <p className={styles.minNotice}>
+                This cook has no pickup times available right now.
+              </p>
+            ) : (
+              <select
+                id="pickup-at"
+                className={styles.input}
+                value={
+                  cart.pickupAt &&
+                  pickupSlots.some((s) => s.iso === cart.pickupAt)
+                    ? cart.pickupAt
+                    : ""
+                }
+                onChange={(e) =>
+                  cart.setPickupAt(e.target.value ? e.target.value : null)
+                }
+              >
+                <option value="">Choose a pickup time…</option>
+                {pickupSlots.map((slot) => (
+                  <option key={slot.iso} value={slot.iso}>
+                    {slot.label}
+                  </option>
+                ))}
+              </select>
+            )}
 
             {!meetsMin && totalQty > 0 && (
               <p className={styles.minNotice}>
@@ -348,14 +436,21 @@ export default function CookMenuPage() {
             <button
               type="button"
               className={styles.checkoutBtn}
-              disabled={!meetsMin || !cart.pickupAt}
+              disabled={
+                !meetsMin ||
+                !cart.pickupAt ||
+                pickupSlots.length === 0 ||
+                !pickupSlots.some((s) => s.iso === cart.pickupAt)
+              }
               onClick={() => router.push("/app/checkout")}
             >
-              {!cart.pickupAt
-                ? "Choose a pickup time"
-                : !meetsMin
-                  ? `Minimum ${cook.minOrderQty} items`
-                  : "Go to checkout"}
+              {pickupSlots.length === 0
+                ? "No pickup times available"
+                : !cart.pickupAt
+                  ? "Choose a pickup time"
+                  : !meetsMin
+                    ? `Minimum ${cook.minOrderQty} items`
+                    : "Go to checkout"}
             </button>
           </div>
         </aside>
