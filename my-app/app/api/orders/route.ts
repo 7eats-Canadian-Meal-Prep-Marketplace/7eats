@@ -14,7 +14,10 @@ import {
 } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { calcDeliveryFee } from "@/lib/delivery-fee";
-import { sendOrderPlacedEmailToCook } from "@/lib/emails/order-events";
+import {
+  sendOrderPlacedEmailToCook,
+  sendOrderReceiptToClient,
+} from "@/lib/emails/order-events";
 import { getDrivingDistanceKm } from "@/lib/mapbox-directions";
 import { computeLineTotal, earliestPickup } from "@/lib/order-pricing";
 import { logAndCheckRateLimit } from "@/lib/rate-limit";
@@ -272,6 +275,7 @@ export async function POST(req: NextRequest) {
     const [cook] = await db
       .select({
         id: cookProfiles.id,
+        displayName: cookProfiles.displayName,
         userStatus: authUser.status,
         minOrderQty: cookProfiles.minOrderQty,
         maxOrderQty: cookProfiles.maxOrderQty,
@@ -674,6 +678,20 @@ export async function POST(req: NextRequest) {
         );
       })
       .catch((err) => console.error("[orders/POST] email", err));
+
+    // Send the client an order receipt (fire-and-forget).
+    sendOrderReceiptToClient(
+      { email: session.user.email, firstName: session.user.firstName ?? null },
+      { name: cook.displayName ?? "your cook" },
+      {
+        id: orderId,
+        listingTitle: computed.map((c) => c.dishName).join(", "),
+        quantity: totalQty,
+        totalPrice: String((subtotal + deliveryFeeSnapshot).toFixed(2)),
+        currency: "CAD",
+        pickupAt: new Date(pickupAt),
+      },
+    ).catch((err) => console.error("[orders/POST] receipt", err));
 
     return NextResponse.json(
       { success: true, data: { orderId } },

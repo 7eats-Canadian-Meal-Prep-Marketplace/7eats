@@ -88,6 +88,52 @@ export async function sendOrderPlacedEmailToCook(
   }
 }
 
+export async function sendOrderReceiptToClient(
+  client: { email: string; firstName: string | null },
+  cook: { name: string },
+  order: OrderEmailData,
+): Promise<void> {
+  try {
+    const pickup = formatPickup(order.pickupAt);
+    const subject = `Your 7eats order with ${cook.name} is confirmed`;
+    const html = htmlEmail({
+      title: subject,
+      preheader: `We received your order from ${cook.name}.`,
+      bodyHtml:
+        paragraph(greeting(client.firstName)) +
+        paragraph(`Thanks for your order with <strong>${cook.name}</strong>.`) +
+        orderDetailsTable([
+          { label: "Items", value: order.listingTitle },
+          {
+            label: "Total",
+            value: formatMoney(order.totalPrice, order.currency),
+          },
+          { label: "Pickup", value: pickup },
+        ]) +
+        paragraph(
+          "You can track its status and pickup code any time from your orders.",
+        ),
+      ctaLabel: "View your order",
+      ctaUrl: `${process.env.NEXT_PUBLIC_APP_URL}/app/orders/${order.id}`,
+    });
+    const text = [
+      greeting(client.firstName),
+      "",
+      `Thanks for your order with ${cook.name}.`,
+      "",
+      `Items: ${order.listingTitle}`,
+      `Total: ${formatMoney(order.totalPrice, order.currency)}`,
+      `Pickup: ${pickup}`,
+      "",
+      "Track it any time from your orders:",
+      `${process.env.NEXT_PUBLIC_APP_URL}/app/orders/${order.id}`,
+    ].join("\n");
+    await sendMail({ to: client.email, subject, text, html });
+  } catch (err) {
+    console.error("[email/order-receipt-client]", err);
+  }
+}
+
 export async function sendOrderConfirmedEmailToClient(
   client: { email: string; firstName: string | null },
   cook: { name: string },
