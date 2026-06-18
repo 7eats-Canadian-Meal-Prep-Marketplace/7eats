@@ -15,11 +15,15 @@ export async function GET(
       .select({
         id: cookProfiles.id,
         userId: authUser.id,
+        displayName: cookProfiles.displayName,
         firstName: authUser.firstName,
         lastName: authUser.lastName,
         bio: cookProfiles.bio,
         neighborhood: authUser.neighborhood,
         leadTime: cookProfiles.leadTime,
+        minOrderQty: cookProfiles.minOrderQty,
+        maxOrderQty: cookProfiles.maxOrderQty,
+        cancellationAllowed: cookProfiles.cancellationAllowed,
         isVerified: cookProfiles.setupComplete,
         createdAt: cookProfiles.createdAt,
       })
@@ -66,6 +70,7 @@ export async function GET(
         id: row.id,
         userId: row.userId,
         name,
+        displayName: row.displayName ?? null,
         firstName: row.firstName ?? null,
         lastName: row.lastName ?? null,
         bio: row.bio ?? null,
@@ -78,6 +83,9 @@ export async function GET(
         memberSince,
         ordersCompleted: Number(ordersCompleted),
         leadTime: row.leadTime ?? null,
+        minOrderQty: row.minOrderQty,
+        maxOrderQty: row.maxOrderQty,
+        cancellationAllowed: row.cancellationAllowed,
       },
     });
   } catch (err) {
