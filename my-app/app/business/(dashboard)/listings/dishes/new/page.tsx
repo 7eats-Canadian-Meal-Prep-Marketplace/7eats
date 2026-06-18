@@ -3,6 +3,7 @@
 import { ArrowLeft, Check, Plus, Trash2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import styles from "./page.module.css";
 
@@ -30,6 +31,7 @@ const STEPS: { n: 1 | 2; label: string }[] = [
 
 const EMPTY_FORM = {
   name: "",
+  price: "",
   cuisine: "",
   description: "",
   status: "active" as DishStatus,
@@ -40,6 +42,8 @@ const EMPTY_NUTRITION = { calories: "", protein: "", carbs: "", fat: "" };
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function NewDishPage() {
+  const router = useRouter();
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [step, setStep] = useState<1 | 2>(1);
   const [created, setCreated] = useState(false);
 
@@ -114,12 +118,38 @@ export default function NewDishPage() {
     setStep(1);
   }
 
-  function handleCreate() {
-    setCreated(true);
-    setTimeout(() => {
-      setCreated(false);
-      resetAll();
-    }, 1600);
+  async function handleCreate() {
+    setSaveError(null);
+    const priceNum = Number(form.price);
+    if (!form.name.trim()) {
+      setSaveError("Please enter a name.");
+      return;
+    }
+    if (!Number.isFinite(priceNum) || priceNum <= 0) {
+      setSaveError("Please enter a price greater than 0.");
+      return;
+    }
+    try {
+      const res = await fetch("/api/business/dishes", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          name: form.name.trim(),
+          price: Math.round(priceNum * 100) / 100,
+          cuisine: form.cuisine.trim() || undefined,
+          description: form.description.trim() || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setSaveError(data.error ?? "Could not create the meal.");
+        return;
+      }
+      setCreated(true);
+      setTimeout(() => router.push("/business/listings"), 900);
+    } catch {
+      setSaveError("Network error — please try again.");
+    }
   }
 
   return (
@@ -166,6 +196,25 @@ export default function NewDishPage() {
                 placeholder="e.g. Jollof Rice & Chicken"
                 onChange={(e) =>
                   setForm((f) => ({ ...f, name: e.target.value }))
+                }
+                required
+              />
+            </div>
+
+            <div className={styles.formGroup}>
+              <label htmlFor="f-price" className={styles.formLabel}>
+                Price per meal
+              </label>
+              <input
+                id="f-price"
+                type="number"
+                min="0.01"
+                step="0.01"
+                className={styles.formInput}
+                value={form.price}
+                placeholder="e.g. 14.00"
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, price: e.target.value }))
                 }
                 required
               />
@@ -426,6 +475,11 @@ export default function NewDishPage() {
               </div>
             </section>
 
+            {saveError && (
+              <p style={{ color: "var(--red, #e23744)", marginBottom: 12 }}>
+                {saveError}
+              </p>
+            )}
             <div className={styles.formActions}>
               <button
                 type="button"
