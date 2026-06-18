@@ -1,13 +1,9 @@
 "use client";
 
-import { Package, RefreshCw } from "lucide-react";
+import { Package } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
-import {
-  INTERVAL_LABELS,
-  type SubscriptionInterval,
-} from "@/lib/subscription-schedule";
 import styles from "./page.module.css";
 
 type OrderStatus =
@@ -20,17 +16,24 @@ type OrderStatus =
 type ApiOrder = {
   id: string;
   status: OrderStatus;
-  listingTitle: string | null;
-  listingId: string | null;
+  dishes?: { dishName: string; quantity: number }[];
   totalPrice: string | null;
   pickupDate: string | null;
   pickupWindow: string | null;
   fulfillmentMode: "pickup" | "delivery" | null;
-  isSubscription: boolean;
-  subscriptionInterval: SubscriptionInterval | null;
   cookName: string | null;
   cookInitials: string | null;
 };
+
+function orderTitle(o: ApiOrder): string {
+  if (o.dishes && o.dishes.length > 0) {
+    const extra = o.dishes.length - 1;
+    return extra > 0
+      ? `${o.dishes[0].dishName} +${extra} more`
+      : o.dishes[0].dishName;
+  }
+  return "Order";
+}
 
 function statusInfo(order: ApiOrder): { label: string; color: string } {
   switch (order.status) {
@@ -149,22 +152,12 @@ function OrdersContent() {
                       <span className={styles.cookName}>
                         {order.cookName ?? "Unknown cook"}
                       </span>
-                      <h3 className={styles.orderTitle}>
-                        {order.listingTitle ?? "Order"}
-                      </h3>
+                      <h3 className={styles.orderTitle}>{orderTitle(order)}</h3>
                       <p className={styles.orderMeta}>
                         {fulfillmentPrefix}
                         {order.pickupDate ? ` · ${order.pickupDate}` : ""}
                         {order.pickupWindow ? ` · ${order.pickupWindow}` : ""}
                       </p>
-                      {order.isSubscription && (
-                        <span className={styles.subscriptionTag}>
-                          <RefreshCw size={10} />
-                          {order.subscriptionInterval
-                            ? `${INTERVAL_LABELS[order.subscriptionInterval]} subscription`
-                            : "Subscription"}
-                        </span>
-                      )}
                     </div>
 
                     <div className={styles.orderRight}>
@@ -215,9 +208,7 @@ function OrdersContent() {
                       <span className={styles.cookName}>
                         {order.cookName ?? "Unknown cook"}
                       </span>
-                      <h3 className={styles.orderTitle}>
-                        {order.listingTitle ?? "Order"}
-                      </h3>
+                      <h3 className={styles.orderTitle}>{orderTitle(order)}</h3>
                       <p className={styles.orderMeta}>
                         {fulfillmentPrefix}
                         {order.pickupDate ? ` · ${order.pickupDate}` : ""}
@@ -234,15 +225,6 @@ function OrdersContent() {
                             ? `$${Number(order.totalPrice).toFixed(2)}`
                             : "—"}
                         </span>
-                        {order.listingId && (
-                          <Link
-                            href={`/app/listings/${order.listingId}`}
-                            className={styles.reorderBtn}
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            Order again
-                          </Link>
-                        )}
                       </div>
                     </div>
                   </Link>
