@@ -443,12 +443,12 @@ export async function POST(req: NextRequest) {
 
         const now = new Date();
         const valid =
-          row &&
+          !!row &&
           row.isActive &&
           (!row.validFrom || row.validFrom <= now) &&
           (!row.validUntil || row.validUntil > now) &&
           (row.maxUses == null || row.usesCount < row.maxUses);
-        if (!valid) {
+        if (!row || !valid) {
           return NextResponse.json(
             {
               error: "A selected promotion is no longer valid.",
@@ -561,7 +561,7 @@ export async function POST(req: NextRequest) {
             .limit(1);
           const now = new Date();
           const stillValid =
-            row &&
+            !!row &&
             row.isActive &&
             (!row.validFrom || row.validFrom <= now) &&
             (!row.validUntil || row.validUntil > now) &&

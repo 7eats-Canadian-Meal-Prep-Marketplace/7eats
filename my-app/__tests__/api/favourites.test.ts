@@ -33,7 +33,6 @@ import { auth } from "@/lib/auth";
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
 const USER_ID = "user-uuid-1234";
-const LISTING_ID = "a1b2c3d4-e5f6-7a8b-9c0d-e1f2a3b4c5d6";
 const COOK_ID = "b2c3d4e5-f6a7-4b8c-9d0e-f1a2b3c4d5e6";
 
 function makeReq(url: string, method = "GET", body?: unknown) {
@@ -56,16 +55,6 @@ function mockSession(userId: string | null) {
   );
 }
 
-/** .from().innerJoin()...().where() resolves directly */
-function innerJoinsWhereChain(rows: unknown[]) {
-  const where = vi.fn().mockResolvedValue(rows);
-  const innerJoin3 = vi.fn(() => ({ where }));
-  const innerJoin2 = vi.fn(() => ({ innerJoin: innerJoin3 }));
-  const innerJoin1 = vi.fn(() => ({ innerJoin: innerJoin2 }));
-  const from = vi.fn(() => ({ innerJoin: innerJoin1 }));
-  return { from } as never;
-}
-
 /** .from().innerJoin().innerJoin().where() (for favourites/cooks GET) */
 function cooksFollowedChain(rows: unknown[]) {
   const where = vi.fn().mockResolvedValue(rows);
@@ -86,11 +75,6 @@ function limitChain(rows: unknown[]) {
 function mockInsertSuccess() {
   const values = vi.fn().mockResolvedValue([]);
   vi.mocked(db.insert).mockReturnValue({ values } as never);
-}
-
-function mockDeleteSuccess() {
-  const where = vi.fn().mockResolvedValue([]);
-  vi.mocked(db.delete).mockReturnValue({ where } as never);
 }
 
 // ─── GET /api/favourites/cooks ────────────────────────────────────────────────

@@ -106,18 +106,6 @@ export default function NewDishPage() {
     setStep(2);
   }
 
-  function resetAll() {
-    setForm(EMPTY_FORM);
-    setIngredients([]);
-    setNutrition(EMPTY_NUTRITION);
-    setAllergens([]);
-    setCoverPreview((prev) => {
-      if (prev) URL.revokeObjectURL(prev);
-      return null;
-    });
-    setStep(1);
-  }
-
   async function handleCreate() {
     setSaveError(null);
     const priceNum = Number(form.price);

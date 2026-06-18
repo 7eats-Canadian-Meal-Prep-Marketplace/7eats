@@ -1,15 +1,6 @@
 "use client";
 
-import {
-  CreditCard,
-  Edit3,
-  Eye,
-  EyeOff,
-  Plus,
-  RefreshCw,
-  Trash2,
-  X,
-} from "lucide-react";
+import { CreditCard, Edit3, Eye, EyeOff, Plus, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import styles from "./page.module.css";
 
@@ -80,18 +71,12 @@ const PREFERENCE_QUESTIONS: PreferenceQuestion[] = [
   },
 ];
 
-type Tab =
-  | "profile"
-  | "preferences"
-  | "payment"
-  | "subscriptions"
-  | "notifications";
+type Tab = "profile" | "preferences" | "payment" | "notifications";
 
 const TAB_LABELS: Record<Tab, string> = {
   profile: "Profile",
   preferences: "Preferences",
   payment: "Payment",
-  subscriptions: "Subscriptions",
   notifications: "Notifications",
 };
 
@@ -110,16 +95,6 @@ type SavedCard = {
   expMonth: number | undefined;
   expYear: number | undefined;
 };
-type ActiveSub = {
-  id: string;
-  status: string;
-  cancelAtPeriodEnd: boolean;
-  currentPeriodEnd: string | null;
-  listing: { id: string; title: string };
-  tier: { id: string; interval: string; price: string };
-  cookDisplayName: string;
-};
-
 // ─── API types ────────────────────────────────────────────────────────────────
 
 type ProfileData = {
@@ -386,14 +361,8 @@ export default function SettingsPage() {
   // ── Card / sub state ───────────────────────────────────────────────────────
   const [cards, setCards] = useState<SavedCard[]>([]);
   const [cardsLoading, setCardsLoading] = useState(true);
-  const [subs, setSubs] = useState<ActiveSub[]>([]);
-  const [subsLoading, setSubsLoading] = useState(true);
   const [showAddCard, setShowAddCard] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-  const [confirmCancelSubId, setConfirmCancelSubId] = useState<string | null>(
-    null,
-  );
-  const [subCancelError, setSubCancelError] = useState<string | null>(null);
 
   // ── Fetch profile on mount ─────────────────────────────────────────────────
   useEffect(() => {
@@ -452,18 +421,6 @@ export default function SettingsPage() {
       .finally(() => setCardsLoading(false));
   }, []);
 
-  // ── Fetch subscriptions on mount ───────────────────────────────────────────
-  useEffect(() => {
-    setSubsLoading(true);
-    fetch("/api/subscriptions")
-      .then((r) => r.json())
-      .then((json: { success?: boolean; data?: ActiveSub[] }) => {
-        if (json.data) setSubs(json.data);
-      })
-      .catch(() => {})
-      .finally(() => setSubsLoading(false));
-  }, []);
-
   // ── Helpers ────────────────────────────────────────────────────────────────
 
   const atLeastOneChannel =
@@ -488,24 +445,6 @@ export default function SettingsPage() {
   const removeCard = (id: string) => {
     setCards((prev) => prev.filter((c) => c.id !== id));
     setConfirmDeleteId(null);
-  };
-
-  const confirmCancelSub = async (id: string) => {
-    setSubCancelError(null);
-    try {
-      const res = await fetch(`/api/subscriptions/${id}`, { method: "DELETE" });
-      const json = (await res.json()) as { success?: boolean; error?: string };
-      if (!res.ok) {
-        setSubCancelError(json.error ?? "Failed to cancel subscription.");
-        return;
-      }
-      setSubs((prev) =>
-        prev.map((s) => (s.id === id ? { ...s, cancelAtPeriodEnd: true } : s)),
-      );
-      setConfirmCancelSubId(null);
-    } catch {
-      setSubCancelError("Network error. Please try again.");
-    }
   };
 
   // ── Profile save ───────────────────────────────────────────────────────────
@@ -968,7 +907,7 @@ export default function SettingsPage() {
             <div className={styles.card}>
               <div className={styles.cardTitle}>Saved cards</div>
               <p className={styles.cardDesc}>
-                Cards on file are used for orders and weekly subscriptions.
+                Cards on file are used for orders.
               </p>
               <div className={styles.cardList}>
                 {cardsLoading ? (
@@ -1046,134 +985,6 @@ export default function SettingsPage() {
                 Add a new card
               </button>
             </div>
-          </div>
-        )}
-
-        {/* Subscriptions */}
-        {tab === "subscriptions" && (
-          <div className={styles.tabContent}>
-            {subsLoading ? (
-              <p className={styles.profileInfoEmpty}>Loading…</p>
-            ) : subs.length === 0 ? (
-              <div className={styles.subEmpty}>
-                <RefreshCw size={32} className={styles.subEmptyIcon} />
-                <p className={styles.subEmptyText}>No active subscriptions.</p>
-                <p className={styles.subEmptyDesc}>
-                  When you subscribe to a weekly listing it will appear here.
-                </p>
-              </div>
-            ) : (
-              <>
-                <p className={styles.prefIntro}>
-                  Charges occur automatically each week until you cancel.
-                </p>
-                {subCancelError && (
-                  <p className={styles.profileInfoEmpty}>{subCancelError}</p>
-                )}
-                {subs.map((sub) => {
-                  const isActive =
-                    sub.status === "active" && !sub.cancelAtPeriodEnd;
-                  const isCancelling =
-                    sub.status === "active" && sub.cancelAtPeriodEnd;
-                  const nextDateLabel = sub.currentPeriodEnd
-                    ? new Date(sub.currentPeriodEnd).toLocaleDateString(
-                        "en-CA",
-                        { weekday: "short", month: "short", day: "numeric" },
-                      )
-                    : null;
-                  return (
-                    <div key={sub.id} className={styles.subCard}>
-                      <div className={styles.subCardTop}>
-                        <div className={styles.subCardInfo}>
-                          <div className={styles.subCardTitle}>
-                            {sub.listing.title}
-                          </div>
-                          <div className={styles.subCardCook}>
-                            {sub.cookDisplayName}
-                          </div>
-                        </div>
-                        <div className={styles.subCardRight}>
-                          <span
-                            className={`${styles.subStatus} ${isActive ? styles.subStatusActive : styles.subStatusCancelled}`}
-                          >
-                            {isActive
-                              ? "Active"
-                              : isCancelling
-                                ? "Cancelling"
-                                : "Cancelled"}
-                          </span>
-                          <span className={styles.subPrice}>
-                            ${Number(sub.tier.price)}
-                            <span className={styles.subInterval}>
-                              /{sub.tier.interval}
-                            </span>
-                          </span>
-                        </div>
-                      </div>
-                      {/* Cancellation guard — shown when user clicked Cancel */}
-                      {confirmCancelSubId === sub.id ? (
-                        <div className={styles.subCancelConfirm}>
-                          <div className={styles.subCancelConfirmText}>
-                            <span className={styles.subCancelConfirmTitle}>
-                              Cancel this subscription?
-                            </span>
-                            <span className={styles.subCancelConfirmPolicy}>
-                              Your subscription will remain active until{" "}
-                              <strong>
-                                {nextDateLabel ?? "end of period"}
-                              </strong>
-                              . No further charges after that.
-                            </span>
-                          </div>
-                          <div className={styles.subCancelConfirmActions}>
-                            <button
-                              type="button"
-                              className={styles.subCancelKeep}
-                              onClick={() => setConfirmCancelSubId(null)}
-                            >
-                              Keep
-                            </button>
-                            <button
-                              type="button"
-                              className={styles.subCancelConfirmBtn}
-                              onClick={() => confirmCancelSub(sub.id)}
-                            >
-                              Confirm cancellation
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className={styles.subCardFooter}>
-                          {isActive && nextDateLabel ? (
-                            <span className={styles.subNextDate}>
-                              <RefreshCw size={11} />
-                              Next charge · {nextDateLabel}
-                            </span>
-                          ) : isCancelling && nextDateLabel ? (
-                            <span className={styles.subCancelledNote}>
-                              Cancels after <strong>{nextDateLabel}</strong>
-                            </span>
-                          ) : (
-                            <span className={styles.subCancelledNote}>
-                              Cancelled
-                            </span>
-                          )}
-                          {isActive && (
-                            <button
-                              type="button"
-                              className={styles.cancelSubBtn}
-                              onClick={() => setConfirmCancelSubId(sub.id)}
-                            >
-                              Cancel
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </>
-            )}
           </div>
         )}
 
