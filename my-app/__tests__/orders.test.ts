@@ -76,6 +76,7 @@ vi.mock("@/lib/auth", () => ({
 }));
 vi.mock("@/lib/emails/order-events", () => ({
   sendOrderPlacedEmailToCook: vi.fn().mockResolvedValue(undefined),
+  sendOrderReceiptToClient: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock("@/lib/delivery-fee", () => ({ calcDeliveryFee: vi.fn() }));
 vi.mock("@/lib/mapbox-directions", () => ({ getDrivingDistanceKm: vi.fn() }));
