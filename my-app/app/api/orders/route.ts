@@ -387,7 +387,84 @@ export async function POST(req: NextRequest) {
     let deliveryFeeSnapshot = 0;
     let deliveryDistanceKm = 0;
 
-    // Compute delivery fee (outside the txn — read-only external call).
+    // ── Pricing (optimistic, no locks) ───────────────────────────────────────
+    // Validate promotions with a plain read so we can compute the total and
+    // create the PaymentIntent BEFORE opening a write transaction. The promos
+    // are re-checked under FOR UPDATE at commit time to prevent overselling, so
+    // no external call ever runs while a row lock is held.
+    const computed: LineComputed[] = [];
+    for (const line of lines) {
+      const dish = dishById.get(line.dishId);
+      if (!dish) throw new Error("dish vanished");
+      const price = Number.parseFloat(dish.price);
+
+      let promo: {
+        type: "percentage_off" | "fixed_off";
+        value: number;
+      } | null = null;
+      let promotionId: string | null = null;
+      if (line.promotionId) {
+        const [row] = await db
+          .select({
+            id: dishPromotions.id,
+            type: dishPromotions.type,
+            value: dishPromotions.value,
+            isActive: dishPromotions.isActive,
+            validFrom: dishPromotions.validFrom,
+            validUntil: dishPromotions.validUntil,
+            maxUses: dishPromotions.maxUses,
+            usesCount: dishPromotions.usesCount,
+          })
+          .from(dishPromotions)
+          .where(
+            and(
+              eq(dishPromotions.id, line.promotionId),
+              eq(dishPromotions.dishId, line.dishId),
+            ),
+          )
+          .limit(1);
+
+        const now = new Date();
+        const valid =
+          row &&
+          row.isActive &&
+          (!row.validFrom || row.validFrom <= now) &&
+          (!row.validUntil || row.validUntil > now) &&
+          (row.maxUses == null || row.usesCount < row.maxUses);
+        if (!valid) {
+          return NextResponse.json(
+            {
+              error: "A selected promotion is no longer valid.",
+              dishId: line.dishId,
+            },
+            { status: 422 },
+          );
+        }
+        promo = {
+          type: row.type as "percentage_off" | "fixed_off",
+          value: Number.parseFloat(row.value),
+        };
+        promotionId = row.id;
+      }
+
+      const { discountAmount, lineTotal } = computeLineTotal(
+        price,
+        line.quantity,
+        promo,
+      );
+      subtotal += lineTotal;
+      computed.push({
+        dishId: line.dishId,
+        dishName: dish.name,
+        quantity: line.quantity,
+        priceSnapshot: price,
+        promotionId,
+        discountAmount,
+        lineTotal,
+      });
+    }
+
+    // Delivery fee snapshot (external call, outside any transaction).
     const wantsDelivery =
       fulfillmentMode === "delivery" &&
       cook.delivery === "self" &&
@@ -395,133 +472,89 @@ export async function POST(req: NextRequest) {
       customerLng != null &&
       cook.pickupLat != null &&
       cook.pickupLng != null;
+    if (wantsDelivery) {
+      try {
+        const distKm = await getDrivingDistanceKm(
+          cook.pickupLat as number,
+          cook.pickupLng as number,
+          customerLat as number,
+          customerLng as number,
+        );
+        const feeResult = calcDeliveryFee(
+          {
+            maxDeliveryKm: cook.maxDeliveryKm,
+            deliveryRatePerKm: cook.deliveryRatePerKm,
+            deliveryFlatFee: cook.deliveryFlatFee,
+            freeDeliveryAbove: cook.freeDeliveryAbove,
+          },
+          distKm,
+          subtotal,
+        );
+        deliveryFeeSnapshot = feeResult.fee;
+        deliveryDistanceKm = Math.round(distKm);
+      } catch (e) {
+        console.error("[orders/POST] delivery fee", e);
+      }
+    }
 
-    // First pass (no promos) to know the subtotal for free-delivery thresholds.
-    // Promo validation + final discount happens inside the txn.
-    const computed: LineComputed[] = [];
+    const totalPrice = Math.round((subtotal + deliveryFeeSnapshot) * 100) / 100;
+    const totalCents = Math.round(totalPrice * 100);
+    const platformFeePct = Number.parseFloat(cook.platformFeePct);
+    const platformFeeCents = Math.round((totalCents * platformFeePct) / 100);
+    const cookPayoutCents = totalCents - platformFeeCents;
 
-    // Build the Stripe PI before DB writes; if it fails nothing is persisted.
-    // We compute the total inside the txn, so create the PI after pricing but
-    // before committing by doing pricing first in a read, then the PI, then the
-    // writes. To keep promo locking correct we do everything in one txn and
-    // create the PI inside it, cancelling on any post-PI failure.
+    // ── Create the off-session PaymentIntent BEFORE the DB transaction ────────
     let piId: string | null = null;
+    try {
+      const pi = await createFullPaymentIntent({
+        totalAmountCents: totalCents,
+        platformFeeCents,
+        stripeCustomerId: stripeCustomerId as string,
+        paymentMethodId,
+        connectedAccountId: cook.stripeAccountId as string,
+        idempotencyKey: `full-${orderId}`,
+      });
+      piId = pi.piId;
+    } catch (stripeErr) {
+      console.error("[orders/POST] stripe", stripeErr);
+      return NextResponse.json(
+        { error: "Payment could not be authorized." },
+        { status: 502 },
+      );
+    }
 
+    // ── Short write transaction: re-lock promos, insert, increment usesCount ──
     try {
       await dbPool.transaction(async (tx) => {
-        for (const line of lines) {
-          const dish = dishById.get(line.dishId);
-          if (!dish) throw new Error("dish vanished");
-          const price = Number.parseFloat(dish.price);
-
-          let promo: {
-            type: "percentage_off" | "fixed_off";
-            value: number;
-          } | null = null;
-          let promotionId: string | null = null;
-          if (line.promotionId) {
-            const [row] = await tx
-              .select({
-                id: dishPromotions.id,
-                type: dishPromotions.type,
-                value: dishPromotions.value,
-                isActive: dishPromotions.isActive,
-                validFrom: dishPromotions.validFrom,
-                validUntil: dishPromotions.validUntil,
-                maxUses: dishPromotions.maxUses,
-                usesCount: dishPromotions.usesCount,
-              })
-              .from(dishPromotions)
-              .where(
-                and(
-                  eq(dishPromotions.id, line.promotionId),
-                  eq(dishPromotions.dishId, line.dishId),
-                ),
-              )
-              .for("update")
-              .limit(1);
-
-            const now = new Date();
-            const valid =
-              row &&
-              row.isActive &&
-              (!row.validFrom || row.validFrom <= now) &&
-              (!row.validUntil || row.validUntil > now) &&
-              (row.maxUses == null || row.usesCount < row.maxUses);
-            if (!valid) {
-              const err = new Error("PROMO_INVALID");
-              (err as { dishId?: string }).dishId = line.dishId;
-              throw err;
-            }
-            promo = {
-              type: row.type as "percentage_off" | "fixed_off",
-              value: Number.parseFloat(row.value),
-            };
-            promotionId = row.id;
-          }
-
-          const { discountAmount, lineTotal } = computeLineTotal(
-            price,
-            line.quantity,
-            promo,
-          );
-          subtotal += lineTotal;
-          computed.push({
-            dishId: line.dishId,
-            dishName: dish.name,
-            quantity: line.quantity,
-            priceSnapshot: price,
-            promotionId,
-            discountAmount,
-            lineTotal,
-          });
-        }
-
-        // Delivery fee snapshot.
-        if (wantsDelivery) {
-          try {
-            const distKm = await getDrivingDistanceKm(
-              cook.pickupLat as number,
-              cook.pickupLng as number,
-              customerLat as number,
-              customerLng as number,
-            );
-            const feeResult = calcDeliveryFee(
-              {
-                maxDeliveryKm: cook.maxDeliveryKm,
-                deliveryRatePerKm: cook.deliveryRatePerKm,
-                deliveryFlatFee: cook.deliveryFlatFee,
-                freeDeliveryAbove: cook.freeDeliveryAbove,
-              },
-              distKm,
-              subtotal,
-            );
-            deliveryFeeSnapshot = feeResult.fee;
-            deliveryDistanceKm = Math.round(distKm);
-          } catch (e) {
-            console.error("[orders/POST] delivery fee", e);
+        // Re-validate each promo under a row lock to prevent concurrent
+        // overselling between the optimistic read and the commit.
+        for (const c of computed) {
+          if (!c.promotionId) continue;
+          const [row] = await tx
+            .select({
+              isActive: dishPromotions.isActive,
+              validFrom: dishPromotions.validFrom,
+              validUntil: dishPromotions.validUntil,
+              maxUses: dishPromotions.maxUses,
+              usesCount: dishPromotions.usesCount,
+            })
+            .from(dishPromotions)
+            .where(eq(dishPromotions.id, c.promotionId))
+            .for("update")
+            .limit(1);
+          const now = new Date();
+          const stillValid =
+            row &&
+            row.isActive &&
+            (!row.validFrom || row.validFrom <= now) &&
+            (!row.validUntil || row.validUntil > now) &&
+            (row.maxUses == null || row.usesCount < row.maxUses);
+          if (!stillValid) {
+            const err = new Error("PROMO_INVALID");
+            (err as { dishId?: string }).dishId = c.dishId;
+            throw err;
           }
         }
-
-        const totalPrice =
-          Math.round((subtotal + deliveryFeeSnapshot) * 100) / 100;
-        const totalCents = Math.round(totalPrice * 100);
-        const platformFeePct = Number.parseFloat(cook.platformFeePct);
-        const platformFeeCents = Math.round(
-          (totalCents * platformFeePct) / 100,
-        );
-        const cookPayoutCents = totalCents - platformFeeCents;
-
-        // Create the off-session PaymentIntent inside the txn; cancel on failure.
-        const pi = await createFullPaymentIntent({
-          totalAmountCents: totalCents,
-          platformFeeCents,
-          stripeCustomerId: stripeCustomerId as string,
-          paymentMethodId,
-          connectedAccountId: cook.stripeAccountId as string,
-          idempotencyKey: `full-${orderId}`,
-        });
-        piId = pi.piId;
 
         await tx.insert(orders).values({
           id: orderId as `${string}-${string}-${string}-${string}-${string}`,
@@ -573,7 +606,6 @@ export async function POST(req: NextRequest) {
           authorizedAt: new Date(),
         });
 
-        // Increment promotion usage for each used promo.
         for (const c of computed) {
           if (c.promotionId) {
             await tx
@@ -584,6 +616,8 @@ export async function POST(req: NextRequest) {
         }
       });
     } catch (txErr) {
+      // Roll back the authorized payment so the client is never charged for a
+      // failed write.
       if (piId) {
         await cancelPaymentIntent(piId, `cancel-${orderId}`).catch(() => {});
       }
