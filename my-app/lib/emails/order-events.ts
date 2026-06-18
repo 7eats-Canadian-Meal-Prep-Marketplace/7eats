@@ -49,7 +49,7 @@ export async function sendOrderPlacedEmailToCook(
 ): Promise<void> {
   try {
     const pickup = formatPickup(order.pickupAt);
-    const subject = `New order from ${customer.name} — ${order.listingTitle}`;
+    const subject = `New order from ${customer.name}: ${order.listingTitle}`;
     const html = htmlEmail({
       title: subject,
       preheader: `${customer.name} ordered ${order.listingTitle}.`,
@@ -57,7 +57,7 @@ export async function sendOrderPlacedEmailToCook(
         paragraph(greeting(cook.firstName)) +
         paragraph(`${customer.name} just placed an order.`) +
         orderDetailsTable([
-          { label: "Listing", value: order.listingTitle },
+          { label: "Order", value: order.listingTitle },
           { label: "Quantity", value: String(order.quantity) },
           {
             label: "Total",
@@ -74,7 +74,7 @@ export async function sendOrderPlacedEmailToCook(
       "",
       `${customer.name} just placed an order.`,
       "",
-      `Listing: ${order.listingTitle}`,
+      `Order: ${order.listingTitle}`,
       `Quantity: ${order.quantity}`,
       `Total: ${formatMoney(order.totalPrice, order.currency)}`,
       `Pickup: ${pickup}`,
@@ -103,7 +103,7 @@ export async function sendOrderConfirmedEmailToClient(
         paragraph(greeting(client.firstName)) +
         paragraph(`${cook.name} confirmed your order. See you at pickup.`) +
         orderDetailsTable([
-          { label: "Listing", value: order.listingTitle },
+          { label: "Order", value: order.listingTitle },
           { label: "Quantity", value: String(order.quantity) },
           {
             label: "Total",
@@ -120,7 +120,7 @@ export async function sendOrderConfirmedEmailToClient(
       "",
       `${cook.name} confirmed your order. See you at pickup.`,
       "",
-      `Listing: ${order.listingTitle}`,
+      `Order: ${order.listingTitle}`,
       `Quantity: ${order.quantity}`,
       `Total: ${formatMoney(order.totalPrice, order.currency)}`,
       `Pickup: ${pickup}`,
@@ -141,7 +141,7 @@ export async function sendOrderReadyEmailToClient(
 ): Promise<void> {
   try {
     const pickup = formatPickup(order.pickupAt);
-    const subject = `Your order is ready — pickup code ${pickupCode}`;
+    const subject = `Your order is ready, pickup code ${pickupCode}`;
     const html = htmlEmail({
       title: subject,
       preheader: `Your order from ${cook.name} is ready for pickup.`,
@@ -152,7 +152,7 @@ export async function sendOrderReadyEmailToClient(
         ) +
         pickupCodeBlock(pickupCode) +
         orderDetailsTable([
-          { label: "Listing", value: order.listingTitle },
+          { label: "Order", value: order.listingTitle },
           { label: "Pickup", value: pickup },
         ]) +
         paragraph("This code expires 24 hours after it was issued."),
@@ -164,7 +164,7 @@ export async function sendOrderReadyEmailToClient(
       "",
       pickupCode,
       "",
-      `Listing: ${order.listingTitle}`,
+      `Order: ${order.listingTitle}`,
       `Pickup: ${pickup}`,
       "",
       "This code expires 24 hours after it was issued.",

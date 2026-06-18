@@ -4,6 +4,8 @@ import { z } from "zod";
 import { db } from "@/db";
 import { cookApplications, legalAcceptances } from "@/db/schema";
 import { generateSignedValue } from "@/lib/cookie";
+import { sendMail } from "@/lib/email";
+import { htmlEmail, paragraph } from "@/lib/emails/base";
 import { hashIp } from "@/lib/hash";
 import { COOK_APPLICATION_DOCS, LEGAL_VERSION } from "@/lib/legal";
 
@@ -141,18 +143,13 @@ export async function POST(req: Request) {
 }
 
 async function confirmCook(to: string, firstName: string, kitchenName: string) {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) return;
-
-  const resend = new Resend(apiKey);
-  await resend.emails.send({
-    from: process.env.RESEND_FROM_EMAIL ?? "noreply@7eats.ca",
+  await sendMail({
     to,
     subject: `We received your application, ${firstName}`,
     text: [
       `Hi ${firstName},`,
       "",
-      `Thank you for applying to 7eats with ${kitchenName}. We're excited to learn more about what you're cooking.`,
+      `Thank you for applying to 7eats with ${kitchenName}. We are excited to learn more about what you are cooking.`,
       "",
       "We review every application personally. A member of our team will reach out within 2 business days by phone. Not an automated call, a real conversation.",
       "",
@@ -160,6 +157,22 @@ async function confirmCook(to: string, firstName: string, kitchenName: string) {
       "",
       "The 7eats team, Toronto",
     ].join("\n"),
+    html: htmlEmail({
+      title: "We received your application",
+      preheader: `Thanks for applying to 7eats with ${kitchenName}.`,
+      bodyHtml:
+        paragraph(`Hi ${firstName},`) +
+        paragraph(
+          `Thank you for applying to 7eats with <strong>${kitchenName}</strong>. We are excited to learn more about what you are cooking.`,
+        ) +
+        paragraph(
+          "We review every application personally. A member of our team will reach out within 2 business days by phone. Not an automated call, a real conversation.",
+        ) +
+        paragraph(
+          "In the meantime, feel free to reply to this email if you have any questions.",
+        ) +
+        paragraph("The 7eats team, Toronto"),
+    }),
   });
 }
 
