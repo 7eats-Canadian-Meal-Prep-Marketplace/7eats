@@ -50,6 +50,8 @@ status = 'active'
 dish_id IN (SELECT id FROM dishes WHERE status = 'active')
 ```
 
+**Column name note:** The `dishes` table uses `name` (not `title`) for the dish name — `name: varchar("name", { length: 255 })`. All references in this spec to dish "title" mean `dishes.name`. The `order_dishes` snapshot column is `dishName`. No rename is planned; `name` is used consistently throughout.
+
 ### 3.2 `cook_profiles` — order rules + cancellation policy
 
 **Add columns:**
@@ -208,7 +210,9 @@ Path changes only; business logic preserved:
 | `/api/business/listings/dishes/[dishId]/tags/**` | `/api/business/dishes/[dishId]/tags/**` |
 | `/api/business/listings/_lib/cook-auth.ts` | `/api/business/_lib/cook-auth.ts` |
 
-Additionally, the `POST /api/business/dishes` (create dish) and `PATCH /api/business/dishes/[dishId]` (edit dish) now require and accept a `price` field.
+Additionally:
+- `POST /api/business/dishes` (create dish) and `PATCH /api/business/dishes/[dishId]` (edit dish) now require and accept a `price` field.
+- `GET /api/business/dishes` (was `listings/dishes`): remove the `listingCount` computed subquery field from the response — it queries `listing_dishes` which is deprecated and meaningless post-migration.
 
 ### 4.3 Modified endpoints
 
@@ -216,7 +220,8 @@ Additionally, the `POST /api/business/dishes` (create dish) and `PATCH /api/busi
 Returns cook cards for the browse page.
 - Query params: `lat` (float, optional), `lng` (float, optional)
 - When `lat`/`lng` provided, results are ordered by distance to cook's `pickupLat`/`pickupLng` (haversine); distance in km included in each result
-- Response per cook: `id`, `displayName`, `photoUrl`, `bio`, `tags`, `leadTime`, `delivery` (`none` | `self` — frontend shows delivery option only when `delivery = 'self'`), `pickupCity`, `rating` (aggregate), `reviewCount`, `representativeDishPhoto` (first active dish photo ordered by dish `sortOrder` ASC, then photo `sortOrder` ASC), `distanceKm` (nullable)
+- Current response returns `firstName`, `lastName`, `neighborhood` from `authUser`. New response switches to `displayName` from `cook_profiles` (the kitchen/operating name) and adds photo, tags, and dish data.
+- Response per cook: `id`, `displayName` (from `cook_profiles.displayName`, not `authUser` personal name), `photoUrl`, `bio`, `tags`, `leadTime`, `delivery` (`none` | `self` — frontend shows delivery option only when `delivery = 'self'`), `pickupCity`, `rating` (aggregate), `reviewCount`, `representativeDishPhoto` (first active dish photo ordered by dish `sortOrder` ASC, then photo `sortOrder` ASC), `distanceKm` (nullable)
 
 **`GET /api/cooks/[cookId]`**
 - Add to response: `minOrderQty`, `maxOrderQty`, `cancellationAllowed`, `leadTime`
@@ -237,10 +242,14 @@ Request body:
   ],
   "fulfillmentMode": "pickup | delivery",
   "pickupAt": "ISO 8601 timestamp",
-  "deliveryAddress": { "street": "...", "city": "...", ... } | null,
+  "paymentMethodId": "string",
+  "deliveryAddress": { "street": "...", "unit": "...", "city": "...", "province": "XX", "postal": "..." } | null,
+  "customerLat": "float | null",
+  "customerLng": "float | null",
   "notes": "string | null"
 }
 ```
+`paymentMethodId` is required (passed to Stripe PI creation). `customerLat`/`customerLng` are required when `fulfillmentMode = 'delivery'` to compute driving distance for `deliveryFeeSnapshot` via Mapbox.
 
 **leadTime enum → time offset mapping** (used in step 2 and cancellation):
 | enum value | offset |
@@ -252,7 +261,7 @@ Request body:
 | `4_days` | 96 hours |
 | `5_days` | 120 hours |
 
-**Stripe failure handling:** The Stripe PaymentIntent is created **before** any DB writes (step 1 below). If PI creation fails, the handler returns 500 with no DB state written — no compensating rollback needed. If DB writes subsequently fail after a successful PI creation, the orphaned PI will expire unused (no charge is captured). This is the accepted trade-off over a 2-phase commit.
+**Stripe failure handling:** The Stripe PaymentIntent is created **before** any DB writes (step 9 below). If PI creation fails, return 500 — no DB state written. If DB writes fail after a successful PI creation, explicitly cancel the PI (call `cancelPaymentIntent`) before re-throwing — this matches the existing pattern in `orders/route.ts` and is better than letting it expire. The `orderId` is pre-generated (via `crypto.randomUUID()`) before Stripe so it can be used as the PI idempotency key.
 
 Server logic:
 1. Load and verify cook: `status = 'active'`, read `minOrderQty`, `maxOrderQty`, `leadTime`, `cancellationAllowed`, `platformFeePct`
@@ -267,7 +276,9 @@ Server logic:
 10. Open DB transaction: write `orders` row (status = `pending`, snapshot `cancellationAllowed`, `totalPrice`, `deliveryFeeSnapshot`, `fulfillmentMode`, `pickupAt`), write `order_dishes` rows (`dishId`, `dishName` snapshot, `quantity`, `priceSnapshot`, `promotionId`, `discountAmount`, `lineTotal`), increment `usesCount` on each used `dish_promotions` row, write `orderPayments` row (status = authorized, Stripe PI id). Commit.
 11. Return `{ orderId, clientSecret }`
 
-Note: `totalPrice` on `orders` must equal the sum of all `order_dishes.lineTotal` values. This is asserted in the service_role creation code — both are computed from the same in-memory data before any writes, so they are always consistent.
+Note: `totalPrice` on `orders` must equal the sum of all `order_dishes.lineTotal` values. Both are computed from the same in-memory data before any writes, so they are always consistent.
+
+**Cook notification email:** After the DB commit, fire-and-forget `sendOrderPlacedEmailToCook`. Replace the current `listingTitle` field with a comma-joined list of dish names from the order (e.g. "Jerk Chicken, Rice & Peas"). Pass `totalPrice` and `pickupAt` as before.
 
 **`PATCH /api/orders/[orderId]`** (client cancellation)
 - Client sends `{ "status": "cancelled" }`
@@ -282,6 +293,16 @@ Note: `totalPrice` on `orders` must equal the sum of all `order_dishes.lineTotal
 - Remove `listingId` from request body and from RLS/validation
 - Validate: `orderId` belongs to `clientId = auth.uid()`, `status = 'fulfilled'`, `cookId` matches
 - Dish context is implicit from the order
+
+**`GET /api/orders`** (client orders list)
+Currently joins `listings` for `listingTitle`, and `listingSubscriptionTiers` for `subscriptionInterval`. Both joins must be removed. Response changes:
+- Remove: `listingTitle`, `listingId`, `quantity`, `unitPrice`, `subscriptionId`, `subscriptionInterval`, `isSubscription`
+- Keep: `id`, `status`, `totalPrice`, `currency`, `pickupAt`, `pickupDate`, `pickupWindow`, `pickupCode`, `notes`, `cookName`, `cookInitials`, `fulfillmentMode`, `createdAt`
+- Add: `dishes: [{ dishName, quantity, priceSnapshot, discountAmount, lineTotal }]` — already fetched from `order_dishes` in existing code, just needs new fields added to the select
+
+**`GET /api/orders/[orderId]`** (single order detail)
+Same changes as the list endpoint above, plus:
+- Response includes `cancellationAllowed` (snapshotted on order) and `pickupAt` so the frontend can determine if the cancellation button should show
 
 **`PATCH /api/business/dashboard/settings`**
 - Accept: `minOrderQty` (integer, >= 1), `maxOrderQty` (integer, nullable, >= minOrderQty if set), `cancellationAllowed` (boolean)
@@ -304,7 +325,7 @@ Response:
   },
   "dishes": [
     {
-      "id", "title", "description", "price",
+      "id", "name", "description", "price",
       "photos": [{ "url", "sortOrder" }],
       "tags": [{ "slug", "label" }],
       "promotion": {
@@ -351,6 +372,8 @@ Auth flows, setup/onboarding, Stripe Connect, stripe status/dashboard-link, payo
 
 #### Pages removed / redirected
 - `app/app/listings/[id]/page.tsx` — remove; `/app/listings/*` redirects to `/app/browse` in `proxy.ts`
+- `app/app/listings/[id]/_DealCallout.tsx` — delete (listing-level deal callout, replaced by per-dish promotion badges)
+- `app/app/listings/[id]/_DishModal.tsx` — adapt for the new menu page (see §5.1 new pages)
 - `app/app/subscriptions/page.tsx` — remove; route returns 404 for launch
 - `app/app/saved/page.tsx` — hide from nav for launch (saved listings concept gone; saved cooks via `followedCooks` is a future iteration)
 
@@ -396,8 +419,8 @@ Cart shape:
 ```ts
 type CartItem = {
   dishId: string
-  title: string
-  price: number           // base price
+  name: string            // dishes.name snapshot for display
+  price: number           // base price (dishes.price)
   quantity: number
   promotionId: string | null
   discountAmount: number  // 0 if no promotion
