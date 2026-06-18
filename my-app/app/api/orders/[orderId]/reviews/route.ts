@@ -4,6 +4,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { orders, reviews } from "@/db/schema";
 import { auth } from "@/lib/auth";
+import { logAndCheckRateLimit } from "@/lib/rate-limit";
 
 export type Params = { params: Promise<{ orderId: string }> };
 
@@ -31,6 +32,17 @@ export async function POST(req: NextRequest, { params }: Params) {
   const { orderId } = await params;
   if (!orderIdSchema.safeParse(orderId).success) {
     return NextResponse.json({ error: "Invalid order ID." }, { status: 400 });
+  }
+
+  const withinLimit = await logAndCheckRateLimit(`review:${session.user.id}`, {
+    windowMinutes: 10,
+    maxAttempts: 15,
+  });
+  if (!withinLimit) {
+    return NextResponse.json(
+      { error: "Too many requests. Please wait a moment." },
+      { status: 429 },
+    );
   }
 
   let body: unknown;

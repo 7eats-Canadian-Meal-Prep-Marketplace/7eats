@@ -51,11 +51,13 @@ vi.mock("@/db/schema", () => ({
   orderDishes: {},
   orderPayments: {},
   orders: {},
+  rateLimitLog: {},
 }));
 
 vi.mock("drizzle-orm", () => ({
   eq: vi.fn(),
   and: vi.fn(),
+  gt: vi.fn(),
   inArray: vi.fn(),
   count: vi.fn(),
   desc: vi.fn(),
@@ -107,8 +109,10 @@ function chain(rows: unknown[]) {
   return proxy as never;
 }
 function selectQueue(results: unknown[][]) {
+  // The first db.select in POST is the rate-limit count check.
+  const all: unknown[][] = [[{ count: 0 }], ...results];
   let i = 0;
-  return () => chain(results[i++] ?? []);
+  return () => chain(all[i++] ?? []);
 }
 
 const FUTURE = new Date(Date.now() + 7 * 86400_000).toISOString();
@@ -148,6 +152,11 @@ describe("POST /api/orders", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     createPiMock.mockResolvedValue({ piId: "pi_test" });
+    // Rate-limit writes a log row; default select returns an under-limit count.
+    vi.mocked(db.insert).mockReturnValue({
+      values: vi.fn().mockResolvedValue([]),
+    } as never);
+    vi.mocked(db.select).mockImplementation(() => chain([{ count: 0 }]));
   });
 
   it("401 when unauthenticated", async () => {

@@ -8,6 +8,7 @@ import {
 } from "@/app/api/business/_lib/cook-auth";
 import { db } from "@/db";
 import { dishes, dishPromotions } from "@/db/schema";
+import { logAndCheckRateLimit } from "@/lib/rate-limit";
 import { validatePromotionWindow } from "./_validate";
 
 type Params = { params: Promise<{ dishId: string }> };
@@ -58,6 +59,17 @@ export async function POST(req: NextRequest, { params }: Params) {
   const cookId = await getCookId(req.headers);
   if (!cookId) return unauthorized();
   const { dishId } = await params;
+
+  const withinLimit = await logAndCheckRateLimit(`promo:${cookId}`, {
+    windowMinutes: 10,
+    maxAttempts: 30,
+  });
+  if (!withinLimit) {
+    return NextResponse.json(
+      { error: "Too many promotion changes. Please wait a moment." },
+      { status: 429 },
+    );
+  }
 
   let body: unknown;
   try {

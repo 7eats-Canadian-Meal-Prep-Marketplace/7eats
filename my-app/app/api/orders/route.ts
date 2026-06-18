@@ -17,6 +17,7 @@ import { calcDeliveryFee } from "@/lib/delivery-fee";
 import { sendOrderPlacedEmailToCook } from "@/lib/emails/order-events";
 import { getDrivingDistanceKm } from "@/lib/mapbox-directions";
 import { computeLineTotal, earliestPickup } from "@/lib/order-pricing";
+import { logAndCheckRateLimit } from "@/lib/rate-limit";
 import {
   cancelPaymentIntent,
   createFullPaymentIntent,
@@ -222,6 +223,18 @@ export async function POST(req: NextRequest) {
   }
   if (session.user.role !== "client") {
     return NextResponse.json({ error: "Access denied." }, { status: 403 });
+  }
+
+  // Per-client throttle on order creation (abuse / double-submit protection).
+  const withinLimit = await logAndCheckRateLimit(`order:${session.user.id}`, {
+    windowMinutes: 5,
+    maxAttempts: 10,
+  });
+  if (!withinLimit) {
+    return NextResponse.json(
+      { error: "Too many orders in a short time. Please wait a moment." },
+      { status: 429 },
+    );
   }
 
   let body: unknown;
