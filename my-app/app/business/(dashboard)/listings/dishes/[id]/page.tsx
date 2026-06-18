@@ -11,9 +11,10 @@ import {
   type IngredientRow,
   useDishDetail,
 } from "./_dish-detail-context";
+import { PromotionsTab } from "./_promotions-tab";
 import styles from "./page.module.css";
 
-type Tab = "details" | "nutrition";
+type Tab = "details" | "nutrition" | "promotions";
 
 const MAX_PHOTOS = 8;
 
@@ -24,6 +25,7 @@ function DetailsTab() {
     useDishDetail();
   const [localForm, setLocalForm] = useState({
     name: "",
+    price: "",
     cuisine: "",
     description: "",
     status: "active" as "active" | "draft" | "archived",
@@ -45,6 +47,7 @@ function DetailsTab() {
   async function handleSave() {
     const ok = await saveDetails({
       name: localForm.name,
+      price: localForm.price,
       cuisine: localForm.cuisine,
       description: localForm.description,
     });
@@ -90,6 +93,23 @@ function DetailsTab() {
               value={localForm.name}
               onChange={(e) =>
                 setLocalForm((f) => ({ ...f, name: e.target.value }))
+              }
+            />
+          </div>
+
+          <div className={styles.formGroup}>
+            <label htmlFor="f-price" className={styles.formLabel}>
+              Price per meal
+            </label>
+            <input
+              id="f-price"
+              type="number"
+              min="0.01"
+              step="0.01"
+              className={styles.formInput}
+              value={localForm.price}
+              onChange={(e) =>
+                setLocalForm((f) => ({ ...f, price: e.target.value }))
               }
             />
           </div>
@@ -497,6 +517,7 @@ function NutritionTab() {
 const TABS: { id: Tab; label: string }[] = [
   { id: "details", label: "Details" },
   { id: "nutrition", label: "Nutrition & Ingredients" },
+  { id: "promotions", label: "Promotions" },
 ];
 
 export default function DishDetailPage() {
@@ -555,6 +576,7 @@ function DishDetailContent() {
       <div className={styles.content} key={tab}>
         {tab === "details" && <DetailsTab />}
         {tab === "nutrition" && <NutritionTab />}
+        {tab === "promotions" && <PromotionsTab />}
       </div>
     </div>
   );

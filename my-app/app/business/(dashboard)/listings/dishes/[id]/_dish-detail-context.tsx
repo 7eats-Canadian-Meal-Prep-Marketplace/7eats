@@ -87,6 +87,7 @@ type DishDetailContextValue = {
   stats: DishStats;
   form: {
     name: string;
+    price: string;
     cuisine: string;
     description: string;
     status: DishStatus;
@@ -95,6 +96,7 @@ type DishDetailContextValue = {
   setPhotos: React.Dispatch<React.SetStateAction<DishPhoto[]>>;
   saveDetails: (payload: {
     name: string;
+    price?: string;
     cuisine: string;
     description: string;
   }) => Promise<boolean>;
@@ -171,6 +173,7 @@ export function DishDetailProvider({
       );
       setForm({
         name: dish.name,
+        price: dish.price ?? "",
         cuisine: dish.cuisine ?? "",
         description: dish.description ?? "",
         status: dish.status as DishStatus,
@@ -208,11 +211,21 @@ export function DishDetailProvider({
   }, [load]);
 
   const saveDetails = useCallback(
-    async (payload: { name: string; cuisine: string; description: string }) => {
+    async (payload: {
+      name: string;
+      price?: string;
+      cuisine: string;
+      description: string;
+    }) => {
+      const { price, ...rest } = payload;
+      const body =
+        price !== undefined && price !== ""
+          ? { ...rest, price: Number(price) }
+          : rest;
       const res = await fetch(`/api/business/dishes/${dishId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(body),
       });
       if (!res.ok) return false;
       await load();
