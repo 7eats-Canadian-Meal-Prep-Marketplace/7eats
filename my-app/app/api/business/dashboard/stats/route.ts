@@ -1,9 +1,6 @@
 import { and, count, eq, gte, inArray, lte, sql, sum } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
-import {
-  getCookId,
-  unauthorized,
-} from "@/app/api/business/listings/_lib/cook-auth";
+import { getCookId, unauthorized } from "@/app/api/business/_lib/cook-auth";
 import { db } from "@/db";
 import { listings, orders, reviews } from "@/db/schema";
 

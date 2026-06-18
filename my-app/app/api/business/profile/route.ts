@@ -5,7 +5,7 @@ import {
   getCookId,
   notFound,
   unauthorized,
-} from "@/app/api/business/listings/_lib/cook-auth";
+} from "@/app/api/business/_lib/cook-auth";
 import { db } from "@/db";
 import { cookProfiles } from "@/db/schema";
 

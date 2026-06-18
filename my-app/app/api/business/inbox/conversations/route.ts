@@ -1,10 +1,7 @@
 import { and, asc, count, desc, eq, sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import {
-  getCookId,
-  unauthorized,
-} from "@/app/api/business/listings/_lib/cook-auth";
+import { getCookId, unauthorized } from "@/app/api/business/_lib/cook-auth";
 import { db } from "@/db";
 import {
   authUser,
