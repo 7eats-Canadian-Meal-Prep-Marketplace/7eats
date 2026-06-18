@@ -1,21 +1,20 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/db";
 import {
   authUser,
   cookProfiles,
-  listings,
   orderDishes,
   orderPayments,
   orders,
 } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { sendOrderCancelledByClientEmailToCook } from "@/lib/emails/order-events";
+import { LEAD_TIME_HOURS } from "@/lib/order-pricing";
 import {
   cancelPaymentIntent,
   capturePaymentIntent,
-  partialCapturePaymentIntent,
   refundPaymentIntent,
 } from "@/lib/stripe-payments";
 
@@ -31,19 +30,11 @@ function formatPickupDate(isoString: string): string {
 function formatPickupWindow(isoString: string, windowHours = 2): string {
   const d = new Date(isoString);
   const start = d
-    .toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: undefined,
-      hour12: true,
-    })
+    .toLocaleTimeString("en-US", { hour: "numeric", hour12: true })
     .toLowerCase()
     .replace(":00", "");
   const end = new Date(d.getTime() + windowHours * 3600000)
-    .toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: undefined,
-      hour12: true,
-    })
+    .toLocaleTimeString("en-US", { hour: "numeric", hour12: true })
     .toLowerCase()
     .replace(":00", "");
   return `${start} – ${end}`;
@@ -72,10 +63,6 @@ export async function GET(req: NextRequest, { params }: Params) {
       .select({
         id: orders.id,
         status: orders.status,
-        listingId: orders.listingId,
-        listingTitle: listings.title,
-        quantity: orders.quantity,
-        unitPrice: orders.unitPrice,
         totalPrice: orders.totalPrice,
         currency: orders.currency,
         pickupAt: orders.pickupAt,
@@ -84,16 +71,16 @@ export async function GET(req: NextRequest, { params }: Params) {
         pickupCode: orders.pickupCode,
         fulfillmentMode: orders.fulfillmentMode,
         deliveryAddress: orders.deliveryAddress,
-        subscriptionId: orders.subscriptionId,
+        deliveryFeeSnapshot: orders.deliveryFeeSnapshot,
+        cancellationAllowed: orders.cancellationAllowed,
         cancelledAt: orders.cancelledAt,
-        cancelledBy: orders.cancelledBy,
         cookFirstName: authUser.firstName,
         cookLastName: authUser.lastName,
         cookNeighborhood: authUser.neighborhood,
         cookPickupAddress: cookProfiles.pickupAddress,
+        cookLeadTime: cookProfiles.leadTime,
       })
       .from(orders)
-      .leftJoin(listings, eq(orders.listingId, listings.id))
       .leftJoin(cookProfiles, eq(orders.cookId, cookProfiles.id))
       .leftJoin(authUser, eq(cookProfiles.userId, authUser.id))
       .where(and(eq(orders.id, orderId), eq(orders.clientId, session.user.id)))
@@ -108,10 +95,13 @@ export async function GET(req: NextRequest, { params }: Params) {
         id: orderDishes.id,
         dishName: orderDishes.dishName,
         quantity: orderDishes.quantity,
+        priceSnapshot: orderDishes.priceSnapshot,
+        discountAmount: orderDishes.discountAmount,
+        lineTotal: orderDishes.lineTotal,
         sortOrder: orderDishes.sortOrder,
       })
       .from(orderDishes)
-      .where(inArray(orderDishes.orderId, [orderId]));
+      .where(eq(orderDishes.orderId, orderId));
 
     const pickupAtIso =
       row.pickupAt instanceof Date ? row.pickupAt.toISOString() : row.pickupAt;
@@ -123,7 +113,6 @@ export async function GET(req: NextRequest, { params }: Params) {
         .filter(Boolean)
         .join("") || null;
 
-    // Derive pickup address from fulfillment mode
     let pickupAddress: string | null = null;
     if (row.fulfillmentMode === "delivery") {
       const addr = row.deliveryAddress as Record<string, string> | null;
@@ -139,17 +128,25 @@ export async function GET(req: NextRequest, { params }: Params) {
           .join(", ");
       }
     } else {
-      // pickup or null — use cook's pickup address, fall back to neighborhood
       pickupAddress = row.cookPickupAddress ?? row.cookNeighborhood ?? null;
     }
+
+    // The client may cancel for a refund only while the lead-time window is open.
+    const leadHours = row.cookLeadTime ? LEAD_TIME_HOURS[row.cookLeadTime] : 0;
+    const refundCutoff =
+      row.pickupAt instanceof Date
+        ? new Date(row.pickupAt.getTime() - leadHours * 3600_000)
+        : null;
+    const refundEligible =
+      row.cancellationAllowed &&
+      refundCutoff != null &&
+      new Date() < refundCutoff;
+    const cancellable =
+      ["pending", "confirmed"].includes(row.status) && row.pickupAt != null;
 
     const data = {
       id: row.id,
       status: row.status,
-      listingId: row.listingId,
-      listingTitle: row.listingTitle ?? null,
-      quantity: row.quantity,
-      unitPrice: row.unitPrice,
       totalPrice: row.totalPrice,
       currency: row.currency,
       pickupAt: pickupAtIso,
@@ -162,7 +159,10 @@ export async function GET(req: NextRequest, { params }: Params) {
       cookName,
       cookInitials,
       fulfillmentMode: row.fulfillmentMode,
-      isSubscription: row.subscriptionId !== null,
+      deliveryFeeSnapshot: row.deliveryFeeSnapshot,
+      cancellationAllowed: row.cancellationAllowed,
+      cancellable,
+      refundEligible,
       pickupDate: pickupAtIso ? formatPickupDate(pickupAtIso) : null,
       pickupWindow: pickupAtIso ? formatPickupWindow(pickupAtIso) : null,
       pickupAddress,
@@ -189,6 +189,9 @@ export async function GET(req: NextRequest, { params }: Params) {
 
 const CANCELLABLE_STATUSES = ["pending", "confirmed"];
 
+// Client cancellation. Full refund only when the cook allows cancellation AND
+// the order has a pickup time AND we are still before (pickupAt - leadTime).
+// Otherwise the order is cancelled with no refund (payment captured to the cook).
 export async function DELETE(req: NextRequest, { params }: Params) {
   const session = await auth.api.getSession({ headers: req.headers });
   if (!session) {
@@ -206,19 +209,15 @@ export async function DELETE(req: NextRequest, { params }: Params) {
         id: orders.id,
         clientId: orders.clientId,
         cookId: orders.cookId,
-        listingId: orders.listingId,
         status: orders.status,
-        quantity: orders.quantity,
         totalPrice: orders.totalPrice,
         currency: orders.currency,
         pickupAt: orders.pickupAt,
-        lateCancelFeeEnabled: orders.lateCancelFeeEnabled,
-        lateCancelFeeType: orders.lateCancelFeeType,
-        lateCancelFeeValue: orders.lateCancelFeeValue,
-        lateCancelWindowHours: orders.lateCancelWindowHours,
-        depositAmount: orders.depositAmount,
+        cancellationAllowed: orders.cancellationAllowed,
+        cookLeadTime: cookProfiles.leadTime,
       })
       .from(orders)
+      .leftJoin(cookProfiles, eq(orders.cookId, cookProfiles.id))
       .where(and(eq(orders.id, orderId), eq(orders.clientId, session.user.id)))
       .limit(1);
 
@@ -232,132 +231,64 @@ export async function DELETE(req: NextRequest, { params }: Params) {
       );
     }
 
-    const allPayments = await db
+    const leadHours = order.cookLeadTime
+      ? LEAD_TIME_HOURS[order.cookLeadTime]
+      : 0;
+    const refundCutoff =
+      order.pickupAt instanceof Date
+        ? new Date(order.pickupAt.getTime() - leadHours * 3600_000)
+        : null;
+    const refundEligible =
+      order.cancellationAllowed &&
+      refundCutoff != null &&
+      new Date() < refundCutoff;
+
+    const payments = await db
       .select({
         id: orderPayments.id,
-        type: orderPayments.type,
         status: orderPayments.status,
-        totalAmount: orderPayments.totalAmount,
         stripePaymentIntentId: orderPayments.stripePaymentIntentId,
-        platformFeePct: orderPayments.platformFeePct,
       })
       .from(orderPayments)
       .where(eq(orderPayments.orderId, orderId));
 
-    // Compute capture floor
-    const now = new Date();
-    const pickupAt = order.pickupAt;
-    const windowMs = (order.lateCancelWindowHours ?? 24) * 60 * 60 * 1000;
-    const withinWindow =
-      pickupAt !== null && now > new Date(pickupAt.getTime() - windowMs);
-
-    const totalPrice = parseFloat(order.totalPrice);
-    const depositAmount = order.depositAmount
-      ? parseFloat(order.depositAmount)
-      : 0;
-
-    let lateCancelFee = 0;
-    if (
-      order.lateCancelFeeEnabled &&
-      withinWindow &&
-      order.lateCancelFeeValue
-    ) {
-      const feeVal = parseFloat(order.lateCancelFeeValue);
-      lateCancelFee =
-        order.lateCancelFeeType === "flat"
-          ? Math.min(feeVal, totalPrice)
-          : Math.min((totalPrice * feeVal) / 100, totalPrice);
-    }
-
-    // If deposit already covers protection, no additional capture on balance
-    const totalCaptureFloor = Math.max(depositAmount, lateCancelFee);
-    // For the active (non-deposit) PI: capture max(0, totalCaptureFloor - depositAmount)
-    const additionalCapture = Math.max(0, totalCaptureFloor - depositAmount);
-    const additionalCaptureCents = Math.round(additionalCapture * 100);
-
-    for (const payment of allPayments) {
+    for (const payment of payments) {
       if (!payment.stripePaymentIntentId) continue;
 
-      if (payment.type === "deposit" && payment.status === "released") {
-        // Deposit already with cook — stays there regardless (non-refundable after confirmation)
-        continue;
-      }
-
-      if (payment.type === "deposit" && payment.status === "authorized") {
-        // Deposit not yet captured (order still pending) — cancel/refund to client
-        await cancelPaymentIntent(
-          payment.stripePaymentIntentId,
-          `client-cancel-deposit-${orderId}`,
-        );
-        await db
-          .update(orderPayments)
-          .set({ status: "refunded", refundedAt: new Date() })
-          .where(eq(orderPayments.id, payment.id));
-        continue;
-      }
-
-      // full or balance PI
-      if (payment.status === "authorized") {
-        const paymentTotalCents = Math.round(
-          parseFloat(payment.totalAmount) * 100,
-        );
-
-        if (
-          additionalCaptureCents > 0 &&
-          additionalCaptureCents < paymentTotalCents
-        ) {
-          // Partial capture for late cancel fee
-          const platformFeePct = parseFloat(payment.platformFeePct ?? "0");
-          const newFeeCents = Math.round(
-            (additionalCaptureCents * platformFeePct) / 100,
-          );
-          await partialCapturePaymentIntent({
-            piId: payment.stripePaymentIntentId,
-            captureAmountCents: additionalCaptureCents,
-            newPlatformFeeCents: newFeeCents,
-            idempotencyKey: `client-cancel-partial-${orderId}`,
-          });
-          await db
-            .update(orderPayments)
-            .set({
-              status: "released",
-              releasedAt: new Date(),
-            })
-            .where(eq(orderPayments.id, payment.id));
-        } else if (additionalCaptureCents >= paymentTotalCents) {
-          // Cook keeps full balance payment
-          await capturePaymentIntent(
-            payment.stripePaymentIntentId,
-            `client-cancel-full-capture-${orderId}`,
-          );
-          await db
-            .update(orderPayments)
-            .set({ status: "released", releasedAt: new Date() })
-            .where(eq(orderPayments.id, payment.id));
-        } else {
-          // Full refund to client
+      if (refundEligible) {
+        // Authorized holds are cancelled; captured funds are refunded.
+        if (payment.status === "authorized") {
           await cancelPaymentIntent(
             payment.stripePaymentIntentId,
-            `client-cancel-${orderId}-${payment.type}`,
+            `client-cancel-${orderId}`,
           );
           await db
             .update(orderPayments)
             .set({ status: "refunded", refundedAt: new Date() })
             .where(eq(orderPayments.id, payment.id));
+        } else if (payment.status === "held" || payment.status === "released") {
+          const refundId = await refundPaymentIntent({
+            paymentIntentId: payment.stripePaymentIntentId,
+            idempotencyKey: `client-cancel-refund-${orderId}`,
+          });
+          await db
+            .update(orderPayments)
+            .set({
+              status: "refunded",
+              stripeRefundId: refundId,
+              refundedAt: new Date(),
+            })
+            .where(eq(orderPayments.id, payment.id));
         }
-      } else if (payment.status === "held") {
-        // Subscription payment — refund
-        const refundId = await refundPaymentIntent({
-          paymentIntentId: payment.stripePaymentIntentId,
-          idempotencyKey: `client-cancel-refund-${orderId}`,
-        });
+      } else if (payment.status === "authorized") {
+        // No refund — capture the authorized payment to the cook.
+        await capturePaymentIntent(
+          payment.stripePaymentIntentId,
+          `client-cancel-capture-${orderId}`,
+        );
         await db
           .update(orderPayments)
-          .set({
-            status: "refunded",
-            stripeRefundId: refundId,
-            refundedAt: new Date(),
-          })
+          .set({ status: "released", releasedAt: new Date() })
           .where(eq(orderPayments.id, payment.id));
       }
     }
@@ -368,25 +299,27 @@ export async function DELETE(req: NextRequest, { params }: Params) {
         status: "cancelled",
         cancelledAt: new Date(),
         cancelledBy: session.user.id,
-        ...(lateCancelFee > 0
-          ? { lateCancelFeeApplied: String(lateCancelFee.toFixed(2)) }
-          : {}),
       })
       .where(and(eq(orders.id, orderId), eq(orders.clientId, session.user.id)));
 
-    // Fire and forget — non-blocking
+    // Notify the cook (fire-and-forget) with the dish names.
     db.select({
       cookEmail: authUser.email,
       cookFirstName: authUser.firstName,
-      listingTitle: listings.title,
     })
       .from(cookProfiles)
       .innerJoin(authUser, eq(cookProfiles.userId, authUser.id))
-      .innerJoin(listings, eq(listings.id, order.listingId ?? ""))
       .where(eq(cookProfiles.id, order.cookId))
       .limit(1)
-      .then(([row]) => {
+      .then(async ([row]) => {
         if (!row) return;
+        const dishRows = await db
+          .select({
+            name: orderDishes.dishName,
+            quantity: orderDishes.quantity,
+          })
+          .from(orderDishes)
+          .where(eq(orderDishes.orderId, orderId));
         const customerName =
           session.user.name ||
           [session.user.firstName, session.user.lastName]
@@ -398,8 +331,8 @@ export async function DELETE(req: NextRequest, { params }: Params) {
           { name: customerName },
           {
             id: order.id,
-            listingTitle: row.listingTitle,
-            quantity: order.quantity ?? 1,
+            listingTitle: dishRows.map((d) => d.name).join(", "),
+            quantity: dishRows.reduce((s, d) => s + d.quantity, 0),
             totalPrice: order.totalPrice,
             currency: order.currency,
             pickupAt: order.pickupAt,
@@ -408,7 +341,7 @@ export async function DELETE(req: NextRequest, { params }: Params) {
       })
       .catch((err) => console.error("[orders/DELETE] email", err));
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, refunded: refundEligible });
   } catch (err) {
     console.error("[orders/DELETE]", err);
     return NextResponse.json(

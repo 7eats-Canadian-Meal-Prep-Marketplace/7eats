@@ -59,7 +59,6 @@ export async function POST(req: NextRequest, { params }: Params) {
         id: orders.id,
         clientId: orders.clientId,
         cookId: orders.cookId,
-        listingId: orders.listingId,
         status: orders.status,
       })
       .from(orders)
@@ -96,7 +95,6 @@ export async function POST(req: NextRequest, { params }: Params) {
         orderId,
         clientId: session.user.id,
         cookId: order.cookId,
-        listingId: order.listingId,
         rating,
         comment: comment ?? null,
       })

@@ -1,9 +1,9 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { cancelPiMock, refundPiMock, partialCaptureMock } = vi.hoisted(() => ({
-  cancelPiMock: vi.fn(),
+const { cancelPiMock, refundPiMock, captureMock } = vi.hoisted(() => ({
+  cancelPiMock: vi.fn().mockResolvedValue(undefined),
   refundPiMock: vi.fn().mockResolvedValue("re_test"),
-  partialCaptureMock: vi.fn(),
+  captureMock: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("@/db", () => ({
@@ -14,18 +14,26 @@ vi.mock("@/db/schema", () => ({
   orders: {},
   authUser: {},
   cookProfiles: {},
-  listings: {},
+  orderDishes: {},
 }));
 vi.mock("drizzle-orm", () => ({ eq: vi.fn(), and: vi.fn() }));
 
 vi.mock("@/lib/stripe-payments", () => ({
   cancelPaymentIntent: cancelPiMock,
   refundPaymentIntent: refundPiMock,
-  partialCapturePaymentIntent: partialCaptureMock,
+  capturePaymentIntent: captureMock,
 }));
-vi.mock("@/lib/auth", () => ({
-  auth: { api: { getSession: vi.fn() } },
+vi.mock("@/lib/order-pricing", () => ({
+  LEAD_TIME_HOURS: {
+    same_day: 0,
+    "1_day": 24,
+    "2_days": 48,
+    "3_days": 72,
+    "4_days": 96,
+    "5_days": 120,
+  },
 }));
+vi.mock("@/lib/auth", () => ({ auth: { api: { getSession: vi.fn() } } }));
 vi.mock("@/lib/emails/order-events", () => ({
   sendOrderCancelledByClientEmailToCook: vi.fn().mockResolvedValue(undefined),
 }));
@@ -34,68 +42,53 @@ import { NextRequest } from "next/server";
 import { DELETE } from "@/app/api/orders/[orderId]/route";
 import { db } from "@/db";
 import { auth } from "@/lib/auth";
-import { sendOrderCancelledByClientEmailToCook } from "@/lib/emails/order-events";
 
-function makeRequest(orderId: string) {
-  return new NextRequest(`http://localhost/api/orders/${orderId}`, {
+const ORDER_ID = "c3d4e5f6-a7b8-4c9d-8e1f-a2b3c4d5e6f7";
+
+function makeRequest() {
+  return new NextRequest(`http://localhost/api/orders/${ORDER_ID}`, {
     method: "DELETE",
     headers: { "content-type": "application/json" },
   });
 }
 
-function limitChain(rows: unknown[]) {
-  const limit = vi.fn().mockResolvedValue(rows);
-  const where = vi
-    .fn()
-    .mockImplementation(() => Object.assign(Promise.resolve(rows), { limit }));
-  const from = vi.fn(() => ({ where }));
-  return { from } as never;
+/** Query-shape-agnostic chain resolving to `rows` when awaited. */
+function chain(rows: unknown[]) {
+  const proxy: unknown = new Proxy(() => {}, {
+    get(_t, prop) {
+      if (prop === "then") {
+        return (resolve: (v: unknown) => void) => resolve(rows);
+      }
+      return () => proxy;
+    },
+  });
+  return proxy as never;
+}
+function selectQueue(results: unknown[][]) {
+  let i = 0;
+  return () => chain(results[i++] ?? []);
 }
 
 function updateChain() {
-  const where = vi.fn().mockResolvedValue([{}]);
-  const set = vi.fn(() => ({ where }));
-  return { set } as never;
+  return chain([{}]);
 }
 
-/** Chain for the fire-and-forget cook email lookup (cookProfiles + 2 joins). */
-function emailLookupChain() {
-  const limit = vi
-    .fn()
-    .mockResolvedValue([
-      { cookEmail: "cook@t.com", cookFirstName: "Cook", listingTitle: "Soup" },
-    ]);
-  const where = vi.fn(() => ({ limit }));
-  const innerJoin2 = vi.fn(() => ({ where }));
-  const innerJoin1 = vi.fn(() => ({ innerJoin: innerJoin2 }));
-  const from = vi.fn(() => ({ innerJoin: innerJoin1 }));
-  return { from } as never;
+const FUTURE = new Date(Date.now() + 7 * 86400_000);
+
+function orderRow(over: Record<string, unknown> = {}) {
+  return {
+    id: ORDER_ID,
+    clientId: "user-1",
+    cookId: "cook-1",
+    status: "pending",
+    totalPrice: "30.00",
+    currency: "CAD",
+    pickupAt: FUTURE,
+    cancellationAllowed: true,
+    cookLeadTime: null,
+    ...over,
+  };
 }
-
-// Using a valid v4 UUID (version nibble = 4, variant nibble = 8-b)
-const ORDER_ID = "a1b2c3d4-e5f6-4a7b-8c9d-e0f1a2b3c410";
-
-const PENDING_ORDER = {
-  id: ORDER_ID,
-  clientId: "user-1",
-  cookId: "cook-1",
-  listingId: "listing-1",
-  status: "pending",
-  quantity: 1,
-  totalPrice: "20.00",
-  currency: "CAD",
-  pickupAt: new Date(Date.now() + 86400000),
-  lateCancelFeeEnabled: false,
-  lateCancelFeeType: null,
-  lateCancelFeeValue: null,
-  lateCancelWindowHours: 24,
-  depositAmount: null,
-};
-
-const CONFIRMED_ORDER = {
-  ...PENDING_ORDER,
-  status: "confirmed",
-};
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -105,128 +98,70 @@ beforeEach(() => {
   vi.mocked(db.update).mockReturnValue(updateChain());
 });
 
-afterEach(() => vi.unstubAllEnvs());
-
 describe("DELETE /api/orders/[orderId]", () => {
-  it("returns 401 when not authenticated", async () => {
+  it("401 when unauthenticated", async () => {
     vi.mocked(auth.api.getSession).mockResolvedValue(null);
-    const res = await DELETE(makeRequest(ORDER_ID), {
+    const res = await DELETE(makeRequest(), {
       params: Promise.resolve({ orderId: ORDER_ID }),
     });
     expect(res.status).toBe(401);
   });
 
-  it("returns 404 when order not found", async () => {
-    vi.mocked(db.select).mockImplementation(() => limitChain([]));
-    const res = await DELETE(makeRequest(ORDER_ID), {
+  it("404 when order not found", async () => {
+    vi.mocked(db.select).mockImplementation(selectQueue([[]]));
+    const res = await DELETE(makeRequest(), {
       params: Promise.resolve({ orderId: ORDER_ID }),
     });
     expect(res.status).toBe(404);
   });
 
-  it("cancels PI and returns 200 for a pending order", async () => {
-    let call = 0;
-    vi.mocked(db.select).mockImplementation(() => {
-      call++;
-      if (call === 1) return limitChain([PENDING_ORDER]);
-      if (call === 2)
-        return limitChain([
-          {
-            id: "pay-1",
-            type: "full",
-            status: "authorized",
-            stripePaymentIntentId: "pi_1",
-            totalAmount: "20.00",
-            platformFeePct: "7.50",
-          },
-        ]);
-      return emailLookupChain();
-    });
-
-    const res = await DELETE(makeRequest(ORDER_ID), {
-      params: Promise.resolve({ orderId: ORDER_ID }),
-    });
-    expect(res.status).toBe(200);
-    expect(cancelPiMock).toHaveBeenCalledWith("pi_1", expect.any(String));
-  });
-
-  it("sends the cancelled-by-client email to the cook on success", async () => {
-    let call = 0;
-    vi.mocked(db.select).mockImplementation(() => {
-      call++;
-      if (call === 1) return limitChain([PENDING_ORDER]);
-      if (call === 2)
-        return limitChain([
-          {
-            id: "pay-1",
-            type: "full",
-            status: "authorized",
-            stripePaymentIntentId: "pi_1",
-            totalAmount: "20.00",
-            platformFeePct: "7.50",
-          },
-        ]);
-      return emailLookupChain();
-    });
-
-    const res = await DELETE(makeRequest(ORDER_ID), {
-      params: Promise.resolve({ orderId: ORDER_ID }),
-    });
-    expect(res.status).toBe(200);
-    await Promise.resolve();
-    await Promise.resolve();
-    expect(sendOrderCancelledByClientEmailToCook).toHaveBeenCalledWith(
-      { email: "cook@t.com", firstName: "Cook" },
-      expect.objectContaining({ name: expect.any(String) }),
-      expect.objectContaining({ listingTitle: "Soup" }),
+  it("400 for a fulfilled order", async () => {
+    vi.mocked(db.select).mockImplementation(
+      selectQueue([[orderRow({ status: "fulfilled" })]]),
     );
-  });
-
-  it("returns 400 for a fulfilled order", async () => {
-    vi.mocked(db.select).mockImplementation(() =>
-      limitChain([{ ...PENDING_ORDER, status: "fulfilled" }]),
-    );
-    const res = await DELETE(makeRequest(ORDER_ID), {
+    const res = await DELETE(makeRequest(), {
       params: Promise.resolve({ orderId: ORDER_ID }),
     });
     expect(res.status).toBe(400);
   });
 
-  it("partially captures late cancel fee on balance PI when within window", async () => {
-    const pickupSoon = new Date(Date.now() + 2 * 3600 * 1000); // 2 hours from now
-    const orderWithFee = {
-      ...CONFIRMED_ORDER,
-      pickupAt: pickupSoon,
-      lateCancelFeeEnabled: true,
-      lateCancelFeeType: "flat",
-      lateCancelFeeValue: "5.00",
-      lateCancelWindowHours: 24,
-      depositAmount: null,
-    };
-    let call = 0;
-    vi.mocked(db.select).mockImplementation(() => {
-      call++;
-      if (call === 1) return limitChain([orderWithFee]);
-      if (call === 2)
-        return limitChain([
-          {
-            id: "pay-1",
-            type: "full",
-            status: "authorized",
-            stripePaymentIntentId: "pi_1",
-            totalAmount: "20.00",
-            platformFeePct: "7.50",
-          },
-        ]);
-      return emailLookupChain();
-    });
+  it("refunds (cancels PI) when cancellation is allowed and within window", async () => {
+    vi.mocked(db.select).mockImplementation(
+      selectQueue([
+        [orderRow()],
+        [{ id: "p1", status: "authorized", stripePaymentIntentId: "pi_1" }],
+        [{ cookEmail: "k@t.com", cookFirstName: "K" }],
+        [{ name: "Soup", quantity: 1 }],
+      ]),
+    );
 
-    const res = await DELETE(makeRequest(ORDER_ID), {
+    const res = await DELETE(makeRequest(), {
       params: Promise.resolve({ orderId: ORDER_ID }),
     });
     expect(res.status).toBe(200);
-    expect(partialCaptureMock).toHaveBeenCalledWith(
-      expect.objectContaining({ captureAmountCents: 500 }),
+    const body = await res.json();
+    expect(body.refunded).toBe(true);
+    expect(cancelPiMock).toHaveBeenCalledOnce();
+    expect(captureMock).not.toHaveBeenCalled();
+  });
+
+  it("captures (no refund) when cancellation is not allowed", async () => {
+    vi.mocked(db.select).mockImplementation(
+      selectQueue([
+        [orderRow({ cancellationAllowed: false })],
+        [{ id: "p1", status: "authorized", stripePaymentIntentId: "pi_1" }],
+        [{ cookEmail: "k@t.com", cookFirstName: "K" }],
+        [{ name: "Soup", quantity: 1 }],
+      ]),
     );
+
+    const res = await DELETE(makeRequest(), {
+      params: Promise.resolve({ orderId: ORDER_ID }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.refunded).toBe(false);
+    expect(captureMock).toHaveBeenCalledOnce();
+    expect(cancelPiMock).not.toHaveBeenCalled();
   });
 });
