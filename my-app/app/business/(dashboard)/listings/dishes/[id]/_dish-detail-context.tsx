@@ -155,7 +155,7 @@ export function DishDetailProvider({
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/business/listings/dishes/${dishId}`);
+      const res = await fetch(`/api/business/dishes/${dishId}`);
       if (!res.ok) {
         setError("Dish not found.");
         return;
@@ -209,7 +209,7 @@ export function DishDetailProvider({
 
   const saveDetails = useCallback(
     async (payload: { name: string; cuisine: string; description: string }) => {
-      const res = await fetch(`/api/business/listings/dishes/${dishId}`, {
+      const res = await fetch(`/api/business/dishes/${dishId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -222,7 +222,7 @@ export function DishDetailProvider({
   );
 
   const archiveDish = useCallback(async () => {
-    const res = await fetch(`/api/business/listings/dishes/${dishId}/archive`, {
+    const res = await fetch(`/api/business/dishes/${dishId}/archive`, {
       method: "POST",
     });
     if (!res.ok) return false;
@@ -232,7 +232,7 @@ export function DishDetailProvider({
 
   const removePhoto = useCallback(
     async (photoId: string) => {
-      await fetch(`/api/business/listings/dishes/${dishId}/photos/${photoId}`, {
+      await fetch(`/api/business/dishes/${dishId}/photos/${photoId}`, {
         method: "DELETE",
       });
       setPhotos((prev) => prev.filter((p) => p.id !== photoId));
@@ -261,10 +261,9 @@ export function DishDetailProvider({
 
       for (const id of remoteIds) {
         if (!localIds.has(id)) {
-          await fetch(
-            `/api/business/listings/dishes/${dishId}/ingredients/${id}`,
-            { method: "DELETE" },
-          );
+          await fetch(`/api/business/dishes/${dishId}/ingredients/${id}`, {
+            method: "DELETE",
+          });
         }
       }
 
@@ -272,7 +271,7 @@ export function DishDetailProvider({
         const quantity = formatQuantity(ing.amount, ing.unit);
         const isAllergen = allergenSet.has(ing.name);
         if (ing.id.startsWith("ing-")) {
-          await fetch(`/api/business/listings/dishes/${dishId}/ingredients`, {
+          await fetch(`/api/business/dishes/${dishId}/ingredients`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -282,22 +281,19 @@ export function DishDetailProvider({
             }),
           });
         } else {
-          await fetch(
-            `/api/business/listings/dishes/${dishId}/ingredients/${ing.id}`,
-            {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                name: ing.name,
-                quantity,
-                isAllergen,
-              }),
-            },
-          );
+          await fetch(`/api/business/dishes/${dishId}/ingredients/${ing.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name: ing.name,
+              quantity,
+              isAllergen,
+            }),
+          });
         }
       }
 
-      await fetch(`/api/business/listings/dishes/${dishId}`, {
+      await fetch(`/api/business/dishes/${dishId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -307,7 +303,7 @@ export function DishDetailProvider({
         }),
       });
 
-      await fetch(`/api/business/listings/dishes/${dishId}/nutrition`, {
+      await fetch(`/api/business/dishes/${dishId}/nutrition`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

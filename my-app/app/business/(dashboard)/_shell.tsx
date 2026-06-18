@@ -44,7 +44,7 @@ function splitNotifDetail(detail: string): { who: string; what: string } {
 const NAV_ITEMS = [
   { href: "/business/dashboard", label: "Dashboard", Icon: LayoutDashboard },
   { href: "/business/orders", label: "Orders", Icon: ClipboardList },
-  { href: "/business/listings", label: "Listings", Icon: Store },
+  { href: "/business/listings", label: "Meals", Icon: Store },
   { href: "/business/earnings", label: "Earnings", Icon: TrendingUp },
   { href: "/business/calendar", label: "Calendar", Icon: Calendar },
   { href: "/business/inbox", label: "Inbox", Icon: Inbox },
