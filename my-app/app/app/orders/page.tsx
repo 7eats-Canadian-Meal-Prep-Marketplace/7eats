@@ -71,7 +71,7 @@ function OrdersContent() {
     fetch("/api/orders")
       .then((r) => {
         if (r.status === 401) {
-          router.replace("/app-auth/sign-in");
+          router.replace("/app-auth/login");
           return null;
         }
         return r.json();

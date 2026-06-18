@@ -216,7 +216,7 @@ export default function OrderDetailPage({
     fetch(`/api/orders/${id}`)
       .then((r) => {
         if (r.status === 401) {
-          router.replace("/app-auth/sign-in");
+          router.replace("/app-auth/login");
           return null;
         }
         if (r.status === 404) {
