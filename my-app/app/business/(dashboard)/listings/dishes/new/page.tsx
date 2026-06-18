@@ -145,11 +145,74 @@ export default function NewDishPage() {
         setSaveError(data.error ?? "Could not create the meal.");
         return;
       }
+
+      // Persist the nutrition, ingredients, and allergens captured in step 2.
+      const dishId: string | undefined = data.data?.id;
+      if (dishId) {
+        await saveDishDetails(dishId);
+      }
+
       setCreated(true);
       setTimeout(() => router.push("/business/listings"), 900);
     } catch {
       setSaveError("Network error — please try again.");
     }
+  }
+
+  async function saveDishDetails(dishId: string) {
+    const calls: Promise<unknown>[] = [];
+
+    for (const ing of ingredients) {
+      if (!ing.name.trim()) continue;
+      const quantity = [ing.amount, ing.unit]
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .join(" ");
+      calls.push(
+        fetch(`/api/business/dishes/${dishId}/ingredients`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            name: ing.name.trim(),
+            ...(quantity ? { quantity } : {}),
+            isAllergen: false,
+          }),
+        }),
+      );
+    }
+
+    for (const allergen of allergens) {
+      calls.push(
+        fetch(`/api/business/dishes/${dishId}/ingredients`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ name: allergen, isAllergen: true }),
+        }),
+      );
+    }
+
+    const num = (v: string) => {
+      const n = Number(v);
+      return v.trim() !== "" && Number.isFinite(n) && n >= 0 ? n : undefined;
+    };
+    const nutritionBody = {
+      calories: num(nutrition.calories),
+      proteinG: num(nutrition.protein),
+      carbsG: num(nutrition.carbs),
+      fatG: num(nutrition.fat),
+    };
+    if (Object.values(nutritionBody).some((v) => v !== undefined)) {
+      calls.push(
+        fetch(`/api/business/dishes/${dishId}/nutrition`, {
+          method: "PUT",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(nutritionBody),
+        }),
+      );
+    }
+
+    // Best-effort — the dish already exists; failures here are non-fatal.
+    await Promise.allSettled(calls);
   }
 
   return (
