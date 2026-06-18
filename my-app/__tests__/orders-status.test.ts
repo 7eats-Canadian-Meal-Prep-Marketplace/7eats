@@ -11,7 +11,7 @@ vi.mock("@/db/schema", () => ({
   cookProfiles: {},
   orderPayments: {},
   authUser: {},
-  listings: {},
+  orderDishes: {},
 }));
 vi.mock("drizzle-orm", () => ({
   eq: vi.fn(),
@@ -139,29 +139,34 @@ function cookUserChain(userId: string | null = COOK_USER_ID) {
   return { from } as never;
 }
 
+/** Query-shape-agnostic chain that resolves to `rows` when awaited. */
+function thenable(rows: unknown[]) {
+  const proxy: unknown = new Proxy(() => {}, {
+    get(_t, prop) {
+      if (prop === "then") {
+        return (resolve: (v: unknown) => void) => resolve(rows);
+      }
+      return () => proxy;
+    },
+  });
+  return proxy as never;
+}
+
 /**
- * Returns a select chain for the fire-and-forget email lookup, which joins
- * orders + user + listings + cook_profiles (three innerJoins).
+ * The fire-and-forget email lookup (client + cook) followed by a second select
+ * for the order's dish names. Both are returned as shape-agnostic thenables.
  */
 function emailLookupChain() {
-  const limit = vi.fn().mockResolvedValue([
+  return thenable([
     {
       clientEmail: "client@test.com",
       clientFirstName: "Client",
-      listingTitle: "Test Listing",
-      quantity: 2,
       totalPrice: "40.00",
       currency: "CAD",
       pickupAt: new Date(Date.now() + 2 * 3600_000),
       cookName: "Cook Kitchen",
     },
   ]);
-  const where = vi.fn(() => ({ limit }));
-  const innerJoin3 = vi.fn(() => ({ where }));
-  const innerJoin2 = vi.fn(() => ({ innerJoin: innerJoin3 }));
-  const innerJoin1 = vi.fn(() => ({ innerJoin: innerJoin2 }));
-  const from = vi.fn(() => ({ innerJoin: innerJoin1 }));
-  return { from } as never;
 }
 
 function mockUpdate(row: object) {

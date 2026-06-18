@@ -100,6 +100,7 @@ type FormState = {
   maxCapacity: string;
   delivery: string;
   acceptsSpecialRequests: boolean;
+  cancellationAllowed: boolean;
   // Step 3
   certIdNumber: string;
   certExpiry: string;
@@ -128,6 +129,7 @@ type InitialData = {
   maxCapacity: string;
   delivery: string;
   acceptsSpecialRequests: boolean;
+  cancellationAllowed?: boolean;
   selectedTagSlugs: string[];
   stripeConnected?: boolean;
 };
@@ -195,6 +197,7 @@ export default function OnboardingWizard({
     maxCapacity: initialData?.maxCapacity ?? "",
     delivery: initialData?.delivery ?? "none",
     acceptsSpecialRequests: initialData?.acceptsSpecialRequests ?? false,
+    cancellationAllowed: initialData?.cancellationAllowed ?? false,
     certIdNumber: "",
     certExpiry: "",
     certFullName: "",
@@ -323,6 +326,7 @@ export default function OnboardingWizard({
               ([day, win]) => ({ day, from: win.from, to: win.to }),
             ),
             leadTime: form.leadTime,
+            cancellationAllowed: form.cancellationAllowed,
             maxCapacity: form.maxCapacity,
             delivery: form.delivery,
             acceptsSpecialRequests: form.acceptsSpecialRequests,
@@ -895,6 +899,27 @@ function Step2({
             <span className={styles.checkLabel}>
               I accept ingredient swaps and special requests from customers.
               They can add a note when ordering.
+            </span>
+          </label>
+        </div>
+
+        <div className={styles.field}>
+          <span className={styles.label}>Cancellation policy</span>
+          <label className={styles.checkRow}>
+            <input
+              type="checkbox"
+              className={styles.checkbox}
+              checked={form.cancellationAllowed}
+              onChange={(e) =>
+                setForm((f) => ({
+                  ...f,
+                  cancellationAllowed: e.target.checked,
+                }))
+              }
+            />
+            <span className={styles.checkLabel}>
+              Allow customers to cancel for a full refund up until my lead time
+              before pickup. If left unchecked, all sales are final.
             </span>
           </label>
         </div>

@@ -35,6 +35,7 @@ export default async function OnboardingPage() {
       maxCapacity: cookProfiles.maxCapacity,
       delivery: cookProfiles.delivery,
       acceptsSpecialRequests: cookProfiles.acceptsSpecialRequests,
+      cancellationAllowed: cookProfiles.cancellationAllowed,
       stripeAccountId: cookProfiles.stripeAccountId,
     })
     .from(cookProfiles)
@@ -89,6 +90,7 @@ export default async function OnboardingPage() {
                 maxCapacity: profile.maxCapacity?.toString() ?? "",
                 delivery: profile.delivery ?? "none",
                 acceptsSpecialRequests: profile.acceptsSpecialRequests,
+                cancellationAllowed: profile.cancellationAllowed,
                 selectedTagSlugs: tagSlugs,
                 stripeConnected: !!profile.stripeAccountId,
               }

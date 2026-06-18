@@ -230,6 +230,7 @@ async function step2(req: Request, userId: string) {
         maxCapacity,
         delivery,
         acceptsSpecialRequests: data.acceptsSpecialRequests,
+        cancellationAllowed: data.cancellationAllowed === true,
         currentSetupStep: Math.max(profile.currentSetupStep, 3),
       })
       .where(eq(cookProfiles.userId, userId));
