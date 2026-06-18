@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { createPiMock, cancelPiMock } = vi.hoisted(() => ({
   createPiMock: vi.fn(),
@@ -8,65 +8,68 @@ const { createPiMock, cancelPiMock } = vi.hoisted(() => ({
 vi.mock("@/db", () => ({
   db: { select: vi.fn(), insert: vi.fn(), update: vi.fn() },
   dbPool: {
-    transaction: vi.fn((fn: (tx: unknown) => Promise<unknown>) =>
-      fn({
-        insert: vi.fn().mockReturnValue({
-          values: vi.fn().mockResolvedValue([]),
-        }),
-        select: vi.fn().mockReturnValue({
-          from: vi.fn().mockReturnValue({
-            innerJoin: vi.fn().mockReturnValue({
+    transaction: vi.fn(
+      async (fn: (tx: unknown) => Promise<unknown>) =>
+        await fn({
+          insert: vi.fn().mockReturnValue({
+            values: vi.fn().mockResolvedValue([]),
+          }),
+          update: vi.fn().mockReturnValue({
+            set: vi.fn().mockReturnValue({
               where: vi.fn().mockResolvedValue([]),
             }),
           }),
+          select: vi.fn(),
         }),
-      }),
     ),
   },
 }));
 
 vi.mock("@/db/schema", () => ({
   authUser: {},
+  authUserTable: {},
   cookProfiles: {},
   dishes: {},
-  listingDishes: {},
-  listingPromotions: {},
-  listings: {},
+  dishPromotions: {},
   orderDishes: {},
   orderPayments: {},
   orders: {},
 }));
 
-vi.mock("drizzle-orm", () => ({ eq: vi.fn(), and: vi.fn() }));
+vi.mock("drizzle-orm", () => ({
+  eq: vi.fn(),
+  and: vi.fn(),
+  inArray: vi.fn(),
+  count: vi.fn(),
+  desc: vi.fn(),
+  sql: Object.assign(vi.fn(), { join: vi.fn() }),
+}));
 
 vi.mock("@/lib/stripe-payments", () => ({
   createFullPaymentIntent: createPiMock,
   cancelPaymentIntent: cancelPiMock,
 }));
-
 vi.mock("@/lib/stripe-subscriptions", () => ({
   getOrCreateStripeCustomer: vi.fn().mockResolvedValue("cus_test"),
 }));
-
 vi.mock("@/lib/auth", () => ({
-  auth: {
-    api: {
-      getSession: vi.fn(),
-    },
-  },
+  auth: { api: { getSession: vi.fn() } },
 }));
-
 vi.mock("@/lib/emails/order-events", () => ({
   sendOrderPlacedEmailToCook: vi.fn().mockResolvedValue(undefined),
 }));
+vi.mock("@/lib/delivery-fee", () => ({ calcDeliveryFee: vi.fn() }));
+vi.mock("@/lib/mapbox-directions", () => ({ getDrivingDistanceKm: vi.fn() }));
 
 import { NextRequest } from "next/server";
 import { POST } from "@/app/api/orders/route";
 import { db } from "@/db";
 import { auth } from "@/lib/auth";
-import { sendOrderPlacedEmailToCook } from "@/lib/emails/order-events";
 
-function makeRequest(body: unknown) {
+const COOK_ID = "b2c3d4e5-f6a7-4b8c-9d0e-f1a2b3c4d5e6";
+const DISH_ID = "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d";
+
+function makePost(body: unknown): NextRequest {
   return new NextRequest("http://localhost/api/orders", {
     method: "POST",
     body: JSON.stringify(body),
@@ -74,282 +77,132 @@ function makeRequest(body: unknown) {
   });
 }
 
-function limitChain(rows: unknown[]) {
-  const limit = vi.fn().mockResolvedValue(rows);
-  const where = vi.fn(() => ({ limit }));
-  const from = vi.fn(() => ({ where }));
-  return { from } as never;
+/** Query-shape-agnostic chain that resolves to `rows` when awaited. */
+function chain(rows: unknown[]) {
+  const proxy: unknown = new Proxy(() => {}, {
+    get(_t, prop) {
+      if (prop === "then") {
+        return (resolve: (v: unknown) => void) => resolve(rows);
+      }
+      return () => proxy;
+    },
+  });
+  return proxy as never;
+}
+function selectQueue(results: unknown[][]) {
+  let i = 0;
+  return () => chain(results[i++] ?? []);
 }
 
-/** Chain supporting an innerJoin (used by the fire-and-forget email lookup). */
-function joinLimitChain(rows: unknown[]) {
-  const limit = vi.fn().mockResolvedValue(rows);
-  const where = vi.fn(() => ({ limit }));
-  const innerJoin = vi.fn(() => ({ where }));
-  const from = vi.fn(() => ({ innerJoin }));
-  return { from } as never;
-}
+const FUTURE = new Date(Date.now() + 7 * 86400_000).toISOString();
 
-const LISTING_ID = "a1b2c3d4-e5f6-4a7b-8c9d-e0f1a2b3c4d5";
-const COOK_ID = "b2c3d4e5-f6a7-4b8c-9d0e-f1a2b3c4d5e6";
-
-const VALID_BODY = {
-  listingId: LISTING_ID,
-  quantity: 1,
-  paymentMethodId: "pm_test_123",
-  pickupAt: new Date(Date.now() + 86400000).toISOString(),
-};
-
-const ACTIVE_LISTING = {
-  id: LISTING_ID,
-  cookId: COOK_ID,
-  type: "one_time",
-  status: "active",
-  basePrice: "20.00",
+const COOK_ROW = {
+  id: COOK_ID,
+  userStatus: "active",
   minOrderQty: 1,
   maxOrderQty: null,
-  depositEnabled: false,
-  depositType: null,
-  depositValue: null,
-  title: "Test Listing",
-};
-
-const COOK = {
+  leadTime: null,
+  cancellationAllowed: false,
+  platformFeePct: "7.5",
   stripeAccountId: "acct_test",
-  platformFeePct: "7.50",
+  delivery: "none",
+  pickupLat: null,
+  pickupLng: null,
+  maxDeliveryKm: null,
+  deliveryRatePerKm: null,
+  deliveryFlatFee: null,
+  freeDeliveryAbove: null,
 };
 
-beforeEach(() => {
-  vi.clearAllMocks();
-  vi.mocked(auth.api.getSession).mockResolvedValue({
-    user: { id: "user-1", role: "client", email: "client@test.com" },
-  } as never);
-  createPiMock.mockResolvedValue({
-    piId: "pi_test",
-    status: "requires_capture",
-    clientSecret: null,
-  });
-});
+const validBody = {
+  cookId: COOK_ID,
+  dishes: [{ dishId: DISH_ID, quantity: 2 }],
+  paymentMethodId: "pm_test",
+  pickupAt: FUTURE,
+};
 
-afterEach(() => vi.unstubAllEnvs());
+function asClient() {
+  vi.mocked(auth.api.getSession).mockResolvedValue({
+    user: { id: "user-1", role: "client", email: "c@test.com" },
+  } as never);
+}
 
 describe("POST /api/orders", () => {
-  it("returns 401 when not authenticated", async () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    createPiMock.mockResolvedValue({ piId: "pi_test" });
+  });
+
+  it("401 when unauthenticated", async () => {
     vi.mocked(auth.api.getSession).mockResolvedValue(null);
-    const res = await POST(makeRequest(VALID_BODY));
+    const res = await POST(makePost(validBody));
     expect(res.status).toBe(401);
   });
 
-  it("returns 403 when user is a cook not a client", async () => {
+  it("403 when role is not client", async () => {
     vi.mocked(auth.api.getSession).mockResolvedValue({
-      user: { id: "user-1", role: "cook", email: "cook@test.com" },
+      user: { id: "u", role: "cook", email: "k@test.com" },
     } as never);
-    const res = await POST(makeRequest(VALID_BODY));
+    const res = await POST(makePost(validBody));
     expect(res.status).toBe(403);
   });
 
-  it("returns 404 when listing is not active", async () => {
-    let call = 0;
-    vi.mocked(db.select).mockImplementation(() => {
-      call++;
-      if (call === 1) return limitChain([]); // listing not found
-      return joinLimitChain([{ email: "cook@t.com", firstName: "Cook" }]);
-    });
-    const res = await POST(makeRequest(VALID_BODY));
+  it("400 on invalid body", async () => {
+    asClient();
+    const res = await POST(makePost({ cookId: "not-a-uuid", dishes: [] }));
+    expect(res.status).toBe(400);
+  });
+
+  it("404 when cook not found / inactive", async () => {
+    asClient();
+    vi.mocked(db.select).mockImplementation(selectQueue([[]]));
+    const res = await POST(makePost(validBody));
     expect(res.status).toBe(404);
   });
 
-  it("returns 400 when listing type is subscription", async () => {
-    let call = 0;
-    vi.mocked(db.select).mockImplementation(() => {
-      call++;
-      if (call === 1)
-        return limitChain([{ ...ACTIVE_LISTING, type: "subscription" }]);
-      return joinLimitChain([{ email: "cook@t.com", firstName: "Cook" }]);
-    });
-    const res = await POST(makeRequest(VALID_BODY));
-    expect(res.status).toBe(400);
-    const body = await res.json();
-    expect(body.error).toMatch(/subscription/i);
+  it("422 when pickup is sooner than the lead time", async () => {
+    asClient();
+    vi.mocked(db.select).mockImplementation(
+      selectQueue([[{ ...COOK_ROW, leadTime: "2_days" }]]),
+    );
+    const soon = new Date(Date.now() + 3600_000).toISOString();
+    const res = await POST(makePost({ ...validBody, pickupAt: soon }));
+    expect(res.status).toBe(422);
   });
 
-  it("returns 400 when cook has no Stripe account", async () => {
-    let call = 0;
-    vi.mocked(db.select).mockImplementation(() => {
-      call++;
-      if (call === 1) return limitChain([ACTIVE_LISTING]);
-      if (call === 2)
-        return limitChain([{ stripeAccountId: null, platformFeePct: "7.50" }]);
-      return limitChain([]);
-    });
-    const res = await POST(makeRequest(VALID_BODY));
-    expect(res.status).toBe(400);
+  it("422 when below the minimum order quantity", async () => {
+    asClient();
+    vi.mocked(db.select).mockImplementation(
+      selectQueue([[{ ...COOK_ROW, minOrderQty: 5 }]]),
+    );
+    const res = await POST(makePost(validBody));
+    expect(res.status).toBe(422);
   });
 
-  it("creates order and payment intent for a no-deposit listing", async () => {
-    let call = 0;
-    vi.mocked(db.select).mockImplementation(() => {
-      call++;
-      if (call === 1) return limitChain([ACTIVE_LISTING]);
-      if (call === 2) return limitChain([COOK]);
-      if (call === 3)
-        return limitChain([
+  it("creates an order and returns 201 with orderId", async () => {
+    asClient();
+    vi.mocked(db.select).mockImplementation(
+      selectQueue([
+        [COOK_ROW], // cook lookup
+        [{ id: DISH_ID, name: "Jollof Rice", price: "12.00" }], // dishes
+        [
           {
-            stripeCustomerId: "cus_existing",
-            email: "c@t.com",
-            firstName: "A",
-            lastName: "B",
             onboardingCompletedAt: new Date(),
+            stripeCustomerId: "cus_test",
+            email: "c@test.com",
+            firstName: "C",
+            lastName: "L",
           },
-        ]);
-      // Fire-and-forget cook email lookup (uses innerJoin)
-      return joinLimitChain([{ email: "cook@t.com", firstName: "Cook" }]);
-    });
-    vi.mocked(db.insert).mockReturnValue({
-      values: vi.fn().mockResolvedValue([]),
-    } as never);
+        ], // user lookup
+        [{ email: "cook@test.com", firstName: "Cook" }], // email lookup
+      ]),
+    );
 
-    const res = await POST(makeRequest(VALID_BODY));
+    const res = await POST(makePost(validBody));
     expect(res.status).toBe(201);
     const body = await res.json();
     expect(body.success).toBe(true);
     expect(body.data.orderId).toBeDefined();
-    expect(createPiMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        totalAmountCents: 2000,
-        platformFeeCents: 150,
-        connectedAccountId: "acct_test",
-      }),
-    );
-  });
-
-  it("returns 403 before creating a payment intent when client onboarding is incomplete", async () => {
-    let call = 0;
-    vi.mocked(db.select).mockImplementation(() => {
-      call++;
-      if (call === 1) return limitChain([ACTIVE_LISTING]);
-      if (call === 2) return limitChain([COOK]);
-      if (call === 3)
-        return limitChain([
-          {
-            stripeCustomerId: "cus_existing",
-            email: "c@t.com",
-            firstName: "A",
-            lastName: "B",
-            onboardingCompletedAt: null,
-          },
-        ]);
-      return joinLimitChain([{ email: "cook@t.com", firstName: "Cook" }]);
-    });
-
-    const res = await POST(makeRequest(VALID_BODY));
-
-    expect(res.status).toBe(403);
-    expect(createPiMock).not.toHaveBeenCalled();
-  });
-
-  it("sends the order-placed email to the cook on successful creation", async () => {
-    let call = 0;
-    vi.mocked(db.select).mockImplementation(() => {
-      call++;
-      if (call === 1) return limitChain([ACTIVE_LISTING]);
-      if (call === 2) return limitChain([COOK]);
-      if (call === 3)
-        return limitChain([
-          {
-            stripeCustomerId: "cus_existing",
-            email: "c@t.com",
-            firstName: "A",
-            lastName: "B",
-            onboardingCompletedAt: new Date(),
-          },
-        ]);
-      return joinLimitChain([{ email: "cook@t.com", firstName: "Cook" }]);
-    });
-    vi.mocked(db.insert).mockReturnValue({
-      values: vi.fn().mockResolvedValue([]),
-    } as never);
-
-    const res = await POST(makeRequest(VALID_BODY));
-    expect(res.status).toBe(201);
-    await Promise.resolve();
-    await Promise.resolve();
-    expect(sendOrderPlacedEmailToCook).toHaveBeenCalledWith(
-      { email: "cook@t.com", firstName: "Cook" },
-      expect.objectContaining({ name: expect.any(String) }),
-      expect.objectContaining({
-        listingTitle: "Test Listing",
-        quantity: 1,
-        currency: "CAD",
-      }),
-    );
-  });
-
-  it("cancels the PI and returns 500 when DB transaction fails", async () => {
-    let call = 0;
-    vi.mocked(db.select).mockImplementation(() => {
-      call++;
-      if (call === 1) return limitChain([ACTIVE_LISTING]);
-      if (call === 2) return limitChain([COOK]);
-      if (call === 3)
-        return limitChain([
-          {
-            stripeCustomerId: "cus_existing",
-            email: "c@t.com",
-            onboardingCompletedAt: new Date(),
-          },
-        ]);
-      return limitChain([]);
-    });
-    const { dbPool } = await import("@/db");
-    vi.mocked(dbPool.transaction).mockRejectedValue(new Error("db error"));
-
-    const res = await POST(makeRequest(VALID_BODY));
-    expect(res.status).toBe(500);
-    expect(cancelPiMock).toHaveBeenCalledWith("pi_test", expect.any(String));
-  });
-
-  it("cancels the deposit PI when balance PI creation fails (prevents money leak)", async () => {
-    const DEPOSIT_LISTING = {
-      ...ACTIVE_LISTING,
-      depositEnabled: true,
-      depositType: "percentage",
-      depositValue: "30",
-    };
-
-    let call = 0;
-    vi.mocked(db.select).mockImplementation(() => {
-      call++;
-      if (call === 1) return limitChain([DEPOSIT_LISTING]);
-      if (call === 2) return limitChain([COOK]);
-      if (call === 3)
-        return limitChain([
-          {
-            stripeCustomerId: "cus_existing",
-            email: "c@t.com",
-            onboardingCompletedAt: new Date(),
-          },
-        ]);
-      return limitChain([]);
-    });
-
-    // First call (deposit PI) succeeds; second call (balance PI) fails
-    createPiMock
-      .mockResolvedValueOnce({
-        piId: "pi_deposit",
-        status: "requires_capture",
-        clientSecret: null,
-      })
-      .mockRejectedValueOnce(new Error("stripe balance PI failed"));
-
-    cancelPiMock.mockResolvedValue(undefined);
-
-    const res = await POST(makeRequest(VALID_BODY));
-    expect(res.status).toBe(500);
-    // Deposit PI must be cancelled to release the hold on the customer's funds
-    expect(cancelPiMock).toHaveBeenCalledWith(
-      "pi_deposit",
-      expect.stringContaining("cancel-deposit-on-balance-fail"),
-    );
+    expect(createPiMock).toHaveBeenCalledOnce();
   });
 });

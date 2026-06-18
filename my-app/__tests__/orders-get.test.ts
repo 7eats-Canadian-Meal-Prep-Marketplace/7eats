@@ -76,6 +76,9 @@ const MOCK_DISH = {
   id: "dish-uuid-1",
   dishName: "Lasagna",
   quantity: 2,
+  priceSnapshot: "15.00",
+  discountAmount: null,
+  lineTotal: "30.00",
   sortOrder: 0,
 };
 
@@ -181,10 +184,11 @@ describe("GET /api/orders", () => {
     expect(body.data).toHaveLength(1);
     const order = body.data[0];
     expect(order.id).toBe(ORDER_ID);
-    expect(order.listingTitle).toBe(LISTING_TITLE);
-    expect(order.quantity).toBe(2);
+    expect(order.totalPrice).toBe("30.00");
     expect(order.dishes).toHaveLength(1);
     expect(order.dishes[0].dishName).toBe("Lasagna");
+    expect(order.dishes[0].priceSnapshot).toBe("15.00");
+    expect(order.dishes[0].lineTotal).toBe("30.00");
     expect(body.meta).toEqual({ total: 1, limit: 20, offset: 0 });
   });
 
