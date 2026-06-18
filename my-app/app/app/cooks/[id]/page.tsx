@@ -31,20 +31,9 @@ type ApiCook = {
   memberSince: string | null;
   ordersCompleted: number;
   leadTime: string | null;
-};
-
-type ApiListing = {
-  id: string;
-  title: string;
-  description: string | null;
-  type: string;
-  subscriptionEnabled: boolean;
-  basePrice: number;
-  currency: string;
-  coverPhotoUrl: string | null;
   minOrderQty: number;
   maxOrderQty: number | null;
-  createdAt: string;
+  cancellationAllowed: boolean;
 };
 
 type ApiReview = {
@@ -52,7 +41,7 @@ type ApiReview = {
   rating: number;
   comment: string | null;
   reviewerName: string;
-  listingTitle: string | null;
+  dishes: string[];
   createdAt: string;
 };
 
@@ -92,7 +81,6 @@ export default function CookProfilePage({
 
   // ── API state ──────────────────────────────────────────────────────────────
   const [cook, setCook] = useState<ApiCook | null>(null);
-  const [listings, setListings] = useState<ApiListing[]>([]);
   const [reviews, setReviews] = useState<ApiReview[]>([]);
   const [notFoundFlag, setNotFoundFlag] = useState(false);
 
@@ -106,9 +94,8 @@ export default function CookProfilePage({
 
     async function fetchData() {
       try {
-        const [cookRes, listingsRes, reviewsRes] = await Promise.all([
+        const [cookRes, reviewsRes] = await Promise.all([
           fetch(`${baseUrl}/api/cooks/${id}`, { cache: "no-store" }),
-          fetch(`${baseUrl}/api/cooks/${id}/listings`, { cache: "no-store" }),
           fetch(`${baseUrl}/api/cooks/${id}/reviews`, { cache: "no-store" }),
         ]);
 
@@ -118,16 +105,12 @@ export default function CookProfilePage({
         }
 
         const cookJson = await cookRes.json();
-        const listingsJson = listingsRes.ok
-          ? await listingsRes.json()
-          : { data: [] };
         const reviewsJson = reviewsRes.ok
           ? await reviewsRes.json()
           : { data: [] };
 
         if (!cancelled) {
           setCook(cookJson.data);
-          setListings(listingsJson.data ?? []);
           setReviews(reviewsJson.data ?? []);
         }
       } catch {
@@ -287,62 +270,26 @@ export default function CookProfilePage({
           </section>
         )}
 
-        {/* Active listings */}
+        {/* Order CTA + policies */}
         <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>
-            Available now
-            <span className={styles.listingCount}>{listings.length}</span>
-          </h2>
-          {listings.length === 0 ? (
-            <p className={styles.noListings}>No active listings right now.</p>
-          ) : (
-            <div className={styles.listingList}>
-              {listings.map((listing) => (
-                <Link
-                  key={listing.id}
-                  href={`/app/listings/${listing.id}`}
-                  className={styles.listingCard}
-                >
-                  <div
-                    className={styles.listingCover}
-                    style={{
-                      background:
-                        "linear-gradient(135deg, #e8e8e8 0%, #d0d0d0 100%)",
-                    }}
-                  >
-                    {listing.coverPhotoUrl && (
-                      // biome-ignore lint/performance/noImgElement: thumbnail in client component
-                      <img
-                        src={listing.coverPhotoUrl}
-                        alt=""
-                        aria-hidden="true"
-                        className={styles.listingCoverImg}
-                      />
-                    )}
-                  </div>
-                  <div className={styles.listingMain}>
-                    <div className={styles.listingHeader}>
-                      <h3 className={styles.listingTitle}>{listing.title}</h3>
-                      <span className={styles.listingPrice}>
-                        From ${listing.basePrice}
-                      </span>
-                    </div>
-                    {listing.description && (
-                      <p className={styles.listingSummary}>
-                        {listing.description}
-                      </p>
-                    )}
-                    <div className={styles.listingFooter}>
-                      <span className={styles.listingSpots}>
-                        {listing.minOrderQty} portion
-                        {listing.minOrderQty !== 1 ? "s" : ""} min
-                      </span>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
+          <h2 className={styles.sectionTitle}>Ordering</h2>
+          <p className={styles.noListings}>
+            Minimum {cook.minOrderQty} item{cook.minOrderQty === 1 ? "" : "s"}
+            {cook.maxOrderQty ? ` · maximum ${cook.maxOrderQty}` : ""} per
+            order.
+          </p>
+          <p className={styles.noListings}>
+            {cook.cancellationAllowed
+              ? "Cancellations accepted before the lead time for a full refund."
+              : "No cancellations once an order is placed."}
+          </p>
+          <Link
+            href={`/app/cooks/${id}/menu`}
+            className={styles.followBtn}
+            style={{ marginTop: 12, display: "inline-block" }}
+          >
+            Order now
+          </Link>
         </section>
 
         {/* Reviews */}
@@ -388,9 +335,9 @@ export default function CookProfilePage({
                     </div>
                   </div>
                   <p className={styles.reviewComment}>{review.comment ?? ""}</p>
-                  {review.listingTitle && (
+                  {review.dishes.length > 0 && (
                     <span className={styles.reviewDish}>
-                      {review.listingTitle}
+                      Ordered: {review.dishes.join(", ")}
                     </span>
                   )}
                 </div>
