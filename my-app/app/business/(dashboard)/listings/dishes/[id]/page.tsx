@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { deepEqual } from "@/lib/forms/use-dirty";
 import {
   DISH_PHOTO_ACCEPT,
   validateDishPhotoFile,
@@ -12,6 +13,8 @@ import {
 import {
   ALLERGENS,
   DishDetailProvider,
+  type IngredientRow,
+  type NutritionForm,
   useDishDetail,
 } from "./_dish-detail-context";
 import { PromotionsTab } from "./_promotions-tab";
@@ -211,6 +214,16 @@ function DetailsTab() {
     }
   }
 
+  // Dirty when the text fields changed, or photos were added/removed.
+  const photosDirty =
+    workingPhotos.some((p) => p.file) ||
+    workingPhotos
+      .filter((p) => p.serverId)
+      .map((p) => p.serverId)
+      .join(",") !== photos.map((p) => p.id).join(",");
+  const formDirty = form ? !deepEqual(localForm, form) : false;
+  const dirty = formDirty || photosDirty;
+
   if (loading && !initialized) {
     return <p className={styles.emptyNote}>Loading dish…</p>;
   }
@@ -351,7 +364,7 @@ function DetailsTab() {
               type="button"
               className={styles.saveBtn}
               onClick={handleSave}
-              disabled={workingPhotos.length === 0 || saving}
+              disabled={workingPhotos.length === 0 || saving || !dirty}
             >
               {saving ? "Saving…" : "Save changes"}
             </button>
@@ -383,12 +396,30 @@ function NutritionTab() {
   const [otherText, setOtherText] = useState("");
   const [noneApplies, setNoneApplies] = useState(false);
   const [initialized, setInitialized] = useState(false);
+  const baselineRef = useRef<{
+    ingredients: IngredientRow[];
+    nutrition: NutritionForm;
+  } | null>(null);
 
   useEffect(() => {
     if (!loading && !initialized) {
+      baselineRef.current = { ingredients, nutrition };
       setInitialized(true);
     }
-  }, [loading, initialized]);
+  }, [loading, initialized, ingredients, nutrition]);
+
+  const dirty = baselineRef.current
+    ? !deepEqual(
+        { ingredients, nutrition, otherChecked, otherText, noneApplies },
+        {
+          ingredients: baselineRef.current.ingredients,
+          nutrition: baselineRef.current.nutrition,
+          otherChecked: false,
+          otherText: "",
+          noneApplies: false,
+        },
+      )
+    : false;
 
   function addIngredient() {
     setIngredients((prev) => [...prev, { id: `ing-${Date.now()}`, name: "" }]);
@@ -635,7 +666,12 @@ function NutritionTab() {
         >
           Cancel
         </button>
-        <button type="button" className={styles.saveBtn} onClick={handleSave}>
+        <button
+          type="button"
+          className={styles.saveBtn}
+          onClick={handleSave}
+          disabled={!dirty}
+        >
           Save changes
         </button>
       </div>

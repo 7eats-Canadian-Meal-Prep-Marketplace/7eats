@@ -18,6 +18,7 @@ import {
   defaultMaxDeliveryKm,
   withDeliveryDefaults,
 } from "@/lib/delivery-pricing";
+import { useDirtyState } from "@/lib/forms/use-dirty";
 import styles from "./page.module.css";
 
 type FulfillmentType = "pickup" | "delivery" | "both";
@@ -115,7 +116,13 @@ function windowsFromForm(
 }
 
 export function LogisticsSection() {
-  const [form, setForm] = useState<LogisticsForm>({
+  const {
+    value: form,
+    setValue: setForm,
+    load,
+    markClean,
+    dirty,
+  } = useDirtyState<LogisticsForm>({
     pickupStreet: "",
     pickupUnit: "",
     pickupCity: "",
@@ -164,7 +171,7 @@ export function LogisticsSection() {
             })
           : null;
 
-        setForm({
+        load({
           pickupStreet: profile?.pickupStreet ?? "",
           pickupUnit: profile?.pickupUnit ?? "",
           pickupCity: profile?.pickupCity ?? "",
@@ -197,7 +204,7 @@ export function LogisticsSection() {
         });
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [load]);
 
   const offersPickup = form.fulfillment !== "delivery";
   const offersDelivery = form.fulfillment !== "pickup";
@@ -324,6 +331,7 @@ export function LogisticsSection() {
       return;
     }
 
+    markClean();
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   }
@@ -650,7 +658,12 @@ export function LogisticsSection() {
       )}
 
       <div className={styles.cardFooter}>
-        <button type="button" className={styles.saveBtn} onClick={handleSave}>
+        <button
+          type="button"
+          className={styles.saveBtn}
+          onClick={handleSave}
+          disabled={!dirty}
+        >
           {saved ? "Saved" : "Save logistics"}
         </button>
       </div>
