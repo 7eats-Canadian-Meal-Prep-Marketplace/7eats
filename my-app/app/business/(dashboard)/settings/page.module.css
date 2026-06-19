@@ -317,6 +317,10 @@
   color: var(--white);
 }
 
+.dayPillActive:hover {
+  color: var(--white);
+}
+
 .perDayWindows {
   display: flex;
   flex-direction: column;

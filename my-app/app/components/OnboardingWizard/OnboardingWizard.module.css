@@ -222,6 +222,10 @@
   color: var(--white);
 }
 
+.pillActive:hover {
+  color: var(--white);
+}
+
 /* ── Per-day pickup windows ──────────────────────────────────── */
 .perDayWindows {
   display: flex;
