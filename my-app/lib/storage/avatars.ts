@@ -20,6 +20,24 @@ export async function uploadAvatar(
   return getAvatarUrl(key);
 }
 
+export async function uploadBanner(
+  userId: string,
+  fileName: string,
+  body: Buffer,
+  contentType: string,
+): Promise<string> {
+  const key = `banners/${userId}/${Date.now()}-${fileName}`;
+  await getR2Client().send(
+    new PutObjectCommand({
+      Bucket: BUCKETS.AVATARS,
+      Key: key,
+      Body: body,
+      ContentType: contentType,
+    }),
+  );
+  return getAvatarUrl(key);
+}
+
 export function getAvatarUrl(key: string): string {
   const base = BUCKET_CONFIG[BUCKETS.AVATARS].cdnBaseUrl;
   if (!base) throw new Error("R2_PUBLIC_BUCKET_URL_AVATARS is not configured");

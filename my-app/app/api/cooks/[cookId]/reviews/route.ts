@@ -1,7 +1,7 @@
-import { count, desc, eq, sql } from "drizzle-orm";
+import { count, desc, eq, inArray, sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { authUser, cookProfiles, listings, reviews } from "@/db/schema";
+import { authUser, cookProfiles, orderDishes, reviews } from "@/db/schema";
 
 export async function GET(
   req: NextRequest,
@@ -40,20 +40,37 @@ export async function GET(
     const rows = await db
       .select({
         id: reviews.id,
+        orderId: reviews.orderId,
         rating: reviews.rating,
         comment: reviews.comment,
         createdAt: reviews.createdAt,
         reviewerFirstName: authUser.firstName,
         reviewerLastName: authUser.lastName,
-        listingTitle: listings.title,
       })
       .from(reviews)
       .innerJoin(authUser, eq(reviews.clientId, authUser.id))
-      .leftJoin(listings, eq(reviews.listingId, listings.id))
       .where(whereClause)
       .orderBy(desc(reviews.createdAt))
       .limit(limit)
       .offset(offset);
+
+    // Attach the dish names ordered for each review (social proof), derived from
+    // the order via order_dishes — no listing reference needed.
+    const orderIds = rows.map((r) => r.orderId);
+    const dishRows = orderIds.length
+      ? await db
+          .select({
+            orderId: orderDishes.orderId,
+            name: orderDishes.dishName,
+          })
+          .from(orderDishes)
+          .where(inArray(orderDishes.orderId, orderIds))
+      : [];
+    const dishesByOrder: Record<string, string[]> = {};
+    for (const d of dishRows) {
+      if (!dishesByOrder[d.orderId]) dishesByOrder[d.orderId] = [];
+      dishesByOrder[d.orderId].push(d.name);
+    }
 
     const data = rows.map((r) => {
       const firstName = r.reviewerFirstName ?? "";
@@ -68,7 +85,7 @@ export async function GET(
         rating: r.rating,
         comment: r.comment ?? null,
         reviewerName,
-        listingTitle: r.listingTitle ?? null,
+        dishes: dishesByOrder[r.orderId] ?? [],
         createdAt:
           r.createdAt instanceof Date
             ? r.createdAt.toISOString()

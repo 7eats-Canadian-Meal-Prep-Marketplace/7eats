@@ -38,6 +38,7 @@ export const cookProfiles = pgTable(
     displayName: text("display_name").notNull(),
     bio: text("bio"),
     photoUrl: text("photo_url"),
+    bannerUrl: text("banner_url"),
     socialLink: text("social_link"),
     currentSetupStep: integer("current_setup_step").notNull().default(1),
     setupComplete: boolean("setup_complete").notNull().default(false),
@@ -65,8 +66,14 @@ export const cookProfiles = pgTable(
     }),
     leadTime: leadTimeEnum("lead_time"),
     maxCapacity: integer("max_capacity"),
+    offersPickup: boolean("offers_pickup").notNull().default(true),
     delivery: deliveryEnum("delivery"),
     acceptsSpecialRequests: boolean("accepts_special_requests")
+      .notNull()
+      .default(false),
+    minOrderQty: integer("min_order_qty").notNull().default(1),
+    maxOrderQty: integer("max_order_qty"),
+    cancellationAllowed: boolean("cancellation_allowed")
       .notNull()
       .default(false),
     stripeAccountId: text("stripe_account_id"),
@@ -114,9 +121,10 @@ export const cookProfiles = pgTable(
       "cook_profiles_late_cancel_fee_positive",
       sql`${t.lateCancelFeeValue} IS NULL OR ${t.lateCancelFeeValue} > 0`,
     ),
+    check("cook_profiles_min_order_qty_positive", sql`${t.minOrderQty} >= 1`),
     check(
-      "cook_profiles_late_cancel_window_positive",
-      sql`${t.lateCancelWindowHours} >= 1`,
+      "cook_profiles_max_order_qty_valid",
+      sql`${t.maxOrderQty} IS NULL OR ${t.maxOrderQty} >= ${t.minOrderQty}`,
     ),
     pgPolicy("cook_profiles_select_active", {
       for: "select",

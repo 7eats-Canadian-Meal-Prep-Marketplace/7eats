@@ -121,7 +121,7 @@ export default function RootLayout({
         {children}
         <CalendlyBadge />
         <CookieBanner />
-        <Toaster position="top-center" richColors={false} closeButton />
+        <Toaster position="top-center" richColors={false} closeButton={false} />
         <Script
           src="https://assets.calendly.com/assets/external/widget.js"
           strategy="afterInteractive"

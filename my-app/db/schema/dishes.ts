@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
   boolean,
   check,
+  index,
   integer,
   numeric,
   pgPolicy,
@@ -9,26 +10,23 @@ import {
   primaryKey,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
 import { cookProfiles } from "./cooks";
-import { dishStatus } from "./enums";
+import { dishStatus, promotionType } from "./enums";
 import { tags } from "./tags";
 
 const isAdmin = sql`auth.role() = 'admin'`;
 
 // cook owns this dish
 const ownDish = sql`cook_id IN (
-  SELECT id FROM cook_profiles WHERE user_id = auth.uid()
+  SELECT id FROM cook_profiles WHERE user_id = auth.uid()::text
 )`;
 
-// dish is part of at least one active listing (makes it publicly visible)
-const dishInActiveListing = sql`id IN (
-  SELECT ld.dish_id FROM listing_dishes ld
-  JOIN listings l ON l.id = ld.listing_id
-  WHERE l.status = 'active'
-)`;
+// dish is publicly visible when it is active
+const dishIsActive = sql`status = 'active'`;
 
 // helper for child tables: cook owns the parent dish
 const ownDishChild = sql`dish_id IN (
@@ -37,11 +35,9 @@ const ownDishChild = sql`dish_id IN (
   WHERE cp.user_id = auth.uid()
 )`;
 
-// helper for child tables: parent dish is in an active listing
-const dishChildInActiveListing = sql`dish_id IN (
-  SELECT ld.dish_id FROM listing_dishes ld
-  JOIN listings l ON l.id = ld.listing_id
-  WHERE l.status = 'active'
+// helper for child tables: parent dish is active
+const dishChildOfActive = sql`dish_id IN (
+  SELECT id FROM dishes WHERE status = 'active'
 )`;
 
 // ─── Dish ────────────────────────────────────────────────────────────────────
@@ -71,21 +67,23 @@ export const dishes = pgTable(
     isKosher: boolean("is_kosher").notNull().default(false),
     // Portion info
     servingSize: varchar("serving_size", { length: 100 }),
-    // Workflow status — public visibility is derived from listing membership,
-    // not from this field.
-    status: dishStatus("status").notNull().default("draft"),
+    price: numeric("price", { precision: 10, scale: 2 }).notNull(),
+    // Workflow status — also drives public visibility (active = visible).
+    status: dishStatus("status").notNull().default("active"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at")
       .notNull()
       .defaultNow()
       .$onUpdate(() => new Date()),
   },
-  () => [
-    // Public: dish appears in at least one active listing
+  (t) => [
+    index("dishes_cook_id_idx").on(t.cookId),
+    check("dishes_price_positive", sql`${t.price} > 0`),
+    // Public: dish is active
     pgPolicy("dishes_select_public", {
       for: "select",
       to: "public",
-      using: dishInActiveListing,
+      using: dishIsActive,
     }),
     pgPolicy("dishes_select_own", {
       for: "select",
@@ -115,8 +113,12 @@ export const dishes = pgTable(
       to: "public",
       using: isAdmin,
     }),
-    // No delete policy — dishes are retired via status='archived', never deleted.
-    // Hard-delete is blocked because order_dishes keeps a FK reference.
+    pgPolicy("dishes_delete_own", {
+      for: "delete",
+      to: "public",
+      using: ownDish,
+    }),
+    // Hard-delete blocked when order_dishes references the dish (ON DELETE restrict).
   ],
 ).enableRLS();
 
@@ -138,7 +140,7 @@ export const dishPhotos = pgTable(
     pgPolicy("dish_photos_select_public", {
       for: "select",
       to: "public",
-      using: dishChildInActiveListing,
+      using: dishChildOfActive,
     }),
     pgPolicy("dish_photos_select_own", {
       for: "select",
@@ -174,7 +176,6 @@ export const dishIngredients = pgTable(
       .notNull()
       .references(() => dishes.id, { onDelete: "cascade" }),
     name: varchar("name", { length: 255 }).notNull(),
-    quantity: varchar("quantity", { length: 100 }),
     isAllergen: boolean("is_allergen").notNull().default(false),
     sortOrder: integer("sort_order").notNull().default(0),
   },
@@ -182,7 +183,7 @@ export const dishIngredients = pgTable(
     pgPolicy("dish_ingredients_select_public", {
       for: "select",
       to: "public",
-      using: dishChildInActiveListing,
+      using: dishChildOfActive,
     }),
     pgPolicy("dish_ingredients_select_own", {
       for: "select",
@@ -265,7 +266,7 @@ export const dishNutrition = pgTable(
     pgPolicy("dish_nutrition_select_public", {
       for: "select",
       to: "public",
-      using: dishChildInActiveListing,
+      using: dishChildOfActive,
     }),
     pgPolicy("dish_nutrition_select_own", {
       for: "select",
@@ -304,9 +305,7 @@ export const dishTags = pgTable(
       for: "select",
       to: "public",
       using: sql`dish_id IN (
-        SELECT ld.dish_id FROM listing_dishes ld
-        JOIN listings l ON l.id = ld.listing_id
-        WHERE l.status = 'active'
+        SELECT id FROM dishes WHERE status = 'active'
       )`,
     }),
     pgPolicy("dish_tags_select_own", {
@@ -334,6 +333,122 @@ export const dishTags = pgTable(
         SELECT d.id FROM dishes d
         JOIN cook_profiles cp ON d.cook_id = cp.id
         WHERE cp.user_id = auth.uid()
+      )`,
+    }),
+  ],
+).enableRLS();
+
+// ─── Dish Promotions ─────────────────────────────────────────────────────────
+// One promotion per dish active at a time (partial unique index). The API
+// enforces validUntil XOR maxUses; uses_count is incremented by service_role at
+// order time. value is always required for both promo types.
+
+export const dishPromotions = pgTable(
+  "dish_promotions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    dishId: uuid("dish_id")
+      .notNull()
+      .references(() => dishes.id, { onDelete: "cascade" }),
+    type: promotionType("type").notNull(),
+    // percentage_off: 1–100. fixed_off: positive dollar amount.
+    value: numeric("value", { precision: 10, scale: 2 }).notNull(),
+    // null = unlimited; mutually exclusive with validUntil (enforced in API).
+    maxUses: integer("max_uses"),
+    usesCount: integer("uses_count").notNull().default(0),
+    isActive: boolean("is_active").notNull().default(true),
+    validFrom: timestamp("valid_from"),
+    validUntil: timestamp("valid_until"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at")
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    // At most one active promotion per dish
+    uniqueIndex("dish_promotions_one_active_uidx")
+      .on(t.dishId)
+      .where(sql`is_active = true`),
+    check("dish_promo_value_positive", sql`${t.value} > 0`),
+    check(
+      "dish_promo_percentage_max",
+      sql`${t.type} != 'percentage_off' OR ${t.value} <= 100`,
+    ),
+    check(
+      "dish_promo_max_uses_positive",
+      sql`${t.maxUses} IS NULL OR ${t.maxUses} >= 1`,
+    ),
+    check("dish_promo_uses_count_non_negative", sql`${t.usesCount} >= 0`),
+    check(
+      "dish_promo_uses_count_cap",
+      sql`${t.maxUses} IS NULL OR ${t.usesCount} <= ${t.maxUses}`,
+    ),
+    check(
+      "dish_promo_dates_order",
+      sql`${t.validFrom} IS NULL OR ${t.validUntil} IS NULL OR ${t.validUntil} > ${t.validFrom}`,
+    ),
+    pgPolicy("dish_promotions_select_public", {
+      for: "select",
+      to: "public",
+      using: sql`
+        is_active = TRUE
+        AND dish_id IN (SELECT id FROM dishes WHERE status = 'active')
+        AND (valid_from IS NULL OR valid_from <= NOW())
+        AND (valid_until IS NULL OR valid_until > NOW())
+        AND (max_uses IS NULL OR uses_count < max_uses)
+      `,
+    }),
+    pgPolicy("dish_promotions_select_own", {
+      for: "select",
+      to: "public",
+      // cook_profiles.user_id is text; auth.uid() is uuid — cast to compare.
+      using: sql`dish_id IN (
+        SELECT d.id FROM dishes d
+        JOIN cook_profiles cp ON d.cook_id = cp.id
+        WHERE cp.user_id = auth.uid()::text
+      )`,
+    }),
+    pgPolicy("dish_promotions_select_admin", {
+      for: "select",
+      to: "public",
+      using: isAdmin,
+    }),
+    pgPolicy("dish_promotions_insert_own", {
+      for: "insert",
+      to: "public",
+      withCheck: sql`dish_id IN (
+        SELECT d.id FROM dishes d
+        JOIN cook_profiles cp ON d.cook_id = cp.id
+        WHERE cp.user_id = auth.uid()::text
+      )`,
+    }),
+    pgPolicy("dish_promotions_update_own", {
+      for: "update",
+      to: "public",
+      using: sql`dish_id IN (
+        SELECT d.id FROM dishes d
+        JOIN cook_profiles cp ON d.cook_id = cp.id
+        WHERE cp.user_id = auth.uid()::text
+      )`,
+      withCheck: sql`dish_id IN (
+        SELECT d.id FROM dishes d
+        JOIN cook_profiles cp ON d.cook_id = cp.id
+        WHERE cp.user_id = auth.uid()::text
+      )`,
+    }),
+    pgPolicy("dish_promotions_update_service", {
+      for: "update",
+      to: "public",
+      using: sql`auth.role() = 'service_role'`,
+    }),
+    pgPolicy("dish_promotions_delete_own", {
+      for: "delete",
+      to: "public",
+      using: sql`dish_id IN (
+        SELECT d.id FROM dishes d
+        JOIN cook_profiles cp ON d.cook_id = cp.id
+        WHERE cp.user_id = auth.uid()::text
       )`,
     }),
   ],

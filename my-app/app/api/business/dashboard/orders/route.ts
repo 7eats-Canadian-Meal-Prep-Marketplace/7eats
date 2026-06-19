@@ -1,10 +1,7 @@
 import { and, count, desc, eq, gte, lte } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import {
-  getCookId,
-  unauthorized,
-} from "@/app/api/business/listings/_lib/cook-auth";
+import { getCookId, unauthorized } from "@/app/api/business/_lib/cook-auth";
 import { db } from "@/db";
 import { authUser, listings, orders } from "@/db/schema";
 
@@ -56,6 +53,7 @@ export async function GET(req: NextRequest) {
           unitPrice: orders.unitPrice,
           totalPrice: orders.totalPrice,
           pickupAt: orders.pickupAt,
+          fulfillmentMode: orders.fulfillmentMode,
           fulfilledAt: orders.fulfilledAt,
           cancelledAt: orders.cancelledAt,
           notes: orders.notes,

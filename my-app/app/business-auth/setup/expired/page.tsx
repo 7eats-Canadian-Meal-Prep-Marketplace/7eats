@@ -40,18 +40,17 @@ export default function ExpiredPage() {
           <h1 className={styles.title}>This link has expired.</h1>
 
           <p className={styles.body}>
-            Setup links are valid for 7 days after they're sent. Yours has
+            Setup links are valid for 3 days after they're sent. Yours has
             either expired, already been used, or the URL is not valid.
           </p>
 
           <div className={styles.card}>
             <p className={styles.cardLabel}>Need a new link?</p>
             <p className={styles.cardBody}>
-              Reply to the original email we sent you, or reach out directly and
-              we'll send a fresh one.
+              Email us and we'll send a fresh one.
             </p>
-            <a href="mailto:support@7eats.ca" className={styles.emailLink}>
-              support@7eats.ca
+            <a href="mailto:contact@7eats.ca" className={styles.emailLink}>
+              contact@7eats.ca
             </a>
           </div>
 

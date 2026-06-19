@@ -4,6 +4,36 @@ export type SniffedType =
   | "image/webp"
   | "application/pdf";
 
+/** Allowed dish cover / gallery photo MIME types (must match upload routes). */
+export const DISH_PHOTO_MIME_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+] as const;
+
+export type DishPhotoMime = (typeof DISH_PHOTO_MIME_TYPES)[number];
+
+export const DISH_PHOTO_ACCEPT = DISH_PHOTO_MIME_TYPES.join(",");
+
+export const DISH_PHOTO_MAX_BYTES = 10 * 1024 * 1024;
+
+export function isAllowedDishPhotoMime(mime: string): mime is DishPhotoMime {
+  return (DISH_PHOTO_MIME_TYPES as readonly string[]).includes(mime);
+}
+
+export function validateDishPhotoFile(file: File): string | null {
+  if (!isAllowedDishPhotoMime(file.type)) {
+    return "Photo must be JPG, PNG, or WebP.";
+  }
+  if (file.size > DISH_PHOTO_MAX_BYTES) {
+    return "Photo must be smaller than 10 MB.";
+  }
+  if (file.size === 0) {
+    return "Photo file is empty.";
+  }
+  return null;
+}
+
 export function sniffFileType(buf: Buffer): SniffedType | null {
   if (
     buf.length >= 3 &&

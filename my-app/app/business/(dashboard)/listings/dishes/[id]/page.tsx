@@ -3,33 +3,41 @@
 import { Camera, Plus, Trash2, X } from "lucide-react";
 import Image from "next/image";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
+import {
+  DISH_PHOTO_ACCEPT,
+  validateDishPhotoFile,
+} from "@/lib/upload-validation";
 import { BackToDishes } from "../../_back-link";
 import {
   ALLERGENS,
   DishDetailProvider,
-  type IngredientRow,
   useDishDetail,
 } from "./_dish-detail-context";
+import { PromotionsTab } from "./_promotions-tab";
 import styles from "./page.module.css";
 
-type Tab = "details" | "nutrition";
+type Tab = "details" | "nutrition" | "promotions";
 
 const MAX_PHOTOS = 8;
+const DESCRIPTION_MAX = 500;
 
 // ─── Details tab ──────────────────────────────────────────────────────────────
 
 function DetailsTab() {
-  const { stats, form, photos, saveDetails, removePhoto, loading } =
+  const { stats, form, photos, saveDetails, removePhoto, addPhoto, loading } =
     useDishDetail();
   const [localForm, setLocalForm] = useState({
     name: "",
-    cuisine: "",
+    price: "",
     description: "",
-    status: "active" as "active" | "draft" | "archived",
+    status: "active" as "active" | "inactive",
   });
   const [saved, setSaved] = useState(false);
   const [initialized, setInitialized] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   useEffect(() => {
     if (form && !initialized) {
@@ -43,14 +51,47 @@ function DetailsTab() {
   }
 
   async function handleSave() {
+    if (!localForm.name.trim()) {
+      toast.error("Enter a dish name.");
+      return;
+    }
+    if (localForm.description.length > DESCRIPTION_MAX) {
+      toast.error(
+        `Description must be ${DESCRIPTION_MAX} characters or fewer.`,
+      );
+      return;
+    }
     const ok = await saveDetails({
       name: localForm.name,
-      cuisine: localForm.cuisine,
+      price: localForm.price,
       description: localForm.description,
+      status: localForm.status,
     });
-    if (!ok) return;
+    if (!ok) {
+      toast.error("Could not save changes.");
+      return;
+    }
+    toast.success("Changes saved.");
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
+  }
+
+  async function handlePhotoSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const err = validateDishPhotoFile(file);
+    if (err) {
+      toast.error(err);
+      return;
+    }
+    setUploadingPhoto(true);
+    try {
+      const ok = await addPhoto(file);
+      if (!ok) toast.error("Photo upload failed.");
+    } finally {
+      setUploadingPhoto(false);
+    }
   }
 
   if (loading && !initialized) {
@@ -63,10 +104,6 @@ function DetailsTab() {
         <div className={styles.statCard}>
           <span className={styles.statLabel}>Total orders</span>
           <span className={styles.statVal}>{stats.totalOrders}</span>
-        </div>
-        <div className={styles.statCard}>
-          <span className={styles.statLabel}>In listings</span>
-          <span className={styles.statVal}>{stats.listingCount}</span>
         </div>
         <div className={styles.statCard}>
           <span className={styles.statLabel}>Avg qty / order</span>
@@ -95,16 +132,18 @@ function DetailsTab() {
           </div>
 
           <div className={styles.formGroup}>
-            <label htmlFor="f-cuisine" className={styles.formLabel}>
-              Cuisine
+            <label htmlFor="f-price" className={styles.formLabel}>
+              Price per meal
             </label>
             <input
-              id="f-cuisine"
-              type="text"
+              id="f-price"
+              type="number"
+              min="0.01"
+              step="0.01"
               className={styles.formInput}
-              value={localForm.cuisine}
+              value={localForm.price}
               onChange={(e) =>
-                setLocalForm((f) => ({ ...f, cuisine: e.target.value }))
+                setLocalForm((f) => ({ ...f, price: e.target.value }))
               }
             />
           </div>
@@ -118,6 +157,7 @@ function DetailsTab() {
               className={styles.formTextarea}
               value={localForm.description}
               rows={6}
+              maxLength={DESCRIPTION_MAX}
               onChange={(e) =>
                 setLocalForm((f) => ({ ...f, description: e.target.value }))
               }
@@ -151,10 +191,24 @@ function DetailsTab() {
                 </div>
               ))}
               {photos.length < MAX_PHOTOS && (
-                <button type="button" className={styles.photoAdd}>
-                  <Camera size={15} className={styles.photoAddIcon} />
-                  <span>Add photo</span>
-                </button>
+                <>
+                  <input
+                    ref={photoInputRef}
+                    type="file"
+                    accept={DISH_PHOTO_ACCEPT}
+                    hidden
+                    onChange={handlePhotoSelect}
+                  />
+                  <button
+                    type="button"
+                    className={styles.photoAdd}
+                    onClick={() => photoInputRef.current?.click()}
+                    disabled={uploadingPhoto}
+                  >
+                    <Camera size={15} className={styles.photoAddIcon} />
+                    <span>{uploadingPhoto ? "Uploading…" : "Add photo"}</span>
+                  </button>
+                </>
               )}
             </div>
           </div>
@@ -184,25 +238,9 @@ function DetailsTab() {
                 }))
               }
             >
-              {localForm.status === "draft" && (
-                <option value="draft">Draft</option>
-              )}
               <option value="active">Active</option>
-              <option value="archived" disabled={stats.listingCount > 0}>
-                Archived
-              </option>
+              <option value="inactive">Paused</option>
             </select>
-            {stats.listingCount > 0 && (
-              <div className={styles.listingBlock}>
-                <span className={styles.listingBlockCount}>
-                  In {stats.listingCount} listing
-                  {stats.listingCount !== 1 ? "s" : ""}
-                </span>
-                <span className={styles.listingBlockDesc}>
-                  Remove from all listings to archive this dish.
-                </span>
-              </div>
-            )}
           </div>
         </div>
       </div>
@@ -221,10 +259,10 @@ function NutritionTab() {
     saveNutrition,
     loading,
   } = useDishDetail();
-  const [saveAttempted, setSaveAttempted] = useState(false);
   const [saved, setSaved] = useState(false);
   const [otherChecked, setOtherChecked] = useState(false);
   const [otherText, setOtherText] = useState("");
+  const [noneApplies, setNoneApplies] = useState(false);
   const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
@@ -233,30 +271,22 @@ function NutritionTab() {
     }
   }, [loading, initialized]);
 
-  const hasIngError = saveAttempted && ingredients.some((i) => !i.name.trim());
-
   function addIngredient() {
-    setIngredients((prev) => [
-      ...prev,
-      { id: `ing-${Date.now()}`, name: "", amount: "", unit: "" },
-    ]);
+    setIngredients((prev) => [...prev, { id: `ing-${Date.now()}`, name: "" }]);
   }
 
   function removeIngredient(id: string) {
     setIngredients((prev) => prev.filter((i) => i.id !== id));
   }
 
-  function updateIngredient(
-    id: string,
-    field: keyof IngredientRow,
-    value: string,
-  ) {
+  function updateIngredient(id: string, value: string) {
     setIngredients((prev) =>
-      prev.map((i) => (i.id === id ? { ...i, [field]: value } : i)),
+      prev.map((i) => (i.id === id ? { ...i, name: value } : i)),
     );
   }
 
   function toggleAllergen(allergen: string) {
+    if (noneApplies) setNoneApplies(false);
     if (allergen === "Other") {
       if (otherChecked) {
         setOtherChecked(false);
@@ -275,16 +305,26 @@ function NutritionTab() {
   }
 
   async function handleSave() {
-    setSaveAttempted(true);
-    if (ingredients.some((i) => !i.name.trim())) return;
-    setSaveAttempted(false);
+    if (ingredients.some((i) => !i.name.trim())) {
+      toast.error("All ingredients must have a name.");
+      return;
+    }
+    if (!noneApplies && nutrition.allergens.length === 0 && !otherChecked) {
+      toast.error("Select allergens or check “None of these apply”.");
+      return;
+    }
     const ok = await saveNutrition({
       ingredients,
       nutrition,
       otherChecked,
       otherText,
+      noneApplies,
     });
-    if (!ok) return;
+    if (!ok) {
+      toast.error("Could not save nutrition.");
+      return;
+    }
+    toast.success("Nutrition saved.");
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   }
@@ -299,44 +339,16 @@ function NutritionTab() {
         <h3 className={styles.sectionTitle}>Ingredients</h3>
 
         {ingredients.length > 0 && (
-          <div className={styles.ingTable}>
-            <div className={styles.ingHeader}>
-              <span className={styles.ingColIngredient}>Ingredient</span>
-              <span className={styles.ingColAmount}>Amount</span>
-              <span className={styles.ingColUnit}>Unit</span>
-              <span className={styles.ingColAction} />
-            </div>
+          <div className={styles.ingListSimple}>
             {ingredients.map((ing) => (
-              <div key={ing.id} className={styles.ingRow}>
+              <div key={ing.id} className={styles.ingRowSimple}>
                 <input
                   type="text"
                   aria-label="Ingredient name"
-                  className={`${styles.ingInput} ${styles.ingNameInput} ${hasIngError && !ing.name.trim() ? styles.ingInputError : ""}`}
+                  className={`${styles.ingInput} ${styles.ingNameInput}`}
                   value={ing.name}
                   placeholder="e.g. Tomato paste"
-                  onChange={(e) =>
-                    updateIngredient(ing.id, "name", e.target.value)
-                  }
-                />
-                <input
-                  type="text"
-                  aria-label="Amount"
-                  className={`${styles.ingInput} ${styles.ingAmountInput}`}
-                  value={ing.amount}
-                  placeholder="2"
-                  onChange={(e) =>
-                    updateIngredient(ing.id, "amount", e.target.value)
-                  }
-                />
-                <input
-                  type="text"
-                  aria-label="Unit"
-                  className={`${styles.ingInput} ${styles.ingUnitInput}`}
-                  value={ing.unit}
-                  placeholder="cups"
-                  onChange={(e) =>
-                    updateIngredient(ing.id, "unit", e.target.value)
-                  }
+                  onChange={(e) => updateIngredient(ing.id, e.target.value)}
                 />
                 <button
                   type="button"
@@ -458,12 +470,32 @@ function NutritionTab() {
                     type="checkbox"
                     className={styles.allergenCheck}
                     checked={checked}
+                    disabled={noneApplies && !isOther}
                     onChange={() => toggleAllergen(allergen)}
                   />
                   {allergen}
                 </label>
               );
             })}
+            <label htmlFor="allergen-none" className={styles.allergenLabel}>
+              <input
+                id="allergen-none"
+                type="checkbox"
+                className={styles.allergenCheck}
+                checked={noneApplies}
+                onChange={() => {
+                  setNoneApplies((prev) => {
+                    if (!prev) {
+                      setNutrition((n) => ({ ...n, allergens: [] }));
+                      setOtherChecked(false);
+                      setOtherText("");
+                    }
+                    return !prev;
+                  });
+                }}
+              />
+              None of these apply
+            </label>
           </div>
           {otherChecked && (
             <input
@@ -476,12 +508,6 @@ function NutritionTab() {
           )}
         </div>
       </section>
-
-      {hasIngError && (
-        <p className={styles.ingError}>
-          All ingredients must have a name before saving.
-        </p>
-      )}
 
       <div className={styles.formActions}>
         <button type="button" className={styles.saveBtn} onClick={handleSave}>
@@ -497,6 +523,7 @@ function NutritionTab() {
 const TABS: { id: Tab; label: string }[] = [
   { id: "details", label: "Details" },
   { id: "nutrition", label: "Nutrition & Ingredients" },
+  { id: "promotions", label: "Promotions" },
 ];
 
 export default function DishDetailPage() {
@@ -555,6 +582,7 @@ function DishDetailContent() {
       <div className={styles.content} key={tab}>
         {tab === "details" && <DetailsTab />}
         {tab === "nutrition" && <NutritionTab />}
+        {tab === "promotions" && <PromotionsTab />}
       </div>
     </div>
   );

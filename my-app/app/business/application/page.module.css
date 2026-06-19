@@ -102,7 +102,7 @@
 
 /* ── Right panel ─────────────────────────────────────────────── */
 .right {
-  background: #f7f6f5;
+  background: var(--white);
   display: flex;
   justify-content: center;
   padding: 64px 48px 80px;
@@ -227,6 +227,13 @@
   letter-spacing: 0;
   text-transform: none;
   color: var(--grey-500);
+}
+
+/* Confirmed city / province / postal once an address is picked from suggestions */
+.addressConfirm {
+  font-size: 13px;
+  color: var(--grey-700);
+  margin-top: 2px;
 }
 
 /* ── Inputs — editorial underline style ──────────────────────── */

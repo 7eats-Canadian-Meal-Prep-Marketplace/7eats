@@ -9,9 +9,16 @@ import {
   tags,
 } from "@/db/schema";
 import { auth } from "@/lib/auth";
-import { uploadAvatar } from "@/lib/storage/avatars";
+import { withDeliveryDefaults } from "@/lib/delivery-pricing";
+import { uploadAvatar, uploadBanner } from "@/lib/storage/avatars";
 import { uploadCert } from "@/lib/storage/certs";
+import { getStripe } from "@/lib/stripe";
+import {
+  isStripeFullyConnected,
+  readStripeConnectAccountStatus,
+} from "@/lib/stripe-connect";
 import { sniffFileType } from "@/lib/upload-validation";
+import { normalizeUrl } from "@/lib/url";
 
 export async function POST(
   req: Request,
@@ -43,7 +50,8 @@ async function step1(req: Request, userId: string) {
   const fd = await req.formData();
   const displayName = ((fd.get("displayName") as string) ?? "").trim();
   const bio = ((fd.get("bio") as string) ?? "").trim();
-  const socialLink = ((fd.get("socialLink") as string) ?? "").trim() || null;
+  const socialLinkRaw = ((fd.get("socialLink") as string) ?? "").trim();
+  const socialLink = socialLinkRaw ? normalizeUrl(socialLinkRaw) : null;
   const cuisineSlugs = ((fd.get("cuisines") as string) ?? "")
     .split(",")
     .filter(Boolean);
@@ -54,6 +62,7 @@ async function step1(req: Request, userId: string) {
     .split(",")
     .filter(Boolean);
   const photo = fd.get("photo") as File | null;
+  const banner = fd.get("banner") as File | null;
 
   if (!displayName)
     return NextResponse.json(
@@ -68,6 +77,11 @@ async function step1(req: Request, userId: string) {
   if (cuisineSlugs.length === 0)
     return NextResponse.json(
       { error: "Select at least one cuisine type." },
+      { status: 400 },
+    );
+  if (socialLinkRaw && !socialLink)
+    return NextResponse.json(
+      { error: "Enter a valid social link URL, or leave it blank." },
       { status: 400 },
     );
 
@@ -101,6 +115,36 @@ async function step1(req: Request, userId: string) {
     }
   }
 
+  let bannerUrl: string | undefined;
+  if (banner && banner.size > 0) {
+    if (!["image/jpeg", "image/png"].includes(banner.type))
+      return NextResponse.json(
+        { error: "Banner must be JPEG or PNG." },
+        { status: 400 },
+      );
+    if (banner.size > 8 * 1024 * 1024)
+      return NextResponse.json(
+        { error: "Banner must be smaller than 8 MB." },
+        { status: 400 },
+      );
+    const buf = Buffer.from(await banner.arrayBuffer());
+    const sniffed = sniffFileType(buf);
+    if (sniffed !== "image/jpeg" && sniffed !== "image/png") {
+      return NextResponse.json(
+        { error: "Banner must be a valid JPEG or PNG." },
+        { status: 400 },
+      );
+    }
+    try {
+      bannerUrl = await uploadBanner(userId, banner.name, buf, sniffed);
+    } catch {
+      return NextResponse.json(
+        { error: "Banner upload failed. Please try again." },
+        { status: 500 },
+      );
+    }
+  }
+
   const [profile] = await db
     .select({
       id: cookProfiles.id,
@@ -129,6 +173,7 @@ async function step1(req: Request, userId: string) {
         bio,
         socialLink,
         ...(photoUrl !== undefined ? { photoUrl } : {}),
+        ...(bannerUrl !== undefined ? { bannerUrl } : {}),
         currentSetupStep: Math.max(profile.currentSetupStep, 2),
       })
       .where(eq(cookProfiles.userId, userId));
@@ -195,13 +240,35 @@ async function step2(req: Request, userId: string) {
   const leadTime = data.leadTime as LeadTimeValue;
   const delivery =
     data.delivery === "self" ? ("self" as const) : ("none" as const);
+  const offersPickup = data.offersPickup !== false;
+  const offersDelivery = delivery === "self";
   const rawCap = Number.parseInt(data.maxCapacity, 10);
   const maxCapacity = Number.isNaN(rawCap)
     ? null
     : Math.min(Math.max(rawCap, 5), 500);
 
-  const windows: Array<{ day: string; from: string; to: string }> =
-    Array.isArray(data.pickupWindows) ? data.pickupWindows : [];
+  const pickupWindows: Array<{ day: string; from: string; to: string }> =
+    offersPickup && Array.isArray(data.pickupWindows) ? data.pickupWindows : [];
+  const deliveryWindows: Array<{ day: string; from: string; to: string }> =
+    offersDelivery && Array.isArray(data.deliveryWindows)
+      ? data.deliveryWindows
+      : [];
+
+  if (!offersPickup && !offersDelivery)
+    return NextResponse.json(
+      { error: "Offer pickup, delivery, or both." },
+      { status: 400 },
+    );
+  if (offersPickup && pickupWindows.length === 0)
+    return NextResponse.json(
+      { error: "Add at least one pickup day." },
+      { status: 400 },
+    );
+  if (offersDelivery && deliveryWindows.length === 0)
+    return NextResponse.json(
+      { error: "Add at least one delivery day." },
+      { status: 400 },
+    );
 
   const [profile] = await db
     .select({
@@ -215,6 +282,13 @@ async function step2(req: Request, userId: string) {
     return NextResponse.json({ error: "Profile not found." }, { status: 404 });
 
   await dbPool.transaction(async (tx) => {
+    const deliveryZone = offersDelivery
+      ? withDeliveryDefaults({
+          maxDeliveryKm: null,
+          deliveryRatePerKm: null,
+        })
+      : null;
+
     await tx
       .update(cookProfiles)
       .set({
@@ -228,8 +302,21 @@ async function step2(req: Request, userId: string) {
         pickupPlaceId,
         leadTime,
         maxCapacity,
+        offersPickup,
         delivery,
+        ...(offersDelivery
+          ? {
+              maxDeliveryKm: deliveryZone!.maxDeliveryKm,
+              deliveryRatePerKm: String(deliveryZone!.deliveryRatePerKm),
+              deliveryFlatFee: "0",
+            }
+          : {
+              maxDeliveryKm: null,
+              deliveryRatePerKm: null,
+              deliveryFlatFee: null,
+            }),
         acceptsSpecialRequests: data.acceptsSpecialRequests,
+        cancellationAllowed: data.cancellationAllowed === true,
         currentSetupStep: Math.max(profile.currentSetupStep, 3),
       })
       .where(eq(cookProfiles.userId, userId));
@@ -238,15 +325,24 @@ async function step2(req: Request, userId: string) {
       .delete(cookPickupWindows)
       .where(eq(cookPickupWindows.cookId, profile.id));
 
-    if (windows.length > 0) {
-      await tx.insert(cookPickupWindows).values(
-        windows.map((w) => ({
-          cookId: profile.id,
-          dayOfWeek: w.day,
-          fromTime: w.from,
-          toTime: w.to,
-        })),
-      );
+    const rows = [
+      ...pickupWindows.map((w) => ({
+        cookId: profile.id,
+        windowType: "pickup" as const,
+        dayOfWeek: w.day,
+        fromTime: w.from,
+        toTime: w.to,
+      })),
+      ...deliveryWindows.map((w) => ({
+        cookId: profile.id,
+        windowType: "delivery" as const,
+        dayOfWeek: w.day,
+        fromTime: w.from,
+        toTime: w.to,
+      })),
+    ];
+    if (rows.length > 0) {
+      await tx.insert(cookPickupWindows).values(rows);
     }
   });
 
@@ -384,6 +480,28 @@ async function step4(req: Request, userId: string) {
       { error: "Connect your payment account before continuing." },
       { status: 400 },
     );
+
+  try {
+    const account = await getStripe().accounts.retrieve(
+      profile.stripeAccountId,
+    );
+    const stripeStatus = readStripeConnectAccountStatus(account);
+    if (!isStripeFullyConnected(stripeStatus)) {
+      return NextResponse.json(
+        {
+          error:
+            "Finish Stripe Connect onboarding before continuing. Open Connect with Stripe and complete any pending steps.",
+        },
+        { status: 400 },
+      );
+    }
+  } catch (err) {
+    console.error("[onboarding/step4] stripe retrieve", err);
+    return NextResponse.json(
+      { error: "Could not verify your Stripe account. Try again." },
+      { status: 500 },
+    );
+  }
 
   await db
     .update(cookProfiles)

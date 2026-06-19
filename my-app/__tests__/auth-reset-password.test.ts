@@ -27,7 +27,7 @@ describe("POST /api/auth/reset-password", () => {
 
   it("returns 200 { redirect: '/business-auth/login' } for business audience", async () => {
     const res = await POST(
-      makeRequest({ token: "valid-token", newPassword: "securepass" }),
+      makeRequest({ token: "valid-token", newPassword: "SecurePass1!" }),
     );
     const body = await res.json();
 
@@ -39,7 +39,7 @@ describe("POST /api/auth/reset-password", () => {
     const res = await POST(
       makeRequest({
         token: "valid-token",
-        newPassword: "securepass",
+        newPassword: "SecurePass1!",
         audience: "client",
       }),
     );
@@ -65,7 +65,17 @@ describe("POST /api/auth/reset-password", () => {
 
   it("returns 400 and skips resetPassword when password is shorter than 8 characters", async () => {
     const res = await POST(
-      makeRequest({ token: "valid-token", newPassword: "short" }),
+      makeRequest({ token: "valid-token", newPassword: "Sh0rt!" }),
+    );
+
+    expect(res.status).toBe(400);
+    expect(vi.mocked(auth.api.resetPassword)).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 and skips resetPassword when password lacks required character classes", async () => {
+    // Long enough but no uppercase / number / special character.
+    const res = await POST(
+      makeRequest({ token: "valid-token", newPassword: "alllowercase" }),
     );
 
     expect(res.status).toBe(400);
@@ -76,7 +86,7 @@ describe("POST /api/auth/reset-password", () => {
     vi.mocked(auth.api.resetPassword).mockResolvedValue(resetResponse(false));
 
     const res = await POST(
-      makeRequest({ token: "expired-token", newPassword: "securepass" }),
+      makeRequest({ token: "expired-token", newPassword: "SecurePass1!" }),
     );
     const body = await res.json();
 
@@ -85,11 +95,13 @@ describe("POST /api/auth/reset-password", () => {
   });
 
   it("passes token and newPassword through to Better Auth correctly", async () => {
-    await POST(makeRequest({ token: "tok-abc", newPassword: "mypassword123" }));
+    await POST(
+      makeRequest({ token: "tok-abc", newPassword: "MyPassword123!" }),
+    );
 
     expect(vi.mocked(auth.api.resetPassword)).toHaveBeenCalledWith(
       expect.objectContaining({
-        body: { token: "tok-abc", newPassword: "mypassword123" },
+        body: { token: "tok-abc", newPassword: "MyPassword123!" },
       }),
     );
   });

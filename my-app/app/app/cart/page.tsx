@@ -1,13 +1,11 @@
 "use client";
 
-import { RefreshCw, ShoppingCart, X } from "lucide-react";
+import { ShoppingCart, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { INTERVAL_LABELS } from "@/lib/subscription-schedule";
 import type { NormalizedAddress } from "@/lib/types/address";
 import { useApp } from "../_app-context";
-import { type CartItem, useCart } from "../_cart-context";
-import { getChargeDisclaimer } from "../_subscription-utils";
+import { useCart } from "../_cart-context";
 import { calcTax, formatCartMoney, getTaxLabel } from "./_cart-tax";
 import styles from "./page.module.css";
 
@@ -20,34 +18,37 @@ type DeliveryFeeState =
   | { status: "error" };
 
 export default function CartPage() {
-  const { items, removeListing, total } = useCart();
+  const {
+    cookId,
+    cookName,
+    items,
+    subtotal,
+    totalQuantity,
+    minOrderQty,
+    maxOrderQty,
+    meetsMinimum,
+    withinMaximum,
+    fulfillmentMode,
+    removeItem,
+  } = useCart();
   const { province } = useApp();
 
   const [deliveryFee, setDeliveryFee] = useState<DeliveryFeeState>({
     status: "idle",
   });
 
-  // Find delivery items and their cook ID (assume single-cook cart)
-  const deliveryCookId = useMemo(() => {
-    const deliveryItem = items.find((i) => i.fulfillmentMode === "delivery");
-    return deliveryItem?.cookId ?? null;
-  }, [items]);
+  const hasDelivery = fulfillmentMode === "delivery" && cookId !== null;
 
-  const hasDelivery = deliveryCookId !== null;
-
-  // Fetch delivery fee when cart has delivery items
   useEffect(() => {
-    if (!hasDelivery) {
+    if (!hasDelivery || !cookId) {
       setDeliveryFee({ status: "idle" });
       return;
     }
-
     let cancelled = false;
     setDeliveryFee({ status: "loading" });
 
-    async function fetchDeliveryFee() {
+    (async () => {
       try {
-        // Fetch user's saved address
         const addrRes = await fetch("/api/user/address");
         if (!addrRes.ok) {
           if (!cancelled) setDeliveryFee({ status: "idle" });
@@ -55,64 +56,52 @@ export default function CartPage() {
         }
         const addrData = await addrRes.json();
         const address: NormalizedAddress | null = addrData.address ?? null;
-
         if (!address?.lat || !address?.lng) {
-          // No address with coordinates — can't calculate
           if (!cancelled) setDeliveryFee({ status: "idle" });
           return;
         }
-
         const res = await fetch("/api/delivery/distance", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
-            cookId: deliveryCookId,
+            cookId,
             customerLat: address.lat,
             customerLng: address.lng,
-            orderSubtotal: total,
+            orderSubtotal: subtotal,
           }),
         });
-
         if (!res.ok) {
           if (!cancelled) setDeliveryFee({ status: "error" });
           return;
         }
-
         const data = await res.json();
-
-        if (!cancelled) {
-          if (data.isOutOfRange) {
-            setDeliveryFee({ status: "out_of_range" });
-          } else if (data.isFree) {
-            setDeliveryFee({ status: "free", message: "$0.00 (Free!)" });
-          } else {
-            setDeliveryFee({ status: "fee", fee: data.fee });
-          }
-        }
+        if (cancelled) return;
+        if (data.isOutOfRange) setDeliveryFee({ status: "out_of_range" });
+        else if (data.isFree)
+          setDeliveryFee({ status: "free", message: "$0.00 (Free!)" });
+        else setDeliveryFee({ status: "fee", fee: data.fee });
       } catch {
         if (!cancelled) setDeliveryFee({ status: "error" });
       }
-    }
-
-    fetchDeliveryFee();
+    })();
 
     return () => {
       cancelled = true;
     };
-  }, [hasDelivery, deliveryCookId, total]);
+  }, [hasDelivery, cookId, subtotal]);
 
   const deliveryFeeAmount = deliveryFee.status === "fee" ? deliveryFee.fee : 0;
 
   const { tax, grandTotal, taxLabel } = useMemo(() => {
     const taxAmount =
-      Math.round(calcTax(total + deliveryFeeAmount, province) * 100) / 100;
+      Math.round(calcTax(subtotal + deliveryFeeAmount, province) * 100) / 100;
     return {
       tax: taxAmount,
       grandTotal:
-        Math.round((total + deliveryFeeAmount + taxAmount) * 100) / 100,
+        Math.round((subtotal + deliveryFeeAmount + taxAmount) * 100) / 100,
       taxLabel: getTaxLabel(province),
     };
-  }, [total, deliveryFeeAmount, province]);
+  }, [subtotal, deliveryFeeAmount, province]);
 
   if (items.length === 0) {
     return (
@@ -125,17 +114,13 @@ export default function CartPage() {
         />
         <h1 className={styles.emptyTitle}>Your cart is empty</h1>
         <Link href="/app/browse" className={styles.browseBtn}>
-          Browse listings
+          Browse cooks
         </Link>
       </div>
     );
   }
 
-  const grouped = items.reduce<Record<string, CartItem[]>>((acc, item) => {
-    if (!acc[item.listingId]) acc[item.listingId] = [];
-    acc[item.listingId].push(item);
-    return acc;
-  }, {});
+  const checkoutDisabled = !meetsMinimum || !withinMaximum;
 
   return (
     <div className={styles.page}>
@@ -144,104 +129,86 @@ export default function CartPage() {
           <header className={styles.pageHeader}>
             <h1 className={styles.heading}>Your cart</h1>
             <p className={styles.subheading}>
-              Review your orders before checkout
+              Review your order before checkout
             </p>
           </header>
 
           <div className={styles.bodyRow}>
             <div className={styles.listingsCol}>
-              {Object.entries(grouped).map(([listingId, listingItems]) => {
-                const first = listingItems[0];
-                const listingSubtotal = listingItems.reduce(
-                  (sum, i) => sum + i.price * i.quantity,
-                  0,
-                );
-
-                return (
-                  <section key={listingId} className={styles.listingSection}>
-                    <div className={styles.listingHeader}>
-                      <Link
-                        href={`/app/listings/${listingId}`}
-                        className={styles.listingHeaderMain}
-                      >
-                        <div className={styles.listingThumb}>
-                          {/* biome-ignore lint/performance/noImgElement: listing cover */}
-                          <img
-                            src="/placeholder.jpg"
-                            alt=""
-                            className={styles.listingThumbImg}
-                            width={56}
-                            height={56}
-                          />
-                        </div>
-                        <div className={styles.listingHeaderText}>
-                          <span className={styles.listingTitle}>
-                            {first.listingTitle}
-                          </span>
-                          <span className={styles.cookName}>
-                            {first.cookName} ·{" "}
-                            <span className={styles.fulfillmentTag}>
-                              {first.fulfillmentMode === "delivery"
-                                ? "Delivery"
-                                : "Pickup"}
-                            </span>
-                          </span>
-                        </div>
-                      </Link>
-                      <button
-                        type="button"
-                        className={styles.removeListingBtn}
-                        onClick={() => removeListing(listingId)}
-                        aria-label={`Remove ${first.listingTitle} from cart`}
-                      >
-                        <X size={16} />
-                      </button>
+              <section className={styles.listingSection}>
+                <div className={styles.listingHeader}>
+                  <Link
+                    href={cookId ? `/app/cooks/${cookId}/menu` : "/app/browse"}
+                    className={styles.listingHeaderMain}
+                  >
+                    <div className={styles.listingHeaderText}>
+                      <span className={styles.listingTitle}>
+                        {cookName ?? "Your order"}
+                      </span>
+                      <span className={styles.cookName}>
+                        <span className={styles.fulfillmentTag}>
+                          {fulfillmentMode === "delivery"
+                            ? "Delivery"
+                            : "Pickup"}
+                        </span>
+                      </span>
                     </div>
+                  </Link>
+                </div>
 
-                    <ul className={styles.itemList}>
-                      {listingItems.map((item) => (
-                        <li key={item.dishId} className={styles.item}>
-                          <span className={styles.itemName}>
-                            {item.quantity}× {item.dishName}
+                <ul className={styles.itemList}>
+                  {items.map((item) => (
+                    <li key={item.dishId} className={styles.item}>
+                      <span className={styles.itemName}>
+                        {item.quantity}× {item.name}
+                        {item.discountAmount > 0 && (
+                          <span className={styles.fulfillmentTag}>
+                            {" "}
+                            −${formatCartMoney(item.discountAmount)}
                           </span>
-                          <span className={styles.itemTotal}>
-                            ${item.price * item.quantity}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
+                        )}
+                      </span>
+                      <span className={styles.itemTotal}>
+                        ${formatCartMoney(item.lineTotal)}
+                        <button
+                          type="button"
+                          className={styles.removeListingBtn}
+                          onClick={() => removeItem(item.dishId)}
+                          aria-label={`Remove ${item.name}`}
+                        >
+                          <X size={14} />
+                        </button>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
 
-                    {/* Subscription notice */}
-                    {first.orderType === "subscription" &&
-                      first.subscriptionInterval && (
-                        <div className={styles.subscriptionNotice}>
-                          <RefreshCw size={12} />
-                          <span>
-                            <strong>
-                              {INTERVAL_LABELS[first.subscriptionInterval]}{" "}
-                              subscription
-                            </strong>{" "}
-                            · {getChargeDisclaimer(first.subscriptionInterval)}
-                          </span>
-                        </div>
-                      )}
+                {!meetsMinimum && (
+                  <div className={styles.listingSubtotal}>
+                    <span>Minimum {minOrderQty} item(s) to check out</span>
+                    <span>
+                      {totalQuantity}/{minOrderQty}
+                    </span>
+                  </div>
+                )}
+                {!withinMaximum && maxOrderQty != null && (
+                  <div className={styles.listingSubtotal}>
+                    <span>Maximum {maxOrderQty} item(s) per order</span>
+                    <span>
+                      {totalQuantity}/{maxOrderQty}
+                    </span>
+                  </div>
+                )}
 
-                    <div className={styles.listingSubtotal}>
-                      <span>Listing subtotal</span>
-                      <span>${listingSubtotal}.00</span>
-                    </div>
-
-                    <div className={styles.listingFooter}>
-                      <Link
-                        href={`/app/listings/${listingId}`}
-                        className={styles.menuLink}
-                      >
-                        Back to menu
-                      </Link>
-                    </div>
-                  </section>
-                );
-              })}
+                <div className={styles.listingFooter}>
+                  <Link
+                    href={cookId ? `/app/cooks/${cookId}/menu` : "/app/browse"}
+                    className={styles.menuLink}
+                  >
+                    Back to menu
+                  </Link>
+                </div>
+              </section>
             </div>
 
             <aside className={styles.summaryCol}>
@@ -253,11 +220,10 @@ export default function CartPage() {
                   <div className={styles.summaryRow}>
                     <span className={styles.summaryRowLabel}>Subtotal</span>
                     <span className={styles.summaryRowVal}>
-                      ${formatCartMoney(total)}
+                      ${formatCartMoney(subtotal)}
                     </span>
                   </div>
 
-                  {/* Delivery fee line item */}
                   {hasDelivery && deliveryFee.status !== "idle" && (
                     <div className={styles.summaryRow}>
                       <span className={styles.summaryRowLabel}>Delivery</span>
@@ -289,7 +255,6 @@ export default function CartPage() {
                     </div>
                   )}
 
-                  {/* Pickup-only hint */}
                   {!hasDelivery && (
                     <div className={styles.summaryRow}>
                       <span className={styles.summaryRowLabel}>Delivery</span>
@@ -314,26 +279,22 @@ export default function CartPage() {
                   <span>${formatCartMoney(grandTotal)}</span>
                 </div>
 
-                <Link href="/app/checkout" className={styles.checkoutBtn}>
-                  Proceed to checkout
-                </Link>
-              </div>
-
-              <div className={styles.promoSection}>
-                <label htmlFor="cart-promo" className={styles.promoLabel}>
-                  Promo code
-                </label>
-                <div className={styles.promoRow}>
-                  <input
-                    id="cart-promo"
-                    type="text"
-                    placeholder="Enter code"
-                    className={styles.promoInput}
-                  />
-                  <button type="button" className={styles.promoBtn}>
-                    Apply
+                {checkoutDisabled ? (
+                  <button
+                    type="button"
+                    className={styles.checkoutBtn}
+                    disabled
+                    aria-disabled
+                  >
+                    {!meetsMinimum
+                      ? `Add ${minOrderQty - totalQuantity} more to check out`
+                      : "Too many items"}
                   </button>
-                </div>
+                ) : (
+                  <Link href="/app/checkout" className={styles.checkoutBtn}>
+                    Proceed to checkout
+                  </Link>
+                )}
               </div>
             </aside>
           </div>

@@ -1,12 +1,10 @@
 import { eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
-import {
-  getCookId,
-  unauthorized,
-} from "@/app/api/business/listings/_lib/cook-auth";
+import { getCookId, unauthorized } from "@/app/api/business/_lib/cook-auth";
 import { db } from "@/db";
 import { cookProfiles } from "@/db/schema";
 import { getStripe } from "@/lib/stripe";
+import { readStripeConnectAccountStatus } from "@/lib/stripe-connect";
 
 export async function GET(req: NextRequest) {
   const cookId = await getCookId(req.headers);
@@ -24,29 +22,16 @@ export async function GET(req: NextRequest) {
     if (!stripeAccountId) {
       return NextResponse.json({
         success: true,
-        data: {
-          hasAccount: false,
-          chargesEnabled: false,
-          payoutsEnabled: false,
-          requirementsCount: 0,
-          requirements: [],
-        },
+        data: readStripeConnectAccountStatus(null),
       });
     }
 
     const stripe = getStripe();
     const account = await stripe.accounts.retrieve(stripeAccountId);
-    const requirements = account.requirements?.currently_due ?? [];
 
     return NextResponse.json({
       success: true,
-      data: {
-        hasAccount: true,
-        chargesEnabled: account.charges_enabled ?? false,
-        payoutsEnabled: account.payouts_enabled ?? false,
-        requirementsCount: requirements.length,
-        requirements,
-      },
+      data: readStripeConnectAccountStatus(account),
     });
   } catch (err) {
     console.error("[dashboard/stripe/status]", err);

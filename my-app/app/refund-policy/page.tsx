@@ -1,10 +1,8 @@
 import Footer from "@/app/components/Footer";
-import Header from "@/app/components/Header";
 
 export const metadata = {
   title: "Refund and Cancellation Policy - 7eats",
-  description:
-    "How refunds, cancellations, deposits, subscriptions, and order disputes work on 7eats.",
+  description: "How refunds, cancellations, and order disputes work on 7eats.",
   alternates: {
     canonical: "/refund-policy",
   },
@@ -16,8 +14,7 @@ const webPageSchema = {
   name: "Refund and Cancellation Policy - 7eats",
   url: "https://www.7eats.ca/refund-policy",
   dateModified: "2026-06-15",
-  description:
-    "How refunds, cancellations, deposits, subscriptions, and order disputes work on 7eats.",
+  description: "How refunds, cancellations, and order disputes work on 7eats.",
   isPartOf: {
     "@type": "WebSite",
     name: "7eats",
@@ -33,13 +30,13 @@ const SECTIONS = [
       <>
         <p>
           This Refund and Cancellation Policy explains how 7eats handles order
-          cancellations, refunds, deposits, subscriptions, failed fulfillment,
-          customer concerns, and payment disputes.
+          cancellations, refunds, failed fulfillment, customer concerns, and
+          payment disputes.
         </p>
         <p>
-          The exact rules for a specific order may depend on the listing,
-          checkout details, order status, cook cancellation settings, payment
-          status, and whether the order is one-time or recurring.
+          The exact rules for a specific order depend on the cook&apos;s
+          cancellation policy shown at checkout, the order status, and the
+          payment status.
         </p>
       </>
     ),
@@ -51,9 +48,8 @@ const SECTIONS = [
       <>
         <p>
           Customers should review all order details before paying, including the
-          meal, cook, price, taxes, fees, quantity, pickup or delivery method,
-          timing, subscription frequency, cancellation cutoff, deposit terms,
-          and any special notes.
+          meals, cook, price, taxes, fees, quantity, pickup or delivery method,
+          timing, the cook&apos;s cancellation policy, and any special notes.
         </p>
         <p>
           If something is unclear, contact the cook before ordering. 7eats may
@@ -69,16 +65,24 @@ const SECTIONS = [
     content: (
       <>
         <p>
-          If a customer cancels before the cancellation cutoff shown for the
-          order, the customer will generally receive a full refund for the
-          cancellable portion of the order.
+          Each cook sets one of two cancellation policies, shown to you at
+          checkout before you pay:
         </p>
+        <ul className="policy-list">
+          <li>
+            <strong>Refund before the lead date.</strong> You may cancel for a
+            full refund up until the cook&apos;s lead time before your pickup or
+            delivery. After that point, the order is final.
+          </li>
+          <li>
+            <strong>All sales final.</strong> The cook does not accept
+            cancellations or refunds for the order once it is placed.
+          </li>
+        </ul>
         <p>
-          If a customer cancels after the cutoff, the cook may already have
-          purchased ingredients, prepared food, reserved capacity, or declined
-          other orders. Late cancellations may be non-refundable or may result
-          in a partial refund, deposit retention, or late cancellation fee as
-          shown at checkout.
+          The applicable policy and, where refunds are allowed, the exact
+          cancel-by time are displayed on the cook&apos;s menu and again at
+          checkout, where you must confirm you understand them before paying.
         </p>
       </>
     ),
@@ -95,34 +99,30 @@ const SECTIONS = [
         </p>
         <p>
           Repeated cook cancellations, late fulfillment, unsafe food concerns,
-          or inaccurate availability may lead to listing review, account limits,
-          payout holds, or removal from 7eats.
+          or inaccurate availability may lead to account review, limits, payout
+          holds, or removal from 7eats.
         </p>
       </>
     ),
   },
   {
     num: "05",
-    title: "Deposits and Held Payments",
+    title: "How Payments Are Handled",
     content: (
       <>
         <p>
-          Some orders may use deposits, payment holds, or staged payment
-          release. These tools help protect both customers and cooks when food
-          is prepared in advance.
+          When you place an order, your payment is authorized and held. Funds
+          are released to the cook through platform tools such as pickup codes,
+          delivery confirmation, or order status.
         </p>
         <ul className="policy-list">
           <li>
-            A refundable deposit may be returned if cancellation happens before
-            the stated cutoff.
+            If you cancel while a refund is allowed by the cook&apos;s policy,
+            the held payment is refunded in full.
           </li>
           <li>
-            A non-refundable or late-cancellation deposit may be kept by the
-            cook if the customer cancels too late.
-          </li>
-          <li>
-            Funds may be held until fulfillment is confirmed through platform
-            tools such as pickup codes, delivery confirmation, or order status.
+            If the cook&apos;s policy is &quot;all sales final&quot; or the
+            refund window has passed, the payment is released to the cook.
           </li>
           <li>
             7eats may delay release of funds during a dispute, safety report,
@@ -134,20 +134,18 @@ const SECTIONS = [
   },
   {
     num: "06",
-    title: "Subscriptions",
+    title: "Cook Cancellation Settings",
     content: (
       <>
         <p>
-          Subscription orders renew at the interval shown at checkout until they
-          are cancelled or end. Cancelling a subscription stops future renewal
-          charges, but it may not automatically cancel an order that is already
-          inside the cook&apos;s cutoff window.
+          Cooks choose their cancellation policy during setup and can change it
+          in their settings. The policy that applies to your order is the one
+          shown at the time you place it.
         </p>
         <p>
-          If a subscription order has already been accepted, prepared, or moved
-          past the cancellation cutoff, the regular order cancellation rules may
-          apply to that order. Customers should cancel subscriptions before the
-          next cutoff to avoid unwanted recurring orders.
+          Cooks are expected to keep this policy accurate and honor it. Repeated
+          disputes or failure to honor a stated policy may lead to account
+          review.
         </p>
       </>
     ),
@@ -158,15 +156,16 @@ const SECTIONS = [
     content: (
       <>
         <p>
-          If an order is missing, materially different from the listing, unsafe,
-          spoiled, damaged, incorrectly labelled, or affected by a serious
-          allergen concern, contact 7eats as soon as possible.
+          If an order is missing, materially different from the menu
+          description, unsafe, spoiled, damaged, incorrectly labelled, or
+          affected by a serious allergen concern, contact 7eats as soon as
+          possible.
         </p>
         <p>
           We may request photos, packaging, timing, message history, medical or
           public health details, and other information needed to review the
           concern. Depending on the situation, 7eats may issue a full refund,
-          partial refund, credit, replacement coordination, listing action, or
+          partial refund, credit, replacement coordination, account action, or
           no refund.
         </p>
       </>
@@ -205,8 +204,8 @@ const SECTIONS = [
         <p>
           Cooks may be responsible for chargebacks, dispute fees, refunds, or
           reversals connected to their orders, especially when the dispute is
-          caused by failed fulfillment, inaccurate listings, unsafe food, fraud,
-          or violation of platform rules.
+          caused by failed fulfillment, inaccurate menus, unsafe food, fraud, or
+          violation of platform rules.
         </p>
       </>
     ),
@@ -252,7 +251,6 @@ export default function RefundPolicyPage() {
         // biome-ignore lint/security/noDangerouslySetInnerHtml: JSON-LD structured data, not user input
         dangerouslySetInnerHTML={{ __html: JSON.stringify(webPageSchema) }}
       />
-      <Header />
       <main className="policy-page">
         <div className="wrap">
           <div className="policy-hero">

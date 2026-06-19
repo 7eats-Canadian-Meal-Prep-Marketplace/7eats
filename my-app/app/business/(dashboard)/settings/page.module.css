@@ -108,6 +108,83 @@
   max-width: 200px;
 }
 
+.formGroupFull {
+  grid-column: 1 / -1;
+}
+
+.phoneChangeBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid #f0f0f3;
+}
+
+.phoneMetaRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.phoneBadge {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--red, #e23744);
+  background: var(--white);
+  padding: 5px 10px;
+  border: 1px solid var(--red, #e23744);
+  border-radius: var(--radius-sm);
+}
+
+.phoneVerifyPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid #e4e4e7;
+  border-radius: var(--radius-sm);
+  background: #fafafa;
+}
+
+.phoneChangeActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.linkBtn {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.linkBtn:hover {
+  opacity: 0.7;
+}
+
+.linkBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.fieldError {
+  margin: 0;
+  font-size: 13px;
+  color: var(--red, #e23744);
+}
+
 .formLabel {
   font-size: 12.5px;
   font-weight: 600;
@@ -118,6 +195,160 @@
 .formLabelOptional {
   font-weight: 400;
   color: #a0a0aa;
+}
+
+.formHint {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: #8a8a96;
+}
+
+.inlineLink {
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.deliveryZone {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding-top: 20px;
+  border-top: 1px solid #ececf0;
+}
+
+.deliveryRateHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.deliveryRateValue {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+  font-feature-settings: "tnum";
+}
+
+.deliveryRateSlider {
+  width: 100%;
+  margin-top: 4px;
+  accent-color: var(--red);
+}
+
+.deliveryRateLabels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 11.5px;
+  color: #8a8a96;
+  font-feature-settings: "tnum";
+}
+
+.fulfillmentGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fulfillmentCard {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid #e4e4e7;
+  border-radius: var(--radius-sm);
+  background: var(--white);
+  cursor: pointer;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--ink);
+  transition:
+    border-color 0.12s,
+    background 0.12s;
+}
+
+.fulfillmentCard:hover {
+  border-color: #c0c0c8;
+}
+
+.fulfillmentCardActive {
+  border-color: var(--ink);
+  background: #fafafa;
+}
+
+.fulfillmentInput {
+  accent-color: var(--red);
+}
+
+.dayPillGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.dayPill {
+  padding: 6px 11px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid #e4e4e7;
+  border-radius: var(--radius-pill);
+  background: var(--white);
+  color: #666670;
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    border-color 0.12s,
+    background 0.12s,
+    color 0.12s;
+}
+
+.dayPill:hover {
+  border-color: #a0a0aa;
+  color: var(--ink);
+}
+
+.dayPillActive {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--white);
+}
+
+.perDayWindows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.perDayRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.perDayName {
+  width: 36px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #666670;
+  flex-shrink: 0;
+}
+
+.timeRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+
+.timeSep {
+  font-size: 12px;
+  color: #8a8a96;
+  flex-shrink: 0;
 }
 
 .formInput {
@@ -520,16 +751,17 @@
 
 .dangerRow {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
   padding: 20px 24px;
 }
 
 .dangerInfo {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
+  width: 100%;
 }
 
 .dangerTitle {
@@ -541,8 +773,8 @@
 .dangerDesc {
   font-size: 13px;
   color: #8a8a96;
-  line-height: 1.45;
-  max-width: 440px;
+  line-height: 1.55;
+  max-width: none;
 }
 
 .deleteBtn {

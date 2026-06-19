@@ -1,9 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
-import {
-  getClientSession,
-  unauthorized,
-} from "@/app/api/subscriptions/_lib/client-auth";
+import { getClientSession, unauthorized } from "@/app/api/_lib/client-auth";
 import { db } from "@/db";
 import { followedCooks } from "@/db/schema";
 

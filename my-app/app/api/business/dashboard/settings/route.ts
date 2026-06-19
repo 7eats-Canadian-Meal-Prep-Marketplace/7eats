@@ -1,23 +1,15 @@
 import { eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import {
-  getCookId,
-  unauthorized,
-} from "@/app/api/business/listings/_lib/cook-auth";
+import { getCookId, unauthorized } from "@/app/api/business/_lib/cook-auth";
 import { db } from "@/db";
 import { cookProfiles } from "@/db/schema";
 
 const patchSchema = z.object({
   acceptsSpecialRequests: z.boolean().optional(),
-  lateCancelFeeEnabled: z.boolean().optional(),
-  lateCancelFeeType: z.enum(["flat", "percentage"]).optional().nullable(),
-  lateCancelFeeValue: z
-    .string()
-    .regex(/^\d+(\.\d{1,2})?$/)
-    .optional()
-    .nullable(),
-  lateCancelWindowHours: z.number().int().min(1).max(168).optional(),
+  minOrderQty: z.number().int().min(1).optional(),
+  maxOrderQty: z.number().int().min(1).nullable().optional(),
+  cancellationAllowed: z.boolean().optional(),
   emailNotificationsNewOrder: z.boolean().optional(),
   emailNotificationsNewReview: z.boolean().optional(),
   smsNotificationsNewOrder: z.boolean().optional(),
@@ -26,10 +18,9 @@ const patchSchema = z.object({
 function pickSettingsFields(row: typeof cookProfiles.$inferSelect) {
   return {
     acceptsSpecialRequests: row.acceptsSpecialRequests,
-    lateCancelFeeEnabled: row.lateCancelFeeEnabled,
-    lateCancelFeeType: row.lateCancelFeeType,
-    lateCancelFeeValue: row.lateCancelFeeValue,
-    lateCancelWindowHours: row.lateCancelWindowHours,
+    minOrderQty: row.minOrderQty,
+    maxOrderQty: row.maxOrderQty,
+    cancellationAllowed: row.cancellationAllowed,
     emailNotificationsNewOrder: row.emailNotificationsNewOrder,
     emailNotificationsNewReview: row.emailNotificationsNewReview,
     smsNotificationsNewOrder: row.smsNotificationsNewOrder,
@@ -89,6 +80,17 @@ export async function PATCH(req: NextRequest) {
   if (Object.keys(body).length === 0) {
     return NextResponse.json(
       { error: "No fields to update." },
+      { status: 400 },
+    );
+  }
+
+  if (
+    body.minOrderQty != null &&
+    body.maxOrderQty != null &&
+    body.maxOrderQty < body.minOrderQty
+  ) {
+    return NextResponse.json(
+      { error: "Max order quantity must be at least the minimum." },
       { status: 400 },
     );
   }

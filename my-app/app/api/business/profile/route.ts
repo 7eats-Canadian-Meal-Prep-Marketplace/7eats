@@ -5,15 +5,22 @@ import {
   getCookId,
   notFound,
   unauthorized,
-} from "@/app/api/business/listings/_lib/cook-auth";
+} from "@/app/api/business/_lib/cook-auth";
 import { db } from "@/db";
 import { cookProfiles } from "@/db/schema";
+import {
+  DELIVERY_MAX_KM_MAX,
+  DELIVERY_MAX_KM_MIN,
+  DELIVERY_RATE_MAX,
+  DELIVERY_RATE_MIN,
+} from "@/lib/delivery-pricing";
 
 const PROFILE_FIELDS = {
   id: cookProfiles.id,
   displayName: cookProfiles.displayName,
   bio: cookProfiles.bio,
   photoUrl: cookProfiles.photoUrl,
+  bannerUrl: cookProfiles.bannerUrl,
   socialLink: cookProfiles.socialLink,
   pickupStreet: cookProfiles.pickupStreet,
   pickupUnit: cookProfiles.pickupUnit,
@@ -45,6 +52,7 @@ const bodySchema = z.object({
   displayName: z.string().min(1).max(100).optional(),
   bio: z.string().max(500).optional(),
   photoUrl: z.string().url().optional().nullable(),
+  bannerUrl: z.string().url().optional().nullable(),
   socialLink: z.string().url().optional().nullable(),
   pickupStreet: z.string().min(1).max(200).optional(),
   pickupUnit: z.string().max(50).optional().nullable(),
@@ -64,9 +72,20 @@ const bodySchema = z.object({
   lateCancelFeeType: z.enum(["flat", "percentage"]).optional().nullable(),
   lateCancelFeeValue: z.string().optional().nullable(),
   lateCancelWindowHours: z.number().int().min(1).optional(),
-  maxDeliveryKm: z.number().int().min(1).max(200).nullable().optional(),
-  deliveryRatePerKm: z.number().min(0).max(99.99).nullable().optional(),
-  deliveryFlatFee: z.number().min(0).max(99.99).nullable().optional(),
+  maxDeliveryKm: z
+    .number()
+    .int()
+    .min(DELIVERY_MAX_KM_MIN)
+    .max(DELIVERY_MAX_KM_MAX)
+    .nullable()
+    .optional(),
+  deliveryRatePerKm: z
+    .number()
+    .min(DELIVERY_RATE_MIN)
+    .max(DELIVERY_RATE_MAX)
+    .nullable()
+    .optional(),
+  deliveryFlatFee: z.number().min(0).max(0).nullable().optional(),
   freeDeliveryAbove: z.number().min(0).max(9999.99).nullable().optional(),
 });
 
@@ -118,6 +137,10 @@ export async function PATCH(req: NextRequest) {
   const updates = Object.fromEntries(
     Object.entries(parsed.data).filter(([, v]) => v !== undefined),
   );
+
+  if (updates.delivery === "self" || updates.deliveryRatePerKm !== undefined) {
+    updates.deliveryFlatFee = 0;
+  }
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json(

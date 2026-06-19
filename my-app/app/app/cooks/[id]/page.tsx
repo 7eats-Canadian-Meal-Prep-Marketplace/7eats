@@ -11,6 +11,8 @@ import {
 import Link from "next/link";
 import { notFound, useRouter } from "next/navigation";
 import { use, useEffect, useState } from "react";
+import { formatLeadTime } from "@/lib/refund-policy";
+import { Skeleton } from "../../_skeleton";
 import styles from "./page.module.css";
 
 // ── API types ─────────────────────────────────────────────────────────────────
@@ -19,6 +21,8 @@ type ApiCook = {
   id: string;
   userId: string;
   name: string;
+  displayName: string | null;
+  photoUrl: string | null;
   firstName: string | null;
   lastName: string | null;
   bio: string | null;
@@ -31,20 +35,9 @@ type ApiCook = {
   memberSince: string | null;
   ordersCompleted: number;
   leadTime: string | null;
-};
-
-type ApiListing = {
-  id: string;
-  title: string;
-  description: string | null;
-  type: string;
-  subscriptionEnabled: boolean;
-  basePrice: number;
-  currency: string;
-  coverPhotoUrl: string | null;
   minOrderQty: number;
   maxOrderQty: number | null;
-  createdAt: string;
+  cancellationAllowed: boolean;
 };
 
 type ApiReview = {
@@ -52,7 +45,7 @@ type ApiReview = {
   rating: number;
   comment: string | null;
   reviewerName: string;
-  listingTitle: string | null;
+  dishes: string[];
   createdAt: string;
 };
 
@@ -92,7 +85,6 @@ export default function CookProfilePage({
 
   // ── API state ──────────────────────────────────────────────────────────────
   const [cook, setCook] = useState<ApiCook | null>(null);
-  const [listings, setListings] = useState<ApiListing[]>([]);
   const [reviews, setReviews] = useState<ApiReview[]>([]);
   const [notFoundFlag, setNotFoundFlag] = useState(false);
 
@@ -106,9 +98,8 @@ export default function CookProfilePage({
 
     async function fetchData() {
       try {
-        const [cookRes, listingsRes, reviewsRes] = await Promise.all([
+        const [cookRes, reviewsRes] = await Promise.all([
           fetch(`${baseUrl}/api/cooks/${id}`, { cache: "no-store" }),
-          fetch(`${baseUrl}/api/cooks/${id}/listings`, { cache: "no-store" }),
           fetch(`${baseUrl}/api/cooks/${id}/reviews`, { cache: "no-store" }),
         ]);
 
@@ -118,16 +109,12 @@ export default function CookProfilePage({
         }
 
         const cookJson = await cookRes.json();
-        const listingsJson = listingsRes.ok
-          ? await listingsRes.json()
-          : { data: [] };
         const reviewsJson = reviewsRes.ok
           ? await reviewsRes.json()
           : { data: [] };
 
         if (!cancelled) {
           setCook(cookJson.data);
-          setListings(listingsJson.data ?? []);
           setReviews(reviewsJson.data ?? []);
         }
       } catch {
@@ -151,8 +138,48 @@ export default function CookProfilePage({
   if (!cook) {
     return (
       <div className={styles.page}>
-        <div style={{ padding: "2rem", textAlign: "center", color: "#666" }}>
-          Loading…
+        <div className={styles.headerCard}>
+          <div className={styles.headerTop}>
+            <Skeleton circle width={64} height={64} />
+            <div
+              style={{
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                gap: 8,
+              }}
+            >
+              <Skeleton width="55%" height={22} radius={6} />
+              <Skeleton width="35%" height={14} radius={6} />
+            </div>
+            <Skeleton width={84} height={32} radius={16} />
+          </div>
+          <div style={{ marginTop: 16, display: "flex", gap: 10 }}>
+            <Skeleton width={120} height={14} radius={6} />
+            <Skeleton width={90} height={14} radius={6} />
+          </div>
+          <div style={{ marginTop: 18, display: "flex", gap: 24 }}>
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                style={{ display: "flex", flexDirection: "column", gap: 6 }}
+              >
+                <Skeleton width={40} height={20} radius={6} />
+                <Skeleton width={64} height={12} radius={6} />
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className={styles.body}>
+          <div className={styles.section}>
+            <Skeleton width="100%" height={14} radius={6} />
+            <Skeleton
+              width="80%"
+              height={14}
+              radius={6}
+              style={{ marginTop: 8 }}
+            />
+          </div>
         </div>
       </div>
     );
@@ -179,23 +206,38 @@ export default function CookProfilePage({
         {/* Top row: avatar · name · follow */}
         <div className={styles.headerTop}>
           <div className={styles.avatarWrap}>
-            <div
-              className={styles.avatarImg}
-              style={{
-                background: "linear-gradient(135deg, #6b6b6b 0%, #3a3a3a 100%)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#fff",
-                fontWeight: 600,
-                fontSize: "1.25rem",
-              }}
-            >
-              {cookInitials}
-            </div>
+            {cook.photoUrl ? (
+              // biome-ignore lint/performance/noImgElement: avatar
+              <img
+                src={cook.photoUrl}
+                alt={cook.name}
+                className={styles.avatarImg}
+              />
+            ) : (
+              <div
+                className={styles.avatarImg}
+                style={{
+                  background:
+                    "linear-gradient(135deg, #6b6b6b 0%, #3a3a3a 100%)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#fff",
+                  fontWeight: 600,
+                  fontSize: "1.25rem",
+                }}
+              >
+                {cookInitials}
+              </div>
+            )}
           </div>
           <div className={styles.nameBlock}>
-            <h1 className={styles.name}>{cook.name}</h1>
+            <div className={styles.nameStack}>
+              <h1 className={styles.name}>{cook.name}</h1>
+              {cook.displayName && (
+                <p className={styles.kitchenName}>{cook.displayName}</p>
+              )}
+            </div>
             {cook.isVerified && (
               <BadgeCheck
                 size={18}
@@ -280,69 +322,33 @@ export default function CookProfilePage({
               <div className={styles.leadTimeWrap}>
                 <span className={styles.leadTimeBadge}>
                   <Clock size={11} />
-                  {cook.leadTime}
+                  {formatLeadTime(cook.leadTime)} notice
                 </span>
               </div>
             )}
           </section>
         )}
 
-        {/* Active listings */}
+        {/* Order CTA + policies */}
         <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>
-            Available now
-            <span className={styles.listingCount}>{listings.length}</span>
-          </h2>
-          {listings.length === 0 ? (
-            <p className={styles.noListings}>No active listings right now.</p>
-          ) : (
-            <div className={styles.listingList}>
-              {listings.map((listing) => (
-                <Link
-                  key={listing.id}
-                  href={`/app/listings/${listing.id}`}
-                  className={styles.listingCard}
-                >
-                  <div
-                    className={styles.listingCover}
-                    style={{
-                      background:
-                        "linear-gradient(135deg, #e8e8e8 0%, #d0d0d0 100%)",
-                    }}
-                  >
-                    {listing.coverPhotoUrl && (
-                      // biome-ignore lint/performance/noImgElement: thumbnail in client component
-                      <img
-                        src={listing.coverPhotoUrl}
-                        alt=""
-                        aria-hidden="true"
-                        className={styles.listingCoverImg}
-                      />
-                    )}
-                  </div>
-                  <div className={styles.listingMain}>
-                    <div className={styles.listingHeader}>
-                      <h3 className={styles.listingTitle}>{listing.title}</h3>
-                      <span className={styles.listingPrice}>
-                        From ${listing.basePrice}
-                      </span>
-                    </div>
-                    {listing.description && (
-                      <p className={styles.listingSummary}>
-                        {listing.description}
-                      </p>
-                    )}
-                    <div className={styles.listingFooter}>
-                      <span className={styles.listingSpots}>
-                        {listing.minOrderQty} portion
-                        {listing.minOrderQty !== 1 ? "s" : ""} min
-                      </span>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
+          <h2 className={styles.sectionTitle}>Ordering</h2>
+          <p className={styles.noListings}>
+            Minimum {cook.minOrderQty} item{cook.minOrderQty === 1 ? "" : "s"}
+            {cook.maxOrderQty ? ` · maximum ${cook.maxOrderQty}` : ""} per
+            order.
+          </p>
+          <p className={styles.noListings}>
+            {cook.cancellationAllowed
+              ? "Cancellations accepted before the lead time for a full refund."
+              : "No cancellations once an order is placed."}
+          </p>
+          <Link
+            href={`/app/cooks/${id}/menu`}
+            className={styles.followBtn}
+            style={{ marginTop: 12, display: "inline-block" }}
+          >
+            Order now
+          </Link>
         </section>
 
         {/* Reviews */}
@@ -388,9 +394,9 @@ export default function CookProfilePage({
                     </div>
                   </div>
                   <p className={styles.reviewComment}>{review.comment ?? ""}</p>
-                  {review.listingTitle && (
+                  {review.dishes.length > 0 && (
                     <span className={styles.reviewDish}>
-                      {review.listingTitle}
+                      Ordered: {review.dishes.join(", ")}
                     </span>
                   )}
                 </div>

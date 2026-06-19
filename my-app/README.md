@@ -104,7 +104,7 @@ Cook accounts are created through a team-gated onboarding flow, not open self-re
 
 POST /api/internal/issue-link   (x-internal-key header required)
   Marks the application approved, generates a one-time setup token,
-  and emails the cook a link to /business-auth/setup/create-password?token=.
+  and emails the cook a 3-day link to /business-auth/setup/create-password?token=.
 
 POST /api/internal/reissue-link   (x-internal-key header required)
   Expires all existing unconsumed tokens for an approved application

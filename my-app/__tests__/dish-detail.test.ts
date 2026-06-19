@@ -24,7 +24,7 @@ vi.mock("drizzle-orm", () => ({
 }));
 
 import { NextRequest } from "next/server";
-import { GET, PATCH } from "@/app/api/business/listings/dishes/[dishId]/route";
+import { GET, PATCH } from "@/app/api/business/dishes/[dishId]/route";
 import { db } from "@/db";
 import { auth } from "@/lib/auth";
 

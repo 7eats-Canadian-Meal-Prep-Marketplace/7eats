@@ -8,6 +8,41 @@
       "when": 1780203245067,
       "tag": "0000_baseline",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1781756872893,
+      "tag": "0001_faulty_plazm",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1781808999414,
+      "tag": "0002_lean_ender_wiggin",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1781900000000,
+      "tag": "0003_cook_fulfillment_windows",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1781832367267,
+      "tag": "0004_brainy_victor_mancha",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1782000000000,
+      "tag": "0005_dish_status_and_ingredients",
+      "breakpoints": true
     }
   ]
 }

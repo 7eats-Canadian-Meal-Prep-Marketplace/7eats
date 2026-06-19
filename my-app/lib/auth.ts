@@ -1,6 +1,5 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { Resend } from "resend";
 import { db } from "@/db";
 import {
   authAccount,
@@ -9,7 +8,12 @@ import {
   authVerification,
 } from "@/db/schema/auth";
 import { sendMail } from "@/lib/email";
-import { htmlEmail, paragraph } from "@/lib/emails/base";
+import {
+  contactParagraph,
+  contactTextLine,
+  htmlEmail,
+  paragraph,
+} from "@/lib/emails/base";
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
@@ -35,11 +39,7 @@ export const auth = betterAuth({
       if (process.env.NODE_ENV !== "production") {
         console.log(`[reset-password] reset link for ${user.email}:\n${url}`);
       }
-      const apiKey = process.env.RESEND_API_KEY;
-      if (!apiKey) return;
-      const resend = new Resend(apiKey);
-      const { error } = await resend.emails.send({
-        from: process.env.RESEND_FROM_EMAIL ?? "noreply@7eats.ca",
+      await sendMail({
         to: user.email,
         subject: "Reset your 7eats password",
         text: [
@@ -52,10 +52,26 @@ export const auth = betterAuth({
           "",
           "If you didn't request this, you can safely ignore this email.",
           "",
-          "— The 7eats team",
+          contactTextLine(),
+          "",
+          "The 7eats team",
         ].join("\n"),
+        html: htmlEmail({
+          title: "Reset your password",
+          preheader: "Reset your 7eats password. This link expires in 1 hour.",
+          bodyHtml:
+            paragraph("Hi,") +
+            paragraph(
+              "We received a request to reset your 7eats password. Tap the button below to set a new one. This link expires in 1 hour.",
+            ) +
+            paragraph(
+              "If you did not request this, you can safely ignore this email and your password will stay the same.",
+            ) +
+            contactParagraph(),
+          ctaLabel: "Reset password",
+          ctaUrl: url,
+        }),
       });
-      if (error) throw new Error(error.message);
     },
   },
   emailVerification: {
@@ -74,7 +90,7 @@ export const auth = betterAuth({
       }
       await sendMail({
         to: user.email,
-        subject: "Confirm your email — 7eats",
+        subject: "Confirm your email for 7eats",
         text: [
           "Welcome to 7eats!",
           "",
@@ -83,7 +99,9 @@ export const auth = betterAuth({
           "",
           "This link expires in 24 hours.",
           "",
-          "— The 7eats team",
+          contactTextLine(),
+          "",
+          "The 7eats team",
         ].join("\n"),
         html: htmlEmail({
           title: "Confirm your email",
@@ -96,7 +114,8 @@ export const auth = betterAuth({
             ) +
             paragraph(
               "If you didn't create a 7eats account, you can safely ignore this email.",
-            ),
+            ) +
+            contactParagraph(),
           ctaLabel: "Confirm email",
           ctaUrl: url,
         }),

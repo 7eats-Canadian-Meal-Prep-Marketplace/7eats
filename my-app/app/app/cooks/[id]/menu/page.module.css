@@ -1,0 +1,292 @@
+.page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px 20px 80px;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 32px;
+  align-items: start;
+}
+
+.menuCol {
+  min-width: 0;
+}
+
+.state {
+  padding: 64px 20px;
+  text-align: center;
+  color: var(--grey-600, #6b7280);
+}
+
+.backLink {
+  display: inline-block;
+  margin-top: 12px;
+  color: var(--red, #e23744);
+  font-weight: 600;
+}
+
+/* ── Cook header ─────────────────────────────────────────────── */
+.cookHeader {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 24px;
+}
+.cookAvatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--grey-200, #e5e7eb);
+  display: grid;
+  place-items: center;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--grey-600, #6b7280);
+  flex-shrink: 0;
+}
+.cookAvatarImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.cookName {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--ink, #1a1a1a);
+}
+.cookMeta {
+  color: var(--grey-600, #6b7280);
+  font-size: 14px;
+}
+.profileLink {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--red, #e23744);
+}
+
+/* ── Dish list ───────────────────────────────────────────────── */
+.dishList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.dishCard {
+  display: flex;
+  gap: 16px;
+  border: 1px solid var(--grey-200, #e5e7eb);
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--white, #fff);
+}
+.dishPhoto {
+  position: relative;
+  width: 120px;
+  flex-shrink: 0;
+  background: var(--grey-100, #f3f4f6);
+}
+.dishPhotoImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.dishPhotoPlaceholder {
+  width: 100%;
+  height: 100%;
+  min-height: 120px;
+  background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
+}
+.promoBadge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: var(--red, #e23744);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+.dishBody {
+  flex: 1;
+  padding: 14px 16px 14px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.dishName {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink, #1a1a1a);
+}
+.dishDesc {
+  font-size: 13px;
+  color: var(--grey-600, #6b7280);
+  line-height: 1.4;
+}
+.dishTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.tag {
+  font-size: 11px;
+  background: var(--grey-100, #f3f4f6);
+  color: var(--grey-700, #374151);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+.dishFooter {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.dishPrice {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink, #1a1a1a);
+}
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.stepBtn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--grey-300, #d1d5db);
+  background: var(--white, #fff);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  color: var(--ink, #1a1a1a);
+}
+.stepBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.stepBtn:focus-visible {
+  outline: 2px solid var(--red, #e23744);
+  outline-offset: 2px;
+}
+.stepQty {
+  min-width: 20px;
+  text-align: center;
+  font-weight: 600;
+}
+
+/* ── Order summary ───────────────────────────────────────────── */
+.summaryCol {
+  position: sticky;
+  top: 24px;
+}
+.summary {
+  border: 1px solid var(--grey-200, #e5e7eb);
+  border-radius: 14px;
+  padding: 20px;
+  background: var(--white, #fff);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.summaryTitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink, #1a1a1a);
+}
+.summaryEmpty {
+  color: var(--grey-500, #9ca3af);
+  font-size: 14px;
+}
+.summaryItems {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.summaryItem {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  color: var(--grey-700, #374151);
+}
+.summaryTotal {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 700;
+  padding-top: 10px;
+  border-top: 1px solid var(--grey-200, #e5e7eb);
+}
+.policy {
+  font-size: 12px;
+  color: var(--grey-600, #6b7280);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 0;
+  border-top: 1px solid var(--grey-200, #e5e7eb);
+}
+.policy p {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.fulfillment {
+  border: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.summaryLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink, #1a1a1a);
+}
+.radioRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+.input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--grey-300, #d1d5db);
+  border-radius: 8px;
+  font: inherit;
+}
+.minNotice {
+  font-size: 13px;
+  color: var(--red, #e23744);
+}
+.checkoutBtn {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 10px;
+  background: var(--red, #e23744);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+.checkoutBtn:disabled {
+  background: var(--grey-300, #d1d5db);
+  cursor: not-allowed;
+}
+.checkoutBtn:focus-visible {
+  outline: 2px solid var(--ink, #1a1a1a);
+  outline-offset: 2px;
+}
+
+@media (max-width: 820px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+  .summaryCol {
+    position: static;
+  }
+}

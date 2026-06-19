@@ -1931,14 +1931,51 @@ p {
    Sonner toast overrides — match app design system
    ========================================================= */
 [data-sonner-toaster] {
-  --normal-bg: var(--ink-2);
-  --normal-border: var(--grey-900);
-  --normal-text: var(--white);
-  --border-radius: var(--radius-sm);
+  --width: 360px;
+  --normal-bg: var(--white);
+  --normal-border: var(--grey-200);
+  --normal-text: var(--ink);
+  --border-radius: 999px;
   font-family: var(--font);
 }
 
-/* Selector targets Sonner v2 internal DOM structure — verify on Sonner upgrades */
+[data-sonner-toaster] [data-sonner-toast] {
+  box-shadow: 0 10px 28px rgba(15, 15, 15, 0.1);
+}
+
 [data-sonner-toaster] [data-sonner-toast][data-type="success"] [data-icon] svg {
   color: var(--red);
+}
+
+.meal-toast {
+  padding: 11px 18px !important;
+  min-height: 0 !important;
+  border: 1px solid var(--grey-200) !important;
+  background: var(--white) !important;
+  color: var(--ink) !important;
+  border-radius: 999px !important;
+  box-shadow:
+    0 10px 28px rgba(15, 15, 15, 0.1),
+    0 0 0 1px rgba(255, 255, 255, 0.8) inset !important;
+  gap: 10px !important;
+}
+
+.meal-toast__title {
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.01em;
+  line-height: 1.35 !important;
+}
+
+.meal-toast__icon {
+  margin-right: 2px;
+}
+
+.meal-toast__icon svg {
+  width: 16px !important;
+  height: 16px !important;
+}
+
+.meal-toast--error [data-icon] svg {
+  color: var(--red) !important;
 }

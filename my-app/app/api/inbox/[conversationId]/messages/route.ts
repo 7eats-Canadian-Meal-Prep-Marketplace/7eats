@@ -5,7 +5,7 @@ import {
   forbidden,
   getClientSession,
   unauthorized,
-} from "@/app/api/subscriptions/_lib/client-auth";
+} from "@/app/api/_lib/client-auth";
 import { db } from "@/db";
 import { conversations, messages, orders } from "@/db/schema";
 

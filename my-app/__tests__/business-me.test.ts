@@ -38,27 +38,35 @@ describe("PATCH /api/business/me", () => {
     } as never);
   });
 
-  it("clears phoneVerified when the phone number changes", async () => {
+  it("updates first and last name", async () => {
     const returning = vi.fn().mockResolvedValue([
       {
         id: "user-1",
         firstName: "Cook",
         lastName: "User",
-        phone: "+14165550999",
+        phone: "+14165550123",
+        phoneVerified: true,
       },
     ]);
     const where = vi.fn(() => ({ returning }));
     const set = vi.fn(() => ({ where }));
     vi.mocked(db.update).mockReturnValue({ set } as never);
 
-    const res = await PATCH(makeReq({ phone: "+14165550999" }));
+    const res = await PATCH(makeReq({ firstName: "Cook", lastName: "User" }));
 
     expect(res.status).toBe(200);
     expect(set).toHaveBeenCalledWith(
       expect.objectContaining({
-        phone: "+14165550999",
-        phoneVerified: false,
+        firstName: "Cook",
+        lastName: "User",
       }),
     );
+  });
+
+  it("rejects direct phone updates", async () => {
+    const res = await PATCH(makeReq({ phone: "+14165550999" }));
+
+    expect(res.status).toBe(400);
+    expect(db.update).not.toHaveBeenCalled();
   });
 });

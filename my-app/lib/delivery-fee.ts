@@ -19,7 +19,6 @@ export function calcDeliveryFee(
 ): DeliveryFeeResult {
   const maxKm = config.maxDeliveryKm ?? null;
   const ratePerKm = Number(config.deliveryRatePerKm ?? 0);
-  const flatFee = Number(config.deliveryFlatFee ?? 0);
   const freeAbove =
     config.freeDeliveryAbove != null ? Number(config.freeDeliveryAbove) : null;
 
@@ -33,7 +32,7 @@ export function calcDeliveryFee(
     return { fee: 0, isFree: true, isOutOfRange: false, distanceKm };
   }
 
-  const fee = flatFee + ratePerKm * distanceKm;
+  const fee = ratePerKm * distanceKm;
   return {
     fee: Math.round(fee * 100) / 100,
     isFree: false,

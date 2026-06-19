@@ -1,6 +1,19 @@
 const FONT_STACK =
   '"Plus Jakarta Sans","Helvetica Neue",Helvetica,Arial,sans-serif';
 
+export const CONTACT_EMAIL = "contact@7eats.ca";
+export const NOREPLY_FROM = "noreply@7eats.ca";
+
+export function contactParagraph(): string {
+  return paragraph(
+    `Questions? Email us at <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a>.`,
+  );
+}
+
+export function contactTextLine(): string {
+  return `Questions? Email us at ${CONTACT_EMAIL}.`;
+}
+
 type HtmlEmailOptions = {
   title: string;
   preheader: string;
@@ -18,7 +31,8 @@ export function htmlEmail({
 }: HtmlEmailOptions): string {
   const cta =
     ctaLabel && ctaUrl
-      ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top:24px;"><tr><td align="center" style="border-radius:6px;background-color:#d64045;"><a href="${ctaUrl}" style="display:inline-block;padding:12px 24px;font-family:${FONT_STACK};font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:6px;">${ctaLabel}</a></td></tr></table>`
+      ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:28px 0 8px;"><tr><td align="center" style="border-radius:10px;background-color:#d64045;box-shadow:0 2px 6px rgba(214,64,69,0.25);"><a href="${ctaUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:14px 32px;font-family:${FONT_STACK};font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:10px;">${ctaLabel}</a></td></tr></table>
+<p style="margin:8px 0 0;font-family:${FONT_STACK};font-size:13px;line-height:1.6;color:#8a8a8a;">If the button does not work, copy and paste this link into your browser:<br /><a href="${ctaUrl}" target="_blank" rel="noopener noreferrer" style="color:#d64045;word-break:break-all;">${ctaUrl}</a></p>`
       : "";
 
   return `<!doctype html>
@@ -44,7 +58,7 @@ ${cta}
 </td>
 </tr>
 <tr>
-<td align="center" style="background-color:#f4f4f4;padding:20px 32px;font-family:${FONT_STACK};font-size:13px;color:#6b6b6b;">© 7eats · hello@7eats.ca</td>
+<td align="center" style="background-color:#f4f4f4;padding:20px 32px;font-family:${FONT_STACK};font-size:13px;color:#6b6b6b;">© 7eats · <a href="mailto:${CONTACT_EMAIL}" style="color:#6b6b6b;text-decoration:none;">${CONTACT_EMAIL}</a></td>
 </tr>
 </table>
 </td>

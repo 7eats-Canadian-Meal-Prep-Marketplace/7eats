@@ -1,11 +1,8 @@
 import { and, count, eq, gte, inArray, lte, sql, sum } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
-import {
-  getCookId,
-  unauthorized,
-} from "@/app/api/business/listings/_lib/cook-auth";
+import { getCookId, unauthorized } from "@/app/api/business/_lib/cook-auth";
 import { db } from "@/db";
-import { listings, orders, reviews } from "@/db/schema";
+import { dishes, orders, reviews } from "@/db/schema";
 
 export async function GET(req: NextRequest) {
   const cookId = await getCookId(req.headers);
@@ -18,7 +15,7 @@ export async function GET(req: NextRequest) {
       earningsThisMonth,
       earningsAllTime,
       earningsPending,
-      activeListingsCount,
+      activeMealsCount,
       ratingStats,
     ] = await Promise.all([
       // Order counts by status (pending, confirmed, ready)
@@ -87,11 +84,11 @@ export async function GET(req: NextRequest) {
           ),
         ),
 
-      // Active listings count
+      // Active meals count
       db
         .select({ count: count() })
-        .from(listings)
-        .where(and(eq(listings.cookId, cookId), eq(listings.status, "active"))),
+        .from(dishes)
+        .where(and(eq(dishes.cookId, cookId), eq(dishes.status, "active"))),
 
       // Rating stats
       db
@@ -150,8 +147,12 @@ export async function GET(req: NextRequest) {
           allTime: Number(earningsAllTime[0]?.total ?? 0),
           pending: Number(earningsPending[0]?.total ?? 0),
         },
+        meals: {
+          active: Number(activeMealsCount[0]?.count ?? 0),
+        },
+        // Legacy key — same value as meals.active
         listings: {
-          active: Number(activeListingsCount[0]?.count ?? 0),
+          active: Number(activeMealsCount[0]?.count ?? 0),
         },
         rating: {
           average: avgRating != null ? Number(avgRating) : null,

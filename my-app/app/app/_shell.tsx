@@ -283,7 +283,7 @@ function ShellInner({
   userEmail: string;
 }) {
   const pathname = usePathname();
-  const { listingCount } = useCart();
+  const { totalQuantity } = useCart();
   const { setProvince } = useApp();
   const [address, setAddress] = useState<NormalizedAddress | null>(null);
   const [showAddress, setShowAddress] = useState(false);
@@ -412,10 +412,10 @@ function ShellInner({
               <Link
                 href="/app/cart"
                 className={styles.cartPill}
-                aria-label={`Cart, ${listingCount} listing${listingCount === 1 ? "" : "s"}`}
+                aria-label={`Cart, ${totalQuantity} item${totalQuantity === 1 ? "" : "s"}`}
               >
                 <ShoppingCart size={18} strokeWidth={2} />
-                <span className={styles.cartCount}>{listingCount}</span>
+                <span className={styles.cartCount}>{totalQuantity}</span>
               </Link>
 
               {isLoggedIn ? (

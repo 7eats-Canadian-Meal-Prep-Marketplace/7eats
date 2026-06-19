@@ -16,6 +16,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { use, useEffect, useState } from "react";
+import { Skeleton } from "../../_skeleton";
 import styles from "./page.module.css";
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
@@ -31,14 +32,15 @@ type ApiDish = {
   id: string;
   dishName: string;
   quantity: number;
+  priceSnapshot: string | null;
+  discountAmount: string | null;
+  lineTotal: string | null;
   sortOrder: number;
 };
 
 type ApiOrder = {
   id: string;
   status: OrderStatus;
-  listingId: string | null;
-  listingTitle: string | null;
   totalPrice: string | null;
   currency: string | null;
   pickupAt: string | null;
@@ -47,12 +49,24 @@ type ApiOrder = {
   pickupCode: string | null;
   pickupAddress: string | null;
   fulfillmentMode: "pickup" | "delivery" | null;
-  isSubscription: boolean;
+  cancellationAllowed: boolean;
+  cancellable: boolean;
+  refundEligible: boolean;
   cookName: string | null;
   cookInitials: string | null;
   dishes: ApiDish[];
   cancelledAt: string | null;
 };
+
+function orderTitle(o: ApiOrder): string {
+  if (o.dishes.length > 0) {
+    const extra = o.dishes.length - 1;
+    return extra > 0
+      ? `${o.dishes[0].dishName} +${extra} more`
+      : o.dishes[0].dishName;
+  }
+  return "Order";
+}
 
 // ─── Review modal ──────────────────────────────────────────────────────────────
 
@@ -171,12 +185,39 @@ export default function OrderDetailPage({
     comment: string;
   } | null>(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+
+  async function handleCancel() {
+    if (cancelling) return;
+    const msg = order?.refundEligible
+      ? "Cancel this order? You'll receive a full refund."
+      : "Cancel this order? No refund will be issued.";
+    if (!window.confirm(msg)) return;
+    setCancelling(true);
+    try {
+      const res = await fetch(`/api/orders/${id}`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        window.alert(
+          data.refunded
+            ? "Order cancelled — your refund is on its way."
+            : "Order cancelled.",
+        );
+        router.refresh();
+        router.replace("/app/orders");
+      } else {
+        window.alert(data.error ?? "Could not cancel the order.");
+      }
+    } finally {
+      setCancelling(false);
+    }
+  }
 
   useEffect(() => {
     fetch(`/api/orders/${id}`)
       .then((r) => {
         if (r.status === 401) {
-          router.replace("/app-auth/sign-in");
+          router.replace("/app-auth/login");
           return null;
         }
         if (r.status === 404) {
@@ -205,6 +246,7 @@ export default function OrderDetailPage({
               <ArrowLeft size={16} />
               All orders
             </Link>
+            <Skeleton width={72} height={12} radius={4} />
           </div>
           <div
             className={styles.heroCard}
@@ -212,11 +254,27 @@ export default function OrderDetailPage({
               background: "linear-gradient(135deg, #3a3a3a 0%, #1a1a1a 100%)",
             }}
           >
-            <div className={styles.heroInitials}>…</div>
-            <div className={styles.heroInfo}>
-              <div className={styles.heroCook}>Loading…</div>
-              <div className={styles.heroTitle}>Loading order</div>
+            <Skeleton circle width={56} height={56} />
+            <div
+              className={styles.heroInfo}
+              style={{ display: "flex", flexDirection: "column", gap: 8 }}
+            >
+              <Skeleton width="45%" height={14} radius={6} />
+              <Skeleton width="70%" height={22} radius={6} />
             </div>
+          </div>
+          <div
+            style={{
+              marginTop: 24,
+              display: "flex",
+              flexDirection: "column",
+              gap: 16,
+            }}
+          >
+            <Skeleton width="100%" height={48} radius={10} />
+            {[0, 1, 2].map((i) => (
+              <Skeleton key={i} width="100%" height={72} radius={12} />
+            ))}
           </div>
         </div>
       </div>
@@ -241,43 +299,27 @@ export default function OrderDetailPage({
 
   const cookDisplayName = order.cookName ?? "Your cook";
   const cookInitials = order.cookInitials ?? "?";
-  const listingTitle = order.listingTitle ?? "Order";
+  const listingTitle = orderTitle(order);
 
-  const steps = order.isSubscription
-    ? [
-        { label: `Auto-confirmed · ${order.pickupDate ?? ""}`, done: true },
-        {
-          label: "Cook is preparing",
-          done: ["confirmed", "ready", "fulfilled"].includes(order.status),
-        },
-        {
-          label: isDelivery ? "Out for delivery" : "Ready for pickup",
-          done: ["ready", "fulfilled"].includes(order.status),
-        },
-        {
-          label: isDelivery ? "Delivered" : "Picked up",
-          done: order.status === "fulfilled",
-        },
-      ]
-    : [
-        {
-          label: "Awaiting confirmation",
-          done: ["confirmed", "ready", "fulfilled"].includes(order.status),
-        },
-        { label: "Order placed", done: true },
-        {
-          label: "Cook is preparing",
-          done: ["confirmed", "ready", "fulfilled"].includes(order.status),
-        },
-        {
-          label: isDelivery ? "Out for delivery" : "Ready for pickup",
-          done: ["ready", "fulfilled"].includes(order.status),
-        },
-        {
-          label: isDelivery ? "Delivered" : "Picked up",
-          done: order.status === "fulfilled",
-        },
-      ];
+  const steps = [
+    { label: "Order placed", done: true },
+    {
+      label: "Awaiting confirmation",
+      done: ["confirmed", "ready", "fulfilled"].includes(order.status),
+    },
+    {
+      label: "Cook is preparing",
+      done: ["confirmed", "ready", "fulfilled"].includes(order.status),
+    },
+    {
+      label: isDelivery ? "Out for delivery" : "Ready for pickup",
+      done: ["ready", "fulfilled"].includes(order.status),
+    },
+    {
+      label: isDelivery ? "Delivered" : "Picked up",
+      done: order.status === "fulfilled",
+    },
+  ];
 
   return (
     <div className={styles.page}>
@@ -339,21 +381,13 @@ export default function OrderDetailPage({
         {order.status === "ready" && order.pickupCode && (
           <div className={styles.codeCard}>
             <div className={styles.codeLabel}>
-              {order.isSubscription
-                ? isDelivery
-                  ? `Weekly delivery code · ${order.pickupDate ?? ""}`
-                  : `Weekly pickup code · ${order.pickupDate ?? ""}`
-                : isDelivery
-                  ? "Your delivery code"
-                  : "Your pickup code"}
+              {isDelivery ? "Your delivery code" : "Your pickup code"}
             </div>
             <div className={styles.codeDisplay}>{order.pickupCode}</div>
             <p className={styles.codeDesc}>
               {isDelivery
                 ? `Share this code with ${cookDisplayName} when your order arrives.`
                 : `Show this code to ${cookDisplayName} when you arrive.`}
-              {order.isSubscription &&
-                " Your code renews automatically each week."}
             </p>
             <button type="button" className={styles.copyBtn} onClick={copyCode}>
               {copied ? "Copied!" : "Copy code"}
@@ -491,7 +525,17 @@ export default function OrderDetailPage({
           {order.dishes.map((dish) => (
             <div key={dish.id} className={styles.dishRow}>
               <span className={styles.dishQty}>{dish.quantity}×</span>
-              <span className={styles.dishName}>{dish.dishName}</span>
+              <span className={styles.dishName}>
+                {dish.dishName}
+                {dish.discountAmount && Number(dish.discountAmount) > 0
+                  ? ` (−$${Number(dish.discountAmount).toFixed(2)})`
+                  : ""}
+              </span>
+              {dish.lineTotal && (
+                <span className={styles.totalVal}>
+                  ${Number(dish.lineTotal).toFixed(2)}
+                </span>
+              )}
             </div>
           ))}
           <div className={styles.totalDivider} />
@@ -506,6 +550,24 @@ export default function OrderDetailPage({
             </span>
           </div>
         </div>
+
+        {order.cancellable && (
+          <div className={styles.itemsCard}>
+            <button
+              type="button"
+              className={styles.modalCancel}
+              onClick={handleCancel}
+              disabled={cancelling}
+            >
+              {cancelling ? "Cancelling…" : "Cancel order"}
+            </button>
+            <p className={styles.codeDesc}>
+              {order.refundEligible
+                ? "You can cancel now for a full refund."
+                : "Cancelling now will not be refunded."}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Review modal */}

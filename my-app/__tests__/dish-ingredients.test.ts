@@ -19,8 +19,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   DELETE,
   PATCH,
-} from "@/app/api/business/listings/dishes/[dishId]/ingredients/[ingredientId]/route";
-import { POST } from "@/app/api/business/listings/dishes/[dishId]/ingredients/route";
+} from "@/app/api/business/dishes/[dishId]/ingredients/[ingredientId]/route";
+import { POST } from "@/app/api/business/dishes/[dishId]/ingredients/route";
 import { db } from "@/db";
 import { auth } from "@/lib/auth";
 
@@ -42,11 +42,10 @@ const mockIngredient = {
   id: INGREDIENT_ID,
   dishId: DISH_ID,
   name: "Flour",
-  quantity: "2 cups",
   isAllergen: false,
   sortOrder: 0,
 };
-const validAddBody = { name: "Flour", quantity: "2 cups" };
+const validAddBody = { name: "Flour" };
 
 // ---------------------------------------------------------------------------
 // Route params

@@ -4,7 +4,13 @@ vi.mock("@/lib/auth", () => ({
   auth: { api: { getSession: vi.fn() } },
 }));
 vi.mock("@/db", () => ({
-  db: { select: vi.fn(), insert: vi.fn(), update: vi.fn(), delete: vi.fn() },
+  db: {
+    select: vi.fn(),
+    insert: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+    execute: vi.fn(),
+  },
   dbPool: { transaction: vi.fn() },
 }));
 vi.mock("@/db/schema", () => ({
@@ -18,7 +24,7 @@ vi.mock("drizzle-orm", () => ({
 }));
 
 import { NextRequest } from "next/server";
-import { POST } from "@/app/api/business/listings/dishes/[dishId]/archive/route";
+import { POST } from "@/app/api/business/dishes/[dishId]/archive/route";
 import { db } from "@/db";
 import { auth } from "@/lib/auth";
 
@@ -67,11 +73,14 @@ function makePost(): NextRequest {
 const params = { params: Promise.resolve({ dishId: DISH_ID }) };
 
 const activeDish = { id: DISH_ID, status: "active" };
-const archivedDish = { id: DISH_ID, status: "archived" };
-const updatedDish = { id: DISH_ID, status: "archived", name: "Test" };
+const archivedDish = { id: DISH_ID, status: "inactive" };
+const updatedDish = { id: DISH_ID, status: "inactive", name: "Test" };
 
 describe("POST /api/business/listings/dishes/[dishId]/archive", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(db.execute).mockResolvedValue({ rows: [] } as never);
+  });
 
   it("returns 401 when session is null", async () => {
     mockSession(null);
@@ -113,7 +122,18 @@ describe("POST /api/business/listings/dishes/[dishId]/archive", () => {
     const body = await res.json();
 
     expect(res.status).toBe(400);
-    expect(body.error).toBe("Dish is already archived.");
+    expect(body.error).toBe("Meal is already archived.");
+  });
+
+  it("returns 400 when the dish is already archived (legacy status)", async () => {
+    mockSession(USER_ID);
+    mockTwoSelects({ id: DISH_ID, status: "archived" });
+
+    const res = await POST(makePost(), params);
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error).toBe("Meal is already archived.");
   });
 
   it("returns 200 with updated dish on success", async () => {

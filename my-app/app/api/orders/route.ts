@@ -5,21 +5,22 @@ import { db, dbPool } from "@/db";
 import {
   authUser,
   authUserTable,
-  clientSubscriptions,
   cookProfiles,
   dishes,
-  listingDishes,
-  listingPromotions,
-  listingSubscriptionTiers,
-  listings,
+  dishPromotions,
   orderDishes,
   orderPayments,
   orders,
 } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { calcDeliveryFee } from "@/lib/delivery-fee";
-import { sendOrderPlacedEmailToCook } from "@/lib/emails/order-events";
+import {
+  sendOrderPlacedEmailToCook,
+  sendOrderReceiptToClient,
+} from "@/lib/emails/order-events";
 import { getDrivingDistanceKm } from "@/lib/mapbox-directions";
+import { computeLineTotal, earliestPickup } from "@/lib/order-pricing";
+import { logAndCheckRateLimit } from "@/lib/rate-limit";
 import {
   cancelPaymentIntent,
   createFullPaymentIntent,
@@ -33,29 +34,19 @@ function formatPickupDate(isoString: string): string {
     month: "short",
     day: "numeric",
   });
-  // Example: "Sat Jun 6"
 }
 
 function formatPickupWindow(isoString: string, windowHours = 2): string {
   const d = new Date(isoString);
   const start = d
-    .toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: undefined,
-      hour12: true,
-    })
+    .toLocaleTimeString("en-US", { hour: "numeric", hour12: true })
     .toLowerCase()
     .replace(":00", "");
   const end = new Date(d.getTime() + windowHours * 3600000)
-    .toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: undefined,
-      hour12: true,
-    })
+    .toLocaleTimeString("en-US", { hour: "numeric", hour12: true })
     .toLowerCase()
     .replace(":00", "");
   return `${start} – ${end}`;
-  // Example: "12pm – 2pm"
 }
 
 const VALID_ORDER_STATUSES = [
@@ -67,12 +58,7 @@ const VALID_ORDER_STATUSES = [
 ] as const;
 type OrderStatusValue = (typeof VALID_ORDER_STATUSES)[number];
 
-type DishEntry = {
-  id: string;
-  dishName: string;
-  quantity: number;
-  sortOrder: number;
-};
+// ─── GET: client order list ───────────────────────────────────────────────────
 
 export async function GET(req: NextRequest) {
   const session = await auth.api.getSession({ headers: req.headers });
@@ -84,7 +70,6 @@ export async function GET(req: NextRequest) {
   }
 
   const params = new URL(req.url).searchParams;
-
   const rawStatus = params.get("status");
   const statusFilter: OrderStatusValue | undefined =
     rawStatus && VALID_ORDER_STATUSES.includes(rawStatus as OrderStatusValue)
@@ -95,7 +80,6 @@ export async function GET(req: NextRequest) {
   const limit = Number.isNaN(rawLimit)
     ? 20
     : Math.min(100, Math.max(1, rawLimit));
-
   const rawOffset = Number.parseInt(params.get("offset") ?? "0", 10);
   const offset = Number.isNaN(rawOffset) ? 0 : Math.max(0, rawOffset);
 
@@ -116,9 +100,6 @@ export async function GET(req: NextRequest) {
       .select({
         id: orders.id,
         status: orders.status,
-        listingTitle: listings.title,
-        quantity: orders.quantity,
-        unitPrice: orders.unitPrice,
         totalPrice: orders.totalPrice,
         currency: orders.currency,
         pickupAt: orders.pickupAt,
@@ -127,56 +108,37 @@ export async function GET(req: NextRequest) {
         pickupCode: orders.pickupCode,
         cookFirstName: authUser.firstName,
         cookLastName: authUser.lastName,
-        listingId: orders.listingId,
         fulfillmentMode: orders.fulfillmentMode,
-        subscriptionId: orders.subscriptionId,
-        subscriptionInterval: listingSubscriptionTiers.interval,
       })
       .from(orders)
-      .leftJoin(listings, eq(orders.listingId, listings.id))
       .leftJoin(cookProfiles, eq(orders.cookId, cookProfiles.id))
       .leftJoin(authUser, eq(cookProfiles.userId, authUser.id))
-      .leftJoin(
-        clientSubscriptions,
-        eq(orders.subscriptionId, clientSubscriptions.id),
-      )
-      .leftJoin(
-        listingSubscriptionTiers,
-        eq(clientSubscriptions.tierId, listingSubscriptionTiers.id),
-      )
       .where(whereClause)
       .orderBy(desc(orders.createdAt))
       .limit(limit)
       .offset(offset);
 
     const orderIds = rows.map((r) => r.id);
-    const dishRows =
-      orderIds.length > 0
-        ? await db
-            .select({
-              orderId: orderDishes.orderId,
-              id: orderDishes.id,
-              dishName: orderDishes.dishName,
-              quantity: orderDishes.quantity,
-              sortOrder: orderDishes.sortOrder,
-            })
-            .from(orderDishes)
-            .where(inArray(orderDishes.orderId, orderIds))
-        : [];
+    const dishRows = orderIds.length
+      ? await db
+          .select({
+            orderId: orderDishes.orderId,
+            id: orderDishes.id,
+            dishName: orderDishes.dishName,
+            quantity: orderDishes.quantity,
+            priceSnapshot: orderDishes.priceSnapshot,
+            discountAmount: orderDishes.discountAmount,
+            lineTotal: orderDishes.lineTotal,
+            sortOrder: orderDishes.sortOrder,
+          })
+          .from(orderDishes)
+          .where(inArray(orderDishes.orderId, orderIds))
+      : [];
 
-    // Biome's noAccumulatingSpread rule disallows spread inside reduce accumulators,
-    // so we use a for-of loop with mutation scoped to a local variable instead.
-    const dishesByOrderId: Record<string, DishEntry[]> = {};
+    const dishesByOrderId: Record<string, (typeof dishRows)[number][]> = {};
     for (const d of dishRows) {
-      if (!dishesByOrderId[d.orderId]) {
-        dishesByOrderId[d.orderId] = [];
-      }
-      dishesByOrderId[d.orderId].push({
-        id: d.id,
-        dishName: d.dishName,
-        quantity: d.quantity,
-        sortOrder: d.sortOrder,
-      });
+      if (!dishesByOrderId[d.orderId]) dishesByOrderId[d.orderId] = [];
+      dishesByOrderId[d.orderId].push(d);
     }
 
     const data = rows.map((r) => {
@@ -185,9 +147,6 @@ export async function GET(req: NextRequest) {
       return {
         id: r.id,
         status: r.status,
-        listingTitle: r.listingTitle ?? null,
-        quantity: r.quantity,
-        unitPrice: r.unitPrice,
         totalPrice: r.totalPrice,
         currency: r.currency,
         pickupAt: pickupAtIso,
@@ -195,17 +154,22 @@ export async function GET(req: NextRequest) {
         createdAt:
           r.createdAt instanceof Date ? r.createdAt.toISOString() : r.createdAt,
         pickupCode: r.status === "ready" ? (r.pickupCode ?? null) : null,
-        dishes: dishesByOrderId[r.id] ?? [],
+        dishes: (dishesByOrderId[r.id] ?? []).map((d) => ({
+          id: d.id,
+          dishName: d.dishName,
+          quantity: d.quantity,
+          priceSnapshot: d.priceSnapshot,
+          discountAmount: d.discountAmount,
+          lineTotal: d.lineTotal,
+          sortOrder: d.sortOrder,
+        })),
         cookName:
           [r.cookFirstName, r.cookLastName].filter(Boolean).join(" ") || null,
         cookInitials:
           [r.cookFirstName?.[0], r.cookLastName?.[0]]
             .filter(Boolean)
             .join("") || null,
-        listingId: r.listingId,
         fulfillmentMode: r.fulfillmentMode,
-        isSubscription: r.subscriptionId !== null,
-        subscriptionInterval: r.subscriptionInterval ?? null,
         pickupDate: pickupAtIso ? formatPickupDate(pickupAtIso) : null,
         pickupWindow: pickupAtIso ? formatPickupWindow(pickupAtIso) : null,
       };
@@ -225,13 +189,22 @@ export async function GET(req: NextRequest) {
   }
 }
 
+// ─── POST: multi-dish order creation ──────────────────────────────────────────
+
 const createOrderSchema = z.object({
-  listingId: z.string().uuid(),
-  quantity: z.number().int().min(1),
+  cookId: z.string().uuid(),
+  dishes: z
+    .array(
+      z.object({
+        dishId: z.string().uuid(),
+        quantity: z.number().int().min(1),
+        promotionId: z.string().uuid().nullable().optional(),
+      }),
+    )
+    .min(1),
   paymentMethodId: z.string().min(1),
-  pickupAt: z.string().datetime().optional(),
-  promotionId: z.string().uuid().optional(),
-  notes: z.string().max(500).optional(),
+  pickupAt: z.string().datetime(),
+  fulfillmentMode: z.enum(["pickup", "delivery"]).optional(),
   deliveryAddress: z
     .object({
       street: z.string().min(1).max(200),
@@ -241,9 +214,9 @@ const createOrderSchema = z.object({
       postal: z.string().min(5).max(10),
     })
     .optional(),
-  fulfillmentMode: z.enum(["pickup", "delivery"]).optional(),
   customerLat: z.number().min(-90).max(90).optional(),
   customerLng: z.number().min(-180).max(180).optional(),
+  notes: z.string().max(500).optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -253,6 +226,18 @@ export async function POST(req: NextRequest) {
   }
   if (session.user.role !== "client") {
     return NextResponse.json({ error: "Access denied." }, { status: 403 });
+  }
+
+  // Per-client throttle on order creation (abuse / double-submit protection).
+  const withinLimit = await logAndCheckRateLimit(`order:${session.user.id}`, {
+    windowMinutes: 5,
+    maxAttempts: 10,
+  });
+  if (!withinLimit) {
+    return NextResponse.json(
+      { error: "Too many orders in a short time. Please wait a moment." },
+      { status: 429 },
+    );
   }
 
   let body: unknown;
@@ -273,57 +258,31 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { listingId, quantity, paymentMethodId, pickupAt, promotionId, notes } =
-    parsed.data;
+  const {
+    cookId,
+    dishes: lines,
+    paymentMethodId,
+    pickupAt,
+    fulfillmentMode,
+    deliveryAddress,
+    customerLat,
+    customerLng,
+    notes,
+  } = parsed.data;
 
   try {
-    const [listing] = await db
-      .select({
-        id: listings.id,
-        cookId: listings.cookId,
-        title: listings.title,
-        type: listings.type,
-        status: listings.status,
-        basePrice: listings.basePrice,
-        minOrderQty: listings.minOrderQty,
-        maxOrderQty: listings.maxOrderQty,
-        depositEnabled: listings.depositEnabled,
-        depositType: listings.depositType,
-        depositValue: listings.depositValue,
-      })
-      .from(listings)
-      .where(and(eq(listings.id, listingId), eq(listings.status, "active")))
-      .limit(1);
-
-    if (!listing) {
-      return NextResponse.json(
-        { error: "Listing not found." },
-        { status: 404 },
-      );
-    }
-    if (listing.type !== "one_time") {
-      return NextResponse.json(
-        { error: "This listing is subscription-only." },
-        { status: 400 },
-      );
-    }
-    if (quantity < listing.minOrderQty) {
-      return NextResponse.json(
-        { error: `Minimum order quantity is ${listing.minOrderQty}.` },
-        { status: 400 },
-      );
-    }
-    if (listing.maxOrderQty !== null && quantity > listing.maxOrderQty) {
-      return NextResponse.json(
-        { error: `Maximum order quantity is ${listing.maxOrderQty}.` },
-        { status: 400 },
-      );
-    }
-
+    // 1. Load and verify the cook (active account).
     const [cook] = await db
       .select({
-        stripeAccountId: cookProfiles.stripeAccountId,
+        id: cookProfiles.id,
+        displayName: cookProfiles.displayName,
+        userStatus: authUser.status,
+        minOrderQty: cookProfiles.minOrderQty,
+        maxOrderQty: cookProfiles.maxOrderQty,
+        leadTime: cookProfiles.leadTime,
+        cancellationAllowed: cookProfiles.cancellationAllowed,
         platformFeePct: cookProfiles.platformFeePct,
+        stripeAccountId: cookProfiles.stripeAccountId,
         delivery: cookProfiles.delivery,
         pickupLat: cookProfiles.pickupLat,
         pickupLng: cookProfiles.pickupLng,
@@ -333,140 +292,66 @@ export async function POST(req: NextRequest) {
         freeDeliveryAbove: cookProfiles.freeDeliveryAbove,
       })
       .from(cookProfiles)
-      .where(eq(cookProfiles.id, listing.cookId))
+      .innerJoin(authUser, eq(cookProfiles.userId, authUser.id))
+      .where(eq(cookProfiles.id, cookId))
       .limit(1);
 
-    if (!cook?.stripeAccountId) {
+    if (!cook || cook.userStatus !== "active") {
+      return NextResponse.json({ error: "Cook not found." }, { status: 404 });
+    }
+    if (!cook.stripeAccountId) {
       return NextResponse.json(
         { error: "Cook payment account not connected." },
         { status: 400 },
       );
     }
 
-    // Promotion
-    let discountAmount = 0;
-    let validatedPromotionId: string | null = null;
-    if (promotionId) {
-      const [promo] = await db
-        .select({
-          id: listingPromotions.id,
-          type: listingPromotions.type,
-          value: listingPromotions.value,
-          maxUses: listingPromotions.maxUses,
-          usesCount: listingPromotions.usesCount,
-          validFrom: listingPromotions.validFrom,
-          validUntil: listingPromotions.validUntil,
-        })
-        .from(listingPromotions)
-        .where(
-          and(
-            eq(listingPromotions.id, promotionId),
-            eq(listingPromotions.listingId, listingId),
-            eq(listingPromotions.isActive, true),
-          ),
-        )
-        .limit(1);
-
-      if (!promo) {
-        return NextResponse.json(
-          { error: "Promotion not found or inactive." },
-          { status: 400 },
-        );
-      }
-      const now = new Date();
-      if (promo.validFrom && new Date(promo.validFrom) > now) {
-        return NextResponse.json(
-          { error: "Promotion not yet active." },
-          { status: 400 },
-        );
-      }
-      if (promo.validUntil && new Date(promo.validUntil) <= now) {
-        return NextResponse.json(
-          { error: "Promotion has expired." },
-          { status: 400 },
-        );
-      }
-      if (promo.maxUses !== null && promo.usesCount >= promo.maxUses) {
-        return NextResponse.json(
-          { error: "Promotion usage limit reached." },
-          { status: 400 },
-        );
-      }
-      const unitPriceForPromo = parseFloat(listing.basePrice);
-      if (promo.type === "percentage_off") {
-        discountAmount = Math.min(
-          (unitPriceForPromo * quantity * parseFloat(promo.value ?? "0")) / 100,
-          unitPriceForPromo * quantity,
-        );
-      } else if (promo.type === "fixed_off") {
-        discountAmount = Math.min(
-          parseFloat(promo.value ?? "0"),
-          unitPriceForPromo * quantity,
-        );
-      }
-      validatedPromotionId = promo.id;
+    // 2. Pickup must respect the cook's lead time.
+    if (new Date(pickupAt) < earliestPickup(cook.leadTime)) {
+      return NextResponse.json(
+        { error: "Pickup time is too soon for this cook's lead time." },
+        { status: 422 },
+      );
     }
 
-    // Compute totals
-    const unitPrice = parseFloat(listing.basePrice);
-    const totalPrice = Math.max(0, unitPrice * quantity - discountAmount);
-    const totalPriceCents = Math.round(totalPrice * 100);
-    const platformFeePct = parseFloat(cook.platformFeePct);
-    const totalPlatformFeeCents = Math.round(
-      (totalPriceCents * platformFeePct) / 100,
-    );
-    const cookPayoutCents = totalPriceCents - totalPlatformFeeCents;
+    // 3. Min/max order quantity (total across all dishes).
+    const totalQty = lines.reduce((sum, l) => sum + l.quantity, 0);
+    if (totalQty < cook.minOrderQty) {
+      return NextResponse.json(
+        { error: `Minimum order is ${cook.minOrderQty} item(s).` },
+        { status: 422 },
+      );
+    }
+    if (cook.maxOrderQty != null && totalQty > cook.maxOrderQty) {
+      return NextResponse.json(
+        { error: `Maximum order is ${cook.maxOrderQty} item(s).` },
+        { status: 422 },
+      );
+    }
 
-    // Delivery fee snapshot
-    let deliveryFeeSnapshot = 0;
-    let deliveryDistanceKm = 0;
-    const { customerLat, customerLng } = parsed.data;
-    if (
-      parsed.data.fulfillmentMode === "delivery" &&
-      customerLat != null &&
-      customerLng != null &&
-      cook.delivery === "self" &&
-      cook.pickupLat != null &&
-      cook.pickupLng != null
-    ) {
-      try {
-        const distKm = await getDrivingDistanceKm(
-          cook.pickupLat,
-          cook.pickupLng,
-          customerLat,
-          customerLng,
+    // 4. Load all requested dishes (active, belonging to this cook).
+    const dishIds = lines.map((l) => l.dishId);
+    const dishRows = await db
+      .select({ id: dishes.id, name: dishes.name, price: dishes.price })
+      .from(dishes)
+      .where(
+        and(
+          inArray(dishes.id, dishIds),
+          eq(dishes.cookId, cookId),
+          eq(dishes.status, "active"),
+        ),
+      );
+    const dishById = new Map(dishRows.map((d) => [d.id, d]));
+    for (const l of lines) {
+      if (!dishById.has(l.dishId)) {
+        return NextResponse.json(
+          { error: "One or more dishes are unavailable." },
+          { status: 422 },
         );
-        const feeResult = calcDeliveryFee(
-          {
-            maxDeliveryKm: cook.maxDeliveryKm,
-            deliveryRatePerKm: cook.deliveryRatePerKm,
-            deliveryFlatFee: cook.deliveryFlatFee,
-            freeDeliveryAbove: cook.freeDeliveryAbove,
-          },
-          distKm,
-          totalPrice,
-        );
-        deliveryFeeSnapshot = feeResult.fee;
-        deliveryDistanceKm = Math.round(distKm);
-      } catch (err) {
-        console.error("[orders/POST] delivery fee calc", err);
-        // Non-fatal — snapshot 0 and continue
       }
     }
 
-    // Deposit
-    let depositAmountCents = 0;
-    let depositAmount = 0;
-    if (listing.depositEnabled && listing.depositValue) {
-      const depositVal = parseFloat(listing.depositValue);
-      depositAmount =
-        listing.depositType === "percentage"
-          ? Math.min((totalPrice * depositVal) / 100, totalPrice)
-          : Math.min(depositVal, totalPrice);
-      depositAmountCents = Math.round(depositAmount * 100);
-    }
-
-    // Stripe customer
+    // 5. Onboarding + Stripe customer.
     const [userRow] = await db
       .select({
         stripeCustomerId: authUser.stripeCustomerId,
@@ -486,10 +371,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    let stripeCustomerId = userRow?.stripeCustomerId ?? null;
+    let stripeCustomerId = userRow.stripeCustomerId ?? null;
     if (!stripeCustomerId) {
       const name =
-        [userRow?.firstName, userRow?.lastName].filter(Boolean).join(" ") ||
+        [userRow.firstName, userRow.lastName].filter(Boolean).join(" ") ||
         session.user.email;
       stripeCustomerId = await getOrCreateStripeCustomer(
         session.user.email,
@@ -501,96 +386,204 @@ export async function POST(req: NextRequest) {
         .where(eq(authUser.id, session.user.id));
     }
 
-    // Pre-generate order ID for idempotency keys
     const orderId = crypto.randomUUID();
 
-    // Create Stripe PI(s)
-    let fullPiId: string | null = null;
-    let depositPiId: string | null = null;
-    let balancePiId: string | null = null;
+    // 6. Run pricing + writes in a single transaction. Promotion rows are locked
+    //    FOR UPDATE so concurrent orders cannot oversell a limited promotion.
+    type LineComputed = {
+      dishId: string;
+      dishName: string;
+      quantity: number;
+      priceSnapshot: number;
+      promotionId: string | null;
+      discountAmount: number;
+      lineTotal: number;
+    };
 
-    try {
-      if (depositAmountCents === 0) {
-        const result = await createFullPaymentIntent({
-          totalAmountCents: totalPriceCents,
-          platformFeeCents: totalPlatformFeeCents,
-          stripeCustomerId,
-          paymentMethodId,
-          connectedAccountId: cook.stripeAccountId,
-          idempotencyKey: `full-${orderId}`,
-        });
-        fullPiId = result.piId;
-      } else {
-        const balanceAmountCents = totalPriceCents - depositAmountCents;
-        const depositPlatformFeeCents = Math.round(
-          (totalPlatformFeeCents * depositAmountCents) / totalPriceCents,
-        );
-        const balancePlatformFeeCents =
-          totalPlatformFeeCents - depositPlatformFeeCents;
-        // Create deposit PI first so its ID is available for cleanup on failure
-        const depositResult = await createFullPaymentIntent({
-          totalAmountCents: depositAmountCents,
-          platformFeeCents: depositPlatformFeeCents,
-          stripeCustomerId,
-          paymentMethodId,
-          connectedAccountId: cook.stripeAccountId,
-          idempotencyKey: `deposit-${orderId}`,
-        });
-        depositPiId = depositResult.piId;
-        // Only create balance PI after deposit succeeds
-        try {
-          const balanceResult = await createFullPaymentIntent({
-            totalAmountCents: balanceAmountCents,
-            platformFeeCents: balancePlatformFeeCents,
-            stripeCustomerId,
-            paymentMethodId,
-            connectedAccountId: cook.stripeAccountId,
-            idempotencyKey: `balance-${orderId}`,
-          });
-          balancePiId = balanceResult.piId;
-        } catch (balanceErr) {
-          // Balance PI failed — cancel the already-authorized deposit PI before re-throwing
-          await cancelPaymentIntent(
-            depositPiId,
-            `cancel-deposit-on-balance-fail-${orderId}`,
-          ).catch(() => {});
-          throw balanceErr;
+    let subtotal = 0;
+    let deliveryFeeSnapshot = 0;
+    let deliveryDistanceKm = 0;
+
+    // ── Pricing (optimistic, no locks) ───────────────────────────────────────
+    // Validate promotions with a plain read so we can compute the total and
+    // create the PaymentIntent BEFORE opening a write transaction. The promos
+    // are re-checked under FOR UPDATE at commit time to prevent overselling, so
+    // no external call ever runs while a row lock is held.
+    const computed: LineComputed[] = [];
+    for (const line of lines) {
+      const dish = dishById.get(line.dishId);
+      if (!dish) throw new Error("dish vanished");
+      const price = Number.parseFloat(dish.price);
+
+      let promo: {
+        type: "percentage_off" | "fixed_off";
+        value: number;
+      } | null = null;
+      let promotionId: string | null = null;
+      if (line.promotionId) {
+        const [row] = await db
+          .select({
+            id: dishPromotions.id,
+            type: dishPromotions.type,
+            value: dishPromotions.value,
+            isActive: dishPromotions.isActive,
+            validFrom: dishPromotions.validFrom,
+            validUntil: dishPromotions.validUntil,
+            maxUses: dishPromotions.maxUses,
+            usesCount: dishPromotions.usesCount,
+          })
+          .from(dishPromotions)
+          .where(
+            and(
+              eq(dishPromotions.id, line.promotionId),
+              eq(dishPromotions.dishId, line.dishId),
+            ),
+          )
+          .limit(1);
+
+        const now = new Date();
+        const valid =
+          !!row &&
+          row.isActive &&
+          (!row.validFrom || row.validFrom <= now) &&
+          (!row.validUntil || row.validUntil > now) &&
+          (row.maxUses == null || row.usesCount < row.maxUses);
+        if (!row || !valid) {
+          return NextResponse.json(
+            {
+              error: "A selected promotion is no longer valid.",
+              dishId: line.dishId,
+            },
+            { status: 422 },
+          );
         }
+        promo = {
+          type: row.type as "percentage_off" | "fixed_off",
+          value: Number.parseFloat(row.value),
+        };
+        promotionId = row.id;
       }
-    } catch (stripeErr) {
-      // Any Stripe PI creation failure — clean up any authorized PIs
-      const toCancel = [fullPiId, depositPiId, balancePiId].filter(
-        (id): id is string => id !== null,
+
+      const { discountAmount, lineTotal } = computeLineTotal(
+        price,
+        line.quantity,
+        promo,
       );
-      await Promise.allSettled(
-        toCancel.map((id) =>
-          cancelPaymentIntent(id, `cancel-stripe-err-${orderId}-${id}`).catch(
-            () => {},
-          ),
-        ),
-      );
-      throw stripeErr;
+      subtotal += lineTotal;
+      computed.push({
+        dishId: line.dishId,
+        dishName: dish.name,
+        quantity: line.quantity,
+        priceSnapshot: price,
+        promotionId,
+        discountAmount,
+        lineTotal,
+      });
     }
 
-    // DB transaction
+    // Delivery fee snapshot (external call, outside any transaction).
+    const wantsDelivery =
+      fulfillmentMode === "delivery" &&
+      cook.delivery === "self" &&
+      customerLat != null &&
+      customerLng != null &&
+      cook.pickupLat != null &&
+      cook.pickupLng != null;
+    if (wantsDelivery) {
+      try {
+        const distKm = await getDrivingDistanceKm(
+          cook.pickupLat as number,
+          cook.pickupLng as number,
+          customerLat as number,
+          customerLng as number,
+        );
+        const feeResult = calcDeliveryFee(
+          {
+            maxDeliveryKm: cook.maxDeliveryKm,
+            deliveryRatePerKm: cook.deliveryRatePerKm,
+            deliveryFlatFee: cook.deliveryFlatFee,
+            freeDeliveryAbove: cook.freeDeliveryAbove,
+          },
+          distKm,
+          subtotal,
+        );
+        deliveryFeeSnapshot = feeResult.fee;
+        deliveryDistanceKm = Math.round(distKm);
+      } catch (e) {
+        console.error("[orders/POST] delivery fee", e);
+      }
+    }
+
+    const totalPrice = Math.round((subtotal + deliveryFeeSnapshot) * 100) / 100;
+    const totalCents = Math.round(totalPrice * 100);
+    const platformFeePct = Number.parseFloat(cook.platformFeePct);
+    const platformFeeCents = Math.round((totalCents * platformFeePct) / 100);
+    const cookPayoutCents = totalCents - platformFeeCents;
+
+    // ── Create the off-session PaymentIntent BEFORE the DB transaction ────────
+    let piId: string | null = null;
+    try {
+      const pi = await createFullPaymentIntent({
+        totalAmountCents: totalCents,
+        platformFeeCents,
+        stripeCustomerId: stripeCustomerId as string,
+        paymentMethodId,
+        connectedAccountId: cook.stripeAccountId as string,
+        idempotencyKey: `full-${orderId}`,
+      });
+      piId = pi.piId;
+    } catch (stripeErr) {
+      console.error("[orders/POST] stripe", stripeErr);
+      return NextResponse.json(
+        { error: "Payment could not be authorized." },
+        { status: 502 },
+      );
+    }
+
+    // ── Short write transaction: re-lock promos, insert, increment usesCount ──
     try {
       await dbPool.transaction(async (tx) => {
+        // Re-validate each promo under a row lock to prevent concurrent
+        // overselling between the optimistic read and the commit.
+        for (const c of computed) {
+          if (!c.promotionId) continue;
+          const [row] = await tx
+            .select({
+              isActive: dishPromotions.isActive,
+              validFrom: dishPromotions.validFrom,
+              validUntil: dishPromotions.validUntil,
+              maxUses: dishPromotions.maxUses,
+              usesCount: dishPromotions.usesCount,
+            })
+            .from(dishPromotions)
+            .where(eq(dishPromotions.id, c.promotionId))
+            .for("update")
+            .limit(1);
+          const now = new Date();
+          const stillValid =
+            !!row &&
+            row.isActive &&
+            (!row.validFrom || row.validFrom <= now) &&
+            (!row.validUntil || row.validUntil > now) &&
+            (row.maxUses == null || row.usesCount < row.maxUses);
+          if (!stillValid) {
+            const err = new Error("PROMO_INVALID");
+            (err as { dishId?: string }).dishId = c.dishId;
+            throw err;
+          }
+        }
+
         await tx.insert(orders).values({
           id: orderId as `${string}-${string}-${string}-${string}-${string}`,
           clientId: session.user.id,
-          listingId,
-          cookId: listing.cookId,
+          cookId,
           status: "pending",
-          quantity,
-          unitPrice: String(unitPrice),
-          promotionId: validatedPromotionId,
-          discountAmount:
-            discountAmount > 0 ? String(discountAmount.toFixed(2)) : null,
+          cancellationAllowed: cook.cancellationAllowed,
           totalPrice: String(totalPrice.toFixed(2)),
           currency: "CAD",
-          pickupAt: pickupAt ? new Date(pickupAt) : null,
-          deliveryAddress: parsed.data.deliveryAddress ?? null,
-          fulfillmentMode: parsed.data.fulfillmentMode ?? null,
+          pickupAt: new Date(pickupAt),
+          deliveryAddress: deliveryAddress ?? null,
+          fulfillmentMode: fulfillmentMode ?? null,
           deliveryFeeSnapshot:
             deliveryFeeSnapshot > 0
               ? String(deliveryFeeSnapshot.toFixed(2))
@@ -598,119 +591,70 @@ export async function POST(req: NextRequest) {
           deliveryDistanceKm:
             deliveryDistanceKm > 0 ? deliveryDistanceKm : null,
           notes: notes ?? null,
-          depositEnabled: listing.depositEnabled,
-          depositType: listing.depositType ?? null,
-          depositValue: listing.depositValue ?? null,
-          depositAmount:
-            depositAmount > 0 ? String(depositAmount.toFixed(2)) : null,
         });
 
-        const listingDishRows = await tx
-          .select({
-            dishId: listingDishes.dishId,
-            quantity: listingDishes.quantity,
-            sortOrder: listingDishes.sortOrder,
-            dishName: dishes.name,
-          })
-          .from(listingDishes)
-          .innerJoin(dishes, eq(listingDishes.dishId, dishes.id))
-          .where(eq(listingDishes.listingId, listingId));
-
-        if (listingDishRows.length > 0) {
-          await tx.insert(orderDishes).values(
-            listingDishRows.map((d) => ({
-              orderId,
-              dishId: d.dishId,
-              dishName: d.dishName,
-              quantity: d.quantity,
-              sortOrder: d.sortOrder,
-            })),
-          );
-        }
-
-        if (fullPiId) {
-          await tx.insert(orderPayments).values({
+        await tx.insert(orderDishes).values(
+          computed.map((c, i) => ({
             orderId,
-            cookId: listing.cookId,
-            clientId: session.user.id,
-            type: "full",
-            status: "authorized",
-            totalAmount: String(totalPrice.toFixed(2)),
-            platformFeePct: cook.platformFeePct,
-            platformFeeAmount: String((totalPlatformFeeCents / 100).toFixed(2)),
-            cookPayoutAmount: String((cookPayoutCents / 100).toFixed(2)),
-            currency: "CAD",
-            stripePaymentIntentId: fullPiId,
-            authorizedAt: new Date(),
-          });
-        }
+            dishId: c.dishId,
+            dishName: c.dishName,
+            quantity: c.quantity,
+            priceSnapshot: String(c.priceSnapshot.toFixed(2)),
+            promotionId: c.promotionId,
+            discountAmount:
+              c.discountAmount > 0 ? String(c.discountAmount.toFixed(2)) : null,
+            lineTotal: String(c.lineTotal.toFixed(2)),
+            sortOrder: i,
+          })),
+        );
 
-        if (depositPiId && balancePiId) {
-          const depPlatFee = Math.round(
-            (totalPlatformFeeCents * depositAmountCents) / totalPriceCents,
-          );
-          const balPlatFee = totalPlatformFeeCents - depPlatFee;
-          const balAmtCents = totalPriceCents - depositAmountCents;
+        await tx.insert(orderPayments).values({
+          orderId,
+          cookId,
+          clientId: session.user.id,
+          type: "full",
+          status: "authorized",
+          totalAmount: String(totalPrice.toFixed(2)),
+          platformFeePct: cook.platformFeePct,
+          platformFeeAmount: String((platformFeeCents / 100).toFixed(2)),
+          cookPayoutAmount: String((cookPayoutCents / 100).toFixed(2)),
+          currency: "CAD",
+          stripePaymentIntentId: piId,
+          authorizedAt: new Date(),
+        });
 
-          await tx.insert(orderPayments).values([
-            {
-              orderId,
-              cookId: listing.cookId,
-              clientId: session.user.id,
-              type: "deposit",
-              status: "authorized",
-              totalAmount: String((depositAmountCents / 100).toFixed(2)),
-              platformFeePct: cook.platformFeePct,
-              platformFeeAmount: String((depPlatFee / 100).toFixed(2)),
-              cookPayoutAmount: String(
-                ((depositAmountCents - depPlatFee) / 100).toFixed(2),
-              ),
-              currency: "CAD",
-              stripePaymentIntentId: depositPiId,
-              authorizedAt: new Date(),
-            },
-            {
-              orderId,
-              cookId: listing.cookId,
-              clientId: session.user.id,
-              type: "balance",
-              status: "authorized",
-              totalAmount: String((balAmtCents / 100).toFixed(2)),
-              platformFeePct: cook.platformFeePct,
-              platformFeeAmount: String((balPlatFee / 100).toFixed(2)),
-              cookPayoutAmount: String(
-                ((balAmtCents - balPlatFee) / 100).toFixed(2),
-              ),
-              currency: "CAD",
-              stripePaymentIntentId: balancePiId,
-              authorizedAt: new Date(),
-            },
-          ]);
-        }
-
-        // Increment promotion usage count atomically
-        if (validatedPromotionId) {
-          await tx
-            .update(listingPromotions)
-            .set({ usesCount: sql`${listingPromotions.usesCount} + 1` })
-            .where(eq(listingPromotions.id, validatedPromotionId));
+        for (const c of computed) {
+          if (c.promotionId) {
+            await tx
+              .update(dishPromotions)
+              .set({ usesCount: sql`${dishPromotions.usesCount} + 1` })
+              .where(eq(dishPromotions.id, c.promotionId));
+          }
         }
       });
-    } catch (dbErr) {
-      const cancels = [fullPiId, depositPiId, balancePiId]
-        .filter((id): id is string => id !== null)
-        .map((id) =>
-          cancelPaymentIntent(id, `cancel-${orderId}-${id}`).catch(() => {}),
+    } catch (txErr) {
+      // Roll back the authorized payment so the client is never charged for a
+      // failed write.
+      if (piId) {
+        await cancelPaymentIntent(piId, `cancel-${orderId}`).catch(() => {});
+      }
+      if ((txErr as Error).message === "PROMO_INVALID") {
+        return NextResponse.json(
+          {
+            error: "A selected promotion is no longer valid.",
+            dishId: (txErr as { dishId?: string }).dishId,
+          },
+          { status: 422 },
         );
-      await Promise.allSettled(cancels);
-      throw dbErr;
+      }
+      throw txErr;
     }
 
-    // Fire and forget — non-blocking
+    // Notify the cook (fire-and-forget) with the dish names.
     db.select({ email: authUser.email, firstName: authUser.firstName })
       .from(cookProfiles)
       .innerJoin(authUser, eq(cookProfiles.userId, authUser.id))
-      .where(eq(cookProfiles.id, listing.cookId))
+      .where(eq(cookProfiles.id, cookId))
       .limit(1)
       .then(([cookUser]) => {
         if (!cookUser) return;
@@ -725,15 +669,29 @@ export async function POST(req: NextRequest) {
           { name: customerName },
           {
             id: orderId,
-            listingTitle: listing.title,
-            quantity,
-            totalPrice: totalPrice.toFixed(2),
+            listingTitle: computed.map((c) => c.dishName).join(", "),
+            quantity: totalQty,
+            totalPrice: String((subtotal + deliveryFeeSnapshot).toFixed(2)),
             currency: "CAD",
-            pickupAt: pickupAt ? new Date(pickupAt) : "TBD",
+            pickupAt: new Date(pickupAt),
           },
         );
       })
       .catch((err) => console.error("[orders/POST] email", err));
+
+    // Send the client an order receipt (fire-and-forget).
+    sendOrderReceiptToClient(
+      { email: session.user.email, firstName: session.user.firstName ?? null },
+      { name: cook.displayName ?? "your cook" },
+      {
+        id: orderId,
+        listingTitle: computed.map((c) => c.dishName).join(", "),
+        quantity: totalQty,
+        totalPrice: String((subtotal + deliveryFeeSnapshot).toFixed(2)),
+        currency: "CAD",
+        pickupAt: new Date(pickupAt),
+      },
+    ).catch((err) => console.error("[orders/POST] receipt", err));
 
     return NextResponse.json(
       { success: true, data: { orderId } },

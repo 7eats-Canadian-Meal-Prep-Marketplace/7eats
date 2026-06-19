@@ -37,6 +37,7 @@ type DashboardStats = {
     pending: number;
   };
   listings: { active: number };
+  meals: { active: number };
   rating: { average: number | null; count: number };
 };
 
@@ -194,9 +195,9 @@ function RequestRow({
 
 const QUICK_ACTIONS = [
   {
-    href: "/business/listings/new",
+    href: "/business/listings/dishes/new",
     Icon: Plus,
-    label: "New listing",
+    label: "New meal",
     desc: "Publish a meal for customers to order",
   },
   {
@@ -278,7 +279,7 @@ export default function DashboardPage() {
   const earningsWeek = stats ? formatMoney(stats.earnings.thisWeek) : "—";
   const earningsMonth = stats ? formatMoney(stats.earnings.thisMonth) : "—";
   const pendingCount = stats?.orders.pending ?? 0;
-  const activeListings = stats?.listings.active ?? 0;
+  const activeMeals = stats?.meals?.active ?? stats?.listings.active ?? 0;
   const ratingAvg = stats?.rating.average;
   const ratingCount = stats?.rating.count ?? 0;
 
@@ -330,10 +331,8 @@ export default function DashboardPage() {
         </div>
 
         <div className={styles.statCard}>
-          <span className={styles.statLabel}>Active listings</span>
-          <div className={styles.statValue}>
-            {loading ? "—" : activeListings}
-          </div>
+          <span className={styles.statLabel}>Active meals</span>
+          <div className={styles.statValue}>{loading ? "—" : activeMeals}</div>
         </div>
 
         <div className={styles.statCard}>

@@ -1,15 +1,35 @@
 "use client";
 
-import { ArrowLeft, ExternalLink, Eye, EyeOff, ImagePlus } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { AddressAutocomplete } from "@/components/AddressAutocomplete";
+import ImageDropzone from "@/app/components/ImageDropzone";
+import StripeConnectPanel from "@/app/components/StripeConnectPanel";
+import {
+  validateAccountSettings,
+  validateKitchenSettings,
+  validateOrderRules,
+} from "@/lib/business-settings-validation";
+import {
+  formatPhoneDisplay,
+  isValidNorthAmericanPhone,
+  phoneDigits,
+} from "@/lib/phone";
+import { normalizeUrl } from "@/lib/url";
+import { LogisticsSection } from "./_logistics-section";
 import styles from "./page.module.css";
 
-type SectionId = "kitchen" | "account" | "billing" | "notifications" | "danger";
+type SectionId =
+  | "kitchen"
+  | "logistics"
+  | "account"
+  | "billing"
+  | "notifications"
+  | "danger";
 
 const SECTIONS: { id: SectionId; label: string }[] = [
   { id: "kitchen", label: "Kitchen" },
+  { id: "logistics", label: "Logistics" },
   { id: "account", label: "Account" },
   { id: "billing", label: "Billing" },
   { id: "notifications", label: "Notifications" },
@@ -32,43 +52,24 @@ function useSaved() {
 type KitchenForm = {
   displayName: string;
   bio: string;
-  pickupStreet: string;
-  pickupUnit: string;
-  pickupCity: string;
-  pickupProvince: string;
-  pickupPostal: string;
-  pickupLat: number | null;
-  pickupLng: number | null;
-  pickupPlaceId: string | null;
+  photoUrl: string | null;
+  bannerUrl: string | null;
   socialLink: string;
-  delivery: "none" | "self";
-  maxDeliveryKm: number | null;
-  deliveryRatePerKm: number | null;
-  deliveryFlatFee: number | null;
-  freeDeliveryAbove: number | null;
 };
 
 function KitchenSection() {
   const [form, setForm] = useState<KitchenForm>({
     displayName: "",
     bio: "",
-    pickupStreet: "",
-    pickupUnit: "",
-    pickupCity: "",
-    pickupProvince: "",
-    pickupPostal: "",
-    pickupLat: null,
-    pickupLng: null,
-    pickupPlaceId: null,
+    photoUrl: null,
+    bannerUrl: null,
     socialLink: "",
-    delivery: "none",
-    maxDeliveryKm: null,
-    deliveryRatePerKm: null,
-    deliveryFlatFee: null,
-    freeDeliveryAbove: null,
   });
   const [loading, setLoading] = useState(true);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const { saved, triggerSaved } = useSaved();
+  const photoFileRef = useRef<File | null>(null);
+  const bannerFileRef = useRef<File | null>(null);
 
   useEffect(() => {
     fetch("/api/business/profile")
@@ -78,32 +79,9 @@ function KitchenSection() {
           setForm({
             displayName: json.data.displayName ?? "",
             bio: json.data.bio ?? "",
-            pickupStreet: json.data.pickupStreet ?? "",
-            pickupUnit: json.data.pickupUnit ?? "",
-            pickupCity: json.data.pickupCity ?? "",
-            pickupProvince: json.data.pickupProvince ?? "",
-            pickupPostal: json.data.pickupPostal ?? "",
-            pickupLat: json.data.pickupLat ?? null,
-            pickupLng: json.data.pickupLng ?? null,
-            pickupPlaceId: json.data.pickupPlaceId ?? null,
+            photoUrl: json.data.photoUrl ?? null,
+            bannerUrl: json.data.bannerUrl ?? null,
             socialLink: json.data.socialLink ?? "",
-            delivery: json.data.delivery ?? "none",
-            maxDeliveryKm:
-              json.data.maxDeliveryKm != null
-                ? Number(json.data.maxDeliveryKm)
-                : null,
-            deliveryRatePerKm:
-              json.data.deliveryRatePerKm != null
-                ? Number(json.data.deliveryRatePerKm)
-                : null,
-            deliveryFlatFee:
-              json.data.deliveryFlatFee != null
-                ? Number(json.data.deliveryFlatFee)
-                : null,
-            freeDeliveryAbove:
-              json.data.freeDeliveryAbove != null
-                ? Number(json.data.freeDeliveryAbove)
-                : null,
           });
         }
       })
@@ -111,28 +89,66 @@ function KitchenSection() {
   }, []);
 
   async function handleSave() {
-    await fetch("/api/business/profile", {
+    setSaveError(null);
+
+    const validationError = validateKitchenSettings(form);
+    if (validationError) {
+      setSaveError(validationError);
+      return;
+    }
+
+    if (photoFileRef.current) {
+      const fd = new FormData();
+      fd.set("photo", photoFileRef.current);
+      const uploadRes = await fetch("/api/business/profile/photo", {
+        method: "POST",
+        body: fd,
+      });
+      const uploadJson = await uploadRes.json();
+      if (!uploadRes.ok || !uploadJson.success) {
+        setSaveError(uploadJson.error ?? "Could not upload profile photo.");
+        return;
+      }
+      setForm((f) => ({
+        ...f,
+        photoUrl: uploadJson.data.photoUrl ?? f.photoUrl,
+      }));
+      photoFileRef.current = null;
+    }
+
+    if (bannerFileRef.current) {
+      const fd = new FormData();
+      fd.set("banner", bannerFileRef.current);
+      const uploadRes = await fetch("/api/business/profile/banner", {
+        method: "POST",
+        body: fd,
+      });
+      const uploadJson = await uploadRes.json();
+      if (!uploadRes.ok || !uploadJson.success) {
+        setSaveError(uploadJson.error ?? "Could not upload banner.");
+        return;
+      }
+      setForm((f) => ({
+        ...f,
+        bannerUrl: uploadJson.data.bannerUrl ?? f.bannerUrl,
+      }));
+      bannerFileRef.current = null;
+    }
+
+    const res = await fetch("/api/business/profile", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        displayName: form.displayName || undefined,
-        bio: form.bio || undefined,
-        pickupStreet: form.pickupStreet || undefined,
-        pickupUnit: form.pickupUnit || null,
-        pickupCity: form.pickupCity || undefined,
-        pickupProvince: form.pickupProvince || undefined,
-        pickupPostal: form.pickupPostal || undefined,
-        pickupLat: form.pickupLat ?? undefined,
-        pickupLng: form.pickupLng ?? undefined,
-        pickupPlaceId: form.pickupPlaceId ?? undefined,
-        socialLink: form.socialLink || undefined,
-        delivery: form.delivery,
-        maxDeliveryKm: form.maxDeliveryKm,
-        deliveryRatePerKm: form.deliveryRatePerKm,
-        deliveryFlatFee: form.deliveryFlatFee,
-        freeDeliveryAbove: form.freeDeliveryAbove,
+        displayName: form.displayName.trim(),
+        bio: form.bio.trim() || undefined,
+        socialLink: normalizeUrl(form.socialLink),
       }),
     });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setSaveError(json.error ?? "Could not save kitchen settings.");
+      return;
+    }
     triggerSaved();
   }
 
@@ -151,14 +167,33 @@ function KitchenSection() {
       <div className={styles.cardForm}>
         <div className={styles.formGroup}>
           <span className={styles.formLabel}>Profile photo</span>
-          <div className={styles.dropzone}>
-            <ImagePlus size={20} className={styles.dropzoneIcon} />
-            <span className={styles.dropzoneText}>
-              Drop a photo here or{" "}
-              <span className={styles.dropzoneBrowse}>browse</span>
-            </span>
-            <span className={styles.dropzoneSub}>JPG or PNG, max 4 MB</span>
-          </div>
+          <ImageDropzone
+            id="kitchen-profile-photo"
+            variant="avatar"
+            existingUrl={form.photoUrl}
+            alt="Kitchen profile photo"
+            onFile={(file) => {
+              photoFileRef.current = file;
+            }}
+            note="JPG or PNG, max 4 MB"
+          />
+        </div>
+
+        <div className={styles.formGroup}>
+          <span className={styles.formLabel}>
+            Banner image{" "}
+            <span className={styles.formLabelOptional}>(optional)</span>
+          </span>
+          <ImageDropzone
+            id="kitchen-banner"
+            variant="banner"
+            existingUrl={form.bannerUrl}
+            alt="Kitchen banner"
+            onFile={(file) => {
+              bannerFileRef.current = file;
+            }}
+            note="JPG or PNG, max 8 MB"
+          />
         </div>
 
         <div className={styles.formGroup}>
@@ -190,152 +225,6 @@ function KitchenSection() {
         </div>
 
         <div className={styles.formGroup}>
-          <span className={styles.formLabel}>Pickup address</span>
-          <AddressAutocomplete
-            value={{
-              street: form.pickupStreet,
-              unit: form.pickupUnit || undefined,
-              city: form.pickupCity,
-              province: form.pickupProvince,
-              postal: form.pickupPostal,
-              lat: form.pickupLat ?? undefined,
-              lng: form.pickupLng ?? undefined,
-              placeId: form.pickupPlaceId ?? undefined,
-            }}
-            onChange={(addr) =>
-              setForm((f) => ({
-                ...f,
-                pickupStreet: addr.street ?? "",
-                pickupUnit: addr.unit ?? "",
-                pickupCity: addr.city ?? "",
-                pickupProvince: addr.province ?? "",
-                pickupPostal: addr.postal ?? "",
-                pickupLat: addr.lat ?? null,
-                pickupLng: addr.lng ?? null,
-                pickupPlaceId: addr.placeId ?? null,
-              }))
-            }
-            idPrefix="settings-pickup"
-            inputClassName={styles.formInput}
-          />
-        </div>
-
-        <div className={styles.formGroup}>
-          <label htmlFor="deliveryMode" className={styles.formLabel}>
-            Delivery
-          </label>
-          <select
-            id="deliveryMode"
-            className={styles.formInput}
-            value={form.delivery}
-            onChange={(e) =>
-              setForm((f) => ({
-                ...f,
-                delivery: e.target.value as "none" | "self",
-              }))
-            }
-          >
-            <option value="none">Pickup only</option>
-            <option value="self">I deliver myself</option>
-          </select>
-        </div>
-
-        {form.delivery === "self" && (
-          <div className={styles.formGroup}>
-            <span className={styles.formLabel}>Delivery zone</span>
-            <div className={styles.formGroup}>
-              <label htmlFor="maxDeliveryKm" className={styles.formLabel}>
-                Max delivery distance (km)
-              </label>
-              <input
-                id="maxDeliveryKm"
-                type="number"
-                min={1}
-                max={200}
-                className={styles.formInput}
-                value={form.maxDeliveryKm ?? ""}
-                onChange={(e) =>
-                  setForm((f) => ({
-                    ...f,
-                    maxDeliveryKm: e.target.value
-                      ? Number(e.target.value)
-                      : null,
-                  }))
-                }
-                placeholder="e.g. 10"
-              />
-            </div>
-            <div className={styles.formGroup}>
-              <label htmlFor="deliveryFlatFee" className={styles.formLabel}>
-                Flat delivery fee ($)
-              </label>
-              <input
-                id="deliveryFlatFee"
-                type="number"
-                min={0}
-                step={0.01}
-                className={styles.formInput}
-                value={form.deliveryFlatFee ?? ""}
-                onChange={(e) =>
-                  setForm((f) => ({
-                    ...f,
-                    deliveryFlatFee: e.target.value
-                      ? Number(e.target.value)
-                      : null,
-                  }))
-                }
-                placeholder="e.g. 3.00"
-              />
-            </div>
-            <div className={styles.formGroup}>
-              <label htmlFor="deliveryRatePerKm" className={styles.formLabel}>
-                Rate per km ($)
-              </label>
-              <input
-                id="deliveryRatePerKm"
-                type="number"
-                min={0}
-                step={0.01}
-                className={styles.formInput}
-                value={form.deliveryRatePerKm ?? ""}
-                onChange={(e) =>
-                  setForm((f) => ({
-                    ...f,
-                    deliveryRatePerKm: e.target.value
-                      ? Number(e.target.value)
-                      : null,
-                  }))
-                }
-                placeholder="e.g. 1.50"
-              />
-            </div>
-            <div className={styles.formGroup}>
-              <label htmlFor="freeDeliveryAbove" className={styles.formLabel}>
-                Free delivery above subtotal ($){" "}
-                <span className={styles.formLabelOptional}>(optional)</span>
-              </label>
-              <input
-                id="freeDeliveryAbove"
-                type="number"
-                min={0}
-                step={0.01}
-                className={styles.formInput}
-                value={form.freeDeliveryAbove ?? ""}
-                onChange={(e) =>
-                  setForm((f) => ({
-                    ...f,
-                    freeDeliveryAbove: e.target.value
-                      ? Number(e.target.value)
-                      : null,
-                  }))
-                }
-                placeholder="e.g. 50.00 (leave blank to always charge)"
-              />
-            </div>
-          </div>
-        )}
-
-        <div className={styles.formGroup}>
           <label htmlFor="s-social" className={styles.formLabel}>
             Website <span className={styles.formLabelOptional}>(optional)</span>
           </label>
@@ -351,6 +240,15 @@ function KitchenSection() {
         </div>
       </div>
 
+      {saveError && (
+        <p
+          style={{ color: "var(--red, #e23744)", padding: "0 1rem" }}
+          role="alert"
+        >
+          {saveError}
+        </p>
+      )}
+
       <div className={styles.cardFooter}>
         <button type="button" className={styles.saveBtn} onClick={handleSave}>
           {saved ? "Saved" : "Save changes"}
@@ -365,7 +263,6 @@ function KitchenSection() {
 type AccountForm = {
   firstName: string;
   lastName: string;
-  phone: string;
   loginEmail: string;
 };
 
@@ -373,14 +270,31 @@ function AccountSection() {
   const [form, setForm] = useState<AccountForm>({
     firstName: "",
     lastName: "",
-    phone: "",
     loginEmail: "",
   });
+  const [verifiedPhone, setVerifiedPhone] = useState("");
+  const [phoneVerified, setPhoneVerified] = useState(false);
+  const [phoneChangeOpen, setPhoneChangeOpen] = useState(false);
+  const [pendingPhone, setPendingPhone] = useState("");
+  const [otpCode, setOtpCode] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [phoneSaved, setPhoneSaved] = useState(false);
+  const [phoneLoading, setPhoneLoading] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [showPwForm, setShowPwForm] = useState(false);
-  const [showPwNew, setShowPwNew] = useState(false);
-  const [showPwConfirm, setShowPwConfirm] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [resetSent, setResetSent] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
   const { saved, triggerSaved } = useSaved();
+
+  function resetPhoneChange() {
+    setPhoneChangeOpen(false);
+    setPendingPhone("");
+    setOtpCode("");
+    setOtpSent(false);
+    setPhoneError(null);
+    setPhoneLoading(false);
+  }
 
   useEffect(() => {
     fetch("/api/business/me")
@@ -390,25 +304,123 @@ function AccountSection() {
           setForm({
             firstName: json.data.firstName ?? "",
             lastName: json.data.lastName ?? "",
-            phone: json.data.phone ?? "",
             loginEmail: json.data.email ?? "",
           });
+          setVerifiedPhone(formatPhoneDisplay(json.data.phone ?? ""));
+          setPhoneVerified(Boolean(json.data.phoneVerified));
         }
       })
       .finally(() => setLoading(false));
   }, []);
 
   async function handleSave() {
-    await fetch("/api/business/me", {
+    setSaveError(null);
+
+    const validationError = validateAccountSettings(form);
+    if (validationError) {
+      setSaveError(validationError);
+      return;
+    }
+
+    const res = await fetch("/api/business/me", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        firstName: form.firstName || undefined,
-        lastName: form.lastName || undefined,
-        phone: form.phone || null,
+        firstName: form.firstName.trim(),
+        lastName: form.lastName.trim(),
       }),
     });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setSaveError(json.error ?? "Could not save account settings.");
+      return;
+    }
     triggerSaved();
+  }
+
+  async function sendPhoneCode() {
+    setPhoneError(null);
+    setPhoneSaved(false);
+
+    if (!isValidNorthAmericanPhone(pendingPhone)) {
+      setPhoneError("Enter a valid 10-digit phone number.");
+      return;
+    }
+    if (
+      verifiedPhone &&
+      phoneDigits(pendingPhone) === phoneDigits(verifiedPhone)
+    ) {
+      setPhoneError("That is already your phone number.");
+      return;
+    }
+
+    setPhoneLoading(true);
+    try {
+      const res = await fetch("/api/setup/send-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: phoneDigits(pendingPhone) }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setPhoneError(json.error ?? "Could not send verification code.");
+        return;
+      }
+      setOtpSent(true);
+      setOtpCode("");
+    } finally {
+      setPhoneLoading(false);
+    }
+  }
+
+  async function verifyPhoneCode() {
+    setPhoneError(null);
+    if (otpCode.length !== 6 || !/^\d{6}$/.test(otpCode)) {
+      setPhoneError("Enter the 6-digit code we sent you.");
+      return;
+    }
+
+    setPhoneLoading(true);
+    try {
+      const res = await fetch("/api/business/phone/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: otpCode }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setPhoneError(json.error ?? "Verification failed.");
+        return;
+      }
+      setVerifiedPhone(formatPhoneDisplay(json.data.phone ?? pendingPhone));
+      setPhoneVerified(true);
+      setPhoneSaved(true);
+      resetPhoneChange();
+      setTimeout(() => setPhoneSaved(false), 2500);
+    } finally {
+      setPhoneLoading(false);
+    }
+  }
+
+  async function sendPasswordReset() {
+    if (!form.loginEmail) return;
+    setResetLoading(true);
+    setSaveError(null);
+    try {
+      const res = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: form.loginEmail }),
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        setSaveError(json.error ?? "Could not send reset email.");
+        return;
+      }
+      setResetSent(true);
+    } finally {
+      setResetLoading(false);
+    }
   }
 
   if (loading) {
@@ -457,19 +469,135 @@ function AccountSection() {
 
         <div className={styles.formRow}>
           <div className={styles.formGroup}>
-            <label htmlFor="s-personal-phone" className={styles.formLabel}>
-              Phone
-            </label>
+            <span className={styles.formLabel}>Phone</span>
             <input
-              id="s-personal-phone"
               type="tel"
               className={styles.formInput}
-              value={form.phone}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, phone: e.target.value }))
-              }
+              value={verifiedPhone || "Not set"}
+              readOnly
+              tabIndex={-1}
+              aria-readonly="true"
+              style={{ opacity: 0.85, cursor: "default" }}
             />
+            {!phoneChangeOpen ? (
+              <div className={styles.phoneMetaRow}>
+                <button
+                  type="button"
+                  className={styles.linkBtn}
+                  onClick={() => {
+                    setPhoneChangeOpen(true);
+                    setPhoneError(null);
+                    setPhoneSaved(false);
+                  }}
+                >
+                  Change phone number
+                </button>
+                {verifiedPhone && phoneVerified && (
+                  <span className={styles.phoneBadge}>Verified</span>
+                )}
+              </div>
+            ) : (
+              <div className={styles.phoneChangeBlock}>
+                <label htmlFor="s-new-phone" className={styles.formLabel}>
+                  New number
+                </label>
+                <input
+                  id="s-new-phone"
+                  type="tel"
+                  className={styles.formInput}
+                  value={pendingPhone}
+                  onChange={(e) => {
+                    setPendingPhone(formatPhoneDisplay(e.target.value));
+                    setPhoneError(null);
+                  }}
+                  placeholder="(416) 555-0100"
+                  disabled={otpSent || phoneLoading}
+                  autoComplete="tel"
+                />
+                {!otpSent ? (
+                  <div className={styles.phoneChangeActions}>
+                    <button
+                      type="button"
+                      className={styles.outlineBtn}
+                      onClick={sendPhoneCode}
+                      disabled={phoneLoading}
+                    >
+                      {phoneLoading ? "Sending…" : "Send code"}
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.linkBtn}
+                      onClick={resetPhoneChange}
+                      disabled={phoneLoading}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <div className={styles.phoneVerifyPanel}>
+                    <p className={styles.formHint}>
+                      Code sent to {formatPhoneDisplay(pendingPhone)}.
+                    </p>
+                    <label htmlFor="s-phone-otp" className={styles.formLabel}>
+                      Verification code
+                    </label>
+                    <input
+                      id="s-phone-otp"
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      className={styles.formInput}
+                      value={otpCode}
+                      onChange={(e) => {
+                        setOtpCode(
+                          e.target.value.replace(/\D/g, "").slice(0, 6),
+                        );
+                        setPhoneError(null);
+                      }}
+                      placeholder="000000"
+                      autoComplete="one-time-code"
+                      disabled={phoneLoading}
+                    />
+                    <div className={styles.phoneChangeActions}>
+                      <button
+                        type="button"
+                        className={styles.outlineBtn}
+                        onClick={verifyPhoneCode}
+                        disabled={phoneLoading}
+                      >
+                        {phoneLoading ? "Verifying…" : "Verify and update"}
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.linkBtn}
+                        onClick={sendPhoneCode}
+                        disabled={phoneLoading}
+                      >
+                        Resend
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.linkBtn}
+                        onClick={resetPhoneChange}
+                        disabled={phoneLoading}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {phoneError && (
+                  <p className={styles.fieldError} role="alert">
+                    {phoneError}
+                  </p>
+                )}
+              </div>
+            )}
+            {phoneSaved && (
+              <p className={styles.formHint}>Phone number updated.</p>
+            )}
           </div>
+
           <div className={styles.formGroup}>
             <label htmlFor="s-login-email" className={styles.formLabel}>
               Login email
@@ -480,6 +608,8 @@ function AccountSection() {
               className={styles.formInput}
               value={form.loginEmail}
               readOnly
+              tabIndex={-1}
+              aria-readonly="true"
               style={{ opacity: 0.7 }}
             />
           </div>
@@ -487,69 +617,29 @@ function AccountSection() {
 
         <div className={styles.formDivider} />
 
-        {!showPwForm ? (
+        <div className={styles.formGroup}>
+          <span className={styles.formLabel}>Password</span>
+          <p className={styles.notifDesc}>
+            We will email you a secure link to set a new password.
+          </p>
           <button
             type="button"
             className={styles.outlineBtn}
-            onClick={() => setShowPwForm(true)}
+            onClick={sendPasswordReset}
+            disabled={resetLoading || !form.loginEmail}
           >
-            Change password
+            {resetLoading
+              ? "Sending…"
+              : resetSent
+                ? "Reset email sent"
+                : "Email password reset link"}
           </button>
-        ) : (
-          <div className={styles.pwForm}>
-            <div className={styles.formRow}>
-              <div className={styles.formGroup}>
-                <label htmlFor="s-pw-new" className={styles.formLabel}>
-                  New password
-                </label>
-                <div className={styles.pwInputWrap}>
-                  <input
-                    id="s-pw-new"
-                    type={showPwNew ? "text" : "password"}
-                    className={styles.formInput}
-                    placeholder="Min. 8 characters"
-                  />
-                  <button
-                    type="button"
-                    className={styles.pwEyeBtn}
-                    onClick={() => setShowPwNew((s) => !s)}
-                    aria-label={showPwNew ? "Hide password" : "Show password"}
-                  >
-                    {showPwNew ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-              </div>
-              <div className={styles.formGroup}>
-                <label htmlFor="s-pw-confirm" className={styles.formLabel}>
-                  Confirm password
-                </label>
-                <div className={styles.pwInputWrap}>
-                  <input
-                    id="s-pw-confirm"
-                    type={showPwConfirm ? "text" : "password"}
-                    className={styles.formInput}
-                  />
-                  <button
-                    type="button"
-                    className={styles.pwEyeBtn}
-                    onClick={() => setShowPwConfirm((s) => !s)}
-                    aria-label={
-                      showPwConfirm ? "Hide password" : "Show password"
-                    }
-                  >
-                    {showPwConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-              </div>
-            </div>
-            <button
-              type="button"
-              className={styles.cancelBtn}
-              onClick={() => setShowPwForm(false)}
-            >
-              Cancel
-            </button>
-          </div>
+        </div>
+
+        {saveError && (
+          <p style={{ color: "var(--red, #e23744)" }} role="alert">
+            {saveError}
+          </p>
         )}
       </div>
 
@@ -564,92 +654,34 @@ function AccountSection() {
 
 // ─── Billing ───────────────────────────────────────────────────────────────────
 
-type StripeStatusData = {
-  hasAccount: boolean;
-  chargesEnabled: boolean;
-  payoutsEnabled: boolean;
-  requirementsCount: number;
-};
-
 function BillingSection() {
-  const [stripeStatus, setStripeStatus] = useState<StripeStatusData | null>(
-    null,
-  );
+  const [platformFeePct, setPlatformFeePct] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [linkLoading, setLinkLoading] = useState(false);
 
   useEffect(() => {
-    fetch("/api/business/dashboard/stripe/status")
+    fetch("/api/business/profile")
       .then((r) => r.json())
       .then((json) => {
-        if (json.success) setStripeStatus(json.data);
+        if (json.success && json.data.platformFeePct != null) {
+          setPlatformFeePct(String(json.data.platformFeePct));
+        }
       })
       .finally(() => setLoading(false));
   }, []);
 
-  async function handleStripeAction() {
-    setLinkLoading(true);
-    try {
-      const endpoint =
-        stripeStatus?.hasAccount && stripeStatus?.chargesEnabled
-          ? "/api/business/dashboard/stripe/dashboard-link"
-          : "/api/business/dashboard/stripe/onboarding-link";
-      const res = await fetch(endpoint, { method: "POST" });
-      const json = await res.json();
-      if (json.success && json.data?.url) {
-        window.open(json.data.url, "_blank");
-      }
-    } finally {
-      setLinkLoading(false);
-    }
-  }
-
-  const isConnected =
-    stripeStatus?.hasAccount &&
-    stripeStatus?.chargesEnabled &&
-    stripeStatus?.payoutsEnabled;
-
   return (
     <div className={styles.card}>
       <div className={styles.cardForm}>
-        <div className={styles.stripeStatus}>
-          <div className={styles.stripeInfo}>
-            {loading ? (
-              <span style={{ color: "var(--muted)" }}>Loading…</span>
-            ) : (
-              <>
-                <span
-                  className={`${styles.stripeBadge} ${isConnected ? styles.stripeBadgeConnected : styles.stripeBadgePending}`}
-                >
-                  {isConnected ? "Connected" : "Not connected"}
-                </span>
-                {stripeStatus?.requirementsCount != null &&
-                  stripeStatus.requirementsCount > 0 && (
-                    <span className={styles.stripeDetails}>
-                      <span className={styles.stripeBank}>
-                        {stripeStatus.requirementsCount} requirement
-                        {stripeStatus.requirementsCount !== 1 ? "s" : ""}{" "}
-                        pending
-                      </span>
-                    </span>
-                  )}
-              </>
-            )}
+        {!loading && platformFeePct != null && (
+          <div className={styles.formGroup}>
+            <span className={styles.formLabel}>Platform fee</span>
+            <p className={styles.notifDesc}>
+              {Number(platformFeePct)}% per order, deducted automatically at
+              checkout.
+            </p>
           </div>
-          <button
-            type="button"
-            className={styles.stripeBtn}
-            onClick={handleStripeAction}
-            disabled={loading || linkLoading}
-          >
-            {linkLoading
-              ? "Opening…"
-              : isConnected
-                ? "Manage in Stripe"
-                : "Connect with Stripe"}
-            <ExternalLink size={13} />
-          </button>
-        </div>
+        )}
+        <StripeConnectPanel returnTo="/business/settings" />
       </div>
     </div>
   );
@@ -685,12 +717,166 @@ function Toggle({
   );
 }
 
+function OrderRulesSection() {
+  const [minOrderQty, setMinOrderQty] = useState("1");
+  const [maxOrderQty, setMaxOrderQty] = useState("");
+  const [cancellationAllowed, setCancellationAllowed] = useState(false);
+  const [acceptsSpecialRequests, setAcceptsSpecialRequests] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [savedMsg, setSavedMsg] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/business/dashboard/settings")
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.success) {
+          setMinOrderQty(String(json.data.minOrderQty ?? 1));
+          setMaxOrderQty(
+            json.data.maxOrderQty != null ? String(json.data.maxOrderQty) : "",
+          );
+          setCancellationAllowed(Boolean(json.data.cancellationAllowed));
+          setAcceptsSpecialRequests(Boolean(json.data.acceptsSpecialRequests));
+        }
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  async function save() {
+    setError(null);
+    setSavedMsg(null);
+
+    const validationError = validateOrderRules({ minOrderQty, maxOrderQty });
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    const min = Number(minOrderQty);
+    const max = maxOrderQty === "" ? null : Number(maxOrderQty);
+    const res = await fetch("/api/business/dashboard/settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        minOrderQty: min,
+        maxOrderQty: max,
+        cancellationAllowed,
+        acceptsSpecialRequests,
+      }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error ?? "Could not save order rules.");
+      return;
+    }
+    setSavedMsg("Saved");
+    setTimeout(() => setSavedMsg(null), 2000);
+  }
+
+  if (loading) {
+    return (
+      <div className={styles.card}>
+        <div style={{ padding: "1rem", color: "var(--muted)" }}>Loading…</div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={styles.card}
+      style={{
+        padding: "1rem",
+        display: "flex",
+        flexDirection: "column",
+        gap: 16,
+      }}
+    >
+      <div className={styles.notifRow}>
+        <div className={styles.notifInfo}>
+          <span className={styles.notifLabel}>Minimum order quantity</span>
+          <span className={styles.notifDesc}>
+            Fewest items a customer must order.
+          </span>
+        </div>
+        <input
+          type="number"
+          min="1"
+          step="1"
+          value={minOrderQty}
+          onChange={(e) => setMinOrderQty(e.target.value)}
+          style={{
+            width: 90,
+            padding: 8,
+            borderRadius: 8,
+            border: "1px solid var(--grey-300, #d1d5db)",
+          }}
+        />
+      </div>
+
+      <div className={styles.notifRow}>
+        <div className={styles.notifInfo}>
+          <span className={styles.notifLabel}>Maximum order quantity</span>
+          <span className={styles.notifDesc}>Leave blank for none.</span>
+        </div>
+        <input
+          type="number"
+          min="1"
+          step="1"
+          placeholder="None"
+          value={maxOrderQty}
+          onChange={(e) => setMaxOrderQty(e.target.value)}
+          style={{
+            width: 90,
+            padding: 8,
+            borderRadius: 8,
+            border: "1px solid var(--grey-300, #d1d5db)",
+          }}
+        />
+      </div>
+
+      <div className={styles.notifRow}>
+        <div className={styles.notifInfo}>
+          <span className={styles.notifLabel}>Special requests</span>
+          <span className={styles.notifDesc}>
+            Let customers add notes to their orders.
+          </span>
+        </div>
+        <Toggle
+          on={acceptsSpecialRequests}
+          onToggle={() => setAcceptsSpecialRequests((v) => !v)}
+          label="Special requests"
+        />
+      </div>
+
+      <div className={styles.notifRow}>
+        <div className={styles.notifInfo}>
+          <span className={styles.notifLabel}>Allow cancellations</span>
+          <span className={styles.notifDesc}>
+            Let clients cancel before the lead date for a full refund.
+          </span>
+        </div>
+        <Toggle
+          on={cancellationAllowed}
+          onToggle={() => setCancellationAllowed((v) => !v)}
+          label="Allow cancellations"
+        />
+      </div>
+
+      {error && <p style={{ color: "var(--red, #e23744)" }}>{error}</p>}
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <button type="button" className={styles.saveBtn} onClick={save}>
+          Save order rules
+        </button>
+        {savedMsg && (
+          <span style={{ color: "var(--green, #16a34a)" }}>{savedMsg}</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function NotificationsSection() {
-  const [settings, setSettings] = useState<NotifSettings>({
-    emailNotificationsNewOrder: true,
-    emailNotificationsNewReview: true,
-    smsNotificationsNewOrder: false,
-  });
+  const [settings, setSettings] = useState<NotifSettings | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -709,8 +895,9 @@ function NotificationsSection() {
   }, []);
 
   async function toggle(key: keyof NotifSettings) {
+    if (!settings) return;
     const newValue = !settings[key];
-    setSettings((prev) => ({ ...prev, [key]: newValue }));
+    setSettings((prev) => (prev ? { ...prev, [key]: newValue } : prev));
     await fetch("/api/business/dashboard/settings", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -738,7 +925,7 @@ function NotificationsSection() {
 
   return (
     <div className={styles.card}>
-      {loading ? (
+      {loading || !settings ? (
         <div style={{ padding: "1rem", color: "var(--muted)" }}>Loading…</div>
       ) : (
         items.map((item, i) => (
@@ -773,13 +960,14 @@ function DangerSection() {
         <div className={styles.dangerInfo}>
           <div className={styles.dangerTitle}>Delete account</div>
           <div className={styles.dangerDesc}>
-            Permanently remove your kitchen, listings, and all associated data.
-            This cannot be undone.
+            To permanently remove your kitchen and all associated data, contact
+            support at{" "}
+            <a href="mailto:contact@7eats.ca" className={styles.inlineLink}>
+              contact@7eats.ca
+            </a>
+            . We will verify your identity before deleting anything.
           </div>
         </div>
-        <button type="button" className={styles.deleteBtn}>
-          Delete account
-        </button>
       </div>
     </div>
   );
@@ -791,6 +979,7 @@ export default function SettingsPage() {
   const [activeSection, setActiveSection] = useState<SectionId>("kitchen");
 
   const kitchenRef = useRef<HTMLDivElement>(null);
+  const logisticsRef = useRef<HTMLDivElement>(null);
   const accountRef = useRef<HTMLDivElement>(null);
   const billingRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
@@ -800,6 +989,7 @@ export default function SettingsPage() {
   useEffect(() => {
     const ORDER: SectionId[] = [
       "kitchen",
+      "logistics",
       "account",
       "billing",
       "notifications",
@@ -824,7 +1014,14 @@ export default function SettingsPage() {
       },
       { rootMargin: "0px 0px -60% 0px", threshold: 0 },
     );
-    const refs = [kitchenRef, accountRef, billingRef, notifRef, dangerRef];
+    const refs = [
+      kitchenRef,
+      logisticsRef,
+      accountRef,
+      billingRef,
+      notifRef,
+      dangerRef,
+    ];
     for (const ref of refs) {
       if (ref.current) observer.observe(ref.current);
     }
@@ -834,6 +1031,7 @@ export default function SettingsPage() {
   function scrollTo(id: SectionId) {
     const refMap: Record<SectionId, React.RefObject<HTMLDivElement | null>> = {
       kitchen: kitchenRef,
+      logistics: logisticsRef,
       account: accountRef,
       billing: billingRef,
       notifications: notifRef,
@@ -859,6 +1057,11 @@ export default function SettingsPage() {
             <KitchenSection />
           </div>
 
+          <div id="logistics" ref={logisticsRef} className={styles.section}>
+            <h2 className={styles.sectionTitle}>Logistics</h2>
+            <LogisticsSection />
+          </div>
+
           <div id="account" ref={accountRef} className={styles.section}>
             <h2 className={styles.sectionTitle}>Account</h2>
             <AccountSection />
@@ -867,6 +1070,11 @@ export default function SettingsPage() {
           <div id="billing" ref={billingRef} className={styles.section}>
             <h2 className={styles.sectionTitle}>Billing</h2>
             <BillingSection />
+          </div>
+
+          <div className={styles.section}>
+            <h2 className={styles.sectionTitle}>Order rules</h2>
+            <OrderRulesSection />
           </div>
 
           <div id="notifications" ref={notifRef} className={styles.section}>

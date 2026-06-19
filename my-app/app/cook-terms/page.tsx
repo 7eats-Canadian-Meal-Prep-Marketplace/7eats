@@ -1,5 +1,4 @@
 import Footer from "@/app/components/Footer";
-import Header from "@/app/components/Header";
 
 export const metadata = {
   title: "Cook Terms - 7eats",
@@ -319,7 +318,6 @@ export default function CookTermsPage() {
         // biome-ignore lint/security/noDangerouslySetInnerHtml: JSON-LD structured data, not user input
         dangerouslySetInnerHTML={{ __html: JSON.stringify(webPageSchema) }}
       />
-      <Header />
       <main className="policy-page">
         <div className="wrap">
           <div className="policy-hero">

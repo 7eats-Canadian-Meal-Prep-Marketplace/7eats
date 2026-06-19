@@ -17,8 +17,8 @@ vi.mock("drizzle-orm", () => ({
 
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { DELETE } from "@/app/api/business/listings/dishes/[dishId]/tags/[tagId]/route";
-import { POST } from "@/app/api/business/listings/dishes/[dishId]/tags/route";
+import { DELETE } from "@/app/api/business/dishes/[dishId]/tags/[tagId]/route";
+import { POST } from "@/app/api/business/dishes/[dishId]/tags/route";
 import { db } from "@/db";
 import { auth } from "@/lib/auth";
 
