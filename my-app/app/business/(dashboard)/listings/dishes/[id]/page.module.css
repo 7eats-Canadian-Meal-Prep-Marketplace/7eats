@@ -179,6 +179,32 @@
   cursor: not-allowed;
 }
 
+/* ─── Cancel / secondary button ────────────────────────────────────────────── */
+.cancelBtn {
+  padding: 10px 18px;
+  background: var(--white);
+  color: var(--grey-700);
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid var(--grey-300);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    border-color 0.12s,
+    color 0.12s;
+}
+
+.cancelBtn:hover:not(:disabled) {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.cancelBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .listingBlock {
   display: flex;
   flex-direction: column;
@@ -227,6 +253,9 @@
 }
 
 .photoImg {
+  display: block;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
 }
 
@@ -529,6 +558,193 @@
   text-align: center;
   border: 1px dashed #e4e4e7;
   border-radius: var(--radius-sm);
+}
+
+/* ─── Promotions tab ───────────────────────────────────────────────────────── */
+.promoTab {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  max-width: 560px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.disclaimer {
+  display: flex;
+  gap: 11px;
+  padding: 13px 15px;
+  border: 1px solid rgba(214, 64, 69, 0.28);
+  background: rgba(214, 64, 69, 0.06);
+  border-radius: var(--radius-sm);
+}
+
+.disclaimerIcon {
+  flex: none;
+  margin-top: 1px;
+  color: var(--red);
+}
+
+.disclaimerTitle {
+  margin: 0 0 3px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.disclaimerText {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--grey-700);
+}
+
+/* Segmented control (matches the create-dish flow) */
+.segControl {
+  display: inline-flex;
+  align-self: flex-start;
+  gap: 2px;
+  padding: 3px;
+  background: var(--grey-100);
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-sm);
+}
+
+.segBtn {
+  padding: 6px 16px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--grey-700);
+  background: transparent;
+  border: none;
+  border-radius: calc(var(--radius-sm) - 2px);
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  transition:
+    background 0.12s,
+    color 0.12s,
+    box-shadow 0.12s;
+}
+
+.segBtn:hover {
+  color: var(--ink);
+}
+
+.segBtnActive,
+.segBtnActive:hover {
+  color: var(--ink);
+  font-weight: 600;
+  background: var(--white);
+  box-shadow:
+    0 1px 3px rgba(15, 15, 15, 0.1),
+    0 0 0 0.5px rgba(15, 15, 15, 0.06);
+}
+
+/* Add-promotion button (primary, matches the create-dish flow) */
+.addPromoBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  align-self: flex-start;
+  padding: 10px 18px;
+  background: var(--red);
+  color: var(--white);
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-family: inherit;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+  transition:
+    background 0.12s,
+    opacity 0.12s;
+}
+
+.addPromoBtn:hover:not(:disabled) {
+  background: var(--red-deep);
+}
+
+.addPromoBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* Existing promotions list */
+.promoList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.promoCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-sm);
+  background: var(--white);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.promoCardInactive {
+  background: var(--grey-100);
+}
+
+.promoMain {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.promoAmount {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+
+.promoLimit {
+  font-size: 12px;
+  color: var(--grey-700);
+}
+
+.promoBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-pill);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--grey-700);
+  background: var(--white);
+}
+
+.promoDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.promoDotActive {
+  background: var(--red);
+}
+
+.promoDotInactive {
+  background: var(--grey-300);
 }
 
 /* ─── Mobile ───────────────────────────────────────────────────────────────── */

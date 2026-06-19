@@ -59,6 +59,7 @@ interface Props {
   firstName: string;
   lastName: string;
   email: string;
+  photoUrl: string | null;
   pendingSteps: PendingStep[];
   children: React.ReactNode;
 }
@@ -67,6 +68,7 @@ export default function DashboardShell({
   firstName,
   lastName,
   email,
+  photoUrl,
   pendingSteps,
   children,
 }: Props) {
@@ -274,7 +276,17 @@ export default function DashboardShell({
                 aria-label="Account menu"
                 aria-expanded={profileOpen}
               >
-                {initials}
+                {photoUrl ? (
+                  <Image
+                    src={photoUrl}
+                    alt=""
+                    fill
+                    sizes="34px"
+                    className={styles.avatarImg}
+                  />
+                ) : (
+                  initials
+                )}
               </button>
               {profileOpen && (
                 <div className={styles.dropdown}>
