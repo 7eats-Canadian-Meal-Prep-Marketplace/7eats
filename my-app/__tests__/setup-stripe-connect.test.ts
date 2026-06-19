@@ -22,8 +22,16 @@ function makeRequest(headers: Record<string, string> = {}): Request {
 
 function mockSession(role: string, id = "user_abcdefgh") {
   vi.mocked(auth.api.getSession).mockResolvedValue({
-    user: { id, role },
+    user: { id, role, email: "cook@example.com" },
   } as never);
+}
+
+function mockStripeCreate(account: { id: string }) {
+  const create = vi.fn().mockResolvedValue(account);
+  vi.mocked(getStripe).mockReturnValue({
+    v2: { core: { accounts: { create } } },
+  } as never);
+  return create;
 }
 
 let whereSpy: ReturnType<typeof vi.fn>;
@@ -51,10 +59,7 @@ describe("POST /api/setup/stripe-connect", () => {
 
   it("returns 200 with success:true for a cook session when creating new account", async () => {
     mockSession("cook");
-    const mockAccount = { id: "acct_test123" };
-    vi.mocked(getStripe).mockReturnValue({
-      accounts: { create: vi.fn().mockResolvedValue(mockAccount) },
-    } as never);
+    mockStripeCreate({ id: "acct_test123" });
 
     const res = await POST(makeRequest());
     const body = await res.json();
@@ -88,9 +93,7 @@ describe("POST /api/setup/stripe-connect", () => {
     const userId = "user_abcdefghijkl";
     const mockAccountId = "acct_stripe123";
     mockSession("cook", userId);
-    vi.mocked(getStripe).mockReturnValue({
-      accounts: { create: vi.fn().mockResolvedValue({ id: mockAccountId }) },
-    } as never);
+    mockStripeCreate({ id: mockAccountId });
 
     await POST(makeRequest());
 

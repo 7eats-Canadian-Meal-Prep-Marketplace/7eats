@@ -1,55 +1,94 @@
+import type Stripe from "stripe";
 import { describe, expect, it } from "vitest";
 import {
   isStripeFullyConnected,
   readStripeConnectAccountStatus,
 } from "@/lib/stripe-connect";
 
-describe("stripe-connect", () => {
-  it("treats charges and payouts enabled as connected", () => {
-    expect(
-      isStripeFullyConnected({
-        hasAccount: true,
-        chargesEnabled: true,
-        payoutsEnabled: true,
-        cardPaymentsActive: false,
-        transfersActive: false,
-      }),
-    ).toBe(true);
-  });
-
-  it("falls back to active capabilities when enabled flags lag", () => {
-    expect(
-      isStripeFullyConnected({
-        hasAccount: true,
-        chargesEnabled: false,
-        payoutsEnabled: false,
-        cardPaymentsActive: true,
-        transfersActive: true,
-      }),
-    ).toBe(true);
-  });
-
-  it("maps Stripe account fields into status", () => {
-    expect(
-      readStripeConnectAccountStatus({
-        id: "acct_123",
-        charges_enabled: true,
-        payouts_enabled: false,
-        details_submitted: true,
+function v2Account(
+  overrides: Partial<{
+    transfersStatus: "active" | "pending" | "restricted" | "unsupported";
+    requirements: Array<{
+      description: string;
+      awaiting_action_from: "user" | "stripe";
+    }>;
+  }> = {},
+): Stripe.V2.Core.Account {
+  return {
+    id: "acct_123",
+    configuration: {
+      recipient: {
         capabilities: {
-          card_payments: "active",
-          transfers: "pending",
+          stripe_balance: {
+            stripe_transfers: {
+              status: overrides.transfersStatus ?? "restricted",
+            },
+          },
         },
-        requirements: { currently_due: ["external_account"] },
-      } as never),
-    ).toMatchObject({
-      hasAccount: true,
-      chargesEnabled: true,
-      payoutsEnabled: false,
-      detailsSubmitted: true,
-      cardPaymentsActive: true,
+      },
+    },
+    requirements: {
+      entries: (overrides.requirements ?? []).map((r) => ({
+        description: r.description,
+        awaiting_action_from: r.awaiting_action_from,
+      })),
+    },
+  } as unknown as Stripe.V2.Core.Account;
+}
+
+describe("stripe-connect (Accounts v2)", () => {
+  it("treats an active stripe_transfers capability as fully connected", () => {
+    const status = readStripeConnectAccountStatus(
+      v2Account({ transfersStatus: "active" }),
+    );
+    expect(status.transfersActive).toBe(true);
+    expect(status.payoutsEnabled).toBe(true);
+    expect(isStripeFullyConnected(status)).toBe(true);
+  });
+
+  it("is not connected while the transfers capability is restricted", () => {
+    const status = readStripeConnectAccountStatus(
+      v2Account({ transfersStatus: "restricted" }),
+    );
+    expect(status.transfersActive).toBe(false);
+    expect(isStripeFullyConnected(status)).toBe(false);
+  });
+
+  it("counts only requirements awaiting the cook, not Stripe", () => {
+    const status = readStripeConnectAccountStatus(
+      v2Account({
+        transfersStatus: "restricted",
+        requirements: [
+          {
+            description: "identity.individual.id_number",
+            awaiting_action_from: "user",
+          },
+          { description: "external_account", awaiting_action_from: "user" },
+          {
+            description: "configuration.merchant.mcc",
+            awaiting_action_from: "stripe",
+          },
+        ],
+      }),
+    );
+    expect(status.requirementsCount).toBe(2);
+    expect(status.requirements).toEqual([
+      "identity.individual.id_number",
+      "external_account",
+    ]);
+    expect(status.onboardingComplete).toBe(false);
+  });
+
+  it("returns an empty status when there is no account", () => {
+    const status = readStripeConnectAccountStatus(null);
+    expect(status).toMatchObject({
+      hasAccount: false,
       transfersActive: false,
-      requirementsCount: 1,
+      payoutsEnabled: false,
+      onboardingComplete: false,
+      requirementsCount: 0,
+      requirements: [],
     });
+    expect(isStripeFullyConnected(status)).toBe(false);
   });
 });

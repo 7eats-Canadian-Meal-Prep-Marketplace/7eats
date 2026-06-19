@@ -477,8 +477,9 @@ async function step4(req: Request, userId: string) {
     );
 
   try {
-    const account = await getStripe().accounts.retrieve(
+    const account = await getStripe().v2.core.accounts.retrieve(
       profile.stripeAccountId,
+      { include: ["configuration.recipient", "requirements"] },
     );
     const stripeStatus = readStripeConnectAccountStatus(account);
     if (!isStripeFullyConnected(stripeStatus)) {
