@@ -71,7 +71,6 @@ type LogisticsForm = {
   deliveryDays: (typeof DAYS)[number][];
   deliveryWindows: Record<string, DayWindow>;
   leadTime: string;
-  maxCapacity: string;
   maxDeliveryKm: number | null;
   deliveryRatePerKm: number;
   freeDeliveryAbove: number | null;
@@ -137,7 +136,6 @@ export function LogisticsSection() {
     deliveryDays: [],
     deliveryWindows: {},
     leadTime: "",
-    maxCapacity: "",
     maxDeliveryKm: null,
     deliveryRatePerKm: defaultDeliveryRate(),
     freeDeliveryAbove: null,
@@ -186,12 +184,6 @@ export function LogisticsSection() {
           deliveryDays: delivery.days,
           deliveryWindows: delivery.windows,
           leadTime: avail?.leadTime ?? profile?.leadTime ?? "",
-          maxCapacity:
-            avail?.maxCapacity != null
-              ? String(avail.maxCapacity)
-              : profile?.maxCapacity != null
-                ? String(profile.maxCapacity)
-                : "",
           maxDeliveryKm: deliveryZone?.maxDeliveryKm ?? null,
           deliveryRatePerKm:
             deliveryZone != null
@@ -276,9 +268,6 @@ export function LogisticsSection() {
       return;
     }
 
-    const maxCapacityNum =
-      form.maxCapacity.trim() === "" ? undefined : Number(form.maxCapacity);
-
     const delivery = offersDelivery ? ("self" as const) : ("none" as const);
 
     const availRes = await fetch("/api/business/dashboard/availability", {
@@ -288,10 +277,6 @@ export function LogisticsSection() {
         offersPickup: offersPickup,
         delivery,
         leadTime: form.leadTime || undefined,
-        maxCapacity:
-          maxCapacityNum != null && Number.isInteger(maxCapacityNum)
-            ? maxCapacityNum
-            : undefined,
         pickupWindows: offersPickup
           ? windowsFromForm(form.pickupDays, form.pickupWindows)
           : [],
@@ -532,23 +517,6 @@ export function LogisticsSection() {
               </option>
             ))}
           </select>
-        </div>
-
-        <div className={styles.formGroup}>
-          <label htmlFor="logistics-maxCapacity" className={styles.formLabel}>
-            Max weekly plates
-          </label>
-          <input
-            id="logistics-maxCapacity"
-            type="number"
-            min={1}
-            className={styles.formInput}
-            value={form.maxCapacity}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, maxCapacity: e.target.value }))
-            }
-            placeholder="e.g. 50"
-          />
         </div>
 
         {offersDelivery && (

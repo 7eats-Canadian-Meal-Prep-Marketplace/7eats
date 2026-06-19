@@ -54,7 +54,6 @@ describe("validateLogisticsSettings", () => {
     deliveryWindows: {},
     dayKey: () => "monday",
     leadTime: "1_day",
-    maxCapacity: "50",
     maxDeliveryKm: null,
     deliveryRatePerKm: 0.5,
     freeDeliveryAbove: null,

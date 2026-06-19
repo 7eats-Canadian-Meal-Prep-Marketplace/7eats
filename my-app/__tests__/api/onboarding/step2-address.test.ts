@@ -11,7 +11,6 @@ const step2Schema = z.object({
   pickupLng: z.number(),
   pickupPlaceId: z.string().min(1),
   leadTime: z.string(),
-  maxCapacity: z.number().int().min(1),
   delivery: z.enum(["none", "self"]),
   acceptsSpecialRequests: z.boolean(),
   pickupWindows: z.record(z.string(), z.any()).optional(),
@@ -29,7 +28,6 @@ describe("onboarding step2 pickup address schema", () => {
       pickupLng: -79.3832,
       pickupPlaceId: "dXJuOm1ieHBsYzpBWmdMWlE",
       leadTime: "1_day",
-      maxCapacity: 10,
       delivery: "none",
       acceptsSpecialRequests: false,
     };
@@ -45,7 +43,6 @@ describe("onboarding step2 pickup address schema", () => {
       pickupLng: -79.3832,
       pickupPlaceId: "dXJuOm1ieHBsYzpBWmdMWlE",
       leadTime: "1_day",
-      maxCapacity: 10,
       delivery: "none",
       acceptsSpecialRequests: false,
     };
@@ -62,7 +59,6 @@ describe("onboarding step2 pickup address schema", () => {
       pickupLng: -79.3832,
       pickupPlaceId: "dXJuOm1ieHBsYzpBWmdMWlE",
       leadTime: "1_day",
-      maxCapacity: 10,
       delivery: "none",
       acceptsSpecialRequests: false,
     };

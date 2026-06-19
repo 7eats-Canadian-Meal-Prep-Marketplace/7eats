@@ -242,10 +242,6 @@ async function step2(req: Request, userId: string) {
     data.delivery === "self" ? ("self" as const) : ("none" as const);
   const offersPickup = data.offersPickup !== false;
   const offersDelivery = delivery === "self";
-  const rawCap = Number.parseInt(data.maxCapacity, 10);
-  const maxCapacity = Number.isNaN(rawCap)
-    ? null
-    : Math.min(Math.max(rawCap, 5), 500);
 
   const pickupWindows: Array<{ day: string; from: string; to: string }> =
     offersPickup && Array.isArray(data.pickupWindows) ? data.pickupWindows : [];
@@ -301,7 +297,6 @@ async function step2(req: Request, userId: string) {
         pickupLng,
         pickupPlaceId,
         leadTime,
-        maxCapacity,
         offersPickup,
         delivery,
         ...(offersDelivery

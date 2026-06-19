@@ -31,7 +31,6 @@ const PROFILE_FIELDS = {
   pickupLng: cookProfiles.pickupLng,
   pickupPlaceId: cookProfiles.pickupPlaceId,
   leadTime: cookProfiles.leadTime,
-  maxCapacity: cookProfiles.maxCapacity,
   delivery: cookProfiles.delivery,
   acceptsSpecialRequests: cookProfiles.acceptsSpecialRequests,
   platformFeePct: cookProfiles.platformFeePct,
@@ -65,7 +64,6 @@ const bodySchema = z.object({
   leadTime: z
     .enum(["same_day", "1_day", "2_days", "3_days", "4_days", "5_days"])
     .optional(),
-  maxCapacity: z.number().int().min(1).optional(),
   delivery: z.enum(["none", "self"]).optional(),
   acceptsSpecialRequests: z.boolean().optional(),
   lateCancelFeeEnabled: z.boolean().optional(),

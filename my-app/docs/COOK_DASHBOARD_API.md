@@ -319,7 +319,6 @@ Returns the cook's current pickup availability configuration from `cook_profiles
     "pickupFrom": "11:00",
     "pickupTo": "18:00",
     "leadTime": "1_day",
-    "maxCapacity": 20,
     "delivery": "none"
   }
 }
@@ -338,7 +337,6 @@ Updates availability fields. All fields are optional. Validates that `pickupTo >
   "pickupFrom": "HH:MM",
   "pickupTo": "HH:MM",
   "leadTime": "same_day|1_day|2_days|3_days|4_days|5_days",
-  "maxCapacity": 1–1000,
   "delivery": "none|self"
 }
 ```
@@ -407,7 +405,6 @@ Updates any subset of profile fields.
 | `pickupFrom` | string (HH:MM) | |
 | `pickupTo` | string (HH:MM) | |
 | `leadTime` | enum | `same_day\|1_day\|2_days\|3_days\|4_days\|5_days` |
-| `maxCapacity` | integer ≥1 | |
 | `delivery` | enum | `none\|self` |
 | `acceptsSpecialRequests` | boolean | |
 | `lateCancelFeeEnabled` | boolean | |

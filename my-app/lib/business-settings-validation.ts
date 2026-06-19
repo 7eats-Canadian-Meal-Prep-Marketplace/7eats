@@ -59,7 +59,6 @@ export function validateLogisticsSettings(input: {
   deliveryWindows: Record<string, DayWindow>;
   dayKey: (shortDay: string) => string;
   leadTime: string;
-  maxCapacity: string;
   maxDeliveryKm: number | null;
   deliveryRatePerKm: number;
   freeDeliveryAbove: number | null;
@@ -99,13 +98,6 @@ export function validateLogisticsSettings(input: {
 
   if (!input.leadTime) {
     return "Select an order lead time.";
-  }
-
-  if (input.maxCapacity.trim() !== "") {
-    const maxCapacity = Number(input.maxCapacity);
-    if (!Number.isInteger(maxCapacity) || maxCapacity < 1) {
-      return "Max weekly plates must be a whole number of at least 1.";
-    }
   }
 
   if (offersDelivery) {
