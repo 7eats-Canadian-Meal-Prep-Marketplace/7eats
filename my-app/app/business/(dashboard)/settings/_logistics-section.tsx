@@ -446,10 +446,10 @@ export function LogisticsSection() {
           {form.pickupLat != null && form.pickupLng != null ? (
             <p className={styles.formHint}>
               {formatAddressQuery({
-                pickupStreet: form.pickupStreet,
-                pickupCity: form.pickupCity,
-                pickupProvince: form.pickupProvince,
-                pickupPostal: form.pickupPostal,
+                street: form.pickupStreet,
+                city: form.pickupCity,
+                province: form.pickupProvince,
+                postal: form.pickupPostal,
               })}
             </p>
           ) : (
