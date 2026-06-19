@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState, useTransition } from "react";
+import { AddressSearchInput } from "@/components/AddressSearchInput";
 import styles from "./page.module.css";
 
 const LEGAL_LINK_PROPS = {
@@ -10,22 +11,6 @@ const LEGAL_LINK_PROPS = {
   rel: "noopener noreferrer",
   className: styles.consentLink,
 } as const;
-
-const PROVINCES = [
-  "Alberta",
-  "British Columbia",
-  "Manitoba",
-  "New Brunswick",
-  "Newfoundland and Labrador",
-  "Northwest Territories",
-  "Nova Scotia",
-  "Nunavut",
-  "Ontario",
-  "Prince Edward Island",
-  "Quebec",
-  "Saskatchewan",
-  "Yukon",
-];
 
 const KITCHEN_TYPES = [
   { value: "licensed_home", label: "Licensed home kitchen" },
@@ -71,22 +56,63 @@ type FormState = {
   email: string;
 };
 
+// Address fields (street/city/province/postal) are validated separately: they
+// only count as filled when an address is picked from the Mapbox suggestions.
 const STEP1_REQUIRED: { key: keyof FormState; label: string }[] = [
   { key: "kitchenName", label: "Kitchen name" },
   { key: "kitchenType", label: "Kitchen type" },
   { key: "yearsOperating", label: "Years operating" },
-  { key: "streetAddress", label: "Street address" },
-  { key: "city", label: "City" },
-  { key: "province", label: "Province" },
-  { key: "postalCode", label: "Postal code" },
   { key: "businessPhone", label: "Business phone" },
   { key: "businessEmail", label: "Business email" },
 ];
+
+const PHONE_DIGITS = 10;
+
+/** Keep only digits, capped at a 10-digit North American number. */
+function phoneDigits(value: string): string {
+  let d = value.replace(/\D/g, "");
+  // Drop a leading "+1" country code (e.g. a Google-autofilled "+1 416 555 0100")
+  // so it doesn't eat one of the 10 real digits.
+  if (d.length === 11 && d.startsWith("1")) d = d.slice(1);
+  return d.slice(0, PHONE_DIGITS);
+}
+
+/** Display digits as "(416) 555-0100", formatting progressively as typed. */
+function formatPhone(value: string): string {
+  const d = phoneDigits(value);
+  if (d.length === 0) return "";
+  if (d.length <= 3) return `(${d}`;
+  if (d.length <= 6) return `(${d.slice(0, 3)}) ${d.slice(3)}`;
+  return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
+}
+
+function isValidPhone(value: string): boolean {
+  return phoneDigits(value).length === PHONE_DIGITS;
+}
+
+function isValidEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
+/** Website is optional; when present it must look like a URL (protocol optional). */
+function isValidWebsite(value: string): boolean {
+  const t = value.trim();
+  if (!t) return true;
+  try {
+    const u = new URL(/^https?:\/\//i.test(t) ? t : `https://${t}`);
+    return u.hostname.includes(".");
+  } catch {
+    return false;
+  }
+}
 
 export default function ApplicationPage() {
   const [step, setStep] = useState(1);
   const [error, setError] = useState<string | null>(null);
   const [step1Attempted, setStep1Attempted] = useState(false);
+  // True only once an address is selected from the Mapbox suggestions. Typed
+  // text that isn't picked from the dropdown does not count.
+  const [addressResolved, setAddressResolved] = useState(false);
   const [agreed, setAgreed] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [form, setForm] = useState<FormState>({
@@ -110,8 +136,44 @@ export default function ApplicationPage() {
   const set = (key: keyof FormState, value: string) =>
     setForm((f) => ({ ...f, [key]: value }));
 
-  const step1Missing = STEP1_REQUIRED.filter((f) => !form[f.key].trim());
-  const step1Complete = step1Missing.length === 0;
+  // Returns the first thing wrong with step 1, or null when it's valid.
+  const step1Error = (): string | null => {
+    for (const f of STEP1_REQUIRED) {
+      if (!form[f.key].trim()) return `Please fill in: ${f.label}`;
+    }
+    if (!addressResolved) {
+      return "Please select your address from the suggestions.";
+    }
+    if (!isValidPhone(form.businessPhone)) {
+      return "Enter a valid 10-digit business phone number.";
+    }
+    if (!isValidEmail(form.businessEmail)) {
+      return "Enter a valid business email address.";
+    }
+    if (!isValidWebsite(form.website)) {
+      return "Enter a valid website URL (e.g. https://yoursite.com).";
+    }
+    return null;
+  };
+
+  // Returns the first thing wrong with step 2, or null when it's valid.
+  const step2Error = (): string | null => {
+    if (!form.contactFirstName.trim()) return "Please enter your first name.";
+    if (!form.contactLastName.trim()) return "Please enter your last name.";
+    if (!form.role.trim()) return "Please select your role.";
+    if (!isValidPhone(form.phone)) {
+      return "Enter a valid 10-digit phone number.";
+    }
+    if (!isValidEmail(form.email)) return "Enter a valid email address.";
+    if (!agreed) {
+      return "Please agree to the Cook Terms and related policies.";
+    }
+    return null;
+  };
+
+  const step1ErrorMsg = step1Error();
+  const step1Complete = step1ErrorMsg === null;
+  const step2Complete = step2Error() === null;
 
   const handleNext = () => {
     if (!step1Complete) {
@@ -124,8 +186,9 @@ export default function ApplicationPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!agreed) {
-      setError("Please agree to the Cook Terms and related policies.");
+    const validationError = step2Error();
+    if (validationError) {
+      setError(validationError);
       return;
     }
     setError(null);
@@ -272,74 +335,52 @@ export default function ApplicationPage() {
                 </div>
 
                 <div className={styles.field}>
-                  <label htmlFor="streetAddress" className={styles.label}>
-                    Street address
+                  <label htmlFor="address-search" className={styles.label}>
+                    Business address
                   </label>
-                  <input
-                    id="streetAddress"
+                  <AddressSearchInput
+                    id="address-search"
                     className={styles.input}
-                    type="text"
                     value={form.streetAddress}
-                    onChange={(e) => set("streetAddress", e.target.value)}
-                    placeholder="123 Main St, Unit 4"
-                    autoComplete="address-line1"
-                    required
+                    onTextChange={(text) => {
+                      // Manual typing clears any prior pick — only a selected
+                      // suggestion is accepted.
+                      setForm((f) => ({
+                        ...f,
+                        streetAddress: text,
+                        city: "",
+                        province: "",
+                        postalCode: "",
+                      }));
+                      setAddressResolved(false);
+                    }}
+                    onResolve={(a) => {
+                      setForm((f) => ({
+                        ...f,
+                        streetAddress: a.streetAddress,
+                        city: a.city,
+                        province: a.province,
+                        postalCode: a.postalCode,
+                      }));
+                      setAddressResolved(true);
+                    }}
                   />
-                </div>
-
-                <div className={styles.fieldRow}>
-                  <div className={styles.field}>
-                    <label htmlFor="city" className={styles.label}>
-                      City
-                    </label>
-                    <input
-                      id="city"
-                      className={styles.input}
-                      type="text"
-                      value={form.city}
-                      onChange={(e) => set("city", e.target.value)}
-                      placeholder="Toronto"
-                      autoComplete="address-level2"
-                      required
-                    />
-                  </div>
-                  <div className={styles.field}>
-                    <label htmlFor="province" className={styles.label}>
-                      Province
-                    </label>
-                    <div className={styles.selectWrap}>
-                      <select
-                        id="province"
-                        className={styles.select}
-                        value={form.province}
-                        onChange={(e) => set("province", e.target.value)}
-                        required
-                      >
-                        <option value="">Select a province</option>
-                        {PROVINCES.map((p) => (
-                          <option key={p} value={p}>
-                            {p}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-                <div className={styles.field}>
-                  <label htmlFor="postalCode" className={styles.label}>
-                    Postal code
-                  </label>
-                  <input
-                    id="postalCode"
-                    className={styles.input}
-                    type="text"
-                    value={form.postalCode}
-                    onChange={(e) => set("postalCode", e.target.value)}
-                    placeholder="M5V 2T6"
-                    autoComplete="postal-code"
-                    required
-                  />
+                  {addressResolved ? (
+                    <p className={styles.addressConfirm}>
+                      {[
+                        form.streetAddress,
+                        form.city,
+                        form.province,
+                        form.postalCode,
+                      ]
+                        .filter(Boolean)
+                        .join(", ")}
+                    </p>
+                  ) : (
+                    <p className={styles.labelNote}>
+                      Select your address from the suggestions.
+                    </p>
+                  )}
                 </div>
 
                 <div className={styles.field}>
@@ -366,8 +407,12 @@ export default function ApplicationPage() {
                       id="businessPhone"
                       className={styles.input}
                       type="tel"
-                      value={form.businessPhone}
-                      onChange={(e) => set("businessPhone", e.target.value)}
+                      inputMode="numeric"
+                      autoComplete="tel"
+                      value={formatPhone(form.businessPhone)}
+                      onChange={(e) =>
+                        set("businessPhone", phoneDigits(e.target.value))
+                      }
                       placeholder="(416) 000-0000"
                       required
                     />
@@ -388,10 +433,8 @@ export default function ApplicationPage() {
                   </div>
                 </div>
 
-                {step1Attempted && step1Missing.length > 0 && (
-                  <p className={styles.errorMsg}>
-                    Please fill in: {step1Missing[0].label}
-                  </p>
+                {step1Attempted && step1ErrorMsg && (
+                  <p className={styles.errorMsg}>{step1ErrorMsg}</p>
                 )}
                 <button
                   type="button"
@@ -469,8 +512,10 @@ export default function ApplicationPage() {
                     id="phone"
                     className={styles.input}
                     type="tel"
-                    value={form.phone}
-                    onChange={(e) => set("phone", e.target.value)}
+                    inputMode="numeric"
+                    autoComplete="tel"
+                    value={formatPhone(form.phone)}
+                    onChange={(e) => set("phone", phoneDigits(e.target.value))}
                     placeholder="(416) 000-0000"
                     required
                   />
@@ -518,8 +563,9 @@ export default function ApplicationPage() {
                 {error && <p className={styles.errorMsg}>{error}</p>}
                 <button
                   type="submit"
-                  className={`btn btn-primary ${styles.ctaBtn}`}
-                  disabled={isPending || !agreed}
+                  className={`btn btn-primary ${styles.ctaBtn} ${!step2Complete ? styles.ctaBtnDisabled : ""}`}
+                  disabled={isPending}
+                  aria-disabled={!step2Complete}
                 >
                   {isPending ? "Submitting…" : "Submit application"}
                 </button>

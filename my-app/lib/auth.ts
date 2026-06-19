@@ -8,7 +8,12 @@ import {
   authVerification,
 } from "@/db/schema/auth";
 import { sendMail } from "@/lib/email";
-import { htmlEmail, paragraph } from "@/lib/emails/base";
+import {
+  contactParagraph,
+  contactTextLine,
+  htmlEmail,
+  paragraph,
+} from "@/lib/emails/base";
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
@@ -47,6 +52,8 @@ export const auth = betterAuth({
           "",
           "If you didn't request this, you can safely ignore this email.",
           "",
+          contactTextLine(),
+          "",
           "The 7eats team",
         ].join("\n"),
         html: htmlEmail({
@@ -59,7 +66,8 @@ export const auth = betterAuth({
             ) +
             paragraph(
               "If you did not request this, you can safely ignore this email and your password will stay the same.",
-            ),
+            ) +
+            contactParagraph(),
           ctaLabel: "Reset password",
           ctaUrl: url,
         }),
@@ -91,6 +99,8 @@ export const auth = betterAuth({
           "",
           "This link expires in 24 hours.",
           "",
+          contactTextLine(),
+          "",
           "The 7eats team",
         ].join("\n"),
         html: htmlEmail({
@@ -104,7 +114,8 @@ export const auth = betterAuth({
             ) +
             paragraph(
               "If you didn't create a 7eats account, you can safely ignore this email.",
-            ),
+            ) +
+            contactParagraph(),
           ctaLabel: "Confirm email",
           ctaUrl: url,
         }),

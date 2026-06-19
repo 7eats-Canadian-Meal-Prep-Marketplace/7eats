@@ -4,8 +4,23 @@ vi.mock("@/lib/auth", () => ({
   auth: { api: { getSession: vi.fn() } },
 }));
 vi.mock("@/db", () => ({
-  db: { select: vi.fn(), insert: vi.fn(), update: vi.fn() },
+  db: {
+    select: vi.fn(),
+    insert: vi.fn(),
+    update: vi.fn(),
+    execute: vi.fn(),
+  },
+  dbPool: { transaction: vi.fn() },
 }));
+vi.mock("@/lib/dish-status", async (importOriginal) => {
+  const mod = await importOriginal<typeof import("@/lib/dish-status")>();
+  return {
+    ...mod,
+    mapDishStatusForDb: vi.fn(async (status: "active" | "inactive") =>
+      status === "inactive" ? "inactive" : "active",
+    ),
+  };
+});
 vi.mock("@/db/schema", () => ({
   dishes: {},
   dishPhotos: {},
@@ -29,11 +44,18 @@ vi.mock("drizzle-orm", () => ({
 
 import { NextRequest } from "next/server";
 import { GET, POST } from "@/app/api/business/dishes/route";
-import { db } from "@/db";
+import { db, dbPool } from "@/db";
 import { auth } from "@/lib/auth";
 
 const COOK_ID = "cook-uuid";
 const USER_ID = "user-uuid";
+
+const validCreateBody = {
+  name: "Test Dish",
+  price: 12.5,
+  allergenNoneApplies: true,
+  allergens: [],
+};
 
 function makeGet(url = "http://localhost/dishes"): NextRequest {
   return new NextRequest(url, { method: "GET" });
@@ -60,10 +82,17 @@ function mockCookLookup(cookId: string | null) {
   vi.mocked(db.select).mockReturnValue({ from } as never);
 }
 
-function mockInsert(row: object) {
-  const returning = vi.fn().mockResolvedValue([row]);
-  const values = vi.fn(() => ({ returning }));
-  vi.mocked(db.insert).mockReturnValue({ values } as never);
+function mockTransaction(row: object) {
+  vi.mocked(dbPool.transaction).mockImplementation(async (cb) => {
+    const tx = {
+      insert: vi.fn(() => ({
+        values: vi.fn(() => ({
+          returning: vi.fn().mockResolvedValue([row]),
+        })),
+      })),
+    };
+    return cb(tx as never);
+  });
 }
 
 describe("GET /api/business/listings/dishes", () => {
@@ -111,8 +140,8 @@ describe("GET /api/business/listings/dishes", () => {
   it("returns 200 with dish rows", async () => {
     mockSession(USER_ID);
     const mockDishes = [
-      { id: "dish-1", name: "Biryani", cookId: COOK_ID },
-      { id: "dish-2", name: "Curry", cookId: COOK_ID },
+      { id: "dish-1", name: "Biryani", cookId: COOK_ID, status: "active" },
+      { id: "dish-2", name: "Curry", cookId: COOK_ID, status: "active" },
     ];
     let callCount = 0;
     vi.mocked(db.select).mockImplementation(() => {
@@ -248,6 +277,13 @@ describe("POST /api/business/listings/dishes", () => {
     expect(body.error).toBeDefined();
   });
 
+  it("returns 400 when allergen declaration is missing", async () => {
+    mockSession(USER_ID);
+    mockCookLookup(COOK_ID);
+    const res = await POST(makePost({ name: "Test Dish", price: 12.5 }));
+    expect(res.status).toBe(400);
+  });
+
   it("returns 201 on valid minimal body", async () => {
     mockSession(USER_ID);
     mockCookLookup(COOK_ID);
@@ -255,38 +291,31 @@ describe("POST /api/business/listings/dishes", () => {
       id: "new-dish",
       name: "Test Dish",
       cookId: COOK_ID,
-      status: "draft",
+      status: "active",
     };
-    mockInsert(inserted);
+    mockTransaction(inserted);
 
-    const res = await POST(makePost({ name: "Test Dish", price: 12.5 }));
+    const res = await POST(makePost(validCreateBody));
     expect(res.status).toBe(201);
     const body = await res.json();
     expect(body.success).toBe(true);
     expect(body.data).toEqual(inserted);
   });
 
-  it("inserts with status='draft'", async () => {
+  it("inserts with status='active' by default", async () => {
     mockSession(USER_ID);
     mockCookLookup(COOK_ID);
     const inserted = {
       id: "new-dish",
       name: "Test Dish",
       cookId: COOK_ID,
-      status: "draft",
+      status: "active",
     };
-    mockInsert(inserted);
+    mockTransaction(inserted);
 
-    await POST(makePost({ name: "Test Dish", price: 12.5 }));
+    await POST(makePost(validCreateBody));
 
-    const valuesMock = vi.mocked(db.insert).mock.results[0]?.value as {
-      values: ReturnType<typeof vi.fn>;
-    };
-    const valuesArg = valuesMock.values.mock.calls[0]?.[0] as Record<
-      string,
-      unknown
-    >;
-    expect(valuesArg.status).toBe("draft");
+    expect(vi.mocked(dbPool.transaction)).toHaveBeenCalledTimes(1);
   });
 
   it("returns 409 on code 23505 from insert", async () => {
@@ -296,11 +325,9 @@ describe("POST /api/business/listings/dishes", () => {
     const conflict = Object.assign(new Error("unique violation"), {
       code: "23505",
     });
-    const returning = vi.fn().mockRejectedValue(conflict);
-    const values = vi.fn(() => ({ returning }));
-    vi.mocked(db.insert).mockReturnValue({ values } as never);
+    vi.mocked(dbPool.transaction).mockRejectedValue(conflict);
 
-    const res = await POST(makePost({ name: "Test Dish", price: 12.5 }));
+    const res = await POST(makePost(validCreateBody));
     expect(res.status).toBe(409);
     const body = await res.json();
     expect(body.error).toBeDefined();
@@ -310,11 +337,9 @@ describe("POST /api/business/listings/dishes", () => {
     mockSession(USER_ID);
     mockCookLookup(COOK_ID);
 
-    const returning = vi.fn().mockRejectedValue(new Error("unexpected"));
-    const values = vi.fn(() => ({ returning }));
-    vi.mocked(db.insert).mockReturnValue({ values } as never);
+    vi.mocked(dbPool.transaction).mockRejectedValue(new Error("unexpected"));
 
-    const res = await POST(makePost({ name: "Test Dish", price: 12.5 }));
+    const res = await POST(makePost(validCreateBody));
     expect(res.status).toBe(500);
     const body = await res.json();
     expect(body.error).toBeDefined();

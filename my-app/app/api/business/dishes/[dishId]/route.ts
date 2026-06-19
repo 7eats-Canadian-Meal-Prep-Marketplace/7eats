@@ -13,8 +13,10 @@ import {
   dishNutrition,
   dishPhotos,
   dishTags,
+  orderDishes,
   tags,
 } from "@/db/schema";
+import { mapDishStatusForDb, normalizeDishStatus } from "@/lib/dish-status";
 
 export type Params = { params: Promise<{ dishId: string }> };
 
@@ -33,6 +35,7 @@ const updateDishSchema = z
     isNutFree: z.boolean().optional().default(false),
     isKosher: z.boolean().optional().default(false),
     servingSize: z.string().max(100).optional(),
+    status: z.enum(["active", "inactive"]).optional(),
   })
   .partial();
 
@@ -109,6 +112,7 @@ export async function GET(req: NextRequest, { params }: Params) {
       success: true,
       data: {
         ...dish,
+        status: normalizeDishStatus(dish.status),
         photos,
         ingredients,
         nutrition,
@@ -150,11 +154,14 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   }
 
   // price is numeric in the DB — stringify it; pass the rest through.
-  const { price, ...rest } = parsed.data;
+  const { price, status, ...rest } = parsed.data;
   const fields: Record<string, unknown> = {
     ...rest,
     ...(price !== undefined ? { price: String(price) } : {}),
   };
+  if (status !== undefined) {
+    fields.status = await mapDishStatusForDb(status);
+  }
   if (Object.keys(fields).length === 0) {
     return NextResponse.json(
       { error: "No fields to update." },
@@ -177,7 +184,13 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       .where(and(eq(dishes.id, dishId), eq(dishes.cookId, cookId)))
       .returning();
 
-    return NextResponse.json({ success: true, data: updated });
+    return NextResponse.json({
+      success: true,
+      data: {
+        ...updated,
+        status: normalizeDishStatus(updated.status),
+      },
+    });
   } catch (err: unknown) {
     if (
       typeof err === "object" &&
@@ -193,6 +206,51 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     console.error("[dishes/id]", err);
     return NextResponse.json(
       { error: "Failed to update dish." },
+      { status: 500 },
+    );
+  }
+}
+
+export async function DELETE(req: NextRequest, { params }: Params) {
+  const cookId = await getCookId(req.headers);
+  if (!cookId) return unauthorized();
+
+  const { dishId } = await params;
+
+  try {
+    const [dish] = await db
+      .select({ id: dishes.id })
+      .from(dishes)
+      .where(and(eq(dishes.id, dishId), eq(dishes.cookId, cookId)))
+      .limit(1);
+
+    if (!dish) return notFound("Dish");
+
+    const [orderRef] = await db
+      .select({ dishId: orderDishes.dishId })
+      .from(orderDishes)
+      .where(eq(orderDishes.dishId, dishId))
+      .limit(1);
+
+    if (orderRef) {
+      return NextResponse.json(
+        {
+          error:
+            "This meal has been ordered before and cannot be deleted. Archive it instead.",
+        },
+        { status: 409 },
+      );
+    }
+
+    await db
+      .delete(dishes)
+      .where(and(eq(dishes.id, dishId), eq(dishes.cookId, cookId)));
+
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error("[dishes/id/delete]", err);
+    return NextResponse.json(
+      { error: "Failed to delete dish." },
       { status: 500 },
     );
   }

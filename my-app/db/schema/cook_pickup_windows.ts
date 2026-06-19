@@ -19,16 +19,26 @@ export const cookPickupWindows = pgTable(
     cookId: uuid("cook_id")
       .notNull()
       .references(() => cookProfiles.id, { onDelete: "cascade" }),
+    // Distinguishes pickup vs delivery availability rows for the same cook/day.
+    windowType: text("window_type").notNull().default("pickup"),
     dayOfWeek: text("day_of_week").notNull(),
     fromTime: time("from_time", { precision: 0 }).notNull(),
     toTime: time("to_time", { precision: 0 }).notNull(),
   },
   (t) => [
-    uniqueIndex("cpw_cook_day_uidx").on(t.cookId, t.dayOfWeek),
+    uniqueIndex("cpw_cook_type_day_uidx").on(
+      t.cookId,
+      t.windowType,
+      t.dayOfWeek,
+    ),
     check("cpw_time_order", sql`${t.toTime} > ${t.fromTime}`),
     check(
       "cpw_day_valid",
       sql`${t.dayOfWeek} IN ('monday','tuesday','wednesday','thursday','friday','saturday','sunday')`,
+    ),
+    check(
+      "cpw_window_type_valid",
+      sql`${t.windowType} IN ('pickup','delivery')`,
     ),
     pgPolicy("cpw_select_public", {
       for: "select",

@@ -4,13 +4,16 @@ import { Search, Star } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
+import { kitchenDisplayName } from "@/lib/cook-display";
 import { Skeleton } from "../_skeleton";
 import styles from "../browse/page.module.css";
 
 type CookCard = {
   id: string;
   displayName: string | null;
+  cookName: string | null;
   photoUrl: string | null;
+  bannerUrl: string | null;
   bio: string | null;
   tags: { slug: string; label: string }[];
   pickupCity: string | null;
@@ -52,6 +55,7 @@ function SearchContent() {
     return cooks.filter((c) => {
       const hay = [
         c.displayName ?? "",
+        c.cookName ?? "",
         c.pickupCity ?? "",
         c.bio ?? "",
         ...c.tags.map((t) => t.label),
@@ -133,10 +137,14 @@ function SearchContent() {
                   className={styles.card}
                 >
                   <div className={styles.cardCover}>
-                    {cook.representativeDishPhoto ? (
+                    {cook.bannerUrl || cook.representativeDishPhoto ? (
                       // biome-ignore lint/performance/noImgElement: cover
                       <img
-                        src={cook.representativeDishPhoto}
+                        src={
+                          cook.bannerUrl ??
+                          cook.representativeDishPhoto ??
+                          undefined
+                        }
                         alt=""
                         className={styles.cardImage}
                       />
@@ -158,7 +166,7 @@ function SearchContent() {
                   </div>
                   <div className={styles.cardBody}>
                     <h3 className={styles.cardTitle}>
-                      {cook.displayName ?? "Chef"}
+                      {kitchenDisplayName(cook)}
                     </h3>
                     <p className={styles.metaLine}>{cook.pickupCity ?? ""}</p>
                     {cook.tags.length > 0 && (

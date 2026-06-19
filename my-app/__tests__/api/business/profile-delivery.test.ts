@@ -20,6 +20,7 @@ import { NextRequest } from "next/server";
 import { GET, PATCH } from "@/app/api/business/profile/route";
 import { db } from "@/db";
 import { auth } from "@/lib/auth";
+import { DELIVERY_MAX_KM_MAX } from "@/lib/delivery-pricing";
 
 const COOK_ID = "cook-uuid";
 const USER_ID = "user-uuid";
@@ -88,15 +89,15 @@ describe("GET /api/business/profile — delivery zone fields", () => {
     expect(res.status).toBe(404);
   });
 
-  it("returns the 4 delivery zone fields when profile exists", async () => {
+  it("returns delivery zone fields when profile exists", async () => {
     mockSession(USER_ID);
     const profileRow = {
       id: COOK_ID,
       displayName: "Test Kitchen",
       delivery: "self",
-      maxDeliveryKm: 15,
+      maxDeliveryKm: 10,
       deliveryRatePerKm: "1.50",
-      deliveryFlatFee: "3.00",
+      deliveryFlatFee: "0",
       freeDeliveryAbove: "50.00",
     };
     mockSelectTwice(profileRow);
@@ -105,9 +106,9 @@ describe("GET /api/business/profile — delivery zone fields", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.success).toBe(true);
-    expect(body.data.maxDeliveryKm).toBe(15);
+    expect(body.data.maxDeliveryKm).toBe(10);
     expect(body.data.deliveryRatePerKm).toBe("1.50");
-    expect(body.data.deliveryFlatFee).toBe("3.00");
+    expect(body.data.deliveryFlatFee).toBe("0");
     expect(body.data.freeDeliveryAbove).toBe("50.00");
   });
 });
@@ -116,14 +117,13 @@ describe("PATCH /api/business/profile — delivery zone fields", () => {
   it("returns 401 when unauthenticated", async () => {
     mockSession(null);
     const res = await PATCH(
-      makePatch({ maxDeliveryKm: 10, deliveryFlatFee: 3 }),
+      makePatch({ maxDeliveryKm: 10, deliveryRatePerKm: 1.5 }),
     );
     expect(res.status).toBe(401);
   });
 
   it("updates delivery zone fields with valid data", async () => {
     mockSession(USER_ID);
-    // getCookId select mock
     const limit = vi.fn().mockResolvedValue([{ id: COOK_ID }]);
     const where = vi.fn(() => ({ limit }));
     const from = vi.fn(() => ({ where }));
@@ -133,7 +133,7 @@ describe("PATCH /api/business/profile — delivery zone fields", () => {
       id: COOK_ID,
       maxDeliveryKm: 10,
       deliveryRatePerKm: "1.50",
-      deliveryFlatFee: "3.00",
+      deliveryFlatFee: "0",
       freeDeliveryAbove: "50.00",
     };
     const { set } = mockUpdate(updatedRow);
@@ -142,7 +142,6 @@ describe("PATCH /api/business/profile — delivery zone fields", () => {
       makePatch({
         maxDeliveryKm: 10,
         deliveryRatePerKm: 1.5,
-        deliveryFlatFee: 3.0,
         freeDeliveryAbove: 50.0,
       }),
     );
@@ -154,32 +153,44 @@ describe("PATCH /api/business/profile — delivery zone fields", () => {
       expect.objectContaining({
         maxDeliveryKm: 10,
         deliveryRatePerKm: 1.5,
-        deliveryFlatFee: 3.0,
+        deliveryFlatFee: 0,
         freeDeliveryAbove: 50.0,
       }),
     );
   });
 
-  it("returns 400 when maxDeliveryKm exceeds 200", async () => {
+  it(`returns 400 when maxDeliveryKm exceeds ${DELIVERY_MAX_KM_MAX}`, async () => {
     mockSession(USER_ID);
-    // getCookId select mock (shouldn't be reached, but set up just in case)
     const limit = vi.fn().mockResolvedValue([{ id: COOK_ID }]);
     const where = vi.fn(() => ({ limit }));
     const from = vi.fn(() => ({ where }));
     vi.mocked(db.select).mockReturnValue({ from } as never);
 
-    const res = await PATCH(makePatch({ maxDeliveryKm: 201 }));
+    const res = await PATCH(
+      makePatch({ maxDeliveryKm: DELIVERY_MAX_KM_MAX + 1 }),
+    );
     expect(res.status).toBe(400);
   });
 
-  it("returns 400 when deliveryRatePerKm is negative", async () => {
+  it("returns 400 when deliveryRatePerKm is below minimum", async () => {
     mockSession(USER_ID);
     const limit = vi.fn().mockResolvedValue([{ id: COOK_ID }]);
     const where = vi.fn(() => ({ limit }));
     const from = vi.fn(() => ({ where }));
     vi.mocked(db.select).mockReturnValue({ from } as never);
 
-    const res = await PATCH(makePatch({ deliveryRatePerKm: -1 }));
+    const res = await PATCH(makePatch({ deliveryRatePerKm: 0.1 }));
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 when deliveryFlatFee is non-zero", async () => {
+    mockSession(USER_ID);
+    const limit = vi.fn().mockResolvedValue([{ id: COOK_ID }]);
+    const where = vi.fn(() => ({ limit }));
+    const from = vi.fn(() => ({ where }));
+    vi.mocked(db.select).mockReturnValue({ from } as never);
+
+    const res = await PATCH(makePatch({ deliveryFlatFee: 3 }));
     expect(res.status).toBe(400);
   });
 

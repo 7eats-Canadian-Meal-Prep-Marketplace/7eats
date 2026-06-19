@@ -98,7 +98,7 @@ Admin pages are not in scope for this phase. Application review and link issuanc
 
 The 7eats team reviews the application and calls the cook. No admin interface is in scope for this phase — this is handled manually by the team. Once approved, the team triggers a magic link email to the cook's application email via an internal tool or direct DB action.
 
-The magic link points to `/business-auth/setup/create-password?token=` with a signed, one-time-use token that expires after 7 days.
+The magic link points to `/business-auth/setup/create-password?token=` with a signed, one-time-use token that expires after 3 days.
 
 ---
 

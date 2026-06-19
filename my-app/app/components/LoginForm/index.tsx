@@ -115,6 +115,7 @@ export default function LoginForm({
               className={styles.input}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter your password"
               required
             />
             <button

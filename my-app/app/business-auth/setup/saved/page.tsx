@@ -43,7 +43,7 @@ export default function SavedPage() {
           <p className={styles.body}>
             We've saved where you left off. Come back whenever you're ready.
             Your setup link is valid for{" "}
-            <strong>7 days from when it was sent.</strong>
+            <strong>3 days from when it was sent.</strong>
           </p>
 
           <div className={styles.card}>

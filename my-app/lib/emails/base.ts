@@ -1,6 +1,19 @@
 const FONT_STACK =
   '"Plus Jakarta Sans","Helvetica Neue",Helvetica,Arial,sans-serif';
 
+export const CONTACT_EMAIL = "contact@7eats.ca";
+export const NOREPLY_FROM = "noreply@7eats.ca";
+
+export function contactParagraph(): string {
+  return paragraph(
+    `Questions? Email us at <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a>.`,
+  );
+}
+
+export function contactTextLine(): string {
+  return `Questions? Email us at ${CONTACT_EMAIL}.`;
+}
+
 type HtmlEmailOptions = {
   title: string;
   preheader: string;
@@ -45,7 +58,7 @@ ${cta}
 </td>
 </tr>
 <tr>
-<td align="center" style="background-color:#f4f4f4;padding:20px 32px;font-family:${FONT_STACK};font-size:13px;color:#6b6b6b;">© 7eats · hello@7eats.ca</td>
+<td align="center" style="background-color:#f4f4f4;padding:20px 32px;font-family:${FONT_STACK};font-size:13px;color:#6b6b6b;">© 7eats · <a href="mailto:${CONTACT_EMAIL}" style="color:#6b6b6b;text-decoration:none;">${CONTACT_EMAIL}</a></td>
 </tr>
 </table>
 </td>

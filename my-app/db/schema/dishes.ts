@@ -22,7 +22,7 @@ const isAdmin = sql`auth.role() = 'admin'`;
 
 // cook owns this dish
 const ownDish = sql`cook_id IN (
-  SELECT id FROM cook_profiles WHERE user_id = auth.uid()
+  SELECT id FROM cook_profiles WHERE user_id = auth.uid()::text
 )`;
 
 // dish is publicly visible when it is active
@@ -69,7 +69,7 @@ export const dishes = pgTable(
     servingSize: varchar("serving_size", { length: 100 }),
     price: numeric("price", { precision: 10, scale: 2 }).notNull(),
     // Workflow status — also drives public visibility (active = visible).
-    status: dishStatus("status").notNull().default("draft"),
+    status: dishStatus("status").notNull().default("active"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at")
       .notNull()
@@ -113,8 +113,12 @@ export const dishes = pgTable(
       to: "public",
       using: isAdmin,
     }),
-    // No delete policy — dishes are retired via status='archived', never deleted.
-    // Hard-delete is blocked because order_dishes keeps a FK reference.
+    pgPolicy("dishes_delete_own", {
+      for: "delete",
+      to: "public",
+      using: ownDish,
+    }),
+    // Hard-delete blocked when order_dishes references the dish (ON DELETE restrict).
   ],
 ).enableRLS();
 
@@ -172,7 +176,6 @@ export const dishIngredients = pgTable(
       .notNull()
       .references(() => dishes.id, { onDelete: "cascade" }),
     name: varchar("name", { length: 255 }).notNull(),
-    quantity: varchar("quantity", { length: 100 }),
     isAllergen: boolean("is_allergen").notNull().default(false),
     sortOrder: integer("sort_order").notNull().default(0),
   },

@@ -17,7 +17,7 @@ const DAY_ORDER = [
 
 type DayOfWeek = (typeof DAY_ORDER)[number];
 
-const pickupWindowSchema = z
+const windowSchema = z
   .object({
     day: z.enum(DAY_ORDER),
     from: z.string().regex(/^\d{2}:\d{2}$/),
@@ -26,7 +26,9 @@ const pickupWindowSchema = z
   .refine((w) => w.to > w.from, { message: "to must be after from" });
 
 const bodySchema = z.object({
-  pickupWindows: z.array(pickupWindowSchema).optional(),
+  pickupWindows: z.array(windowSchema).optional(),
+  deliveryWindows: z.array(windowSchema).optional(),
+  offersPickup: z.boolean().optional(),
   leadTime: z
     .enum(["same_day", "1_day", "2_days", "3_days", "4_days", "5_days"])
     .optional(),
@@ -36,6 +38,38 @@ const bodySchema = z.object({
 
 function formatTime(t: string): string {
   return t.slice(0, 5);
+}
+
+function sortWindows(
+  rows: Array<{ dayOfWeek: string; fromTime: string; toTime: string }>,
+) {
+  return rows
+    .sort(
+      (a, b) =>
+        DAY_ORDER.indexOf(a.dayOfWeek as DayOfWeek) -
+        DAY_ORDER.indexOf(b.dayOfWeek as DayOfWeek),
+    )
+    .map((w) => ({
+      day: w.dayOfWeek,
+      from: formatTime(w.fromTime),
+      to: formatTime(w.toTime),
+    }));
+}
+
+function splitWindows(
+  rows: Array<{
+    windowType: string;
+    dayOfWeek: string;
+    fromTime: string;
+    toTime: string;
+  }>,
+) {
+  return {
+    pickupWindows: sortWindows(rows.filter((w) => w.windowType === "pickup")),
+    deliveryWindows: sortWindows(
+      rows.filter((w) => w.windowType === "delivery"),
+    ),
+  };
 }
 
 export async function GET(req: NextRequest) {
@@ -48,6 +82,7 @@ export async function GET(req: NextRequest) {
         .select({
           leadTime: cookProfiles.leadTime,
           maxCapacity: cookProfiles.maxCapacity,
+          offersPickup: cookProfiles.offersPickup,
           delivery: cookProfiles.delivery,
         })
         .from(cookProfiles)
@@ -55,6 +90,7 @@ export async function GET(req: NextRequest) {
         .limit(1),
       db
         .select({
+          windowType: cookPickupWindows.windowType,
           dayOfWeek: cookPickupWindows.dayOfWeek,
           fromTime: cookPickupWindows.fromTime,
           toTime: cookPickupWindows.toTime,
@@ -67,21 +103,11 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Cook not found." }, { status: 404 });
     }
 
-    const sortedWindows = windows
-      .sort(
-        (a, b) =>
-          DAY_ORDER.indexOf(a.dayOfWeek as DayOfWeek) -
-          DAY_ORDER.indexOf(b.dayOfWeek as DayOfWeek),
-      )
-      .map((w) => ({
-        day: w.dayOfWeek,
-        from: formatTime(w.fromTime),
-        to: formatTime(w.toTime),
-      }));
+    const { pickupWindows, deliveryWindows } = splitWindows(windows);
 
     return NextResponse.json({
       success: true,
-      data: { ...cook, pickupWindows: sortedWindows },
+      data: { ...cook, pickupWindows, deliveryWindows },
     });
   } catch (err) {
     console.error("[dashboard/availability GET]", err);
@@ -111,9 +137,21 @@ export async function PUT(req: NextRequest) {
     );
   }
 
-  const { pickupWindows, ...profileFields } = parsed.data;
+  const {
+    pickupWindows,
+    deliveryWindows,
+    offersPickup: offersPickupBody,
+    ...profileFields
+  } = parsed.data;
 
-  if (!pickupWindows && Object.keys(profileFields).length === 0) {
+  const updatingWindows =
+    pickupWindows !== undefined || deliveryWindows !== undefined;
+
+  if (
+    !updatingWindows &&
+    Object.keys(profileFields).length === 0 &&
+    offersPickupBody === undefined
+  ) {
     return NextResponse.json(
       { error: "No fields to update." },
       { status: 400 },
@@ -121,28 +159,96 @@ export async function PUT(req: NextRequest) {
   }
 
   try {
+    const [current] = await db
+      .select({
+        delivery: cookProfiles.delivery,
+        offersPickup: cookProfiles.offersPickup,
+      })
+      .from(cookProfiles)
+      .where(eq(cookProfiles.id, cookId))
+      .limit(1);
+
+    if (!current) {
+      return NextResponse.json({ error: "Cook not found." }, { status: 404 });
+    }
+
+    const delivery =
+      profileFields.delivery ??
+      (current.delivery === "self" ? ("self" as const) : ("none" as const));
+    const offersPickup = offersPickupBody ?? current.offersPickup;
+    const offersDelivery = delivery === "self";
+
+    if (updatingWindows) {
+      const pickup = pickupWindows ?? [];
+      const deliveryWins = deliveryWindows ?? [];
+
+      if (!offersPickup && !offersDelivery) {
+        return NextResponse.json(
+          { error: "Offer pickup, delivery, or both." },
+          { status: 400 },
+        );
+      }
+      if (offersPickup && pickup.length === 0) {
+        return NextResponse.json(
+          { error: "Add at least one pickup day." },
+          { status: 400 },
+        );
+      }
+      if (offersDelivery && deliveryWins.length === 0) {
+        return NextResponse.json(
+          { error: "Add at least one delivery day." },
+          { status: 400 },
+        );
+      }
+    }
+
     await dbPool.transaction(async (tx) => {
-      if (Object.keys(profileFields).length > 0) {
+      const profileUpdate: {
+        leadTime?: (typeof profileFields)["leadTime"];
+        maxCapacity?: number;
+        delivery?: "none" | "self";
+        offersPickup?: boolean;
+      } = { ...profileFields };
+
+      if (offersPickupBody !== undefined) {
+        profileUpdate.offersPickup = offersPickupBody;
+      } else if (updatingWindows && pickupWindows !== undefined) {
+        profileUpdate.offersPickup = pickupWindows.length > 0;
+      }
+      if (profileFields.delivery === "none") {
+        profileUpdate.offersPickup = offersPickupBody ?? true;
+      }
+
+      if (Object.keys(profileUpdate).length > 0) {
         await tx
           .update(cookProfiles)
-          .set(profileFields)
+          .set(profileUpdate)
           .where(eq(cookProfiles.id, cookId));
       }
 
-      if (pickupWindows !== undefined) {
+      if (updatingWindows) {
         await tx
           .delete(cookPickupWindows)
           .where(eq(cookPickupWindows.cookId, cookId));
 
-        if (pickupWindows.length > 0) {
-          await tx.insert(cookPickupWindows).values(
-            pickupWindows.map((w) => ({
-              cookId,
-              dayOfWeek: w.day,
-              fromTime: w.from,
-              toTime: w.to,
-            })),
-          );
+        const rows = [
+          ...(pickupWindows ?? []).map((w) => ({
+            cookId,
+            windowType: "pickup" as const,
+            dayOfWeek: w.day,
+            fromTime: w.from,
+            toTime: w.to,
+          })),
+          ...(deliveryWindows ?? []).map((w) => ({
+            cookId,
+            windowType: "delivery" as const,
+            dayOfWeek: w.day,
+            fromTime: w.from,
+            toTime: w.to,
+          })),
+        ];
+        if (rows.length > 0) {
+          await tx.insert(cookPickupWindows).values(rows);
         }
       }
     });
@@ -152,6 +258,7 @@ export async function PUT(req: NextRequest) {
         .select({
           leadTime: cookProfiles.leadTime,
           maxCapacity: cookProfiles.maxCapacity,
+          offersPickup: cookProfiles.offersPickup,
           delivery: cookProfiles.delivery,
         })
         .from(cookProfiles)
@@ -159,6 +266,7 @@ export async function PUT(req: NextRequest) {
         .limit(1),
       db
         .select({
+          windowType: cookPickupWindows.windowType,
           dayOfWeek: cookPickupWindows.dayOfWeek,
           fromTime: cookPickupWindows.fromTime,
           toTime: cookPickupWindows.toTime,
@@ -171,21 +279,12 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: "Cook not found." }, { status: 404 });
     }
 
-    const sortedWindows = updatedWindows
-      .sort(
-        (a, b) =>
-          DAY_ORDER.indexOf(a.dayOfWeek as DayOfWeek) -
-          DAY_ORDER.indexOf(b.dayOfWeek as DayOfWeek),
-      )
-      .map((w) => ({
-        day: w.dayOfWeek,
-        from: formatTime(w.fromTime),
-        to: formatTime(w.toTime),
-      }));
+    const { pickupWindows: pw, deliveryWindows: dw } =
+      splitWindows(updatedWindows);
 
     return NextResponse.json({
       success: true,
-      data: { ...updatedCook, pickupWindows: sortedWindows },
+      data: { ...updatedCook, pickupWindows: pw, deliveryWindows: dw },
     });
   } catch (err) {
     console.error("[dashboard/availability PUT]", err);

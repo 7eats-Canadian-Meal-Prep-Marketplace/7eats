@@ -28,6 +28,7 @@ export async function GET(
         minOrderQty: cookProfiles.minOrderQty,
         maxOrderQty: cookProfiles.maxOrderQty,
         leadTime: cookProfiles.leadTime,
+        offersPickup: cookProfiles.offersPickup,
         delivery: cookProfiles.delivery,
         cancellationAllowed: cookProfiles.cancellationAllowed,
         pickupCity: cookProfiles.pickupCity,
@@ -41,14 +42,30 @@ export async function GET(
       return NextResponse.json({ error: "Cook not found." }, { status: 404 });
     }
 
-    const windows = await db
+    const windowRows = await db
       .select({
+        windowType: cookPickupWindows.windowType,
         dayOfWeek: cookPickupWindows.dayOfWeek,
         fromTime: cookPickupWindows.fromTime,
         toTime: cookPickupWindows.toTime,
       })
       .from(cookPickupWindows)
       .where(eq(cookPickupWindows.cookId, cookId));
+
+    const pickupWindows = windowRows
+      .filter((w) => w.windowType === "pickup")
+      .map(({ dayOfWeek, fromTime, toTime }) => ({
+        dayOfWeek,
+        fromTime,
+        toTime,
+      }));
+    const deliveryWindows = windowRows
+      .filter((w) => w.windowType === "delivery")
+      .map(({ dayOfWeek, fromTime, toTime }) => ({
+        dayOfWeek,
+        fromTime,
+        toTime,
+      }));
 
     const dishRows = await db
       .select({
@@ -146,7 +163,10 @@ export async function GET(
 
     return NextResponse.json({
       success: true,
-      data: { cook: { ...cook, pickupWindows: windows }, dishes: assembled },
+      data: {
+        cook: { ...cook, pickupWindows, deliveryWindows },
+        dishes: assembled,
+      },
     });
   } catch (err) {
     console.error("[cooks/menu]", err);

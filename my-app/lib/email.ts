@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { NOREPLY_FROM } from "@/lib/emails/base";
 
 export interface MailMessage {
   to: string;
@@ -26,7 +27,7 @@ export async function sendMail({
 
   const resend = new Resend(apiKey);
   const { error } = await resend.emails.send({
-    from: process.env.RESEND_FROM_EMAIL ?? "noreply@7eats.ca",
+    from: process.env.RESEND_FROM_EMAIL ?? NOREPLY_FROM,
     to,
     subject,
     text,

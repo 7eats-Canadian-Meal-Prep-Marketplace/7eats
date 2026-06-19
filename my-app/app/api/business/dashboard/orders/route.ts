@@ -53,6 +53,7 @@ export async function GET(req: NextRequest) {
           unitPrice: orders.unitPrice,
           totalPrice: orders.totalPrice,
           pickupAt: orders.pickupAt,
+          fulfillmentMode: orders.fulfillmentMode,
           fulfilledAt: orders.fulfilledAt,
           cancelledAt: orders.cancelledAt,
           notes: orders.notes,

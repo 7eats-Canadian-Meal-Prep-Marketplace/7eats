@@ -4,6 +4,8 @@ import { Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useState, useTransition } from "react";
+import PasswordChecklist from "@/app/components/PasswordChecklist";
+import { validatePassword } from "@/lib/password";
 import styles from "./ResetPasswordForm.module.css";
 
 export default function ResetPasswordForm({
@@ -28,8 +30,9 @@ export default function ResetPasswordForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters.");
+    const pwError = validatePassword(password);
+    if (pwError) {
+      setError(pwError);
       return;
     }
     if (password !== confirm) {
@@ -56,7 +59,7 @@ export default function ResetPasswordForm({
     <div className={styles.wrap}>
       <div className={styles.head}>
         <h1 className={styles.title}>Set a new password</h1>
-        <p className={styles.sub}>Must be at least 8 characters.</p>
+        <p className={styles.sub}>Choose a strong password you don't reuse.</p>
       </div>
 
       <form onSubmit={handleSubmit} className={styles.form} noValidate>
@@ -115,6 +118,8 @@ export default function ResetPasswordForm({
             </button>
           </div>
         </div>
+
+        <PasswordChecklist password={password} />
 
         {error && <p className={styles.error}>{error}</p>}
 

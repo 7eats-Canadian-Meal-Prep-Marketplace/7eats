@@ -7,9 +7,11 @@ import {
 } from "@/app/api/business/_lib/cook-auth";
 import { db } from "@/db";
 import { dishes } from "@/db/schema";
+import { isDishPaused, setDishPaused } from "@/lib/dish-status";
 
 export type Params = { params: Promise<{ dishId: string }> };
 
+/** Pause a dish (inactive, or archived on legacy schema). */
 export async function POST(req: NextRequest, { params }: Params) {
   const cookId = await getCookId(req.headers);
   if (!cookId) return unauthorized();
@@ -25,18 +27,15 @@ export async function POST(req: NextRequest, { params }: Params) {
 
     if (!dish) return notFound("Dish");
 
-    if (dish.status === "archived") {
+    if (isDishPaused(dish.status)) {
       return NextResponse.json(
-        { error: "Dish is already archived." },
+        { error: "Meal is already archived." },
         { status: 400 },
       );
     }
 
-    const [updated] = await db
-      .update(dishes)
-      .set({ status: "archived" })
-      .where(and(eq(dishes.id, dishId), eq(dishes.cookId, cookId)))
-      .returning();
+    const updated = await setDishPaused(dishId, cookId);
+    if (!updated) return notFound("Dish");
 
     return NextResponse.json({ success: true, data: updated });
   } catch (err) {

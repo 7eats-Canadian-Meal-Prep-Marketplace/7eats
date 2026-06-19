@@ -2,6 +2,8 @@
 
 import { Eye, EyeOff } from "lucide-react";
 import { useState, useTransition } from "react";
+import PasswordChecklist from "@/app/components/PasswordChecklist";
+import { isPasswordValid, validatePassword } from "@/lib/password";
 import styles from "./CreatePasswordForm.module.css";
 
 export default function CreatePasswordForm({ token }: { token: string }) {
@@ -12,11 +14,14 @@ export default function CreatePasswordForm({ token }: { token: string }) {
   const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState("");
 
+  const formValid = isPasswordValid(password) && password === confirm;
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters.");
+    const pwError = validatePassword(password);
+    if (pwError) {
+      setError(pwError);
       return;
     }
     if (password !== confirm) {
@@ -63,7 +68,7 @@ export default function CreatePasswordForm({ token }: { token: string }) {
                 setPassword(e.target.value);
                 setError("");
               }}
-              placeholder="8+ characters"
+              placeholder="Create a strong password"
               autoComplete="new-password"
               required
             />
@@ -107,12 +112,15 @@ export default function CreatePasswordForm({ token }: { token: string }) {
           </div>
         </div>
 
+        <PasswordChecklist password={password} />
+
         {error && <p className={styles.fieldError}>{error}</p>}
 
         <button
           type="submit"
-          className={`btn btn-primary ${styles.ctaBtn}`}
+          className={`btn btn-primary ${styles.ctaBtn} ${!formValid ? styles.ctaBtnDisabled : ""}`}
           disabled={isPending}
+          aria-disabled={!formValid}
         >
           {isPending ? "Continuing…" : "Continue to setup"}
         </button>

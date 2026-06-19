@@ -53,6 +53,7 @@
 
 ## Known accepted gaps (documented, not blocking)
 
+- **Platform fee copy and defaults:** The codebase still references a **7.5%** platform fee in several places (`cook_profiles.platform_fee_pct` default, onboarding wizard terms summary, billing settings display, FAQ copy, API docs). **Final fee structure and customer-facing copy are TBD before launch** — audit and update all references together when pricing is locked. Track in this doc until done.
 - **Abandoned orders:** an order row in `pending` whose Stripe PI was never completed persists; the reconcile job (B2) surfaces stuck *authorized* payments, and Stripe auto-expires uncaptured PIs. A cleanup job is post-launch.
 - **Delivery out-of-zone at checkout:** the cart shows "Outside delivery zone," but checkout currently still allows submitting; the server snapshots a 0 fee rather than hard-blocking. Tighten if delivery becomes common.
 - **Deep Stripe↔DB amount reconciliation:** B2 checks DB-side staleness; per-PI amount/status verification against the Stripe API can be layered onto the same cron later.

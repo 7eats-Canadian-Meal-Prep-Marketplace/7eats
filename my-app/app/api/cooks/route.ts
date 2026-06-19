@@ -1,10 +1,11 @@
-import { and, avg, count, eq, inArray, sql } from "drizzle-orm";
+import { and, avg, count, eq, exists, inArray, sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import {
   authUser,
   cookProfiles,
   cookProfileTags,
+  dishes,
   orders,
   reviews,
   tags,
@@ -41,7 +42,10 @@ export async function GET(req: NextRequest) {
       .select({
         id: cookProfiles.id,
         displayName: cookProfiles.displayName,
+        firstName: authUser.firstName,
+        lastName: authUser.lastName,
         photoUrl: cookProfiles.photoUrl,
+        bannerUrl: cookProfiles.bannerUrl,
         bio: cookProfiles.bio,
         leadTime: cookProfiles.leadTime,
         delivery: cookProfiles.delivery,
@@ -64,12 +68,26 @@ export async function GET(req: NextRequest) {
         and(
           eq(cookProfiles.setupComplete, true),
           eq(authUser.status, "active"),
+          exists(
+            db
+              .select({ id: dishes.id })
+              .from(dishes)
+              .where(
+                and(
+                  eq(dishes.cookId, cookProfiles.id),
+                  eq(dishes.status, "active"),
+                ),
+              ),
+          ),
         ),
       )
       .groupBy(
         cookProfiles.id,
         cookProfiles.displayName,
+        authUser.firstName,
+        authUser.lastName,
         cookProfiles.photoUrl,
+        cookProfiles.bannerUrl,
         cookProfiles.bio,
         cookProfiles.leadTime,
         cookProfiles.delivery,
@@ -118,7 +136,9 @@ export async function GET(req: NextRequest) {
     let data = baseRows.map((row) => ({
       id: row.id,
       displayName: row.displayName ?? null,
+      cookName: [row.firstName, row.lastName].filter(Boolean).join(" ") || null,
       photoUrl: row.photoUrl ?? null,
+      bannerUrl: row.bannerUrl ?? null,
       bio: row.bio ?? null,
       tags: tagsByCook[row.id] ?? [],
       leadTime: row.leadTime ?? null,

@@ -39,6 +39,10 @@ If a change modifies `db/schema/**`, run Drizzle against the configured Neon
 database before calling the task complete. `drizzle.config.ts` requires
 `DATABASE_URL`; load it from `.env.local` without printing the value.
 
+`pnpm db:migrate` uses `scripts/db-migrate.mjs` (Neon WebSocket + Drizzle
+migrator). Do not use `drizzle-kit migrate` directly — it fails on Neon/Node
+without WebSocket setup.
+
 ## Tech Stack
 
 - **Next.js 16** with App Router, not Pages Router.

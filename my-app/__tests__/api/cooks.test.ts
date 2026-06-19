@@ -8,6 +8,7 @@ vi.mock("@/db/schema", () => ({
   authUser: {},
   cookProfiles: {},
   cookProfileTags: {},
+  dishes: { id: "id", cookId: "cookId", status: "status" },
   tags: {},
   reviews: {},
   orders: {},
@@ -20,6 +21,7 @@ vi.mock("drizzle-orm", () => ({
   desc: vi.fn(),
   asc: vi.fn(),
   inArray: vi.fn(),
+  exists: vi.fn(),
   avg: vi.fn().mockReturnValue({}),
   count: vi.fn().mockReturnValue({}),
   sql: Object.assign(vi.fn().mockReturnValue({}), {
@@ -67,6 +69,8 @@ function selectQueue(results: unknown[][]) {
 const MOCK_COOK_ROW = {
   id: COOK_ID,
   displayName: "Mama Olu's Kitchen",
+  firstName: "Maria",
+  lastName: "Garcia",
   photoUrl: null,
   bio: "Home-cooked West African meals",
   leadTime: "1_day",
@@ -112,6 +116,7 @@ describe("GET /api/cooks", () => {
     expect(Array.isArray(body.data)).toBe(true);
     expect(body.data[0].id).toBe(COOK_ID);
     expect(body.data[0].displayName).toBe("Mama Olu's Kitchen");
+    expect(body.data[0].cookName).toBe("Maria Garcia");
   });
 
   it("returns 200 with empty array when no cooks", async () => {

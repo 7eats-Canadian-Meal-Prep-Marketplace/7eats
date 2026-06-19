@@ -103,10 +103,12 @@ type MenuData = {
     minOrderQty: number;
     maxOrderQty: number | null;
     leadTime: string | null;
+    offersPickup: boolean;
     delivery: "none" | "self" | null;
     cancellationAllowed: boolean;
     pickupCity: string | null;
     pickupWindows: { dayOfWeek: string; fromTime: string; toTime: string }[];
+    deliveryWindows: { dayOfWeek: string; fromTime: string; toTime: string }[];
   };
   dishes: Dish[];
 };
@@ -159,18 +161,40 @@ export default function CookMenuPage() {
     return map;
   }, [cart.cookId, cart.items, cookId]);
 
-  // Concrete pickup slots from the cook's weekly windows (lead time applied).
-  const pickupSlots = useMemo(
-    () =>
-      data
-        ? generatePickupSlots(
-            data.cook.pickupWindows,
-            data.cook.leadTime,
-            new Date(),
-          )
-        : [],
-    [data],
-  );
+  // Concrete slots from the cook's weekly windows (lead time applied).
+  const fulfillmentSlots = useMemo(() => {
+    if (!data) return [];
+    const windows =
+      cart.fulfillmentMode === "delivery"
+        ? data.cook.deliveryWindows
+        : data.cook.pickupWindows;
+    return generatePickupSlots(windows, data.cook.leadTime, new Date());
+  }, [data, cart.fulfillmentMode]);
+
+  const canPickup = data?.cook.offersPickup !== false;
+  const canDeliver = data?.cook.delivery === "self";
+
+  useEffect(() => {
+    if (!data) return;
+    if (canPickup && !canDeliver && cart.fulfillmentMode !== "pickup") {
+      cart.setFulfillment("pickup");
+    } else if (
+      !canPickup &&
+      canDeliver &&
+      cart.fulfillmentMode !== "delivery"
+    ) {
+      cart.setFulfillment("delivery");
+    }
+  }, [data, canPickup, canDeliver, cart.fulfillmentMode, cart.setFulfillment]);
+
+  useEffect(() => {
+    if (
+      cart.pickupAt &&
+      !fulfillmentSlots.some((s) => s.iso === cart.pickupAt)
+    ) {
+      cart.setPickupAt(null);
+    }
+  }, [cart.pickupAt, cart.setPickupAt, fulfillmentSlots]);
 
   function changeQty(dish: Dish, nextQty: number) {
     const promo = dish.promotion
@@ -423,16 +447,18 @@ export default function CookMenuPage() {
 
             <fieldset className={styles.fulfillment}>
               <legend className={styles.summaryLabel}>Fulfillment</legend>
-              <label className={styles.radioRow}>
-                <input
-                  type="radio"
-                  name="fulfillment"
-                  checked={cart.fulfillmentMode === "pickup"}
-                  onChange={() => cart.setFulfillment("pickup")}
-                />
-                Pickup
-              </label>
-              {cook.delivery === "self" && (
+              {canPickup && (
+                <label className={styles.radioRow}>
+                  <input
+                    type="radio"
+                    name="fulfillment"
+                    checked={cart.fulfillmentMode === "pickup"}
+                    onChange={() => cart.setFulfillment("pickup")}
+                  />
+                  Pickup
+                </label>
+              )}
+              {canDeliver && (
                 <label className={styles.radioRow}>
                   <input
                     type="radio"
@@ -446,11 +472,15 @@ export default function CookMenuPage() {
             </fieldset>
 
             <label className={styles.summaryLabel} htmlFor="pickup-at">
-              Pickup time
+              {cart.fulfillmentMode === "delivery"
+                ? "Delivery time"
+                : "Pickup time"}
             </label>
-            {pickupSlots.length === 0 ? (
+            {fulfillmentSlots.length === 0 ? (
               <p className={styles.minNotice}>
-                This cook has no pickup times available right now.
+                {cart.fulfillmentMode === "delivery"
+                  ? "This cook has no delivery times available right now."
+                  : "This cook has no pickup times available right now."}
               </p>
             ) : (
               <select
@@ -458,7 +488,7 @@ export default function CookMenuPage() {
                 className={styles.input}
                 value={
                   cart.pickupAt &&
-                  pickupSlots.some((s) => s.iso === cart.pickupAt)
+                  fulfillmentSlots.some((s) => s.iso === cart.pickupAt)
                     ? cart.pickupAt
                     : ""
                 }
@@ -466,8 +496,12 @@ export default function CookMenuPage() {
                   cart.setPickupAt(e.target.value ? e.target.value : null)
                 }
               >
-                <option value="">Choose a pickup time…</option>
-                {pickupSlots.map((slot) => (
+                <option value="">
+                  {cart.fulfillmentMode === "delivery"
+                    ? "Choose a delivery time…"
+                    : "Choose a pickup time…"}
+                </option>
+                {fulfillmentSlots.map((slot) => (
                   <option key={slot.iso} value={slot.iso}>
                     {slot.label}
                   </option>
@@ -487,15 +521,19 @@ export default function CookMenuPage() {
               disabled={
                 !meetsMin ||
                 !cart.pickupAt ||
-                pickupSlots.length === 0 ||
-                !pickupSlots.some((s) => s.iso === cart.pickupAt)
+                fulfillmentSlots.length === 0 ||
+                !fulfillmentSlots.some((s) => s.iso === cart.pickupAt)
               }
               onClick={() => router.push("/app/checkout")}
             >
-              {pickupSlots.length === 0
-                ? "No pickup times available"
+              {fulfillmentSlots.length === 0
+                ? cart.fulfillmentMode === "delivery"
+                  ? "No delivery times available"
+                  : "No pickup times available"
                 : !cart.pickupAt
-                  ? "Choose a pickup time"
+                  ? cart.fulfillmentMode === "delivery"
+                    ? "Choose a delivery time"
+                    : "Choose a pickup time"
                   : !meetsMin
                     ? `Minimum ${cook.minOrderQty} items`
                     : "Go to checkout"}

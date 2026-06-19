@@ -2,22 +2,34 @@ import { eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/db";
-import { authUser, authUserTable } from "@/db/schema";
+import { authUser, authUserTable, cookProfiles } from "@/db/schema";
 import { auth } from "@/lib/auth";
+
+function resolvePhoneVerified(user: {
+  phone: string | null;
+  phoneVerified: boolean;
+  setupComplete: boolean | null;
+}): boolean {
+  if (user.phoneVerified) return true;
+  // Cooks only reach the dashboard after verify-phone; treat a on-file
+  // number as verified when the flag was never persisted (legacy rows).
+  if (user.phone && user.setupComplete) return true;
+  return false;
+}
 
 const USER_FIELDS = {
   id: authUser.id,
   firstName: authUser.firstName,
   lastName: authUser.lastName,
   phone: authUser.phone,
+  phoneVerified: authUser.phoneVerified,
   email: authUser.email,
   name: authUser.name,
 } as const;
 
 const patchSchema = z.object({
-  firstName: z.string().min(1).max(100).optional(),
-  lastName: z.string().min(1).max(100).optional(),
-  phone: z.string().max(20).optional().nullable(),
+  firstName: z.string().trim().min(1).max(100).optional(),
+  lastName: z.string().trim().min(1).max(100).optional(),
 });
 
 export async function GET(req: NextRequest) {
@@ -27,17 +39,39 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const [user] = await db
-      .select(USER_FIELDS)
+    const [row] = await db
+      .select({
+        id: authUser.id,
+        firstName: authUser.firstName,
+        lastName: authUser.lastName,
+        phone: authUser.phone,
+        phoneVerified: authUser.phoneVerified,
+        email: authUser.email,
+        name: authUser.name,
+        setupComplete: cookProfiles.setupComplete,
+      })
       .from(authUser)
+      .leftJoin(cookProfiles, eq(cookProfiles.userId, authUser.id))
       .where(eq(authUser.id, session.user.id))
       .limit(1);
 
-    if (!user) {
+    if (!row) {
       return NextResponse.json({ error: "User not found." }, { status: 404 });
     }
 
-    return NextResponse.json({ success: true, data: user });
+    const { setupComplete, ...user } = row;
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        ...user,
+        phoneVerified: resolvePhoneVerified({
+          phone: user.phone,
+          phoneVerified: user.phoneVerified,
+          setupComplete: setupComplete ?? false,
+        }),
+      },
+    });
   } catch (err) {
     console.error("[business/me GET]", err);
     return NextResponse.json(
@@ -74,9 +108,6 @@ export async function PATCH(req: NextRequest) {
   const updates: Partial<typeof authUser.$inferInsert> = Object.fromEntries(
     Object.entries(parsed.data).filter(([, v]) => v !== undefined),
   );
-  if (Object.hasOwn(updates, "phone")) {
-    updates.phoneVerified = false;
-  }
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json(

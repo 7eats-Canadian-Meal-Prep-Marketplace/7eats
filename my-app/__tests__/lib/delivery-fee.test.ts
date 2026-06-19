@@ -9,9 +9,9 @@ describe("calcDeliveryFee", () => {
     freeDeliveryAbove: "50.00",
   };
 
-  it("charges flat fee + distance rate", () => {
+  it("charges distance rate only (ignores legacy flat fee)", () => {
     const result = calcDeliveryFee(base, 5, 30);
-    expect(result.fee).toBe(13); // 3 + (2 * 5)
+    expect(result.fee).toBe(10); // 2 * 5
     expect(result.isFree).toBe(false);
     expect(result.isOutOfRange).toBe(false);
   });
@@ -34,14 +34,14 @@ describe("calcDeliveryFee", () => {
       3,
       100,
     );
-    expect(result.fee).toBe(9); // 3 + (2 * 3)
+    expect(result.fee).toBe(6); // 2 * 3
     expect(result.isFree).toBe(false);
   });
 
   it("charges correctly when no max distance set (unlimited range)", () => {
     const result = calcDeliveryFee({ ...base, maxDeliveryKm: null }, 100, 20);
     expect(result.isOutOfRange).toBe(false);
-    expect(result.fee).toBe(203); // 3 + (2 * 100)
+    expect(result.fee).toBe(200); // 2 * 100
   });
 
   it("handles string numeric fields from DB", () => {
@@ -55,6 +55,6 @@ describe("calcDeliveryFee", () => {
       4,
       0,
     );
-    expect(result.fee).toBe(8.5); // 2.5 + (1.5 * 4)
+    expect(result.fee).toBe(6); // 1.5 * 4
   });
 });

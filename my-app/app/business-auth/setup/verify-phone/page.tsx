@@ -12,6 +12,7 @@ import styles from "./page.module.css";
 export default async function VerifyPhonePage() {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) redirect("/business-auth/login");
+  if (session.user.role === "client") redirect("/business-auth/login");
 
   const [row] = await db
     .select({ contactPhone: cookApplications.contactPhone })

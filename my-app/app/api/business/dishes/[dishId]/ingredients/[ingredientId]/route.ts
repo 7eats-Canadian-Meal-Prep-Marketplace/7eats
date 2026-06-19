@@ -14,7 +14,6 @@ type Params = { params: Promise<{ dishId: string; ingredientId: string }> };
 const updateIngredientSchema = z
   .object({
     name: z.string().min(1).max(255).optional(),
-    quantity: z.string().max(100).optional(),
     isAllergen: z.boolean().optional(),
     sortOrder: z.number().int().optional(),
   })
@@ -52,12 +51,9 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     );
   }
 
-  const { name, quantity, isAllergen, sortOrder } = parsed.data;
+  const { name, isAllergen, sortOrder } = parsed.data;
   const hasFields =
-    name !== undefined ||
-    quantity !== undefined ||
-    isAllergen !== undefined ||
-    sortOrder !== undefined;
+    name !== undefined || isAllergen !== undefined || sortOrder !== undefined;
 
   if (!hasFields) {
     return NextResponse.json(
@@ -82,13 +78,11 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   try {
     const updateValues: Partial<{
       name: string;
-      quantity: string | null;
       isAllergen: boolean;
       sortOrder: number;
     }> = {};
 
     if (name !== undefined) updateValues.name = name;
-    if (quantity !== undefined) updateValues.quantity = quantity;
     if (isAllergen !== undefined) updateValues.isAllergen = isAllergen;
     if (sortOrder !== undefined) updateValues.sortOrder = sortOrder;
 

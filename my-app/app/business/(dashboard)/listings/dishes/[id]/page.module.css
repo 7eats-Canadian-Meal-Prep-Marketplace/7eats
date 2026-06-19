@@ -336,6 +336,47 @@
   overflow: hidden;
 }
 
+.ingListSimple {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+/* Ingredient row inputs (match the standard form inputs) */
+.ingNameInput,
+.ingAmountInput {
+  padding: 8px 11px;
+  font-size: 13.5px;
+  color: var(--ink, #1a1a1a);
+  background: var(--white, #fff);
+  border: 1px solid var(--grey-200, #e5e7eb);
+  border-radius: var(--radius-sm, 8px);
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.12s;
+}
+
+.ingNameInput {
+  flex: 1;
+  min-width: 0;
+}
+
+.ingAmountInput {
+  width: 110px;
+}
+
+.ingNameInput:focus,
+.ingAmountInput:focus {
+  border-color: var(--grey-500, #6b7280);
+}
+
+.ingRowSimple {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .ingHeader {
   display: grid;
   grid-template-columns: 1fr 80px 80px 32px;
@@ -533,29 +574,4 @@
   .ingRow {
     grid-template-columns: 1fr 64px 64px 32px;
   }
-}
-
-/* Ingredient row inputs (match the standard form inputs) */
-.ingNameInput,
-.ingAmountInput {
-  padding: 8px 11px;
-  font-size: 13.5px;
-  color: var(--ink, #1a1a1a);
-  background: var(--white, #fff);
-  border: 1px solid var(--grey-200, #e5e7eb);
-  border-radius: var(--radius-sm, 8px);
-  font-family: inherit;
-  outline: none;
-  transition: border-color 0.12s;
-}
-.ingNameInput {
-  flex: 1;
-  min-width: 0;
-}
-.ingAmountInput {
-  width: 110px;
-}
-.ingNameInput:focus,
-.ingAmountInput:focus {
-  border-color: var(--grey-500, #6b7280);
 }

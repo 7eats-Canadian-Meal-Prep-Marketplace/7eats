@@ -21,7 +21,7 @@ export const ALLERGENS = [
   "Other",
 ] as const;
 
-export type DishStatus = "active" | "draft" | "archived";
+export type DishStatus = "active" | "inactive";
 
 export type DishPhoto = {
   id: string;
@@ -31,8 +31,6 @@ export type DishPhoto = {
 export type IngredientRow = {
   id: string;
   name: string;
-  amount: string;
-  unit: string;
 };
 
 export type NutritionForm = {
@@ -52,32 +50,11 @@ export type DishStats = {
 type ApiIngredient = {
   id: string;
   name: string;
-  quantity: string | null;
   isAllergen: boolean;
 };
 
-function parseQuantity(qty: string | null): { amount: string; unit: string } {
-  if (!qty) return { amount: "", unit: "" };
-  const parts = qty.trim().split(/\s+/);
-  if (parts.length === 1) return { amount: parts[0], unit: "" };
-  return { amount: parts[0], unit: parts.slice(1).join(" ") };
-}
-
-function formatQuantity(amount: string, unit: string): string | undefined {
-  const combined = [amount.trim(), unit.trim()].filter(Boolean).join(" ");
-  return combined || undefined;
-}
-
-function allergensFromDish(dish: {
-  isGlutenFree: boolean;
-  isDairyFree: boolean;
-  isNutFree: boolean;
-}): string[] {
-  const out: string[] = [];
-  if (!dish.isGlutenFree) out.push("Gluten");
-  if (!dish.isDairyFree) out.push("Dairy");
-  if (!dish.isNutFree) out.push("Nuts");
-  return out;
+function allergensFromIngredients(ingRows: ApiIngredient[]): string[] {
+  return ingRows.filter((i) => i.isAllergen).map((i) => i.name);
 }
 
 type DishDetailContextValue = {
@@ -88,7 +65,6 @@ type DishDetailContextValue = {
   form: {
     name: string;
     price: string;
-    cuisine: string;
     description: string;
     status: DishStatus;
   } | null;
@@ -97,11 +73,14 @@ type DishDetailContextValue = {
   saveDetails: (payload: {
     name: string;
     price?: string;
-    cuisine: string;
     description: string;
+    status?: DishStatus;
   }) => Promise<boolean>;
-  archiveDish: () => Promise<boolean>;
+  pauseDish: () => Promise<boolean>;
+  activateDish: () => Promise<boolean>;
+  deleteDish: () => Promise<boolean>;
   removePhoto: (photoId: string) => Promise<void>;
+  addPhoto: (file: File) => Promise<boolean>;
   ingredients: IngredientRow[];
   setIngredients: React.Dispatch<React.SetStateAction<IngredientRow[]>>;
   nutrition: NutritionForm;
@@ -111,6 +90,7 @@ type DishDetailContextValue = {
     nutrition: NutritionForm;
     otherChecked: boolean;
     otherText: string;
+    noneApplies: boolean;
   }) => Promise<boolean>;
   reload: () => Promise<void>;
 };
@@ -174,7 +154,6 @@ export function DishDetailProvider({
       setForm({
         name: dish.name,
         price: dish.price ?? "",
-        cuisine: dish.cuisine ?? "",
         description: dish.description ?? "",
         status: dish.status as DishStatus,
       });
@@ -187,17 +166,16 @@ export function DishDetailProvider({
       const ingRows: ApiIngredient[] = dish.ingredients ?? [];
       setRemoteIngredients(ingRows);
       setIngredients(
-        ingRows.map((i) => {
-          const { amount, unit } = parseQuantity(i.quantity);
-          return { id: i.id, name: i.name, amount, unit };
-        }),
+        ingRows
+          .filter((i) => !i.isAllergen)
+          .map((i) => ({ id: i.id, name: i.name })),
       );
       setNutrition({
         calories: dish.nutrition?.calories ?? 0,
         protein: dish.nutrition?.proteinG ? Number(dish.nutrition.proteinG) : 0,
         carbs: dish.nutrition?.carbsG ? Number(dish.nutrition.carbsG) : 0,
         fat: dish.nutrition?.fatG ? Number(dish.nutrition.fatG) : 0,
-        allergens: allergensFromDish(dish),
+        allergens: allergensFromIngredients(ingRows),
       });
     } catch {
       setError("Failed to load dish.");
@@ -214,14 +192,17 @@ export function DishDetailProvider({
     async (payload: {
       name: string;
       price?: string;
-      cuisine: string;
       description: string;
+      status?: DishStatus;
     }) => {
-      const { price, ...rest } = payload;
-      const body =
-        price !== undefined && price !== ""
-          ? { ...rest, price: Number(price) }
-          : rest;
+      const { price, status, ...rest } = payload;
+      const body: Record<string, unknown> = { ...rest };
+      if (price !== undefined && price !== "") {
+        body.price = Number(price);
+      }
+      if (status !== undefined) {
+        body.status = status;
+      }
       const res = await fetch(`/api/business/dishes/${dishId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -234,7 +215,7 @@ export function DishDetailProvider({
     [dishId, load],
   );
 
-  const archiveDish = useCallback(async () => {
+  const pauseDish = useCallback(async () => {
     const res = await fetch(`/api/business/dishes/${dishId}/archive`, {
       method: "POST",
     });
@@ -242,6 +223,22 @@ export function DishDetailProvider({
     await load();
     return true;
   }, [dishId, load]);
+
+  const activateDish = useCallback(async () => {
+    const res = await fetch(`/api/business/dishes/${dishId}/unarchive`, {
+      method: "POST",
+    });
+    if (!res.ok) return false;
+    await load();
+    return true;
+  }, [dishId, load]);
+
+  const deleteDish = useCallback(async () => {
+    const res = await fetch(`/api/business/dishes/${dishId}`, {
+      method: "DELETE",
+    });
+    return res.ok;
+  }, [dishId]);
 
   const removePhoto = useCallback(
     async (photoId: string) => {
@@ -253,12 +250,37 @@ export function DishDetailProvider({
     [dishId],
   );
 
+  const addPhoto = useCallback(
+    async (file: File) => {
+      const fd = new FormData();
+      fd.set("photo", file);
+      fd.set("isPrimary", photos.length === 0 ? "true" : "false");
+      const res = await fetch(`/api/business/dishes/${dishId}/photos/upload`, {
+        method: "POST",
+        body: fd,
+      });
+      if (!res.ok) return false;
+      const json = await res.json();
+      if (json.success && json.data) {
+        setPhotos((prev) => [
+          ...prev,
+          { id: json.data.id, url: json.data.url },
+        ]);
+      } else {
+        await load();
+      }
+      return true;
+    },
+    [dishId, load, photos.length],
+  );
+
   const saveNutrition = useCallback(
     async (payload: {
       ingredients: IngredientRow[];
       nutrition: NutritionForm;
       otherChecked: boolean;
       otherText: string;
+      noneApplies: boolean;
     }) => {
       const allergenSet = new Set(payload.nutrition.allergens);
       if (payload.otherChecked && payload.otherText.trim()) {
@@ -281,7 +303,6 @@ export function DishDetailProvider({
       }
 
       for (const ing of payload.ingredients) {
-        const quantity = formatQuantity(ing.amount, ing.unit);
         const isAllergen = allergenSet.has(ing.name);
         if (ing.id.startsWith("ing-")) {
           await fetch(`/api/business/dishes/${dishId}/ingredients`, {
@@ -289,7 +310,6 @@ export function DishDetailProvider({
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               name: ing.name,
-              quantity,
               isAllergen,
             }),
           });
@@ -299,9 +319,22 @@ export function DishDetailProvider({
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               name: ing.name,
-              quantity,
               isAllergen,
             }),
+          });
+        }
+      }
+
+      for (const allergen of allergenSet) {
+        if (payload.ingredients.some((i) => i.name === allergen)) continue;
+        const existing = remoteIngredients.find(
+          (i) => i.isAllergen && i.name === allergen,
+        );
+        if (!existing) {
+          await fetch(`/api/business/dishes/${dishId}/ingredients`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: allergen, isAllergen: true }),
           });
         }
       }
@@ -343,8 +376,11 @@ export function DishDetailProvider({
       photos,
       setPhotos,
       saveDetails,
-      archiveDish,
+      pauseDish,
+      activateDish,
+      deleteDish,
       removePhoto,
+      addPhoto,
       ingredients,
       setIngredients,
       nutrition,
@@ -360,8 +396,11 @@ export function DishDetailProvider({
       form,
       photos,
       saveDetails,
-      archiveDish,
+      pauseDish,
+      activateDish,
+      deleteDish,
       removePhoto,
+      addPhoto,
       ingredients,
       nutrition,
       saveNutrition,

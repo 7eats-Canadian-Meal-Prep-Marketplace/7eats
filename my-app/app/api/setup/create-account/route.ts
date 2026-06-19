@@ -10,11 +10,17 @@ import {
   setupTokens,
 } from "@/db/schema";
 import { auth } from "@/lib/auth";
+import { validatePassword } from "@/lib/password";
 
 export async function POST(req: Request) {
   const { token, password } = await req.json();
   if (!token || !password) {
     return NextResponse.json({ error: "Invalid request." }, { status: 400 });
+  }
+
+  const pwError = validatePassword(password);
+  if (pwError) {
+    return NextResponse.json({ error: pwError }, { status: 400 });
   }
 
   const tokenHash = createHash("sha256").update(token).digest("hex");

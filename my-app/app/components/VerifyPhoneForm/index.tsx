@@ -6,8 +6,26 @@ import styles from "./VerifyPhoneForm.module.css";
 
 type Stage = "phone" | "code";
 
-function isValidPhone(val: string): boolean {
-  return /^\+?[\d\s\-().]{7,}$/.test(val.trim());
+const PHONE_DIGITS = 10;
+
+/** Keep only digits, dropping a leading "1" country code, capped at 10. */
+function phoneDigits(value: string): string {
+  let d = value.replace(/\D/g, "");
+  if (d.length === 11 && d.startsWith("1")) d = d.slice(1);
+  return d.slice(0, PHONE_DIGITS);
+}
+
+/** Display digits as "(416) 555-0100", formatting progressively as typed. */
+function formatPhone(value: string): string {
+  const d = phoneDigits(value);
+  if (d.length === 0) return "";
+  if (d.length <= 3) return `(${d}`;
+  if (d.length <= 6) return `(${d.slice(0, 3)}) ${d.slice(3)}`;
+  return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
+}
+
+function isValidPhone(value: string): boolean {
+  return phoneDigits(value).length === PHONE_DIGITS;
 }
 
 export default function VerifyPhoneForm({
@@ -17,7 +35,7 @@ export default function VerifyPhoneForm({
 }) {
   const router = useRouter();
   const [stage, setStage] = useState<Stage>("phone");
-  const [phone, setPhone] = useState(defaultPhone);
+  const [phone, setPhone] = useState(() => phoneDigits(defaultPhone));
   const [otp, setOtp] = useState("");
   const [error, setError] = useState("");
   const [isPending, startTransition] = useTransition();
@@ -25,7 +43,7 @@ export default function VerifyPhoneForm({
   const sendCode = (e: React.FormEvent) => {
     e.preventDefault();
     if (!isValidPhone(phone)) {
-      setError("Enter a valid phone number.");
+      setError("Enter a valid 10-digit phone number.");
       return;
     }
     setError("");
@@ -87,7 +105,7 @@ export default function VerifyPhoneForm({
           <p className={styles.formStep}>Step 2 of 6</p>
           <h2 className={styles.formTitle}>Enter the code</h2>
           <p className={styles.formSub}>
-            We sent a 6-digit code to <strong>{phone}</strong>.
+            We sent a 6-digit code to <strong>{formatPhone(phone)}</strong>.
           </p>
         </div>
 
@@ -168,13 +186,14 @@ export default function VerifyPhoneForm({
           <input
             id="phone"
             type="tel"
+            inputMode="numeric"
             className={styles.input}
-            value={phone}
+            value={formatPhone(phone)}
             onChange={(e) => {
-              setPhone(e.target.value);
+              setPhone(phoneDigits(e.target.value));
               setError("");
             }}
-            placeholder="+1 (416) 000-0000"
+            placeholder="(416) 000-0000"
             autoComplete="tel"
           />
         </div>

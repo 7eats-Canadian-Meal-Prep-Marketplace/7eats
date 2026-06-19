@@ -21,6 +21,7 @@ type ApiCook = {
   id: string;
   userId: string;
   name: string;
+  displayName: string | null;
   photoUrl: string | null;
   firstName: string | null;
   lastName: string | null;
@@ -231,7 +232,12 @@ export default function CookProfilePage({
             )}
           </div>
           <div className={styles.nameBlock}>
-            <h1 className={styles.name}>{cook.name}</h1>
+            <div className={styles.nameStack}>
+              <h1 className={styles.name}>{cook.name}</h1>
+              {cook.displayName && (
+                <p className={styles.kitchenName}>{cook.displayName}</p>
+              )}
+            </div>
             {cook.isVerified && (
               <BadgeCheck
                 size={18}

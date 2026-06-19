@@ -57,9 +57,24 @@
   padding: 7px 14px 7px 8px;
   border: 1px solid var(--grey-200);
   border-radius: var(--radius-pill);
+  background: none;
+  font: inherit;
+  color: inherit;
   transition:
     border-color 0.12s,
     background 0.12s;
+}
+
+.stepClickable {
+  cursor: pointer;
+}
+
+.stepClickable:hover {
+  border-color: var(--grey-400);
+}
+
+.step:disabled:not(.stepClickable) {
+  cursor: default;
 }
 
 .stepActive {
@@ -183,6 +198,113 @@
   display: flex;
   gap: 8px;
   padding-top: 4px;
+  flex-wrap: wrap;
+}
+
+.required {
+  color: var(--red);
+}
+
+.charCount {
+  font-size: 11.5px;
+  color: var(--grey-500);
+  align-self: flex-end;
+}
+
+.charCountLimit {
+  color: var(--red);
+}
+
+.dropzone {
+  display: block;
+  width: 100%;
+  max-width: 320px;
+  aspect-ratio: 4 / 3;
+  padding: 0;
+  font: inherit;
+  text-align: inherit;
+  color: inherit;
+  background: transparent;
+  border: 2px dashed var(--grey-200);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  cursor: pointer;
+  transition:
+    border-color 0.12s,
+    background 0.12s;
+}
+
+.dropzone:hover,
+.dropzoneActive {
+  border-color: var(--grey-400);
+  background: var(--grey-50);
+}
+
+.dropzoneEmpty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 100%;
+  color: var(--grey-500);
+  font-size: 13px;
+  padding: 16px;
+  text-align: center;
+}
+
+.dropzoneHint {
+  font-size: 11.5px;
+  color: var(--grey-400);
+}
+
+.changePhotoBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 8px;
+  padding: 6px 12px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--grey-700);
+  background: none;
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.sectionHint {
+  font-size: 12.5px;
+  color: var(--grey-500);
+  margin: -4px 0 12px;
+}
+
+.ingList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.ingRowSimple {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ingRowSimple .formInput {
+  flex: 1;
+  min-width: 0;
+}
+
+.fieldError {
+  border-color: var(--red);
+}
+
+.fieldErrorWrap {
+  padding: 10px;
+  border: 1px solid var(--red);
+  border-radius: var(--radius-sm);
 }
 
 /* ─── Buttons ──────────────────────────────────────────────────────────────── */
@@ -198,8 +320,18 @@
   transition: opacity 0.12s;
 }
 
-.saveBtn:hover {
+.saveBtn:hover:not(:disabled) {
   opacity: 0.88;
+}
+
+.saveBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.secondaryBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .secondaryBtn {
@@ -266,6 +398,17 @@
   gap: 12px;
 }
 
+.coverEmpty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  min-height: 120px;
+  font-size: 13px;
+  color: var(--grey-500);
+}
+
 .coverImgWrap {
   position: relative;
   width: 160px;
@@ -274,6 +417,7 @@
   overflow: hidden;
   border: 1px solid var(--grey-200);
   flex: none;
+  background: var(--grey-100);
 }
 
 .coverImg {
@@ -370,12 +514,12 @@
   border-right: 1px solid var(--grey-200);
   font-family: inherit;
   outline: none;
-  transition: background 0.1s;
+  transition: border-color 0.12s;
   width: 100%;
 }
 
 .ingInput:focus {
-  background: rgba(214, 64, 69, 0.03);
+  border-color: var(--grey-500);
 }
 
 .ingUnitInput {

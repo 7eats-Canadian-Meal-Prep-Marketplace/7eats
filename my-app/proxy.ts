@@ -45,10 +45,113 @@ function isOnboarded(req: NextRequest): boolean {
   return req.cookies.get(ONBOARDED_COOKIE)?.value === "1";
 }
 
+/** Client onboarding gate — cooks/admins browsing the marketplace are treated as guests. */
+async function shouldRedirectToClientOnboarding(req: NextRequest) {
+  if (!hasSession(req) || isOnboarded(req)) return false;
+  const session = await getSession(req);
+  return session?.user.role === "client";
+}
+
 function redirectToClientLogin(req: NextRequest, nextPath?: string) {
   const login = new URL("/app-auth/login", req.url);
   if (nextPath) login.searchParams.set("next", nextPath);
   return NextResponse.redirect(login);
+}
+
+function redirectToBusinessLogin(req: NextRequest) {
+  return NextResponse.redirect(new URL("/business-auth/login", req.url));
+}
+
+type AppSession = NonNullable<Awaited<ReturnType<typeof getSession>>>;
+
+function isClientUser(session: AppSession): boolean {
+  return session.user.role === "client";
+}
+
+function isCookOrAdminUser(session: AppSession): boolean {
+  return session.user.role === "cook" || session.user.role === "admin";
+}
+
+function isBusinessMarketingRoute(pathname: string): boolean {
+  return (
+    pathname === "/business/home" ||
+    pathname === "/business/application" ||
+    pathname.startsWith("/business/application/") ||
+    pathname === "/business/application-confirmation"
+  );
+}
+
+function isBusinessCookSetupRoute(pathname: string): boolean {
+  return (
+    pathname === "/business-auth/setup/verify-phone" ||
+    pathname === "/business-auth/setup/onboarding"
+  );
+}
+
+/** Cook dashboard and tools — not public marketing pages. */
+function isBusinessCookPortalRoute(pathname: string): boolean {
+  if (isBusinessMarketingRoute(pathname)) return false;
+  if (pathname === "/business") return true;
+  return pathname.startsWith("/business/");
+}
+
+async function requireCookSession(req: NextRequest) {
+  const session = await getSession(req);
+  if (!session || !isCookOrAdminUser(session)) {
+    return { session: null as null, deny: redirectToBusinessLogin(req) };
+  }
+  return { session, deny: null as null };
+}
+
+async function enforceCookSetupProgress(
+  req: NextRequest,
+  userId: string,
+  pathname: string,
+): Promise<NextResponse | null> {
+  const state = await getCookState(userId);
+  if (!state) {
+    return redirectToBusinessLogin(req);
+  }
+
+  if (pathname === "/business-auth/setup/verify-phone") {
+    if (state.phoneVerified) {
+      return NextResponse.redirect(
+        new URL("/business-auth/setup/onboarding?step=1", req.url),
+      );
+    }
+    return null;
+  }
+
+  if (pathname === "/business-auth/setup/onboarding") {
+    if (!state.phoneVerified) {
+      return NextResponse.redirect(
+        new URL("/business-auth/setup/verify-phone", req.url),
+      );
+    }
+    if (state.setupComplete) {
+      return NextResponse.redirect(new URL("/business/dashboard", req.url));
+    }
+    const step = req.nextUrl.searchParams.get("step");
+    const current = state.currentSetupStep;
+    const stepNum = Number(step);
+    if (Number.isNaN(stepNum) || stepNum < 1 || stepNum > current) {
+      return NextResponse.redirect(
+        new URL(`/business-auth/setup/onboarding?step=${current}`, req.url),
+      );
+    }
+    return null;
+  }
+
+  if (state.currentSetupStep < 3) {
+    return NextResponse.redirect(
+      new URL(
+        `/business-auth/setup/onboarding?step=${state.currentSetupStep}`,
+        req.url,
+      ),
+    );
+  }
+
+  return null;
 }
 
 // ─── Proxy ────────────────────────────────────────────────────────────────────
@@ -87,6 +190,10 @@ export async function proxy(req: NextRequest) {
   if (pathname.startsWith("/app-auth/onboarding")) {
     if (!hasSession(req)) {
       return redirectToClientLogin(req);
+    }
+    const session = await getSession(req);
+    if (session?.user.role !== "client") {
+      return NextResponse.redirect(new URL("/app/browse", req.url));
     }
     // Already completed onboarding — skip it
     if (isOnboarded(req)) {
@@ -129,7 +236,7 @@ export async function proxy(req: NextRequest) {
     if (!session) {
       return redirectToClientLogin(req);
     }
-    if (session.user.role !== "client") {
+    if (session?.user.role !== "client") {
       return NextResponse.redirect(new URL("/app/browse", req.url));
     }
     return NextResponse.next();
@@ -139,7 +246,7 @@ export async function proxy(req: NextRequest) {
   // Publicly browsable, but logged-in clients who haven't completed onboarding
   // are redirected to finish it before they can interact with the app.
   if (isClientPublicRoute(pathname)) {
-    if (hasSession(req) && !isOnboarded(req)) {
+    if (await shouldRedirectToClientOnboarding(req)) {
       return NextResponse.redirect(new URL("/app-auth/onboarding", req.url));
     }
     return NextResponse.next();
@@ -148,7 +255,7 @@ export async function proxy(req: NextRequest) {
   // ── Client protected routes ───────────────────────────────────────────────
   if (isClientProtectedRoute(pathname)) {
     const session = await getSession(req);
-    if (!session || session.user.role !== "client") {
+    if (!session || !isClientUser(session)) {
       return redirectToClientLogin(req, pathname);
     }
     if (!isOnboarded(req)) {
@@ -159,7 +266,7 @@ export async function proxy(req: NextRequest) {
 
   // ── Client app catch-all (/app, /app/* not matched above) ─────────────────
   if (pathname === "/app" || pathname.startsWith("/app/")) {
-    if (hasSession(req) && !isOnboarded(req)) {
+    if (await shouldRedirectToClientOnboarding(req)) {
       return NextResponse.redirect(new URL("/app-auth/onboarding", req.url));
     }
     return NextResponse.next();
@@ -180,12 +287,13 @@ export async function proxy(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // ── Public marketing pages ───────────────────────────────────────────────
-  if (
-    pathname === "/business/application" ||
-    pathname.startsWith("/business/application/") ||
-    pathname === "/business/home"
-  ) {
+  // ── Business marketing / application pages ───────────────────────────────
+  // Public for guests and clients. Signed-in cooks/admins go to their dashboard.
+  if (isBusinessMarketingRoute(pathname)) {
+    const session = await getSession(req);
+    if (session && isCookOrAdminUser(session)) {
+      return NextResponse.redirect(new URL("/business/dashboard", req.url));
+    }
     return NextResponse.next();
   }
 
@@ -200,74 +308,71 @@ export async function proxy(req: NextRequest) {
   // ── Business login ────────────────────────────────────────────────────────
   if (pathname === "/business-auth/login") {
     const session = await getSession(req);
-    if (session && session.user.role !== "client") {
-      // Cooks/admins are already authenticated for the business portal.
+    if (session && isCookOrAdminUser(session)) {
       return NextResponse.redirect(new URL("/business/dashboard", req.url));
     }
-    // Guests AND logged-in clients can reach the form: a client may keep a
-    // separate cook account, so bouncing them away leaves the "Log in" button
-    // looking dead. Signing in here swaps their session to the cook account.
+    // Guests and logged-in clients can sign in as a cook (separate account).
     return NextResponse.next();
   }
 
-  // Everything below requires a valid session
-  const session = await getSession(req);
-  if (!session) {
-    return NextResponse.redirect(new URL("/business-auth/login", req.url));
-  }
-
-  const userId = session.user.id;
-
-  // ── Business setup: verify-phone ─────────────────────────────────────────
-  if (pathname === "/business-auth/setup/verify-phone") {
-    const state = await getCookState(userId);
-    if (state?.phoneVerified) {
-      return NextResponse.redirect(
-        new URL("/business-auth/setup/onboarding?step=1", req.url),
-      );
-    }
-    return NextResponse.next();
-  }
-
-  // ── Business dashboard ────────────────────────────────────────────────────
-  if (pathname.startsWith("/business/")) {
-    if (session.user.role === "client") {
-      return NextResponse.redirect(new URL("/business-auth/login", req.url));
-    }
-    const state = await getCookState(userId);
-    if (!state) {
-      return NextResponse.redirect(new URL("/business-auth/login", req.url));
-    }
-    if (state.currentSetupStep < 3) {
-      return NextResponse.redirect(
-        new URL(
-          `/business-auth/setup/onboarding?step=${state.currentSetupStep}`,
-          req.url,
-        ),
-      );
+  // ── Public business auth (password recovery, magic-link setup) ────────────
+  if (
+    pathname === "/business-auth/setup/create-password" ||
+    pathname === "/business-auth/setup/expired" ||
+    pathname === "/business-auth/setup/saved" ||
+    pathname === "/business-auth/forgot-password" ||
+    pathname === "/business-auth/reset-password"
+  ) {
+    if (pathname === "/business-auth/setup/create-password") {
+      const existing = await getSession(req);
+      if (existing && isCookOrAdminUser(existing)) {
+        const state = await getCookState(existing.user.id);
+        if (state) {
+          if (!state.phoneVerified) {
+            return NextResponse.redirect(
+              new URL("/business-auth/setup/verify-phone", req.url),
+            );
+          }
+          if (!state.setupComplete) {
+            return NextResponse.redirect(
+              new URL(
+                `/business-auth/setup/onboarding?step=${state.currentSetupStep}`,
+                req.url,
+              ),
+            );
+          }
+          return NextResponse.redirect(new URL("/business/dashboard", req.url));
+        }
+      }
     }
     return NextResponse.next();
   }
 
-  // ── Business onboarding ───────────────────────────────────────────────────
-  if (pathname === "/business-auth/setup/onboarding") {
-    const state = await getCookState(userId);
-    if (!state?.phoneVerified) {
-      return NextResponse.redirect(
-        new URL("/business-auth/setup/verify-phone", req.url),
-      );
-    }
-    if (state.setupComplete) {
-      return NextResponse.redirect(new URL("/business/dashboard", req.url));
-    }
-    const step = req.nextUrl.searchParams.get("step");
-    const current = state.currentSetupStep;
-    const stepNum = Number(step);
-    if (Number.isNaN(stepNum) || stepNum < 1 || stepNum > current) {
-      return NextResponse.redirect(
-        new URL(`/business-auth/setup/onboarding?step=${current}`, req.url),
-      );
-    }
+  // ── Cook setup + dashboard (cook/admin only) ──────────────────────────────
+  // Clients with a marketplace session browse the business site as guests;
+  // they must sign in with a cook account to enter the portal or setup flow.
+  if (
+    isBusinessCookSetupRoute(pathname) ||
+    isBusinessCookPortalRoute(pathname)
+  ) {
+    const { session, deny } = await requireCookSession(req);
+    if (deny) return deny;
+
+    const blocked = await enforceCookSetupProgress(
+      req,
+      session!.user.id,
+      pathname,
+    );
+    if (blocked) return blocked;
+    return NextResponse.next();
+  }
+
+  // ── Remaining business-auth pages ─────────────────────────────────────────
+  if (pathname.startsWith("/business-auth/")) {
+    return NextResponse.next();
+  }
+
+  if (pathname.startsWith("/business/") || pathname === "/business") {
     return NextResponse.next();
   }
 

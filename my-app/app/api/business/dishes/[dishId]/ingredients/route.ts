@@ -14,7 +14,6 @@ type Params = { params: Promise<{ dishId: string }> };
 const addIngredientSchema = z
   .object({
     name: z.string().min(1).max(255),
-    quantity: z.string().max(100).optional(),
     isAllergen: z.boolean().optional().default(false),
     sortOrder: z.number().int().optional().default(0),
   })
@@ -58,7 +57,6 @@ export async function POST(req: NextRequest, { params }: Params) {
       .values({
         dishId,
         name: parsed.data.name,
-        quantity: parsed.data.quantity ?? null,
         isAllergen: parsed.data.isAllergen,
         sortOrder: parsed.data.sortOrder,
       })

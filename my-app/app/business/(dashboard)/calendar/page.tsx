@@ -106,13 +106,22 @@ function buildWeekFromData(
   weekStart: Date,
   availability: {
     pickupWindows: Array<{ day: string; from: string; to: string }>;
+    deliveryWindows: Array<{ day: string; from: string; to: string }>;
+    offersPickup: boolean;
     delivery: string | null;
   },
   orders: CalendarOrder[],
 ): DaySchedule[] {
-  const windowMap = Object.fromEntries(
+  const pickupMap = Object.fromEntries(
     availability.pickupWindows.map((w) => [w.day, { from: w.from, to: w.to }]),
   );
+  const deliveryMap = Object.fromEntries(
+    availability.deliveryWindows.map((w) => [
+      w.day,
+      { from: w.from, to: w.to },
+    ]),
+  );
+  const hasPickup = availability.offersPickup !== false;
   const hasDelivery =
     availability.delivery !== "none" && availability.delivery != null;
 
@@ -121,11 +130,12 @@ function buildWeekFromData(
   for (let i = 0; i < 7; i++) {
     const date = addDays(weekStart, i);
     const dayName = DAY_NAMES[date.getDay()] ?? "";
-    const dayWindow = windowMap[dayName];
+    const pickupWindow = pickupMap[dayName];
+    const deliveryWindow = deliveryMap[dayName];
 
     const windows: WindowGroup[] = [];
 
-    if (dayWindow) {
+    if (hasPickup && pickupWindow) {
       const pickupOrders = orders.filter((o) => {
         if (o.kind !== "pickup") return false;
         return sameDay(new Date(o.datetime), date);
@@ -134,32 +144,33 @@ function buildWeekFromData(
         window: {
           weekday: date.getDay(),
           kind: "pickup",
-          from: dayWindow.from,
-          to: dayWindow.to,
+          from: pickupWindow.from,
+          to: pickupWindow.to,
         },
         orders: pickupOrders.sort(
           (a, b) =>
             new Date(a.datetime).getTime() - new Date(b.datetime).getTime(),
         ),
       });
+    }
 
-      if (hasDelivery) {
-        const deliveryOrders = orders.filter((o) => {
-          if (o.kind !== "delivery") return false;
-          return sameDay(new Date(o.datetime), date);
-        });
-        if (deliveryOrders.length > 0) {
-          windows.push({
-            window: {
-              weekday: date.getDay(),
-              kind: "delivery",
-              from: dayWindow.from,
-              to: dayWindow.to,
-            },
-            orders: deliveryOrders,
-          });
-        }
-      }
+    if (hasDelivery && deliveryWindow) {
+      const deliveryOrders = orders.filter((o) => {
+        if (o.kind !== "delivery") return false;
+        return sameDay(new Date(o.datetime), date);
+      });
+      windows.push({
+        window: {
+          weekday: date.getDay(),
+          kind: "delivery",
+          from: deliveryWindow.from,
+          to: deliveryWindow.to,
+        },
+        orders: deliveryOrders.sort(
+          (a, b) =>
+            new Date(a.datetime).getTime() - new Date(b.datetime).getTime(),
+        ),
+      });
     }
 
     days.push({ date, windows });
@@ -269,6 +280,7 @@ export default function CalendarPage() {
         (o: {
           id: string;
           pickupAt: string;
+          fulfillmentMode: "pickup" | "delivery" | null;
           customerName: string | null;
           customerFirstName: string | null;
           listingTitle: string | null;
@@ -277,7 +289,9 @@ export default function CalendarPage() {
         }) => ({
           id: o.id,
           datetime: o.pickupAt,
-          kind: "pickup" as Fulfillment,
+          kind: (o.fulfillmentMode === "delivery"
+            ? "delivery"
+            : "pickup") as Fulfillment,
           customerName:
             o.customerName ??
             (o.customerFirstName ? o.customerFirstName : "Customer"),
@@ -289,7 +303,12 @@ export default function CalendarPage() {
 
       const built = buildWeekFromData(
         ws,
-        avail ?? { pickupWindows: [], delivery: null },
+        avail ?? {
+          pickupWindows: [],
+          deliveryWindows: [],
+          offersPickup: true,
+          delivery: null,
+        },
         calendarOrders,
       );
       setWeek(built);
@@ -322,7 +341,10 @@ export default function CalendarPage() {
               Your pickup and delivery schedule, week by week.
             </p>
           </div>
-          <Link href="/business/settings" className={styles.manageBtn}>
+          <Link
+            href="/business/settings#logistics"
+            className={styles.manageBtn}
+          >
             <SlidersHorizontal size={15} />
             Manage availability
           </Link>

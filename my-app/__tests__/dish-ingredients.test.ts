@@ -42,11 +42,10 @@ const mockIngredient = {
   id: INGREDIENT_ID,
   dishId: DISH_ID,
   name: "Flour",
-  quantity: "2 cups",
   isAllergen: false,
   sortOrder: 0,
 };
-const validAddBody = { name: "Flour", quantity: "2 cups" };
+const validAddBody = { name: "Flour" };
 
 // ---------------------------------------------------------------------------
 // Route params

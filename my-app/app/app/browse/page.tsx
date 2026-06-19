@@ -3,6 +3,11 @@
 import { Star } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import {
+  cookPersonName,
+  kitchenDisplayName,
+  shouldShowKitchenSubtitle,
+} from "@/lib/cook-display";
 import { useApp } from "../_app-context";
 import { FulfillmentToggle } from "../_shell";
 import { Skeleton } from "../_skeleton";
@@ -12,7 +17,9 @@ import styles from "./page.module.css";
 type CookCard = {
   id: string;
   displayName: string | null;
+  cookName: string | null;
   photoUrl: string | null;
+  bannerUrl: string | null;
   bio: string | null;
   tags: { slug: string; label: string }[];
   leadTime: string | null;
@@ -158,13 +165,18 @@ export default function BrowsePage() {
                             className={styles.cookAvatarImg}
                           />
                         ) : (
-                          initials(cook.displayName)
+                          initials(cook.cookName ?? cook.displayName)
                         )}
                       </div>
                       <span className={styles.cookCardName}>
-                        {cook.displayName ?? "Chef"}
+                        {cookPersonName(cook)}
                       </span>
-                      {cook.pickupCity && (
+                      {shouldShowKitchenSubtitle(cook) && (
+                        <span className={styles.cookCardCuisine}>
+                          {kitchenDisplayName(cook)}
+                        </span>
+                      )}
+                      {cook.pickupCity && !shouldShowKitchenSubtitle(cook) && (
                         <span className={styles.cookCardCuisine}>
                           {cook.pickupCity}
                         </span>
@@ -198,10 +210,14 @@ export default function BrowsePage() {
                     className={styles.card}
                   >
                     <div className={styles.cardCover}>
-                      {cook.representativeDishPhoto ? (
+                      {cook.bannerUrl || cook.representativeDishPhoto ? (
                         // biome-ignore lint/performance/noImgElement: cover
                         <img
-                          src={cook.representativeDishPhoto}
+                          src={
+                            cook.bannerUrl ??
+                            cook.representativeDishPhoto ??
+                            undefined
+                          }
                           alt=""
                           className={styles.cardImage}
                         />
@@ -223,7 +239,7 @@ export default function BrowsePage() {
                     </div>
                     <div className={styles.cardBody}>
                       <h3 className={styles.cardTitle}>
-                        {cook.displayName ?? "Chef"}
+                        {kitchenDisplayName(cook)}
                       </h3>
                       <p className={styles.metaLine}>
                         {cook.pickupCity ?? ""}

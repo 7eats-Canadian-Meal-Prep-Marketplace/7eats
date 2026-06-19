@@ -38,6 +38,7 @@ export const cookProfiles = pgTable(
     displayName: text("display_name").notNull(),
     bio: text("bio"),
     photoUrl: text("photo_url"),
+    bannerUrl: text("banner_url"),
     socialLink: text("social_link"),
     currentSetupStep: integer("current_setup_step").notNull().default(1),
     setupComplete: boolean("setup_complete").notNull().default(false),
@@ -65,6 +66,7 @@ export const cookProfiles = pgTable(
     }),
     leadTime: leadTimeEnum("lead_time"),
     maxCapacity: integer("max_capacity"),
+    offersPickup: boolean("offers_pickup").notNull().default(true),
     delivery: deliveryEnum("delivery"),
     acceptsSpecialRequests: boolean("accepts_special_requests")
       .notNull()

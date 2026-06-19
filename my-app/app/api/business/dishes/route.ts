@@ -1,29 +1,53 @@
-import { and, desc, eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getCookId, unauthorized } from "@/app/api/business/_lib/cook-auth";
-import { db } from "@/db";
-import { dishes } from "@/db/schema";
+import { db, dbPool } from "@/db";
+import { dishes, dishIngredients, dishNutrition } from "@/db/schema";
+import {
+  type DishStatus,
+  dishStatusFilter,
+  mapDishStatusForDb,
+  normalizeDishStatus,
+} from "@/lib/dish-status";
 
-const VALID_STATUSES = ["draft", "active", "archived"] as const;
-type DishStatus = (typeof VALID_STATUSES)[number];
+const VALID_STATUSES = ["active", "inactive"] as const;
 
-const createDishSchema = z.object({
-  name: z.string().min(1).max(255),
-  // dishes.price is NOT NULL — each dish carries its own price.
-  price: z.number().positive().multipleOf(0.01),
-  description: z.string().max(2000).optional(),
-  cuisine: z.string().max(100).optional(),
-  categories: z.array(z.string()).optional().default([]),
-  isHalal: z.boolean().optional().default(false),
-  isVegan: z.boolean().optional().default(false),
-  isVegetarian: z.boolean().optional().default(false),
-  isGlutenFree: z.boolean().optional().default(false),
-  isDairyFree: z.boolean().optional().default(false),
-  isNutFree: z.boolean().optional().default(false),
-  isKosher: z.boolean().optional().default(false),
-  servingSize: z.string().max(100).optional(),
-});
+const nutritionSchema = z
+  .object({
+    calories: z.number().int().min(0).optional(),
+    proteinG: z.number().min(0).optional(),
+    carbsG: z.number().min(0).optional(),
+    fatG: z.number().min(0).optional(),
+  })
+  .optional();
+
+const createDishSchema = z
+  .object({
+    name: z.string().min(1).max(255),
+    price: z.number().positive().multipleOf(0.01),
+    description: z.string().max(500).optional(),
+    categories: z.array(z.string()).optional().default([]),
+    isHalal: z.boolean().optional().default(false),
+    isVegan: z.boolean().optional().default(false),
+    isVegetarian: z.boolean().optional().default(false),
+    isGlutenFree: z.boolean().optional().default(false),
+    isDairyFree: z.boolean().optional().default(false),
+    isNutFree: z.boolean().optional().default(false),
+    isKosher: z.boolean().optional().default(false),
+    servingSize: z.string().max(100).optional(),
+    status: z.enum(["active", "inactive"]).optional().default("active"),
+    ingredients: z
+      .array(z.object({ name: z.string().min(1).max(255) }))
+      .optional()
+      .default([]),
+    allergens: z.array(z.string().min(1).max(255)).default([]),
+    allergenNoneApplies: z.boolean().optional().default(false),
+    nutrition: nutritionSchema,
+  })
+  .refine((d) => d.allergens.length > 0 || d.allergenNoneApplies, {
+    message: "Allergen declaration is required.",
+  });
 
 export async function GET(req: NextRequest) {
   const cookId = await getCookId(req.headers);
@@ -39,7 +63,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const conditions = validStatus
-      ? and(eq(dishes.cookId, cookId), eq(dishes.status, validStatus))
+      ? dishStatusFilter(cookId, validStatus)
       : eq(dishes.cookId, cookId);
 
     const rows = await db
@@ -48,7 +72,13 @@ export async function GET(req: NextRequest) {
       .where(conditions)
       .orderBy(desc(dishes.createdAt));
 
-    return NextResponse.json({ success: true, data: rows });
+    return NextResponse.json({
+      success: true,
+      data: rows.map((row) => ({
+        ...row,
+        status: normalizeDishStatus(row.status),
+      })),
+    });
   } catch (err) {
     console.error("[dishes]", err);
     return NextResponse.json(
@@ -80,20 +110,77 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const {
+    price,
+    status,
+    ingredients,
+    allergens,
+    allergenNoneApplies: _none,
+    nutrition,
+    ...rest
+  } = parsed.data;
+
   try {
-    const { price, ...rest } = parsed.data;
-    const [inserted] = await db
-      .insert(dishes)
-      .values({
-        cookId,
-        ...rest,
-        price: String(price),
-        status: "draft",
-      })
-      .returning();
+    const dbStatus = await mapDishStatusForDb(status);
+    const inserted = await dbPool.transaction(async (tx) => {
+      const [dish] = await tx
+        .insert(dishes)
+        .values({
+          cookId,
+          ...rest,
+          price: String(price),
+          status: dbStatus as "active",
+        })
+        .returning();
+
+      const ingredientRows = ingredients.map((ing, i) => ({
+        dishId: dish.id,
+        name: ing.name,
+        isAllergen: false,
+        sortOrder: i,
+      }));
+
+      const allergenRows = allergens.map((name, i) => ({
+        dishId: dish.id,
+        name,
+        isAllergen: true,
+        sortOrder: ingredients.length + i,
+      }));
+
+      if (ingredientRows.length > 0 || allergenRows.length > 0) {
+        await tx
+          .insert(dishIngredients)
+          .values([...ingredientRows, ...allergenRows]);
+      }
+
+      if (nutrition && Object.values(nutrition).some((v) => v !== undefined)) {
+        await tx.insert(dishNutrition).values({
+          dishId: dish.id,
+          calories: nutrition.calories,
+          proteinG:
+            nutrition.proteinG !== undefined
+              ? String(nutrition.proteinG)
+              : undefined,
+          carbsG:
+            nutrition.carbsG !== undefined
+              ? String(nutrition.carbsG)
+              : undefined,
+          fatG:
+            nutrition.fatG !== undefined ? String(nutrition.fatG) : undefined,
+        });
+      }
+
+      return dish;
+    });
 
     return NextResponse.json(
-      { success: true, data: inserted },
+      {
+        success: true,
+        data: {
+          ...inserted,
+          status: normalizeDishStatus(inserted.status),
+        },
+      },
       { status: 201 },
     );
   } catch (err: unknown) {

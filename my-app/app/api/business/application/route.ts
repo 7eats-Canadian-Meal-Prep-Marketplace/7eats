@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
-import { Resend } from "resend";
 import { z } from "zod";
 import { db } from "@/db";
 import { cookApplications, legalAcceptances } from "@/db/schema";
 import { generateSignedValue } from "@/lib/cookie";
 import { sendMail } from "@/lib/email";
-import { htmlEmail, paragraph } from "@/lib/emails/base";
+import {
+  contactParagraph,
+  contactTextLine,
+  htmlEmail,
+  paragraph,
+} from "@/lib/emails/base";
 import { hashIp } from "@/lib/hash";
 import { COOK_APPLICATION_DOCS, LEGAL_VERSION } from "@/lib/legal";
 
@@ -27,8 +31,17 @@ const schema = z.object({
     (v) => String(v).replace(/\s+/g, "").toUpperCase(),
     z.string().regex(/^[A-Z]\d[A-Z]\d[A-Z]\d$/, "Invalid Canadian postal code"),
   ),
-  website: z.string().optional(),
-  businessPhone: z.string().transform((v) => v.replace(/\D/g, "")),
+  // Optional, but when provided it must be a valid URL. Protocol is optional on
+  // input ("yoursite.com") and normalized to https:// before validation.
+  website: z.preprocess((v) => {
+    const s = typeof v === "string" ? v.trim() : "";
+    if (!s) return undefined;
+    return /^https?:\/\//i.test(s) ? s : `https://${s}`;
+  }, z.string().url().optional()),
+  businessPhone: z
+    .string()
+    .transform((v) => v.replace(/\D/g, ""))
+    .refine((v) => v.length === 10, "Phone must be 10 digits"),
   businessEmail: z
     .string()
     .email()
@@ -36,7 +49,10 @@ const schema = z.object({
   contactFirstName: z.string().min(1),
   contactLastName: z.string().min(1),
   contactRole: z.string().min(1),
-  contactPhone: z.string().transform((v) => v.replace(/\D/g, "")),
+  contactPhone: z
+    .string()
+    .transform((v) => v.replace(/\D/g, ""))
+    .refine((v) => v.length === 10, "Phone must be 10 digits"),
   contactEmail: z
     .string()
     .email()
@@ -153,7 +169,7 @@ async function confirmCook(to: string, firstName: string, kitchenName: string) {
       "",
       "We review every application personally. A member of our team will reach out within 2 business days by phone. Not an automated call, a real conversation.",
       "",
-      "In the meantime, feel free to reply to this email if you have any questions.",
+      contactTextLine(),
       "",
       "The 7eats team, Toronto",
     ].join("\n"),
@@ -168,22 +184,18 @@ async function confirmCook(to: string, firstName: string, kitchenName: string) {
         paragraph(
           "We review every application personally. A member of our team will reach out within 2 business days by phone. Not an automated call, a real conversation.",
         ) +
-        paragraph(
-          "In the meantime, feel free to reply to this email if you have any questions.",
-        ) +
+        contactParagraph() +
         paragraph("The 7eats team, Toronto"),
     }),
   });
 }
 
 async function notifyTeam(contactEmail: string, kitchenName: string) {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) return;
+  const team = process.env.RESEND_TEAM_EMAIL;
+  if (!team) return;
 
-  const resend = new Resend(apiKey);
-  await resend.emails.send({
-    from: process.env.RESEND_FROM_EMAIL ?? "noreply@7eats.ca",
-    to: process.env.RESEND_TEAM_EMAIL ?? "",
+  await sendMail({
+    to: team,
     subject: `New cook application: ${kitchenName}`,
     text: `New application from ${contactEmail} for "${kitchenName}". Review in the admin dashboard.`,
   });

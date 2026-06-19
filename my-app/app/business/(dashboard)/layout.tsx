@@ -19,6 +19,7 @@ export default async function DashboardLayout({
 }) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) redirect("/business-auth/login");
+  if (session.user.role === "client") redirect("/business-auth/login");
 
   const [row] = await db
     .select({

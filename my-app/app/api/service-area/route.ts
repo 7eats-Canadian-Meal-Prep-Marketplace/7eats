@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { cookProfiles, listings } from "@/db/schema";
+import { defaultMaxDeliveryKm } from "@/lib/delivery-pricing";
 import { haversineKm } from "@/lib/haversine";
 
 export async function GET(req: NextRequest) {
@@ -44,7 +45,7 @@ export async function GET(req: NextRequest) {
 
   const distanceKm = haversineKm(cook.pickupLat, cook.pickupLng, lat, lng);
 
-  const maxKm = cook.maxDeliveryKm ?? 10;
+  const maxKm = cook.maxDeliveryKm ?? defaultMaxDeliveryKm();
   const inRange = distanceKm <= maxKm;
 
   return NextResponse.json({
