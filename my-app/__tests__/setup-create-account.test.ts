@@ -132,7 +132,7 @@ describe("POST /api/setup/create-account", () => {
 
   it("returns 200 with verify-phone redirect and forwards session cookies", async () => {
     const res = await POST(
-      makeRequest({ token: "valid-token", password: "secret123" }),
+      makeRequest({ token: "valid-token", password: "Secret123!" }),
     );
     const body = await res.json();
 
@@ -142,7 +142,7 @@ describe("POST /api/setup/create-account", () => {
   });
 
   it("returns 400 when token is missing", async () => {
-    const res = await POST(makeRequest({ password: "secret123" }));
+    const res = await POST(makeRequest({ password: "Secret123!" }));
     expect(res.status).toBe(400);
     expect(vi.mocked(db.select)).not.toHaveBeenCalled();
   });
@@ -157,7 +157,7 @@ describe("POST /api/setup/create-account", () => {
     setupDbSelects(null, application);
 
     const res = await POST(
-      makeRequest({ token: "bad-token", password: "secret123" }),
+      makeRequest({ token: "bad-token", password: "Secret123!" }),
     );
     const body = await res.json();
 
@@ -170,7 +170,7 @@ describe("POST /api/setup/create-account", () => {
     setupDbSelects(tokenRow, null);
 
     const res = await POST(
-      makeRequest({ token: "valid-token", password: "secret123" }),
+      makeRequest({ token: "valid-token", password: "Secret123!" }),
     );
     const body = await res.json();
 
@@ -185,7 +185,7 @@ describe("POST /api/setup/create-account", () => {
     );
 
     const res = await POST(
-      makeRequest({ token: "valid-token", password: "secret123" }),
+      makeRequest({ token: "valid-token", password: "Secret123!" }),
     );
     expect(res.status).toBe(500);
     expect(vi.mocked(dbPool.transaction)).not.toHaveBeenCalled();
@@ -197,7 +197,7 @@ describe("POST /api/setup/create-account", () => {
     );
 
     const res = await POST(
-      makeRequest({ token: "valid-token", password: "secret123" }),
+      makeRequest({ token: "valid-token", password: "Secret123!" }),
     );
     expect(res.status).toBe(500);
     expect(vi.mocked(dbPool.transaction)).not.toHaveBeenCalled();
@@ -209,7 +209,7 @@ describe("POST /api/setup/create-account", () => {
     );
 
     const res = await POST(
-      makeRequest({ token: "valid-token", password: "secret123" }),
+      makeRequest({ token: "valid-token", password: "Secret123!" }),
     );
     expect(res.status).toBe(500);
     expect(vi.mocked(auth.api.signInEmail)).not.toHaveBeenCalled();
@@ -221,7 +221,7 @@ describe("POST /api/setup/create-account", () => {
     );
 
     const res = await POST(
-      makeRequest({ token: "valid-token", password: "secret123" }),
+      makeRequest({ token: "valid-token", password: "Secret123!" }),
     );
     const body = await res.json();
 
@@ -234,7 +234,7 @@ describe("POST /api/setup/create-account", () => {
     const { claimSet } = setupDbSelects(tokenRow, application);
     const { updateFn } = setupTransaction();
 
-    await POST(makeRequest({ token: "valid-token", password: "secret123" }));
+    await POST(makeRequest({ token: "valid-token", password: "Secret123!" }));
 
     expect(claimSet).toHaveBeenCalledTimes(1);
     expect(claimSet).toHaveBeenCalledWith(
@@ -247,7 +247,7 @@ describe("POST /api/setup/create-account", () => {
   it("sets role=cook and status=active on authUser inside the transaction", async () => {
     const { setFn } = setupTransaction();
 
-    await POST(makeRequest({ token: "valid-token", password: "secret123" }));
+    await POST(makeRequest({ token: "valid-token", password: "Secret123!" }));
 
     expect(setFn).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -269,7 +269,7 @@ describe("POST /api/setup/create-account", () => {
     );
 
     const res = await POST(
-      makeRequest({ token: "valid-token", password: "secret123" }),
+      makeRequest({ token: "valid-token", password: "Secret123!" }),
     );
     const setCookies = res.headers.getSetCookie();
 
