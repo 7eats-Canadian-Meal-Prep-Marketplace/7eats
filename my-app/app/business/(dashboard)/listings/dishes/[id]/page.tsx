@@ -51,6 +51,10 @@ function DetailsTab() {
   }
 
   async function handleSave() {
+    if (photos.length === 0) {
+      toast.error("Add at least one photo before saving.");
+      return;
+    }
     if (!localForm.name.trim()) {
       toast.error("Enter a dish name.");
       return;
@@ -218,9 +222,15 @@ function DetailsTab() {
               type="button"
               className={styles.saveBtn}
               onClick={handleSave}
+              disabled={photos.length === 0}
             >
               {saved ? "Saved" : "Save changes"}
             </button>
+            {photos.length === 0 && (
+              <span className={styles.saveHint}>
+                Add at least one photo to save.
+              </span>
+            )}
           </div>
         </div>
 

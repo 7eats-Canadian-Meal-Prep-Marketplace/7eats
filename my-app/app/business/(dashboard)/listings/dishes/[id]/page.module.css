@@ -154,8 +154,14 @@
 
 .formActions {
   display: flex;
-  gap: 8px;
+  align-items: center;
+  gap: 10px;
   padding-top: 6px;
+}
+
+.saveHint {
+  font-size: 12px;
+  color: var(--red);
 }
 
 /* ─── Shared buttons ───────────────────────────────────────────────────────── */
@@ -174,8 +180,13 @@
   transition: opacity 0.12s;
 }
 
-.saveBtn:hover {
+.saveBtn:hover:not(:disabled) {
   opacity: 0.82;
+}
+
+.saveBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 /* ─── Availability card (right column) ────────────────────────────────────── */
