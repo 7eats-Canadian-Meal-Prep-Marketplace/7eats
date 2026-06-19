@@ -91,24 +91,16 @@
   line-height: 1;
 }
 
-/* ─── Two-column layout ────────────────────────────────────────────────────── */
+/* ─── Overview layout ──────────────────────────────────────────────────────── */
 .overviewColumns {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 40px;
-  align-items: start;
+  display: block;
 }
 
 .overviewLeft {
   display: flex;
   flex-direction: column;
   gap: 20px;
-}
-
-.overviewRight {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+  max-width: 560px;
 }
 
 /* ─── Shared form primitives ───────────────────────────────────────────────── */
@@ -126,8 +118,7 @@
 }
 
 .formInput,
-.formTextarea,
-.formSelect {
+.formTextarea {
   padding: 9px 12px;
   font-size: 13.5px;
   color: var(--ink);
@@ -142,8 +133,7 @@
 }
 
 .formInput:focus,
-.formTextarea:focus,
-.formSelect:focus {
+.formTextarea:focus {
   border-color: #a0a0aa;
 }
 
@@ -187,25 +177,6 @@
 .saveBtn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
-}
-
-/* ─── Availability card (right column) ────────────────────────────────────── */
-.statusCard {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 16px;
-  border: 1px solid #e4e4e7;
-  border-radius: var(--radius-sm);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
-}
-
-.statusCardLabel {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  color: #8a8a96;
 }
 
 .listingBlock {
@@ -561,13 +532,6 @@
 }
 
 /* ─── Mobile ───────────────────────────────────────────────────────────────── */
-@media (max-width: 900px) {
-  .overviewColumns {
-    grid-template-columns: 1fr;
-    gap: 28px;
-  }
-}
-
 @media (max-width: 640px) {
   .statsRow {
     grid-template-columns: repeat(2, 1fr);

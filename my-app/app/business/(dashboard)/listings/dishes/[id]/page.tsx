@@ -118,7 +118,6 @@ function DetailsTab() {
       </div>
 
       <div className={styles.overviewColumns}>
-        {/* Left — primary info + photos + save */}
         <div className={styles.overviewLeft}>
           <div className={styles.formGroup}>
             <label htmlFor="f-name" className={styles.formLabel}>
@@ -231,26 +230,6 @@ function DetailsTab() {
                 Add at least one photo to save.
               </span>
             )}
-          </div>
-        </div>
-
-        {/* Right — availability card */}
-        <div className={styles.overviewRight}>
-          <div className={styles.statusCard}>
-            <span className={styles.statusCardLabel}>Availability</span>
-            <select
-              className={styles.formSelect}
-              value={localForm.status}
-              onChange={(e) =>
-                setLocalForm((f) => ({
-                  ...f,
-                  status: e.target.value as typeof localForm.status,
-                }))
-              }
-            >
-              <option value="active">Active</option>
-              <option value="inactive">Paused</option>
-            </select>
           </div>
         </div>
       </div>
