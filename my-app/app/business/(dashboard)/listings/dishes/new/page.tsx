@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ImagePlus, Plus, Trash2, Upload } from "lucide-react";
+import { Check, ImagePlus, Plus, Trash2, Upload, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -14,8 +14,10 @@ import styles from "./page.module.css";
 // ─── Constants ──────────────────────────────────────────────────────────────────
 
 type Ingredient = { id: string; name: string };
+type LocalPhoto = { id: string; file: File; preview: string };
 
 const DESCRIPTION_MAX = 500;
+const MAX_PHOTOS = 8;
 
 const ALLERGENS = [
   "Gluten",
@@ -86,57 +88,92 @@ export default function NewDishPage() {
   const [noneApplies, setNoneApplies] = useState(false);
   const [showIngErrors, setShowIngErrors] = useState(false);
   const [showAllergenError, setShowAllergenError] = useState(false);
-  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [photos, setPhotos] = useState<LocalPhoto[]>([]);
   const [dragging, setDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const coverFileRef = useRef<File | null>(null);
+  const photoIdRef = useRef(0);
+  const photosRef = useRef<LocalPhoto[]>([]);
 
-  const hasPhoto = !!coverPreview;
+  const hasPhoto = photos.length > 0;
+
+  useEffect(() => {
+    photosRef.current = photos;
+  }, [photos]);
 
   useEffect(() => {
     return () => {
-      if (coverPreview) URL.revokeObjectURL(coverPreview);
+      for (const p of photosRef.current) URL.revokeObjectURL(p.preview);
     };
-  }, [coverPreview]);
+  }, []);
 
-  function setCoverFile(file: File | null) {
-    if (!file) return;
-    const err = validateDishPhotoFile(file);
-    if (err) {
-      toast.error(err);
-      return;
-    }
-    coverFileRef.current = file;
-    setCoverPreview((prev) => {
-      if (prev) URL.revokeObjectURL(prev);
-      return URL.createObjectURL(file);
+  function addFiles(files: File[]) {
+    if (files.length === 0) return;
+    setPhotos((prev) => {
+      const room = MAX_PHOTOS - prev.length;
+      if (room <= 0) {
+        toast.error(`You can add up to ${MAX_PHOTOS} photos.`);
+        return prev;
+      }
+      const next = [...prev];
+      let skippedForLimit = false;
+      for (const file of files) {
+        if (next.length - prev.length >= room) {
+          skippedForLimit = true;
+          break;
+        }
+        const err = validateDishPhotoFile(file);
+        if (err) {
+          toast.error(err);
+          continue;
+        }
+        photoIdRef.current += 1;
+        next.push({
+          id: `photo-${photoIdRef.current}`,
+          file,
+          preview: URL.createObjectURL(file),
+        });
+      }
+      if (skippedForLimit) {
+        toast.error(`You can add up to ${MAX_PHOTOS} photos.`);
+      }
+      return next;
     });
   }
 
-  function handleCoverSelect(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (file) setCoverFile(file);
+  function removePhoto(id: string) {
+    setPhotos((prev) => {
+      const target = prev.find((p) => p.id === id);
+      if (target) URL.revokeObjectURL(target.preview);
+      return prev.filter((p) => p.id !== id);
+    });
+  }
+
+  function handlePhotoSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files ? Array.from(e.target.files) : [];
+    addFiles(files);
     e.target.value = "";
   }
 
   function handleDrop(e: React.DragEvent) {
     e.preventDefault();
     setDragging(false);
-    const file = e.dataTransfer.files?.[0];
-    if (file) setCoverFile(file);
+    const files = e.dataTransfer.files ? Array.from(e.dataTransfer.files) : [];
+    addFiles(files);
   }
 
-  async function uploadCoverPhoto(dishId: string) {
-    const file = coverFileRef.current;
-    if (!file) return false;
-    const fd = new FormData();
-    fd.set("photo", file);
-    fd.set("isPrimary", "true");
-    const res = await fetch(`/api/business/dishes/${dishId}/photos/upload`, {
-      method: "POST",
-      body: fd,
-    });
-    return res.ok;
+  async function uploadPhotos(dishId: string) {
+    let allOk = true;
+    for (let i = 0; i < photos.length; i++) {
+      const fd = new FormData();
+      fd.set("photo", photos[i].file);
+      fd.set("isPrimary", i === 0 ? "true" : "false");
+      const res = await fetch(`/api/business/dishes/${dishId}/photos/upload`, {
+        method: "POST",
+        body: fd,
+      });
+      if (!res.ok) allOk = false;
+    }
+    return allOk;
   }
 
   function addIngredient() {
@@ -196,8 +233,8 @@ export default function NewDishPage() {
       );
       return false;
     }
-    if (!coverFileRef.current) {
-      toast.error("Upload a cover photo before continuing.");
+    if (photos.length === 0) {
+      toast.error("Upload at least one photo before continuing.");
       return false;
     }
     return true;
@@ -232,8 +269,8 @@ export default function NewDishPage() {
 
   async function handleCreate() {
     if (!validateStep2()) return;
-    if (!coverFileRef.current) {
-      toast.error("Cover photo is required.");
+    if (photos.length === 0) {
+      toast.error("At least one photo is required.");
       setStep(1);
       return;
     }
@@ -275,10 +312,10 @@ export default function NewDishPage() {
 
       const dishId: string | undefined = data.data?.id;
       if (dishId) {
-        const uploaded = await uploadCoverPhoto(dishId);
+        const uploaded = await uploadPhotos(dishId);
         if (!uploaded) {
           mealToastError(
-            "Meal created but photo upload failed. Add a photo from the edit page.",
+            "Meal created but some photos failed to upload. Add them from the edit page.",
           );
         }
       }
@@ -396,54 +433,90 @@ export default function NewDishPage() {
             </div>
 
             <div className={styles.formGroup}>
-              <span className={styles.formLabel}>
-                Cover photo <span className={styles.required}>*</span>
-              </span>
-              <button
-                type="button"
-                className={`${styles.dropzone} ${dragging ? styles.dropzoneActive : ""}`}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  setDragging(true);
-                }}
-                onDragLeave={() => setDragging(false)}
-                onDrop={handleDrop}
-                onClick={() => fileInputRef.current?.click()}
-              >
-                {coverPreview ? (
-                  // biome-ignore lint/performance/noImgElement: local file preview
-                  <img
-                    src={coverPreview}
-                    alt="Cover preview"
-                    className={styles.coverImg}
-                  />
-                ) : (
+              <div className={styles.photoLabelRow}>
+                <span className={styles.formLabel}>
+                  Photos <span className={styles.required}>*</span>
+                </span>
+                <span className={styles.photoCount}>
+                  {photos.length} / {MAX_PHOTOS}
+                </span>
+              </div>
+              <p className={styles.sectionHint}>
+                The first photo is the cover. JPG, PNG, or WebP · max 10 MB.
+              </p>
+
+              {photos.length === 0 ? (
+                <button
+                  type="button"
+                  className={`${styles.dropzone} ${dragging ? styles.dropzoneActive : ""}`}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setDragging(true);
+                  }}
+                  onDragLeave={() => setDragging(false)}
+                  onDrop={handleDrop}
+                  onClick={() => fileInputRef.current?.click()}
+                >
                   <div className={styles.dropzoneEmpty}>
                     <Upload size={22} strokeWidth={1.5} />
                     <span>Drag and drop or click to upload</span>
                     <span className={styles.dropzoneHint}>
-                      JPG, PNG, or WebP · max 10 MB
+                      Add up to {MAX_PHOTOS} photos
                     </span>
                   </div>
-                )}
-              </button>
+                </button>
+              ) : (
+                // biome-ignore lint/a11y/noStaticElementInteractions: drop target
+                <div
+                  className={styles.photoStrip}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setDragging(true);
+                  }}
+                  onDragLeave={() => setDragging(false)}
+                  onDrop={handleDrop}
+                >
+                  {photos.map((photo, i) => (
+                    <div key={photo.id} className={styles.photoThumb}>
+                      {/* biome-ignore lint/performance/noImgElement: local file preview */}
+                      <img
+                        src={photo.preview}
+                        alt={i === 0 ? "Cover preview" : "Dish photo"}
+                        className={styles.photoImg}
+                      />
+                      {i === 0 && (
+                        <span className={styles.coverTag}>Cover</span>
+                      )}
+                      <button
+                        type="button"
+                        className={styles.photoRemove}
+                        onClick={() => removePhoto(photo.id)}
+                        aria-label="Remove photo"
+                      >
+                        <X size={11} />
+                      </button>
+                    </div>
+                  ))}
+                  {photos.length < MAX_PHOTOS && (
+                    <button
+                      type="button"
+                      className={styles.photoAdd}
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <ImagePlus size={15} className={styles.photoAddIcon} />
+                      <span>Add photo</span>
+                    </button>
+                  )}
+                </div>
+              )}
               <input
                 ref={fileInputRef}
                 type="file"
                 accept={DISH_PHOTO_ACCEPT}
+                multiple
                 hidden
-                onChange={handleCoverSelect}
+                onChange={handlePhotoSelect}
               />
-              {coverPreview && (
-                <button
-                  type="button"
-                  className={styles.changePhotoBtn}
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <ImagePlus size={14} />
-                  Change photo
-                </button>
-              )}
             </div>
 
             <div className={styles.formActions}>
