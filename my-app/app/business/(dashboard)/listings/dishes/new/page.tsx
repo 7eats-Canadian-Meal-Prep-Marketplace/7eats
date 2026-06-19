@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { mealToastError, mealToastSuccess } from "@/lib/meal-toast";
+import { isPriceKeystroke, isValidPrice } from "@/lib/price";
 import {
   DISH_PHOTO_ACCEPT,
   validateDishPhotoFile,
@@ -43,14 +44,6 @@ const EMPTY_FORM = {
 };
 
 const EMPTY_NUTRITION = { calories: "", protein: "", carbs: "", fat: "" };
-
-function isValidPrice(raw: string): boolean {
-  const trimmed = raw.trim();
-  if (!trimmed) return false;
-  if (!/^\d+(\.\d{1,2})?$/.test(trimmed)) return false;
-  const n = Number(trimmed);
-  return Number.isFinite(n) && n > 0;
-}
 
 function step1Complete(form: typeof EMPTY_FORM, hasPhoto: boolean): boolean {
   return (
@@ -334,7 +327,7 @@ export default function NewDishPage() {
   }
 
   function handlePriceChange(value: string) {
-    if (value === "" || /^\d*\.?\d{0,2}$/.test(value)) {
+    if (isPriceKeystroke(value)) {
       setForm((f) => ({ ...f, price: value }));
     }
   }

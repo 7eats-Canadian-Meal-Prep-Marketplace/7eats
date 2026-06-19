@@ -13,6 +13,7 @@ import {
   DELIVERY_MAX_KM_MIN,
   DELIVERY_RATE_MAX,
   DELIVERY_RATE_MIN,
+  FREE_DELIVERY_ABOVE_MAX,
 } from "@/lib/delivery-pricing";
 
 const PROFILE_FIELDS = {
@@ -84,7 +85,12 @@ const bodySchema = z.object({
     .nullable()
     .optional(),
   deliveryFlatFee: z.number().min(0).max(0).nullable().optional(),
-  freeDeliveryAbove: z.number().min(0).max(9999.99).nullable().optional(),
+  freeDeliveryAbove: z
+    .number()
+    .min(0)
+    .max(FREE_DELIVERY_ABOVE_MAX)
+    .nullable()
+    .optional(),
 });
 
 export async function GET(req: NextRequest) {

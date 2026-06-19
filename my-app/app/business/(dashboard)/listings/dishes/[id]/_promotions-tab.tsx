@@ -4,6 +4,7 @@ import { AlertTriangle, Plus } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
+import { isPriceKeystroke } from "@/lib/price";
 import { ConfirmDialog } from "../../../_components/ConfirmDialog";
 import styles from "./page.module.css";
 
@@ -94,12 +95,8 @@ export function PromotionsTab() {
   }
 
   function handleValueChange(raw: string) {
-    if (raw === "") {
-      setValue("");
-      return;
-    }
-    // Digits only, with at most two decimal places.
-    if (!/^\d*\.?\d{0,2}$/.test(raw)) return;
+    // Digits only, with at most two decimal places (also allows empty).
+    if (!isPriceKeystroke(raw)) return;
     // Percentage can never exceed 100.
     if (type === "percentage_off" && Number(raw) > 100) return;
     setValue(raw);

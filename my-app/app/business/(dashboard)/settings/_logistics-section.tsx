@@ -19,6 +19,7 @@ import {
   withDeliveryDefaults,
 } from "@/lib/delivery-pricing";
 import { useDirtyState } from "@/lib/forms/use-dirty";
+import { isPriceKeystroke } from "@/lib/price";
 import styles from "./page.module.css";
 
 type FulfillmentType = "pickup" | "delivery" | "both";
@@ -73,7 +74,7 @@ type LogisticsForm = {
   leadTime: string;
   maxDeliveryKm: number | null;
   deliveryRatePerKm: number;
-  freeDeliveryAbove: number | null;
+  freeDeliveryAbove: string;
 };
 
 function deriveFulfillment(
@@ -138,7 +139,7 @@ export function LogisticsSection() {
     leadTime: "",
     maxDeliveryKm: null,
     deliveryRatePerKm: defaultDeliveryRate(),
-    freeDeliveryAbove: null,
+    freeDeliveryAbove: "",
   });
   const [loading, setLoading] = useState(true);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -191,8 +192,8 @@ export function LogisticsSection() {
               : defaultDeliveryRate(),
           freeDeliveryAbove:
             profile?.freeDeliveryAbove != null
-              ? Number(profile.freeDeliveryAbove)
-              : null,
+              ? String(profile.freeDeliveryAbove)
+              : "",
         });
       })
       .finally(() => setLoading(false));
@@ -307,7 +308,10 @@ export function LogisticsSection() {
         maxDeliveryKm: deliveryZone?.maxDeliveryKm ?? null,
         deliveryRatePerKm: deliveryZone?.deliveryRatePerKm ?? null,
         deliveryFlatFee: offersDelivery ? 0 : null,
-        freeDeliveryAbove: offersDelivery ? form.freeDeliveryAbove : null,
+        freeDeliveryAbove:
+          offersDelivery && form.freeDeliveryAbove.trim() !== ""
+            ? Number(form.freeDeliveryAbove)
+            : null,
       }),
     });
     const profileJson = await profileRes.json().catch(() => ({}));
@@ -596,19 +600,16 @@ export function LogisticsSection() {
               </label>
               <input
                 id="freeDeliveryAbove"
-                type="number"
-                min={0}
-                step={0.01}
+                type="text"
+                inputMode="decimal"
                 className={styles.formInput}
-                value={form.freeDeliveryAbove ?? ""}
-                onChange={(e) =>
-                  setForm((f) => ({
-                    ...f,
-                    freeDeliveryAbove: e.target.value
-                      ? Number(e.target.value)
-                      : null,
-                  }))
-                }
+                value={form.freeDeliveryAbove}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  if (isPriceKeystroke(next)) {
+                    setForm((f) => ({ ...f, freeDeliveryAbove: next }));
+                  }
+                }}
                 placeholder="None (always charge delivery)"
               />
             </div>

@@ -4,8 +4,10 @@ import {
   DELIVERY_MAX_KM_MIN,
   DELIVERY_RATE_MAX,
   DELIVERY_RATE_MIN,
+  FREE_DELIVERY_ABOVE_MAX,
   withDeliveryDefaults,
 } from "@/lib/delivery-pricing";
+import { isValidPrice } from "@/lib/price";
 import { isValidOptionalUrl } from "@/lib/url";
 
 export { formatAddressLine as formatAddressQuery };
@@ -61,7 +63,7 @@ export function validateLogisticsSettings(input: {
   leadTime: string;
   maxDeliveryKm: number | null;
   deliveryRatePerKm: number;
-  freeDeliveryAbove: number | null;
+  freeDeliveryAbove: string;
 }): string | null {
   if (!isGeocodedPickupAddress(input)) {
     if (input.pickupStreet.trim()) {
@@ -121,11 +123,13 @@ export function validateLogisticsSettings(input: {
     ) {
       return `Delivery rate must be between $${DELIVERY_RATE_MIN.toFixed(2)} and $${DELIVERY_RATE_MAX.toFixed(2)} per km.`;
     }
-    if (
-      input.freeDeliveryAbove != null &&
-      (!Number.isFinite(input.freeDeliveryAbove) || input.freeDeliveryAbove < 0)
-    ) {
-      return "Free delivery threshold must be zero or greater.";
+    if (input.freeDeliveryAbove.trim() !== "") {
+      if (!isValidPrice(input.freeDeliveryAbove)) {
+        return "Free delivery threshold must be a dollar amount with up to 2 decimals.";
+      }
+      if (Number(input.freeDeliveryAbove) > FREE_DELIVERY_ABOVE_MAX) {
+        return `Free delivery threshold must be $${FREE_DELIVERY_ABOVE_MAX.toFixed(2)} or less.`;
+      }
     }
   }
 

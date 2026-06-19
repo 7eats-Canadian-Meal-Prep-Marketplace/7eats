@@ -56,7 +56,14 @@ describe("validateLogisticsSettings", () => {
     leadTime: "1_day",
     maxDeliveryKm: null,
     deliveryRatePerKm: 0.5,
-    freeDeliveryAbove: null,
+    freeDeliveryAbove: "",
+  };
+
+  const bothBase = {
+    ...base,
+    fulfillment: "both" as const,
+    deliveryDays: ["Mon"],
+    deliveryWindows: { monday: { from: "11:00", to: "14:00" } },
   };
 
   it("rejects unresolved address text", () => {
@@ -74,15 +81,40 @@ describe("validateLogisticsSettings", () => {
   });
 
   it("accepts delivery logistics with unset zone (defaults apply)", () => {
+    expect(validateLogisticsSettings(bothBase)).toBeNull();
+  });
+
+  it("accepts a well-formed free delivery threshold", () => {
     expect(
-      validateLogisticsSettings({
-        ...base,
-        fulfillment: "both",
-        deliveryDays: ["Mon"],
-        deliveryWindows: { monday: { from: "11:00", to: "14:00" } },
-        maxDeliveryKm: null,
-        deliveryRatePerKm: 0.5,
-      }),
+      validateLogisticsSettings({ ...bothBase, freeDeliveryAbove: "49.99" }),
+    ).toBeNull();
+  });
+
+  it("rejects a free delivery threshold with more than two decimals", () => {
+    expect(
+      validateLogisticsSettings({ ...bothBase, freeDeliveryAbove: "49.999" }),
+    ).toBe(
+      "Free delivery threshold must be a dollar amount with up to 2 decimals.",
+    );
+  });
+
+  it("rejects a non-numeric free delivery threshold", () => {
+    expect(
+      validateLogisticsSettings({ ...bothBase, freeDeliveryAbove: "free" }),
+    ).toBe(
+      "Free delivery threshold must be a dollar amount with up to 2 decimals.",
+    );
+  });
+
+  it("rejects a free delivery threshold above the maximum", () => {
+    expect(
+      validateLogisticsSettings({ ...bothBase, freeDeliveryAbove: "10000" }),
+    ).toBe("Free delivery threshold must be $9999.99 or less.");
+  });
+
+  it("ignores the free delivery threshold when delivery is off", () => {
+    expect(
+      validateLogisticsSettings({ ...base, freeDeliveryAbove: "not-a-price" }),
     ).toBeNull();
   });
 });
