@@ -17,6 +17,25 @@ commands from `my-app/` unless a task explicitly targets repo-level tooling.
     └── public/           # Static assets
 ```
 
+## UI / Frontend Design Work (MANDATORY)
+
+Any time you do UI work — building new components/pages, restyling, layout
+changes, or reviewing/auditing an interface — you MUST consult the design
+skills before and during the work:
+
+1. **`web-design-guidelines`** skill — invoke it to review UI code against the
+   Web Interface Guidelines (accessibility, UX, and best-practice compliance).
+   Run it on the files you touched before considering UI work complete.
+2. **`ui-ux-pro-max`** skill — use for UI/UX design intelligence: styles, color
+   systems, typography/font pairing, spacing, interaction states, layout, and
+   product-type patterns when planning or building UI.
+3. **`frontend-design`** skill — use for distinctive, intentional visual design
+   direction so new or reshaped UI does not read as templated defaults.
+
+Treat these as required reading for UI tasks, not optional. Invoke the relevant
+skill(s) up front (planning/building) and run `web-design-guidelines` as the
+review pass on changed files afterward.
+
 ## Commands
 
 All commands below run from `my-app/`:
