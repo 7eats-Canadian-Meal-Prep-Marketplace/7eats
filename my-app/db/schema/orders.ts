@@ -91,6 +91,11 @@ export const orders = pgTable(
     depositType: lateCancelFeeTypeEnum("deposit_type"),
     depositValue: numeric("deposit_value", { precision: 10, scale: 2 }),
     depositAmount: numeric("deposit_amount", { precision: 10, scale: 2 }),
+    /** Human-readable code e-mailed to guest checkouts, e.g. 7E-A3B9C2 */
+    confirmationCode: varchar("confirmation_code", { length: 16 }),
+    /** SHA-256 of the secret token embedded in guest e-mail links */
+    guestAccessTokenHash: text("guest_access_token_hash"),
+    isGuestCheckout: boolean("is_guest_checkout").notNull().default(false),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at")
       .notNull()

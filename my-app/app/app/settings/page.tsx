@@ -2,74 +2,14 @@
 
 import { CreditCard, Edit3, Eye, EyeOff, Plus, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import {
+  CLIENT_PREFERENCE_QUESTIONS,
+  type ClientPreferenceKey,
+} from "@/lib/client-preferences";
 import styles from "./page.module.css";
 
-type PreferenceQuestion = {
-  id: string;
-  question: string;
-  options: string[];
-  multiSelect: boolean;
-};
-
-const PREFERENCE_QUESTIONS: PreferenceQuestion[] = [
-  {
-    id: "dietary",
-    question: "Dietary needs",
-    options: [
-      "Halal",
-      "Vegan",
-      "Vegetarian",
-      "Gluten-free",
-      "Dairy-free",
-      "Nut-free",
-      "Kosher",
-    ],
-    multiSelect: true,
-  },
-  {
-    id: "allergies",
-    question: "Allergies",
-    options: [
-      "Tree nuts",
-      "Peanuts",
-      "Dairy",
-      "Gluten",
-      "Shellfish",
-      "Eggs",
-      "Soy",
-      "None",
-    ],
-    multiSelect: true,
-  },
-  {
-    id: "goals",
-    question: "Goals & preferences",
-    options: [
-      "High protein",
-      "Weight loss",
-      "Low carb",
-      "Muscle gain",
-      "Heart health",
-      "Comfort food",
-      "Family-friendly",
-      "Balanced",
-    ],
-    multiSelect: true,
-  },
-  {
-    id: "whyMealPrep",
-    question: "Why do you order meal prep?",
-    options: [
-      "Save time cooking",
-      "Eat healthier",
-      "Budget-friendly eating",
-      "Discover new cuisines",
-      "Support local home cooks",
-      "Convenient for my schedule",
-    ],
-    multiSelect: false,
-  },
-];
+type PrefAnswers = Record<ClientPreferenceKey, string[]>;
 
 type Tab = "profile" | "preferences" | "payment" | "notifications";
 
@@ -80,7 +20,6 @@ const TAB_LABELS: Record<Tab, string> = {
   notifications: "Notifications",
 };
 
-type PrefAnswers = Record<string, string[]>;
 const DEFAULT_PREFS: PrefAnswers = {
   dietary: ["Halal"],
   allergies: [],
@@ -426,7 +365,11 @@ export default function SettingsPage() {
   const atLeastOneChannel =
     notifPrefs.channels.sms || notifPrefs.channels.email;
 
-  const toggleAnswer = (qid: string, option: string, multi: boolean) => {
+  const toggleAnswer = (
+    qid: ClientPreferenceKey,
+    option: string,
+    multi: boolean,
+  ) => {
     setPrefAnswers((prev) => {
       const current = prev[qid] ?? [];
       if (multi) {
@@ -836,7 +779,7 @@ export default function SettingsPage() {
               Your preference sheet helps cooks understand you better before you
               even message them.
             </p>
-            {PREFERENCE_QUESTIONS.map((q) => {
+            {CLIENT_PREFERENCE_QUESTIONS.map((q) => {
               const answers = prefAnswers[q.id] ?? [];
               const isEditing = editingPref === q.id;
               return (
@@ -889,11 +832,25 @@ export default function SettingsPage() {
               type="button"
               className={styles.saveBtn}
               onClick={() => {
-                fetch("/api/auth/complete-onboarding", {
+                void fetch("/api/auth/complete-onboarding", {
                   method: "POST",
                   headers: { "content-type": "application/json" },
                   body: JSON.stringify(prefAnswers),
-                }).catch(() => {});
+                })
+                  .then(async (res) => {
+                    const data = await res.json().catch(() => ({}));
+                    if (!res.ok) {
+                      toast.error(
+                        (data as { error?: string }).error ??
+                          "Could not save preferences.",
+                      );
+                      return;
+                    }
+                    toast.success("Preferences saved.");
+                  })
+                  .catch(() => {
+                    toast.error("Could not save preferences.");
+                  });
               }}
             >
               Save preferences

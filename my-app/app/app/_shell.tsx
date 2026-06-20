@@ -649,7 +649,11 @@ export default function AppShell({
   userEmail?: string;
 }) {
   return (
-    <AppProvider isLoggedIn={isLoggedIn}>
+    <AppProvider
+      isLoggedIn={isLoggedIn}
+      userName={userName}
+      userEmail={userEmail}
+    >
       <CartProvider>
         <GuestAddressProvider>
           <ServiceAddressProvider isLoggedIn={isLoggedIn}>

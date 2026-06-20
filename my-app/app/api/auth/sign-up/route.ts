@@ -6,6 +6,7 @@ import { authUser, authUserTable, legalAcceptances } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { hashIp } from "@/lib/hash";
 import { CLIENT_SIGNUP_DOCS, LEGAL_VERSION } from "@/lib/legal";
+import { validatePassword } from "@/lib/password";
 import { logAndCheckRateLimit } from "@/lib/rate-limit";
 
 // Self-serve account creation for clients (consumers). Cooks never reach this
@@ -42,6 +43,11 @@ export async function POST(req: Request) {
 
   const { firstName, lastName, password } = parsed.data;
   const email = parsed.data.email.toLowerCase();
+
+  const pwError = validatePassword(password);
+  if (pwError) {
+    return NextResponse.json({ error: pwError }, { status: 400 });
+  }
 
   const ip =
     req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??

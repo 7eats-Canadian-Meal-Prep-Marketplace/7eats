@@ -2,21 +2,10 @@ import { and, eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/db";
-import {
-  authUser,
-  cookProfiles,
-  orderDishes,
-  orderPayments,
-  orders,
-} from "@/db/schema";
+import { authUser, cookProfiles, orderDishes, orders } from "@/db/schema";
 import { auth } from "@/lib/auth";
-import { sendOrderCancelledByClientEmailToCook } from "@/lib/emails/order-events";
 import { isRefundEligible } from "@/lib/order-pricing";
-import {
-  cancelPaymentIntent,
-  capturePaymentIntent,
-  refundPaymentIntent,
-} from "@/lib/stripe-payments";
+import { cancelClientOrder } from "@/lib/orders/cancel-order";
 
 function formatPickupDate(isoString: string): string {
   const d = new Date(isoString);
@@ -182,11 +171,6 @@ export async function GET(req: NextRequest, { params }: Params) {
   }
 }
 
-const CANCELLABLE_STATUSES = ["pending", "confirmed"];
-
-// Client cancellation. Full refund only when the cook allows cancellation AND
-// the order has a pickup time AND we are still before (pickupAt - leadTime).
-// Otherwise the order is cancelled with no refund (payment captured to the cook).
 export async function DELETE(req: NextRequest, { params }: Params) {
   const session = await auth.api.getSession({ headers: req.headers });
   if (!session) {
@@ -199,138 +183,18 @@ export async function DELETE(req: NextRequest, { params }: Params) {
   }
 
   try {
-    const [order] = await db
-      .select({
-        id: orders.id,
-        clientId: orders.clientId,
-        cookId: orders.cookId,
-        status: orders.status,
-        totalPrice: orders.totalPrice,
-        currency: orders.currency,
-        pickupAt: orders.pickupAt,
-        cancellationAllowed: orders.cancellationAllowed,
-        cookLeadTime: cookProfiles.leadTime,
-      })
-      .from(orders)
-      .leftJoin(cookProfiles, eq(orders.cookId, cookProfiles.id))
-      .where(and(eq(orders.id, orderId), eq(orders.clientId, session.user.id)))
-      .limit(1);
-
-    if (!order) {
-      return NextResponse.json({ error: "Order not found." }, { status: 404 });
-    }
-    if (!CANCELLABLE_STATUSES.includes(order.status)) {
+    const result = await cancelClientOrder(
+      orderId,
+      session.user.id,
+      session.user.id,
+    );
+    if (!result.ok) {
       return NextResponse.json(
-        { error: "Order cannot be cancelled at this stage." },
-        { status: 400 },
+        { error: result.error },
+        { status: result.status },
       );
     }
-
-    const refundEligible = isRefundEligible(
-      order.pickupAt instanceof Date ? order.pickupAt : null,
-      order.cookLeadTime,
-      order.cancellationAllowed,
-    );
-
-    const payments = await db
-      .select({
-        id: orderPayments.id,
-        status: orderPayments.status,
-        stripePaymentIntentId: orderPayments.stripePaymentIntentId,
-      })
-      .from(orderPayments)
-      .where(eq(orderPayments.orderId, orderId));
-
-    for (const payment of payments) {
-      if (!payment.stripePaymentIntentId) continue;
-
-      if (refundEligible) {
-        // Authorized holds are cancelled; captured funds are refunded.
-        if (payment.status === "authorized") {
-          await cancelPaymentIntent(
-            payment.stripePaymentIntentId,
-            `client-cancel-${orderId}`,
-          );
-          await db
-            .update(orderPayments)
-            .set({ status: "refunded", refundedAt: new Date() })
-            .where(eq(orderPayments.id, payment.id));
-        } else if (payment.status === "held" || payment.status === "released") {
-          const refundId = await refundPaymentIntent({
-            paymentIntentId: payment.stripePaymentIntentId,
-            idempotencyKey: `client-cancel-refund-${orderId}`,
-          });
-          await db
-            .update(orderPayments)
-            .set({
-              status: "refunded",
-              stripeRefundId: refundId,
-              refundedAt: new Date(),
-            })
-            .where(eq(orderPayments.id, payment.id));
-        }
-      } else if (payment.status === "authorized") {
-        // No refund — capture the authorized payment to the cook.
-        await capturePaymentIntent(
-          payment.stripePaymentIntentId,
-          `client-cancel-capture-${orderId}`,
-        );
-        await db
-          .update(orderPayments)
-          .set({ status: "released", releasedAt: new Date() })
-          .where(eq(orderPayments.id, payment.id));
-      }
-    }
-
-    await db
-      .update(orders)
-      .set({
-        status: "cancelled",
-        cancelledAt: new Date(),
-        cancelledBy: session.user.id,
-      })
-      .where(and(eq(orders.id, orderId), eq(orders.clientId, session.user.id)));
-
-    // Notify the cook (fire-and-forget) with the dish names.
-    db.select({
-      cookEmail: authUser.email,
-      cookFirstName: authUser.firstName,
-    })
-      .from(cookProfiles)
-      .innerJoin(authUser, eq(cookProfiles.userId, authUser.id))
-      .where(eq(cookProfiles.id, order.cookId))
-      .limit(1)
-      .then(async ([row]) => {
-        if (!row) return;
-        const dishRows = await db
-          .select({
-            name: orderDishes.dishName,
-            quantity: orderDishes.quantity,
-          })
-          .from(orderDishes)
-          .where(eq(orderDishes.orderId, orderId));
-        const customerName =
-          session.user.name ||
-          [session.user.firstName, session.user.lastName]
-            .filter(Boolean)
-            .join(" ") ||
-          "A customer";
-        return sendOrderCancelledByClientEmailToCook(
-          { email: row.cookEmail, firstName: row.cookFirstName },
-          { name: customerName },
-          {
-            id: order.id,
-            listingTitle: dishRows.map((d) => d.name).join(", "),
-            quantity: dishRows.reduce((s, d) => s + d.quantity, 0),
-            totalPrice: order.totalPrice,
-            currency: order.currency,
-            pickupAt: order.pickupAt,
-          },
-        );
-      })
-      .catch((err) => console.error("[orders/DELETE] email", err));
-
-    return NextResponse.json({ success: true, refunded: refundEligible });
+    return NextResponse.json({ success: true, refunded: result.refunded });
   } catch (err) {
     console.error("[orders/DELETE]", err);
     return NextResponse.json(

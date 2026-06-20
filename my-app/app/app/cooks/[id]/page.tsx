@@ -3,7 +3,7 @@
 import {
   ArrowLeft,
   BadgeCheck,
-  Clock,
+  Globe,
   Heart,
   MapPin,
   Star,
@@ -12,22 +12,26 @@ import Link from "next/link";
 import { notFound, useRouter } from "next/navigation";
 import { use, useEffect, useState } from "react";
 import { formatLeadTime } from "@/lib/refund-policy";
+import { useApp } from "../../_app-context";
 import { Skeleton } from "../../_skeleton";
 import styles from "./page.module.css";
 
-// ── API types ─────────────────────────────────────────────────────────────────
+// ── Types ─────────────────────────────────────────────────────────────────────
+type Window = { dayOfWeek: string; fromTime: string; toTime: string };
 
 type ApiCook = {
   id: string;
-  userId: string;
   name: string;
   displayName: string | null;
   photoUrl: string | null;
-  firstName: string | null;
-  lastName: string | null;
+  bannerUrl: string | null;
   bio: string | null;
+  socialLink: string | null;
   cuisineTypes: string[];
+  niches: string[];
+  dietaryTags: string[];
   neighborhood: string | null;
+  pickupCity: string | null;
   rating: number | null;
   reviewCount: number;
   yearsExperience: number | null;
@@ -35,6 +39,10 @@ type ApiCook = {
   memberSince: string | null;
   ordersCompleted: number;
   leadTime: string | null;
+  offersPickup: boolean;
+  delivery: "none" | "self" | null;
+  pickupWindows: Window[];
+  deliveryWindows: Window[];
   minOrderQty: number;
   maxOrderQty: number | null;
   cancellationAllowed: boolean;
@@ -50,10 +58,47 @@ type ApiReview = {
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+const DAY_ORDER = [
+  "sunday",
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+];
+const DAY_SHORT: Record<string, string> = {
+  sunday: "Sun",
+  monday: "Mon",
+  tuesday: "Tue",
+  wednesday: "Wed",
+  thursday: "Thu",
+  friday: "Fri",
+  saturday: "Sat",
+};
 
-function cuisineSubtitle(types: string[]): string {
-  if (types.length === 0) return "Home cook";
-  return types.map((t) => `${t} cuisine`).join(" · ");
+function fmtTime(hhmm: string): string {
+  const [h, m] = hhmm.split(":").map(Number);
+  const period = h >= 12 ? "pm" : "am";
+  const hour = h % 12 === 0 ? 12 : h % 12;
+  return m === 0
+    ? `${hour}${period}`
+    : `${hour}:${String(m).padStart(2, "0")}${period}`;
+}
+
+function summarizeWindows(windows: Window[]): string {
+  if (windows.length === 0) return "";
+  const ordered = [...windows].sort(
+    (a, b) => DAY_ORDER.indexOf(a.dayOfWeek) - DAY_ORDER.indexOf(b.dayOfWeek),
+  );
+  const days = ordered.map((w) => DAY_SHORT[w.dayOfWeek] ?? w.dayOfWeek);
+  const uniform = ordered.every(
+    (w) => w.fromTime === ordered[0].fromTime && w.toTime === ordered[0].toTime,
+  );
+  const range = uniform
+    ? `${fmtTime(ordered[0].fromTime)}–${fmtTime(ordered[0].toTime)}`
+    : "times vary by day";
+  return `${days.join(", ")} · ${range}`;
 }
 
 function nameInitials(name: string): string {
@@ -72,8 +117,19 @@ function formatReviewDate(iso: string): string {
   });
 }
 
-// ── Page ──────────────────────────────────────────────────────────────────────
+function scrollToReviews() {
+  document
+    .getElementById("reviews")
+    ?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
 
+function socialMeta(raw: string): { href: string; label: string } {
+  const url = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+  const label = /instagram\.com/i.test(raw) ? "Instagram" : "Website";
+  return { href: url, label };
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
 export default function CookProfilePage({
   params,
 }: {
@@ -81,9 +137,9 @@ export default function CookProfilePage({
 }) {
   const { id } = use(params);
   const router = useRouter();
+  const { isLoggedIn } = useApp();
   const [following, setFollowing] = useState(false);
 
-  // ── API state ──────────────────────────────────────────────────────────────
   const [cook, setCook] = useState<ApiCook | null>(null);
   const [reviews, setReviews] = useState<ApiReview[]>([]);
   const [notFoundFlag, setNotFoundFlag] = useState(false);
@@ -93,7 +149,6 @@ export default function CookProfilePage({
       typeof window !== "undefined"
         ? window.location.origin
         : (process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000");
-
     let cancelled = false;
 
     async function fetchData() {
@@ -102,17 +157,14 @@ export default function CookProfilePage({
           fetch(`${baseUrl}/api/cooks/${id}`, { cache: "no-store" }),
           fetch(`${baseUrl}/api/cooks/${id}/reviews`, { cache: "no-store" }),
         ]);
-
         if (!cookRes.ok) {
           if (!cancelled) setNotFoundFlag(true);
           return;
         }
-
         const cookJson = await cookRes.json();
         const reviewsJson = reviewsRes.ok
           ? await reviewsRes.json()
           : { data: [] };
-
         if (!cancelled) {
           setCook(cookJson.data);
           setReviews(reviewsJson.data ?? []);
@@ -121,60 +173,34 @@ export default function CookProfilePage({
         if (!cancelled) setNotFoundFlag(true);
       }
     }
-
     fetchData();
-
     return () => {
       cancelled = true;
     };
   }, [id]);
 
-  // ── Render states ──────────────────────────────────────────────────────────
-
-  if (notFoundFlag) {
-    notFound();
-  }
+  if (notFoundFlag) notFound();
 
   if (!cook) {
     return (
       <div className={styles.page}>
-        <div className={styles.headerCard}>
-          <div className={styles.headerTop}>
-            <Skeleton circle width={64} height={64} />
-            <div
-              style={{
-                flex: 1,
-                display: "flex",
-                flexDirection: "column",
-                gap: 8,
-              }}
-            >
-              <Skeleton width="55%" height={22} radius={6} />
-              <Skeleton width="35%" height={14} radius={6} />
-            </div>
-            <Skeleton width={84} height={32} radius={16} />
-          </div>
-          <div style={{ marginTop: 16, display: "flex", gap: 10 }}>
-            <Skeleton width={120} height={14} radius={6} />
-            <Skeleton width={90} height={14} radius={6} />
-          </div>
-          <div style={{ marginTop: 18, display: "flex", gap: 24 }}>
-            {[0, 1, 2].map((i) => (
-              <div
-                key={i}
-                style={{ display: "flex", flexDirection: "column", gap: 6 }}
-              >
-                <Skeleton width={40} height={20} radius={6} />
-                <Skeleton width={64} height={12} radius={6} />
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className={styles.body}>
-          <div className={styles.section}>
-            <Skeleton width="100%" height={14} radius={6} />
+        <div className={styles.hero}>
+          <Skeleton height={120} radius={0} />
+          <div className={styles.heroBody}>
             <Skeleton
-              width="80%"
+              circle
+              width={84}
+              height={84}
+              style={{ marginTop: -50 }}
+            />
+            <Skeleton
+              width="50%"
+              height={24}
+              radius={6}
+              style={{ marginTop: 12 }}
+            />
+            <Skeleton
+              width="35%"
               height={14}
               radius={6}
               style={{ marginTop: 8 }}
@@ -185,226 +211,279 @@ export default function CookProfilePage({
     );
   }
 
-  const cookInitials = nameInitials(cook.name);
+  const kitchen = cook.displayName?.trim();
+  const cuisines = cook.cuisineTypes;
+  const location = cook.pickupCity ?? cook.neighborhood;
+  const social = cook.socialLink ? socialMeta(cook.socialLink) : null;
+  const orderSize =
+    cook.maxOrderQty != null
+      ? `${cook.minOrderQty}–${cook.maxOrderQty} plates`
+      : cook.minOrderQty > 1
+        ? `${cook.minOrderQty}+ plates`
+        : null;
+  const pickupSummary = cook.offersPickup
+    ? summarizeWindows(cook.pickupWindows)
+    : "";
+  const deliverySummary =
+    cook.delivery === "self" ? summarizeWindows(cook.deliveryWindows) : "";
 
   return (
     <div className={styles.page}>
-      {/* ── Breadcrumb back link ─────────────────────────────────────────── */}
-      <div className={styles.breadcrumb}>
-        <button
-          type="button"
-          className={styles.backLink}
-          onClick={() => router.push(`/app/cooks/${id}/menu`)}
-        >
-          <ArrowLeft size={14} strokeWidth={2.5} />
-          Back to menu
-        </button>
-      </div>
+      <button
+        type="button"
+        className={styles.back}
+        onClick={() => router.back()}
+      >
+        <ArrowLeft size={15} strokeWidth={2.5} />
+        Back
+      </button>
 
-      {/* ── Header ──────────────────────────────────────────────────────── */}
-      <div className={styles.headerCard}>
-        {/* Top row: avatar · name · follow */}
-        <div className={styles.headerTop}>
-          <div className={styles.avatarWrap}>
+      {/* ── Hero ────────────────────────────────────────────────────────── */}
+      <header className={styles.hero}>
+        <div className={styles.cover}>
+          {cook.bannerUrl ? (
+            // biome-ignore lint/performance/noImgElement: banner
+            <img src={cook.bannerUrl} alt="" className={styles.coverImg} />
+          ) : (
+            <div className={styles.coverFallback} />
+          )}
+        </div>
+
+        <div className={styles.heroBody}>
+          <div className={styles.avatar}>
             {cook.photoUrl ? (
               // biome-ignore lint/performance/noImgElement: avatar
-              <img
-                src={cook.photoUrl}
-                alt={cook.name}
-                className={styles.avatarImg}
-              />
+              <img src={cook.photoUrl} alt={cook.name} />
             ) : (
-              <div
-                className={styles.avatarImg}
-                style={{
-                  background:
-                    "linear-gradient(135deg, #6b6b6b 0%, #3a3a3a 100%)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "#fff",
-                  fontWeight: 600,
-                  fontSize: "1.25rem",
-                }}
+              <span>{nameInitials(cook.name)}</span>
+            )}
+          </div>
+
+          <div className={styles.heroRow}>
+            <div className={styles.heroId}>
+              <h1 className={styles.name}>
+                <span>{cook.name}</span>
+                {cook.isVerified && (
+                  <BadgeCheck
+                    size={19}
+                    className={styles.verified}
+                    aria-label="Verified cook"
+                  />
+                )}
+              </h1>
+              <div className={styles.heroSub}>
+                {kitchen && <span className={styles.kitchen}>{kitchen}</span>}
+                {social && (
+                  <a
+                    href={social.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={styles.socialLink}
+                  >
+                    <Globe size={14} />
+                    {social.label}
+                  </a>
+                )}
+              </div>
+            </div>
+
+            {isLoggedIn && (
+              <button
+                type="button"
+                className={`${styles.followBtn} ${following ? styles.followBtnActive : ""}`}
+                onClick={() => setFollowing((f) => !f)}
               >
-                {cookInitials}
-              </div>
+                <Heart
+                  size={13}
+                  fill={following ? "currentColor" : "none"}
+                  strokeWidth={following ? 0 : 2}
+                />
+                {following ? "Following" : "Follow"}
+              </button>
             )}
           </div>
-          <div className={styles.nameBlock}>
-            <div className={styles.nameStack}>
-              <h1 className={styles.name}>{cook.name}</h1>
-              {cook.displayName && (
-                <p className={styles.kitchenName}>{cook.displayName}</p>
-              )}
-            </div>
-            {cook.isVerified && (
-              <BadgeCheck
-                size={18}
-                className={styles.verifiedIcon}
-                aria-label="Verified cook"
-              />
-            )}
-          </div>
-          <button
-            type="button"
-            className={`${styles.followBtn} ${following ? styles.followBtnActive : ""}`}
-            onClick={() => setFollowing((f) => !f)}
-          >
-            <Heart
-              size={13}
-              fill={following ? "currentColor" : "none"}
-              strokeWidth={following ? 0 : 2}
-            />
-            {following ? "Following" : "Follow"}
-          </button>
-        </div>
 
-        {/* Full-width details */}
-        <p className={styles.cuisineLine}>
-          {cuisineSubtitle(cook.cuisineTypes)}
-          {cook.yearsExperience !== null
-            ? ` · ${cook.yearsExperience} years experience`
-            : ""}
-        </p>
-
-        <div className={styles.ratingRow}>
-          <Star size={15} fill="currentColor" className={styles.ratingStar} />
-          <span className={styles.ratingBig}>
-            {cook.rating !== null ? cook.rating : "–"}
-          </span>
-          <span className={styles.ratingCount}>
-            ({cook.reviewCount} reviews)
-          </span>
-          {cook.neighborhood && (
-            <>
-              <span className={styles.ratingDot}>·</span>
-              <MapPin size={13} className={styles.ratingLocIcon} />
+          <div className={styles.ratingRow}>
+            <Star size={15} fill="currentColor" className={styles.ratingStar} />
+            <span className={styles.ratingVal}>
+              {(cook.rating ?? 0).toFixed(1)}
+            </span>
+            <button
+              type="button"
+              className={styles.reviewLink}
+              onClick={scrollToReviews}
+            >
+              {cook.reviewCount} review{cook.reviewCount === 1 ? "" : "s"}
+            </button>
+            {location && (
               <span className={styles.ratingLoc}>
-                {cook.neighborhood}, Toronto
+                <MapPin size={13} /> {location}
               </span>
-            </>
-          )}
-        </div>
-
-        <div className={styles.statsStrip}>
-          <div className={styles.statItem}>
-            <span className={styles.statNum}>{cook.ordersCompleted}</span>
-            <span className={styles.statLabel}>meals made</span>
-          </div>
-          {cook.yearsExperience !== null && (
-            <>
-              <span className={styles.statSep} />
-              <div className={styles.statItem}>
-                <span className={styles.statNum}>{cook.yearsExperience}</span>
-                <span className={styles.statLabel}>years cooking</span>
-              </div>
-            </>
-          )}
-          {cook.memberSince && (
-            <>
-              <span className={styles.statSep} />
-              <div className={styles.statItem}>
-                <span className={styles.statNum}>{cook.memberSince}</span>
-                <span className={styles.statLabel}>member since</span>
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* ── Body ────────────────────────────────────────────────────────── */}
-      <div className={styles.body}>
-        {cook.bio && (
-          <section className={styles.section}>
-            <p className={styles.bio}>{cook.bio}</p>
-            {cook.leadTime && (
-              <div className={styles.leadTimeWrap}>
-                <span className={styles.leadTimeBadge}>
-                  <Clock size={11} />
-                  {formatLeadTime(cook.leadTime)} notice
-                </span>
-              </div>
             )}
-          </section>
-        )}
+          </div>
 
-        {/* Order CTA + policies */}
-        <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>Ordering</h2>
-          <p className={styles.noListings}>
-            Minimum {cook.minOrderQty} item{cook.minOrderQty === 1 ? "" : "s"}
-            {cook.maxOrderQty ? ` · maximum ${cook.maxOrderQty}` : ""} per
-            order.
-          </p>
-          <p className={styles.noListings}>
-            {cook.cancellationAllowed
-              ? "Cancellations accepted before the lead time for a full refund."
-              : "No cancellations once an order is placed."}
-          </p>
-          <Link
-            href={`/app/cooks/${id}/menu`}
-            className={styles.followBtn}
-            style={{ marginTop: 12, display: "inline-block" }}
-          >
-            Order now
-          </Link>
-        </section>
-
-        {/* Reviews */}
-        {reviews.length > 0 && (
-          <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>
-              Reviews
-              {cook.rating !== null && (
-                <span className={styles.sectionRating}>
-                  <Star size={14} fill="currentColor" />
-                  {cook.rating}
-                </span>
-              )}
-            </h2>
-            <div className={styles.reviewList}>
-              {reviews.map((review) => (
-                <div key={review.id} className={styles.reviewCard}>
-                  <div className={styles.reviewTop}>
-                    <div className={styles.reviewerAvatar}>
-                      {nameInitials(review.reviewerName)}
-                    </div>
-                    <div className={styles.reviewerInfo}>
-                      <span className={styles.reviewerName}>
-                        {review.reviewerName}
+          {(cuisines.length > 0 ||
+            cook.niches.length > 0 ||
+            cook.dietaryTags.length > 0) && (
+            <div className={styles.tagGroups}>
+              {cuisines.length > 0 && (
+                <div className={styles.tagGroup}>
+                  <span className={styles.tagLabel}>Cuisine</span>
+                  <div className={styles.pills}>
+                    {cuisines.map((c) => (
+                      <span key={c} className={styles.pill}>
+                        {c}
                       </span>
-                      <span className={styles.reviewDate}>
-                        {formatReviewDate(review.createdAt)}
-                      </span>
-                    </div>
-                    <div className={styles.stars}>
-                      {Array.from({ length: 5 }, (_, i) => i).map((i) => (
-                        <Star
-                          key={`star-${i}`}
-                          size={13}
-                          fill={i < review.rating ? "currentColor" : "none"}
-                          className={
-                            i < review.rating
-                              ? styles.starFilled
-                              : styles.starEmpty
-                          }
-                        />
-                      ))}
-                    </div>
+                    ))}
                   </div>
-                  <p className={styles.reviewComment}>{review.comment ?? ""}</p>
-                  {review.dishes.length > 0 && (
-                    <span className={styles.reviewDish}>
-                      Ordered: {review.dishes.join(", ")}
-                    </span>
-                  )}
                 </div>
-              ))}
+              )}
+              {cook.niches.length > 0 && (
+                <div className={styles.tagGroup}>
+                  <span className={styles.tagLabel}>Specialties</span>
+                  <div className={styles.pills}>
+                    {cook.niches.map((c) => (
+                      <span key={c} className={styles.pill}>
+                        {c}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {cook.dietaryTags.length > 0 && (
+                <div className={styles.tagGroup}>
+                  <span className={styles.tagLabel}>Dietary</span>
+                  <div className={styles.pills}>
+                    {cook.dietaryTags.map((c) => (
+                      <span key={c} className={styles.pill}>
+                        {c}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-          </section>
+          )}
+
+          <p className={styles.metaLine}>
+            {cook.ordersCompleted} meals made
+            {cook.memberSince ? ` · Member since ${cook.memberSince}` : ""}
+          </p>
+
+          <Link href={`/app/cooks/${id}/menu`} className={styles.orderBtn}>
+            View menu
+          </Link>
+        </div>
+      </header>
+
+      {/* ── Bio ─────────────────────────────────────────────────────────── */}
+      {cook.bio && (
+        <section className={styles.section}>
+          <h2 className={styles.sectionTitle}>About</h2>
+          <p className={styles.bio}>{cook.bio}</p>
+        </section>
+      )}
+
+      {/* ── Availability ────────────────────────────────────────────────── */}
+      <section className={styles.section}>
+        <h2 className={styles.sectionTitle}>Availability</h2>
+        <dl className={styles.facts}>
+          {cook.leadTime && (
+            <div className={styles.fact}>
+              <dt>Order ahead</dt>
+              <dd>{formatLeadTime(cook.leadTime)} notice</dd>
+            </div>
+          )}
+          {pickupSummary && (
+            <div className={styles.fact}>
+              <dt>Pickup</dt>
+              <dd>{pickupSummary}</dd>
+            </div>
+          )}
+          {deliverySummary && (
+            <div className={styles.fact}>
+              <dt>Delivery</dt>
+              <dd>{deliverySummary}</dd>
+            </div>
+          )}
+          {orderSize && (
+            <div className={styles.fact}>
+              <dt>Order size</dt>
+              <dd>{orderSize}</dd>
+            </div>
+          )}
+          <div className={styles.fact}>
+            <dt>Cancellations</dt>
+            <dd>
+              {cook.cancellationAllowed
+                ? "Free before lead time"
+                : "Final once placed"}
+            </dd>
+          </div>
+          {!pickupSummary && !deliverySummary && (
+            <div className={styles.fact}>
+              <dt>Schedule</dt>
+              <dd>No open times right now</dd>
+            </div>
+          )}
+        </dl>
+      </section>
+
+      {/* ── Reviews ─────────────────────────────────────────────────────── */}
+      <section id="reviews" className={styles.section}>
+        <h2 className={styles.sectionTitle}>
+          Reviews
+          <span className={styles.sectionMeta}>
+            <Star size={14} fill="currentColor" />
+            {(cook.rating ?? 0).toFixed(1)} · {cook.reviewCount}
+          </span>
+        </h2>
+        {reviews.length === 0 ? (
+          <p className={styles.reviewsEmpty}>No reviews yet.</p>
+        ) : (
+          <div className={styles.reviewList}>
+            {reviews.map((review) => (
+              <div key={review.id} className={styles.reviewCard}>
+                <div className={styles.reviewTop}>
+                  <div className={styles.reviewerAvatar}>
+                    {nameInitials(review.reviewerName)}
+                  </div>
+                  <div className={styles.reviewerInfo}>
+                    <span className={styles.reviewerName}>
+                      {review.reviewerName}
+                    </span>
+                    <span className={styles.reviewDate}>
+                      {formatReviewDate(review.createdAt)}
+                    </span>
+                  </div>
+                  <div className={styles.stars}>
+                    {Array.from({ length: 5 }, (_, i) => i).map((i) => (
+                      <Star
+                        key={`star-${i}`}
+                        size={13}
+                        fill={i < review.rating ? "currentColor" : "none"}
+                        className={
+                          i < review.rating
+                            ? styles.starFilled
+                            : styles.starEmpty
+                        }
+                      />
+                    ))}
+                  </div>
+                </div>
+                {review.comment && (
+                  <p className={styles.reviewComment}>{review.comment}</p>
+                )}
+                {review.dishes.length > 0 && (
+                  <span className={styles.reviewDish}>
+                    Ordered: {review.dishes.join(", ")}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
         )}
-      </div>
+      </section>
     </div>
   );
 }

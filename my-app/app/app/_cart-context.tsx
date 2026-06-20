@@ -53,7 +53,6 @@ type CartContextType = {
   cancellationAllowed: boolean;
   items: CartItem[];
   fulfillmentMode: "pickup" | "delivery";
-  pickupAt: string | null;
   deliveryAddress: DeliveryAddress | null;
   notes: string | null;
   /** Total number of items across all dishes. */
@@ -72,7 +71,6 @@ type CartContextType = {
   removeItem: (dishId: string) => void;
   clearCart: () => void;
   setFulfillment: (mode: "pickup" | "delivery") => void;
-  setPickupAt: (iso: string | null) => void;
   setDeliveryAddress: (addr: DeliveryAddress | null) => void;
   setNotes: (notes: string | null) => void;
 };
@@ -82,7 +80,7 @@ type CartContextType = {
  * (important for guests, who have no server-side cart). Bump the version
  * suffix if the stored shape changes in a breaking way.
  */
-const STORAGE_KEY = "7eats:cart:v1";
+const STORAGE_KEY = "7eats:cart:v2";
 
 /**
  * How long a persisted cart stays valid. Long enough to survive a few days of
@@ -95,7 +93,6 @@ type PersistedCart = {
   cook: CookMeta | null;
   items: CartItem[];
   fulfillmentMode: "pickup" | "delivery";
-  pickupAt: string | null;
   deliveryAddress: DeliveryAddress | null;
   notes: string | null;
   /** Epoch ms of the last write — used to expire stale carts. */
@@ -106,7 +103,9 @@ type PersistedCart = {
 function loadPersistedCart(): PersistedCart | null {
   if (typeof window === "undefined") return null;
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw =
+      window.localStorage.getItem(STORAGE_KEY) ??
+      window.localStorage.getItem("7eats:cart:v1");
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Partial<PersistedCart>;
     if (!parsed || !Array.isArray(parsed.items)) return null;
@@ -121,7 +120,6 @@ function loadPersistedCart(): PersistedCart | null {
       items: parsed.items,
       fulfillmentMode:
         parsed.fulfillmentMode === "delivery" ? "delivery" : "pickup",
-      pickupAt: parsed.pickupAt ?? null,
       deliveryAddress: parsed.deliveryAddress ?? null,
       notes: parsed.notes ?? null,
     };
@@ -154,7 +152,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [fulfillmentMode, setFulfillmentMode] = useState<"pickup" | "delivery">(
     "pickup",
   );
-  const [pickupAt, setPickupAtState] = useState<string | null>(null);
   const [deliveryAddress, setDeliveryAddressState] =
     useState<DeliveryAddress | null>(null);
   const [notes, setNotesState] = useState<string | null>(null);
@@ -173,7 +170,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       setCook(saved.cook);
       setItems(saved.items);
       setFulfillmentMode(saved.fulfillmentMode);
-      setPickupAtState(saved.pickupAt);
       setDeliveryAddressState(saved.deliveryAddress);
       setNotesState(saved.notes);
     }
@@ -188,7 +184,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         cook,
         items,
         fulfillmentMode,
-        pickupAt,
         deliveryAddress,
         notes,
         savedAt: Date.now(),
@@ -197,7 +192,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // Storage may be full or unavailable (private mode) — non-critical.
     }
-  }, [cook, items, fulfillmentMode, pickupAt, deliveryAddress, notes]);
+  }, [cook, items, fulfillmentMode, deliveryAddress, notes]);
 
   const upsert = useCallback((meta: CookMeta, item: CartItem) => {
     setCook(meta);
@@ -211,6 +206,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     (input: AddItemInput) => {
       if (cook && cook.cookId !== input.cookId && items.length > 0) {
         return { conflict: true };
+      }
+      if (cook && cook.cookId !== input.cookId) {
+        setNotesState(null);
       }
       upsert(
         {
@@ -231,6 +229,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const clearAndAdd = useCallback(
     (input: AddItemInput) => {
       setItems([]);
+      setNotesState(null);
       upsert(
         {
           cookId: input.cookId,
@@ -254,7 +253,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setItems([]);
     setCook(null);
     setDeliveryAddressState(null);
-    setPickupAtState(null);
     setNotesState(null);
   }, []);
 
@@ -282,7 +280,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     cancellationAllowed: cook?.cancellationAllowed ?? false,
     items,
     fulfillmentMode,
-    pickupAt,
     deliveryAddress,
     notes,
     totalQuantity,
@@ -294,7 +291,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     removeItem,
     clearCart,
     setFulfillment: setFulfillmentMode,
-    setPickupAt: setPickupAtState,
     setDeliveryAddress: setDeliveryAddressState,
     setNotes: setNotesState,
   };

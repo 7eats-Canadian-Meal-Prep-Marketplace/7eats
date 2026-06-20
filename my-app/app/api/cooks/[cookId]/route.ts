@@ -1,8 +1,9 @@
-import { and, avg, count, eq, sql } from "drizzle-orm";
+import { avg, count, eq, sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import {
   authUser,
+  cookPickupWindows,
   cookProfiles,
   cookProfileTags,
   orders,
@@ -24,11 +25,16 @@ export async function GET(
         userId: authUser.id,
         displayName: cookProfiles.displayName,
         photoUrl: cookProfiles.photoUrl,
+        bannerUrl: cookProfiles.bannerUrl,
         firstName: authUser.firstName,
         lastName: authUser.lastName,
         bio: cookProfiles.bio,
+        socialLink: cookProfiles.socialLink,
         neighborhood: authUser.neighborhood,
+        pickupCity: cookProfiles.pickupCity,
         leadTime: cookProfiles.leadTime,
+        offersPickup: cookProfiles.offersPickup,
+        delivery: cookProfiles.delivery,
         minOrderQty: cookProfiles.minOrderQty,
         maxOrderQty: cookProfiles.maxOrderQty,
         cancellationAllowed: cookProfiles.cancellationAllowed,
@@ -63,18 +69,45 @@ export async function GET(
         sql`${reviews.cookId} = ${cookId} AND ${reviews.isVisible} = TRUE`,
       );
 
-    // Cuisine tags (category = 'cuisine') for the profile subtitle.
-    const cuisineRows = await db
-      .select({ label: tags.label })
+    // All profile tags, grouped by category. "cuisine" and "dietary" are
+    // explicit; anything else (e.g. niche/specialty) falls into `niches` so it
+    // surfaces regardless of the exact category string.
+    const tagRows = await db
+      .select({ label: tags.label, category: tags.category })
       .from(cookProfileTags)
       .innerJoin(tags, eq(cookProfileTags.tagId, tags.id))
-      .where(
-        and(
-          eq(cookProfileTags.cookProfileId, cookId),
-          eq(tags.category, "cuisine"),
-        ),
-      );
-    const cuisineTypes = cuisineRows.map((t) => t.label);
+      .where(eq(cookProfileTags.cookProfileId, cookId));
+    const cuisineTypes = tagRows
+      .filter((t) => t.category === "cuisine")
+      .map((t) => t.label);
+    const dietaryTags = tagRows
+      .filter((t) => t.category === "dietary")
+      .map((t) => t.label);
+    const niches = tagRows
+      .filter((t) => t.category !== "cuisine" && t.category !== "dietary")
+      .map((t) => t.label);
+
+    // Pickup & delivery availability windows.
+    const windowRows = await db
+      .select({
+        windowType: cookPickupWindows.windowType,
+        dayOfWeek: cookPickupWindows.dayOfWeek,
+        fromTime: cookPickupWindows.fromTime,
+        toTime: cookPickupWindows.toTime,
+      })
+      .from(cookPickupWindows)
+      .where(eq(cookPickupWindows.cookId, cookId));
+    const toWindow = ({
+      dayOfWeek,
+      fromTime,
+      toTime,
+    }: (typeof windowRows)[number]) => ({ dayOfWeek, fromTime, toTime });
+    const pickupWindows = windowRows
+      .filter((w) => w.windowType === "pickup")
+      .map(toWindow);
+    const deliveryWindows = windowRows
+      .filter((w) => w.windowType === "delivery")
+      .map(toWindow);
 
     const name =
       [row.firstName, row.lastName].filter(Boolean).join(" ") || "Unknown Cook";
@@ -93,11 +126,16 @@ export async function GET(
         name,
         displayName: row.displayName ?? null,
         photoUrl: row.photoUrl ?? null,
+        bannerUrl: row.bannerUrl ?? null,
         firstName: row.firstName ?? null,
         lastName: row.lastName ?? null,
         bio: row.bio ?? null,
+        socialLink: row.socialLink ?? null,
         cuisineTypes,
+        niches,
+        dietaryTags,
         neighborhood: row.neighborhood ?? null,
+        pickupCity: row.pickupCity ?? null,
         rating: rating != null ? Math.round(rating * 10) / 10 : null,
         reviewCount: Number(reviewCount),
         yearsExperience: null,
@@ -105,6 +143,10 @@ export async function GET(
         memberSince,
         ordersCompleted: Number(ordersCompleted),
         leadTime: row.leadTime ?? null,
+        offersPickup: row.offersPickup,
+        delivery: row.delivery ?? null,
+        pickupWindows,
+        deliveryWindows,
         minOrderQty: row.minOrderQty,
         maxOrderQty: row.maxOrderQty,
         cancellationAllowed: row.cancellationAllowed,

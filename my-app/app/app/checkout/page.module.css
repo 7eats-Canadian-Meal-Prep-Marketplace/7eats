@@ -31,9 +31,9 @@
 
 /* ─── Page ──────────────────────────────────────────────────────────────────── */
 .page {
-  max-width: var(--maxw);
+  max-width: 1120px;
   margin: 0 auto;
-  padding: 24px var(--pad-x) 80px;
+  padding: 24px 20px 72px;
 }
 
 /* ─── Header ────────────────────────────────────────────────────────────────── */
@@ -154,10 +154,11 @@
 }
 
 /* ─── Layout ────────────────────────────────────────────────────────────────── */
-.inner {
-  display: flex;
-  gap: 40px;
-  align-items: flex-start;
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 36px;
+  align-items: start;
 }
 
 .formSide {
@@ -165,10 +166,32 @@
   min-width: 0;
 }
 
-@media (max-width: 767px) {
+.rail {
+  min-width: 0;
+  align-self: start;
+}
+
+.railInner {
+  position: sticky;
+  top: calc(72px + 12px);
+}
+
+.inner {
+  display: flex;
+  gap: 40px;
+  align-items: flex-start;
+}
+
+@media (max-width: 820px) {
+  .layout,
   .inner {
-    flex-direction: column-reverse;
+    grid-template-columns: 1fr;
+    flex-direction: column;
     gap: 24px;
+  }
+
+  .railInner {
+    position: static;
   }
 
   .summary {
@@ -180,7 +203,7 @@
 /* ─── Form sections ─────────────────────────────────────────────────────────── */
 .formSection {
   border: 1px solid var(--grey-200);
-  border-radius: 8px;
+  border-radius: var(--radius-md, 14px);
   padding: 24px;
   margin-bottom: 16px;
   box-shadow: var(--shadow-md);
@@ -288,10 +311,185 @@
   margin: -10px 0 18px;
 }
 
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.formGroup:last-child {
+  margin-bottom: 0;
+}
+
+.label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--grey-500);
+}
+
+.contactFields {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.nameRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 520px) {
+  .nameRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+.orderingAs {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--grey-700);
+}
+
+.orderingAs strong {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.textarea {
+  padding: 12px 14px;
+  border: 1.5px solid var(--grey-200);
+  border-radius: var(--radius-sm, 8px);
+  font-size: 15px;
+  font-family: inherit;
+  color: var(--ink);
+  background: var(--white);
+  outline: none;
+  resize: vertical;
+  min-height: 88px;
+  transition: border-color 0.15s;
+}
+
+.textarea:focus {
+  border-color: var(--ink);
+}
+
+.addressSummary {
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-sm, 8px);
+  overflow: hidden;
+  background: var(--white);
+}
+
+.addressLine {
+  margin: 0;
+  padding: 14px 16px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.policyBox {
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-sm, 8px);
+  padding: 14px 16px;
+  background: var(--white);
+}
+
+.policyText {
+  margin: 0 0 12px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--grey-700);
+}
+
+.policyConsent {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+  margin: 0;
+}
+
+.policyConsent .consentCheckbox {
+  margin-top: 2px;
+}
+
+.inputInvalid {
+  border-color: var(--red);
+}
+
+.inputInvalid:focus {
+  border-color: var(--red);
+}
+
+.fieldErrorInline {
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--red);
+}
+
+.submitBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 4px;
+}
+
+.submitBlock .guestBlock {
+  margin-top: 0;
+}
+
+.submitBlock .placeError {
+  margin-bottom: 0;
+}
+
+.submitBlock .placeOrderBtn {
+  margin-bottom: 0;
+}
+
+.submitBlock .terms {
+  margin-top: 0;
+}
+
+.reassurance {
+  margin: 8px 0 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--grey-700);
+}
+
+.discountHint {
+  color: var(--grey-500);
+  font-weight: 500;
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 20px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--grey-700);
+  text-decoration: none;
+  transition: color 0.12s;
+}
+
+.backLink:hover {
+  color: var(--ink);
+}
+
 .input {
   padding: 12px 14px;
   border: 1.5px solid var(--grey-200);
-  border-radius: 8px;
+  border-radius: var(--radius-sm, 8px);
   font-size: 15px;
   font-family: inherit;
   color: var(--ink);
@@ -486,14 +684,12 @@
 
 /* ─── Summary sidebar ───────────────────────────────────────────────────────── */
 .summary {
-  width: 300px;
+  width: 100%;
   flex-shrink: 0;
   padding: 20px;
   border: 1px solid var(--grey-200);
-  border-radius: 8px;
+  border-radius: var(--radius-md, 14px);
   background: var(--white);
-  position: sticky;
-  top: 20px;
   box-shadow: var(--shadow-md);
 }
 
@@ -743,11 +939,12 @@
 }
 
 .walletRow:hover {
-  background: var(--grey-100);
+  border-color: var(--grey-300);
 }
 
 .walletRowActive {
-  background: #f8f8f8;
+  background: var(--white);
+  box-shadow: inset 3px 0 0 var(--red);
 }
 
 .walletRadio {
@@ -916,9 +1113,10 @@
 }
 
 .guestBlock {
-  padding: 16px;
-  background: var(--grey-100);
-  border-radius: 10px;
+  padding: 14px 16px;
+  margin-top: 14px;
+  background: var(--white);
+  border-radius: var(--radius-sm, 8px);
   border: 1px solid var(--grey-200);
 }
 
@@ -944,16 +1142,17 @@
   margin-bottom: 24px;
 }
 .heading {
-  font-size: 28px;
+  font-size: clamp(24px, 3vw, 32px);
   font-weight: 800;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
   color: var(--ink);
   margin: 0;
+  line-height: 1.1;
 }
 .subheading {
   font-size: 14px;
-  color: var(--grey-500, #9ca3af);
-  margin: 4px 0 0;
+  color: var(--grey-700);
+  margin: 6px 0 0;
 }
 .mainCol {
   flex: 1;
@@ -983,20 +1182,5 @@
 .fieldError {
   color: var(--red);
   font-size: 14px;
-  margin: 8px 0;
-}
-.backLink {
-  display: inline-block;
-  margin-top: 16px;
-  color: var(--red);
-  font-weight: 600;
-  text-decoration: none;
-}
-@media (max-width: 820px) {
-  .inner {
-    flex-direction: column;
-  }
-  .summary {
-    width: 100%;
-  }
+  margin: 8px 0 0;
 }

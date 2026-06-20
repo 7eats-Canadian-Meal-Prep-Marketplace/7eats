@@ -38,6 +38,10 @@ function fmtTime(hhmm: string): string {
     : `${hour}:${String(m).padStart(2, "0")}${period}`;
 }
 
+function normalizeDay(day: string): string {
+  return day.trim().toLowerCase();
+}
+
 function generateSlots(
   windows: FulfillmentWindow[],
   leadTime: string | null,
@@ -45,7 +49,7 @@ function generateSlots(
 ): string[] {
   if (windows.length === 0) return [];
   const leadDays = leadTime ? (LEAD_TIME_DAYS_MAP[leadTime] ?? 0) : 0;
-  const byDay = new Map(windows.map((w) => [w.dayOfWeek, w]));
+  const byDay = new Map(windows.map((w) => [normalizeDay(w.dayOfWeek), w]));
   const slots: string[] = [];
   for (let d = 0; d < PICKUP_DAYS_AHEAD; d++) {
     if (d < leadDays) continue;
@@ -120,7 +124,7 @@ export function cookCardSchedule(
 
   const first = new Date(slots[0]);
   const dayKey = DAY_NAMES[first.getDay()];
-  const win = windows.find((w) => w.dayOfWeek === dayKey);
+  const win = windows.find((w) => normalizeDay(w.dayOfWeek) === dayKey);
   const dayLabel = DAY_SHORT[dayKey] ?? dayKey;
   const range = win
     ? `${fmtTime(win.fromTime)}–${fmtTime(win.toTime)}`
@@ -155,4 +159,45 @@ export function firstSlotTimestamp(
   if (slots.length === 0) return null;
   const t = new Date(slots[0]).getTime();
   return Number.isNaN(t) ? null : t;
+}
+
+/** Customer-facing label for the next open fulfillment window (range, not a slot). */
+export function nextFulfillmentWindowLabel(
+  mode: "pickup" | "delivery",
+  pickupWindows: FulfillmentWindow[],
+  deliveryWindows: FulfillmentWindow[],
+  leadTime: string | null,
+  now = new Date(),
+): string | null {
+  const windows = mode === "delivery" ? deliveryWindows : pickupWindows;
+  const modeLabel = mode === "delivery" ? "Delivery" : "Pickup";
+  if (windows.length === 0) return null;
+
+  const slots = generateSlots(windows, leadTime, now);
+  if (slots.length === 0) return null;
+
+  const first = new Date(slots[0]);
+  const dayKey = DAY_NAMES[first.getDay()];
+  const win = windows.find((w) => normalizeDay(w.dayOfWeek) === dayKey) ?? null;
+  const dayPart = first.toLocaleString("en-CA", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+
+  if (!win) return `${modeLabel} · ${dayPart}`;
+  return `${modeLabel} · ${dayPart} · ${fmtTime(win.fromTime)}–${fmtTime(win.toTime)}`;
+}
+
+/** First eligible slot ISO — for refund cutoffs on the menu only (not stored on orders). */
+export function nextFulfillmentSlotIso(
+  mode: "pickup" | "delivery",
+  pickupWindows: FulfillmentWindow[],
+  deliveryWindows: FulfillmentWindow[],
+  leadTime: string | null,
+  now = new Date(),
+): string | null {
+  const windows = mode === "delivery" ? deliveryWindows : pickupWindows;
+  const slots = generateSlots(windows, leadTime, now);
+  return slots[0] ?? null;
 }

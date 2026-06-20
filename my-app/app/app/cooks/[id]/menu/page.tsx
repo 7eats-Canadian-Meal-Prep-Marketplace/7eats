@@ -263,19 +263,6 @@ export default function CookMenuPage() {
     }
   }, [data, canPickup, canDeliver, cart.fulfillmentMode, cart.setFulfillment]);
 
-  // Customers don't pick a time — they order into the cook's window and the
-  // cook confirms. We silently hold the earliest valid slot so the order keeps
-  // a provisional time for scheduling and refund cutoffs.
-  useEffect(() => {
-    if (slots.length === 0) {
-      if (cart.pickupAt) cart.setPickupAt(null);
-      return;
-    }
-    if (!cart.pickupAt || !slots.some((s) => s.iso === cart.pickupAt)) {
-      cart.setPickupAt(slots[0].iso);
-    }
-  }, [slots, cart.pickupAt, cart.setPickupAt]);
-
   function buildBase(dish: Dish, nextQty: number) {
     const promo = dish.promotion
       ? {
@@ -343,7 +330,7 @@ export default function CookMenuPage() {
   const windowSummary = summarizeWindows(
     isDelivery ? cook.deliveryWindows : cook.pickupWindows,
   );
-  const cutoff = cancelByDate(cart.pickupAt, cook.leadTime);
+  const cutoff = cancelByDate(slots[0]?.iso ?? null, cook.leadTime);
 
   // "Order by X to pick up on Y" — derived from the next open slot and lead time.
   const leadBanner = (() => {
@@ -656,36 +643,38 @@ export default function CookMenuPage() {
                 </p>
               )}
 
-              {cook.acceptsSpecialRequests && (
-                <div className={styles.note}>
-                  {cart.notes ? (
-                    <>
-                      <div className={styles.noteHead}>
-                        <span className={styles.noteLabel}>
-                          <NotebookPen size={13} /> Note for the cook
-                        </span>
-                        <button
-                          type="button"
-                          className={styles.noteEdit}
-                          onClick={() => setNoteOpen(true)}
-                        >
-                          Modify
-                        </button>
-                      </div>
-                      <p className={styles.noteText}>{cart.notes}</p>
-                    </>
-                  ) : (
-                    <button
-                      type="button"
-                      className={styles.noteAdd}
-                      onClick={() => setNoteOpen(true)}
-                    >
-                      <NotebookPen size={15} />
-                      Add a note for the cook
-                    </button>
-                  )}
-                </div>
-              )}
+              {activeForThisCook &&
+                cook.acceptsSpecialRequests &&
+                (totalQty > 0 || cart.notes) && (
+                  <div className={styles.note}>
+                    {cart.notes ? (
+                      <>
+                        <div className={styles.noteHead}>
+                          <span className={styles.noteLabel}>
+                            <NotebookPen size={13} /> Note for the cook
+                          </span>
+                          <button
+                            type="button"
+                            className={styles.noteEdit}
+                            onClick={() => setNoteOpen(true)}
+                          >
+                            Modify
+                          </button>
+                        </div>
+                        <p className={styles.noteText}>{cart.notes}</p>
+                      </>
+                    ) : (
+                      <button
+                        type="button"
+                        className={styles.noteAdd}
+                        onClick={() => setNoteOpen(true)}
+                      >
+                        <NotebookPen size={15} />
+                        Add a note for the cook
+                      </button>
+                    )}
+                  </div>
+                )}
 
               <button
                 type="button"
@@ -715,7 +704,7 @@ export default function CookMenuPage() {
         />
       )}
 
-      {noteOpen && (
+      {noteOpen && activeForThisCook && (totalQty > 0 || cart.notes) && (
         <NoteModal
           initial={cart.notes ?? ""}
           onSave={(text) => cart.setNotes(text.trim() ? text.trim() : null)}

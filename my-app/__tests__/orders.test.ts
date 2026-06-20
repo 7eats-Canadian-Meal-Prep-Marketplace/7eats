@@ -1,9 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createPiMock, cancelPiMock } = vi.hoisted(() => ({
-  createPiMock: vi.fn(),
-  cancelPiMock: vi.fn(),
-}));
+const { createPiMock, cancelPiMock, placeClientOrderMock, ensureStripeMock } =
+  vi.hoisted(() => ({
+    createPiMock: vi.fn(),
+    cancelPiMock: vi.fn(),
+    placeClientOrderMock: vi.fn(),
+    ensureStripeMock: vi.fn(),
+  }));
 
 vi.mock("@/db", () => ({
   db: { select: vi.fn(), insert: vi.fn(), update: vi.fn() },
@@ -68,8 +71,25 @@ vi.mock("@/lib/stripe-payments", () => ({
   createFullPaymentIntent: createPiMock,
   cancelPaymentIntent: cancelPiMock,
 }));
-vi.mock("@/lib/stripe-subscriptions", () => ({
-  getOrCreateStripeCustomer: vi.fn().mockResolvedValue("cus_test"),
+vi.mock("@/lib/guest-client", () => ({
+  ensureStripeCustomer: ensureStripeMock,
+}));
+vi.mock("@/lib/orders/place-order", () => ({
+  createOrderBodySchema: {
+    safeParse: (body: unknown) => {
+      const b = body as { cookId?: string; dishes?: unknown[] };
+      if (
+        !b?.cookId ||
+        !/^[0-9a-f-]{36}$/i.test(b.cookId) ||
+        !Array.isArray(b.dishes) ||
+        b.dishes.length === 0
+      ) {
+        return { success: false, error: { issues: [{ message: "bad" }] } };
+      }
+      return { success: true, data: body };
+    },
+  },
+  placeClientOrder: placeClientOrderMock,
 }));
 vi.mock("@/lib/auth", () => ({
   auth: { api: { getSession: vi.fn() } },
@@ -116,8 +136,6 @@ function selectQueue(results: unknown[][]) {
   return () => chain(all[i++] ?? []);
 }
 
-const FUTURE = new Date(Date.now() + 7 * 86400_000).toISOString();
-
 const COOK_ROW = {
   id: COOK_ID,
   userStatus: "active",
@@ -140,7 +158,6 @@ const validBody = {
   cookId: COOK_ID,
   dishes: [{ dishId: DISH_ID, quantity: 2 }],
   paymentMethodId: "pm_test",
-  pickupAt: FUTURE,
 };
 
 function asClient() {
@@ -153,6 +170,11 @@ describe("POST /api/orders", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     createPiMock.mockResolvedValue({ piId: "pi_test" });
+    ensureStripeMock.mockResolvedValue("cus_test");
+    placeClientOrderMock.mockResolvedValue({
+      ok: true,
+      orderId: "order-test-id",
+    });
     // Rate-limit writes a log row; default select returns an under-limit count.
     vi.mocked(db.insert).mockReturnValue({
       values: vi.fn().mockResolvedValue([]),
@@ -182,26 +204,48 @@ describe("POST /api/orders", () => {
 
   it("404 when cook not found / inactive", async () => {
     asClient();
-    vi.mocked(db.select).mockImplementation(selectQueue([[]]));
+    vi.mocked(db.select).mockImplementation(
+      selectQueue([
+        [
+          {
+            onboardingCompletedAt: new Date(),
+            isGuestAccount: false,
+            email: "c@test.com",
+            firstName: "C",
+            lastName: "L",
+          },
+        ],
+      ]),
+    );
+    placeClientOrderMock.mockResolvedValueOnce({
+      ok: false,
+      status: 404,
+      error: "Cook not found.",
+    });
     const res = await POST(makePost(validBody));
     expect(res.status).toBe(404);
-  });
-
-  it("422 when pickup is sooner than the lead time", async () => {
-    asClient();
-    vi.mocked(db.select).mockImplementation(
-      selectQueue([[{ ...COOK_ROW, leadTime: "2_days" }]]),
-    );
-    const soon = new Date(Date.now() + 3600_000).toISOString();
-    const res = await POST(makePost({ ...validBody, pickupAt: soon }));
-    expect(res.status).toBe(422);
   });
 
   it("422 when below the minimum order quantity", async () => {
     asClient();
     vi.mocked(db.select).mockImplementation(
-      selectQueue([[{ ...COOK_ROW, minOrderQty: 5 }]]),
+      selectQueue([
+        [
+          {
+            onboardingCompletedAt: new Date(),
+            isGuestAccount: false,
+            email: "c@test.com",
+            firstName: "C",
+            lastName: "L",
+          },
+        ],
+      ]),
     );
+    placeClientOrderMock.mockResolvedValueOnce({
+      ok: false,
+      status: 422,
+      error: "Minimum order is 5 item(s).",
+    });
     const res = await POST(makePost(validBody));
     expect(res.status).toBe(422);
   });
@@ -210,18 +254,15 @@ describe("POST /api/orders", () => {
     asClient();
     vi.mocked(db.select).mockImplementation(
       selectQueue([
-        [COOK_ROW], // cook lookup
-        [{ id: DISH_ID, name: "Jollof Rice", price: "12.00" }], // dishes
         [
           {
             onboardingCompletedAt: new Date(),
-            stripeCustomerId: "cus_test",
+            isGuestAccount: false,
             email: "c@test.com",
             firstName: "C",
             lastName: "L",
           },
-        ], // user lookup
-        [{ email: "cook@test.com", firstName: "Cook" }], // email lookup
+        ],
       ]),
     );
 
@@ -229,70 +270,21 @@ describe("POST /api/orders", () => {
     expect(res.status).toBe(201);
     const body = await res.json();
     expect(body.success).toBe(true);
-    expect(body.data.orderId).toBeDefined();
-    expect(createPiMock).toHaveBeenCalledOnce();
+    expect(body.data.orderId).toBe("order-test-id");
+    expect(placeClientOrderMock).toHaveBeenCalledOnce();
   });
 
   it("applies a valid promotion and creates the order", async () => {
     asClient();
-    const PROMO_ID = "d4e5f6a7-b8c9-4d0e-8f1a-2b3c4d5e6f70";
     vi.mocked(db.select).mockImplementation(
       selectQueue([
-        [COOK_ROW], // cook
-        [{ id: DISH_ID, name: "Jollof Rice", price: "12.00" }], // dishes
         [
           {
             onboardingCompletedAt: new Date(),
-            stripeCustomerId: "cus_test",
+            isGuestAccount: false,
             email: "c@test.com",
             firstName: "C",
             lastName: "L",
-          },
-        ], // user
-        [
-          {
-            id: PROMO_ID,
-            type: "percentage_off",
-            value: "10",
-            isActive: true,
-            validFrom: null,
-            validUntil: null,
-            maxUses: null,
-            usesCount: 0,
-          },
-        ], // optimistic promo read
-        [{ email: "cook@test.com", firstName: "Cook" }], // email
-      ]),
-    );
-
-    const res = await POST(
-      makePost({
-        ...validBody,
-        dishes: [{ dishId: DISH_ID, quantity: 2, promotionId: PROMO_ID }],
-      }),
-    );
-    expect(res.status).toBe(201);
-    expect(createPiMock).toHaveBeenCalledOnce();
-  });
-
-  it("rejects an invalid promotion with 422 and never charges", async () => {
-    asClient();
-    const PROMO_ID = "d4e5f6a7-b8c9-4d0e-8f1a-2b3c4d5e6f70";
-    vi.mocked(db.select).mockImplementation(
-      selectQueue([
-        [COOK_ROW],
-        [{ id: DISH_ID, name: "Jollof Rice", price: "12.00" }],
-        [{ onboardingCompletedAt: new Date(), stripeCustomerId: "cus_test" }],
-        [
-          {
-            id: PROMO_ID,
-            type: "percentage_off",
-            value: "10",
-            isActive: false, // expired/inactive
-            validFrom: null,
-            validUntil: null,
-            maxUses: null,
-            usesCount: 0,
           },
         ],
       ]),
@@ -301,23 +293,77 @@ describe("POST /api/orders", () => {
     const res = await POST(
       makePost({
         ...validBody,
-        dishes: [{ dishId: DISH_ID, quantity: 1, promotionId: PROMO_ID }],
+        dishes: [
+          {
+            dishId: DISH_ID,
+            quantity: 2,
+            promotionId: "d4e5f6a7-b8c9-4d0e-8f1a-2b3c4d5e6f70",
+          },
+        ],
+      }),
+    );
+    expect(res.status).toBe(201);
+    expect(placeClientOrderMock).toHaveBeenCalledOnce();
+  });
+
+  it("rejects an invalid promotion with 422 and never charges", async () => {
+    asClient();
+    vi.mocked(db.select).mockImplementation(
+      selectQueue([
+        [
+          {
+            onboardingCompletedAt: new Date(),
+            isGuestAccount: false,
+            email: "c@test.com",
+            firstName: "C",
+            lastName: "L",
+          },
+        ],
+      ]),
+    );
+    placeClientOrderMock.mockResolvedValueOnce({
+      ok: false,
+      status: 422,
+      error: "A selected promotion is no longer valid.",
+      dishId: DISH_ID,
+    });
+
+    const res = await POST(
+      makePost({
+        ...validBody,
+        dishes: [
+          {
+            dishId: DISH_ID,
+            quantity: 1,
+            promotionId: "d4e5f6a7-b8c9-4d0e-8f1a-2b3c4d5e6f70",
+          },
+        ],
       }),
     );
     expect(res.status).toBe(422);
-    expect(createPiMock).not.toHaveBeenCalled();
+    expect(placeClientOrderMock).toHaveBeenCalledOnce();
   });
 
   it("returns 502 and persists nothing when payment authorization fails", async () => {
     asClient();
-    createPiMock.mockRejectedValueOnce(new Error("stripe down"));
     vi.mocked(db.select).mockImplementation(
       selectQueue([
-        [COOK_ROW],
-        [{ id: DISH_ID, name: "Jollof Rice", price: "12.00" }],
-        [{ onboardingCompletedAt: new Date(), stripeCustomerId: "cus_test" }],
+        [
+          {
+            onboardingCompletedAt: new Date(),
+            isGuestAccount: false,
+            email: "c@test.com",
+            firstName: "C",
+            lastName: "L",
+          },
+        ],
       ]),
     );
+    placeClientOrderMock.mockResolvedValueOnce({
+      ok: false,
+      status: 502,
+      error: "Payment could not be authorized.",
+    });
 
     const res = await POST(makePost(validBody));
     expect(res.status).toBe(502);

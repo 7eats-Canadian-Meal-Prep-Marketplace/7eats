@@ -6,6 +6,8 @@ export type FulfillmentMode = "pickup" | "delivery";
 
 type AppContextType = {
   isLoggedIn: boolean;
+  userName: string;
+  userEmail: string;
   fulfillment: FulfillmentMode;
   setFulfillment: (m: FulfillmentMode) => void;
   /** 2-char ISO province code from the user's saved address, e.g. "ON", "BC". */
@@ -23,17 +25,29 @@ export function useApp(): AppContextType {
 
 export function AppProvider({
   isLoggedIn,
+  userName = "",
+  userEmail = "",
   children,
 }: {
   isLoggedIn: boolean;
+  userName?: string;
+  userEmail?: string;
   children: React.ReactNode;
 }) {
   const [fulfillment, setFulfillment] = useState<FulfillmentMode>("pickup");
   const [province, setProvince] = useState<string>("ON");
 
   const value = useMemo(
-    () => ({ isLoggedIn, fulfillment, setFulfillment, province, setProvince }),
-    [isLoggedIn, fulfillment, province],
+    () => ({
+      isLoggedIn,
+      userName,
+      userEmail,
+      fulfillment,
+      setFulfillment,
+      province,
+      setProvince,
+    }),
+    [isLoggedIn, userName, userEmail, fulfillment, province],
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

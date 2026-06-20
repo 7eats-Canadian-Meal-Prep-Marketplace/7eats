@@ -28,6 +28,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
   }
 
+  if (session.user.role !== "client") {
+    return NextResponse.json(
+      { error: "Only client accounts can verify a phone here." },
+      { status: 403 },
+    );
+  }
+
   const { code } = await req.json();
   if (!code) {
     return NextResponse.json({ error: "Code is required." }, { status: 400 });

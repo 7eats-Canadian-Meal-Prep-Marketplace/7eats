@@ -3,7 +3,10 @@
 import { Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
+import authStyles from "@/app/components/ClientAuthLayout/client-auth.module.css";
+import PasswordChecklist from "@/app/components/PasswordChecklist";
+import { isPasswordValid, validatePassword } from "@/lib/password";
 import styles from "./SignupForm.module.css";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -32,10 +35,12 @@ function validate(values: Values): FieldErrors {
   else if (values.lastName.trim().length > 100) errors.lastName = "Too long";
   if (!values.email.trim()) errors.email = "Required";
   else if (!EMAIL_RE.test(values.email.trim()))
-    errors.email = "Enter a valid email";
+    errors.email = "Enter a valid email address";
   if (!values.password) errors.password = "Required";
-  else if (values.password.length < 8)
-    errors.password = "Use at least 8 characters";
+  else {
+    const pwError = validatePassword(values.password);
+    if (pwError) errors.password = pwError;
+  }
   if (!values.confirmPassword) errors.confirmPassword = "Required";
   else if (values.confirmPassword !== values.password)
     errors.confirmPassword = "Passwords don't match";
@@ -60,6 +65,17 @@ export default function SignupForm({
   const [isPending, startTransition] = useTransition();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const formValid = useMemo(() => {
+    if (!agreed) return false;
+    if (!values.firstName.trim() || !values.lastName.trim()) return false;
+    if (!values.email.trim() || !EMAIL_RE.test(values.email.trim()))
+      return false;
+    if (!isPasswordValid(values.password)) return false;
+    if (!values.confirmPassword || values.confirmPassword !== values.password)
+      return false;
+    return true;
+  }, [agreed, values]);
 
   const set =
     (field: keyof Values) => (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -122,6 +138,7 @@ export default function SignupForm({
               className={styles.input}
               value={values.firstName}
               onChange={set("firstName")}
+              placeholder="Jane"
               required
             />
             {errors.firstName && (
@@ -140,6 +157,7 @@ export default function SignupForm({
               className={styles.input}
               value={values.lastName}
               onChange={set("lastName")}
+              placeholder="Smith"
               required
             />
             {errors.lastName && (
@@ -177,7 +195,7 @@ export default function SignupForm({
               className={styles.input}
               value={values.password}
               onChange={set("password")}
-              placeholder="8+ characters"
+              placeholder="Create a strong password"
               required
             />
             <button
@@ -225,6 +243,8 @@ export default function SignupForm({
           )}
         </div>
 
+        <PasswordChecklist password={values.password} />
+
         <label className={styles.consent}>
           <input
             type="checkbox"
@@ -254,7 +274,8 @@ export default function SignupForm({
         <button
           type="submit"
           className={`btn btn-primary ${styles.submit}`}
-          disabled={isPending || !agreed}
+          disabled={isPending || !formValid}
+          aria-disabled={!formValid}
         >
           {isPending ? "Creating account…" : "Create account"}
         </button>
@@ -268,17 +289,8 @@ export default function SignupForm({
 
   if (showLogo) {
     return (
-      <div
-        style={{
-          width: "100%",
-          maxWidth: 460,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 32,
-        }}
-      >
-        <Link href="/app/browse" className={styles.logoLink}>
+      <div className={authStyles.formShell}>
+        <Link href="/app/browse" className={authStyles.logoLink}>
           <Image
             src="/7eats-logo.svg"
             alt="7eats"
@@ -288,7 +300,7 @@ export default function SignupForm({
             priority
           />
         </Link>
-        <div className={styles.card}>{formContent}</div>
+        <div className={authStyles.formCard}>{formContent}</div>
       </div>
     );
   }

@@ -68,7 +68,7 @@ const validBody = {
   firstName: "Ada",
   lastName: "Lovelace",
   email: "Ada@Example.com",
-  password: "supersecret",
+  password: "Supersecret1!",
   acceptedTerms: true,
 };
 

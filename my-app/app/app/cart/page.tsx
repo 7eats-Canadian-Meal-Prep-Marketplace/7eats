@@ -1,21 +1,55 @@
 "use client";
 
-import { ShoppingCart, X } from "lucide-react";
+import {
+  ArrowLeft,
+  CalendarClock,
+  NotebookPen,
+  ShoppingCart,
+  Trash2,
+} from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import type { NormalizedAddress } from "@/lib/types/address";
+import {
+  type FulfillmentWindow,
+  nextFulfillmentWindowLabel,
+} from "@/lib/cook-card-schedule";
 import { useApp } from "../_app-context";
 import { useCart } from "../_cart-context";
 import { calcTax, formatCartMoney, getTaxLabel } from "./_cart-tax";
 import styles from "./page.module.css";
 
-type DeliveryFeeState =
-  | { status: "idle" }
-  | { status: "loading" }
-  | { status: "free"; message: string }
-  | { status: "fee"; fee: number }
-  | { status: "out_of_range" }
-  | { status: "error" };
+const NOTE_COLLAPSE_CHARS = 120;
+
+function NotePreview({ notes }: { notes: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const long =
+    notes.length > NOTE_COLLAPSE_CHARS || notes.split("\n").length > 2;
+
+  return (
+    <div className={styles.noteBlock}>
+      <span className={styles.noteLabel}>
+        <NotebookPen size={13} aria-hidden />
+        Note for the cook
+      </span>
+      <p
+        className={
+          expanded || !long ? styles.noteTextExpanded : styles.noteText
+        }
+      >
+        {notes}
+      </p>
+      {long && (
+        <button
+          type="button"
+          className={styles.noteToggle}
+          onClick={() => setExpanded((e) => !e)}
+        >
+          {expanded ? "Show less" : "Read more"}
+        </button>
+      )}
+    </div>
+  );
+}
 
 export default function CartPage() {
   const {
@@ -29,276 +63,227 @@ export default function CartPage() {
     meetsMinimum,
     withinMaximum,
     fulfillmentMode,
+    notes,
     removeItem,
   } = useCart();
   const { province } = useApp();
 
-  const [deliveryFee, setDeliveryFee] = useState<DeliveryFeeState>({
-    status: "idle",
-  });
-
-  const hasDelivery = fulfillmentMode === "delivery" && cookId !== null;
+  const [pickupWindows, setPickupWindows] = useState<FulfillmentWindow[]>([]);
+  const [deliveryWindows, setDeliveryWindows] = useState<FulfillmentWindow[]>(
+    [],
+  );
+  const [leadTime, setLeadTime] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!hasDelivery || !cookId) {
-      setDeliveryFee({ status: "idle" });
-      return;
-    }
+    if (!cookId) return;
     let cancelled = false;
-    setDeliveryFee({ status: "loading" });
-
-    (async () => {
-      try {
-        const addrRes = await fetch("/api/user/address");
-        if (!addrRes.ok) {
-          if (!cancelled) setDeliveryFee({ status: "idle" });
-          return;
-        }
-        const addrData = await addrRes.json();
-        const address: NormalizedAddress | null = addrData.address ?? null;
-        if (!address?.lat || !address?.lng) {
-          if (!cancelled) setDeliveryFee({ status: "idle" });
-          return;
-        }
-        const res = await fetch("/api/delivery/distance", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            cookId,
-            customerLat: address.lat,
-            customerLng: address.lng,
-            orderSubtotal: subtotal,
-          }),
-        });
-        if (!res.ok) {
-          if (!cancelled) setDeliveryFee({ status: "error" });
-          return;
-        }
-        const data = await res.json();
-        if (cancelled) return;
-        if (data.isOutOfRange) setDeliveryFee({ status: "out_of_range" });
-        else if (data.isFree)
-          setDeliveryFee({ status: "free", message: "$0.00 (Free!)" });
-        else setDeliveryFee({ status: "fee", fee: data.fee });
-      } catch {
-        if (!cancelled) setDeliveryFee({ status: "error" });
-      }
-    })();
-
+    fetch(`/api/cooks/${cookId}/menu`, { cache: "no-store" })
+      .then((r) => r.json())
+      .then((json) => {
+        if (cancelled || !json?.data?.cook) return;
+        const cook = json.data.cook;
+        setPickupWindows(cook.pickupWindows ?? []);
+        setDeliveryWindows(cook.deliveryWindows ?? []);
+        setLeadTime(cook.leadTime ?? null);
+      })
+      .catch(() => {});
     return () => {
       cancelled = true;
     };
-  }, [hasDelivery, cookId, subtotal]);
+  }, [cookId]);
 
-  const deliveryFeeAmount = deliveryFee.status === "fee" ? deliveryFee.fee : 0;
+  const menuHref = cookId ? `/app/cooks/${cookId}/menu` : "/app/browse";
+  const isDelivery = fulfillmentMode === "delivery";
 
-  const { tax, grandTotal, taxLabel } = useMemo(() => {
-    const taxAmount =
-      Math.round(calcTax(subtotal + deliveryFeeAmount, province) * 100) / 100;
+  const fulfillmentLabel = useMemo(
+    () =>
+      nextFulfillmentWindowLabel(
+        fulfillmentMode,
+        pickupWindows,
+        deliveryWindows,
+        leadTime,
+      ),
+    [fulfillmentMode, pickupWindows, deliveryWindows, leadTime],
+  );
+
+  const { tax, estimatedTotal, taxLabel } = useMemo(() => {
+    const taxAmount = Math.round(calcTax(subtotal, province) * 100) / 100;
     return {
       tax: taxAmount,
-      grandTotal:
-        Math.round((subtotal + deliveryFeeAmount + taxAmount) * 100) / 100,
+      estimatedTotal: Math.round((subtotal + taxAmount) * 100) / 100,
       taxLabel: getTaxLabel(province),
     };
-  }, [subtotal, deliveryFeeAmount, province]);
+  }, [subtotal, province]);
 
   if (items.length === 0) {
     return (
       <div className={styles.emptyPage}>
-        <ShoppingCart
-          size={48}
-          strokeWidth={1.5}
-          className={styles.emptyIcon}
-          aria-hidden
-        />
-        <h1 className={styles.emptyTitle}>Your cart is empty</h1>
-        <Link href="/app/browse" className={styles.browseBtn}>
-          Browse cooks
-        </Link>
+        <div className={styles.emptyCard}>
+          <div className={styles.emptyIconWrap} aria-hidden>
+            <ShoppingCart size={28} strokeWidth={1.75} />
+          </div>
+          <p className={styles.emptyEyebrow}>Cart</p>
+          <h1 className={styles.emptyTitle}>Your cart is empty</h1>
+          <p className={styles.emptyDesc}>
+            Browse home kitchens near you, add a few plates, and checkout when
+            you&apos;re ready.
+          </p>
+          <Link href="/app/browse" className={styles.browseBtn}>
+            Browse kitchens
+          </Link>
+        </div>
       </div>
     );
   }
 
   const checkoutDisabled = !meetsMinimum || !withinMaximum;
+  const remaining = Math.max(0, minOrderQty - totalQuantity);
 
   return (
     <div className={styles.page}>
-      <div className={styles.inner}>
+      <div className={styles.layout}>
         <div className={styles.mainCol}>
-          <header className={styles.pageHeader}>
-            <h1 className={styles.heading}>Your cart</h1>
-            <p className={styles.subheading}>
-              Review your order before checkout
+          <Link href={menuHref} className={styles.backLink}>
+            <ArrowLeft size={16} aria-hidden />
+            Back to menu
+          </Link>
+
+          <header className={styles.pageHead}>
+            <p className={styles.pageEyebrow}>Cart</p>
+            <h1 className={styles.pageTitle}>Your cart</h1>
+            <p className={styles.pageSub}>
+              {totalQuantity} item{totalQuantity === 1 ? "" : "s"}
             </p>
           </header>
 
-          <div className={styles.bodyRow}>
-            <div className={styles.listingsCol}>
-              <section className={styles.listingSection}>
-                <div className={styles.listingHeader}>
-                  <Link
-                    href={cookId ? `/app/cooks/${cookId}/menu` : "/app/browse"}
-                    className={styles.listingHeaderMain}
-                  >
-                    <div className={styles.listingHeaderText}>
-                      <span className={styles.listingTitle}>
-                        {cookName ?? "Your order"}
-                      </span>
-                      <span className={styles.cookName}>
-                        <span className={styles.fulfillmentTag}>
-                          {fulfillmentMode === "delivery"
-                            ? "Delivery"
-                            : "Pickup"}
-                        </span>
-                      </span>
-                    </div>
-                  </Link>
-                </div>
-
-                <ul className={styles.itemList}>
-                  {items.map((item) => (
-                    <li key={item.dishId} className={styles.item}>
-                      <span className={styles.itemName}>
-                        {item.quantity}× {item.name}
-                        {item.discountAmount > 0 && (
-                          <span className={styles.fulfillmentTag}>
-                            {" "}
-                            −${formatCartMoney(item.discountAmount)}
-                          </span>
-                        )}
-                      </span>
-                      <span className={styles.itemTotal}>
-                        ${formatCartMoney(item.lineTotal)}
-                        <button
-                          type="button"
-                          className={styles.removeListingBtn}
-                          onClick={() => removeItem(item.dishId)}
-                          aria-label={`Remove ${item.name}`}
-                        >
-                          <X size={14} />
-                        </button>
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-
-                {!meetsMinimum && (
-                  <div className={styles.listingSubtotal}>
-                    <span>Minimum {minOrderQty} item(s) to check out</span>
-                    <span>
-                      {totalQuantity}/{minOrderQty}
-                    </span>
-                  </div>
-                )}
-                {!withinMaximum && maxOrderQty != null && (
-                  <div className={styles.listingSubtotal}>
-                    <span>Maximum {maxOrderQty} item(s) per order</span>
-                    <span>
-                      {totalQuantity}/{maxOrderQty}
-                    </span>
-                  </div>
-                )}
-
-                <div className={styles.listingFooter}>
-                  <Link
-                    href={cookId ? `/app/cooks/${cookId}/menu` : "/app/browse"}
-                    className={styles.menuLink}
-                  >
-                    Back to menu
-                  </Link>
-                </div>
-              </section>
-            </div>
-
-            <aside className={styles.summaryCol}>
-              <div className={styles.summary}>
-                <p className={styles.summaryEyebrow}>Checkout</p>
-                <h2 className={styles.summaryTitle}>Order summary</h2>
-
-                <div className={styles.summarySheet}>
-                  <div className={styles.summaryRow}>
-                    <span className={styles.summaryRowLabel}>Subtotal</span>
-                    <span className={styles.summaryRowVal}>
-                      ${formatCartMoney(subtotal)}
-                    </span>
-                  </div>
-
-                  {hasDelivery && deliveryFee.status !== "idle" && (
-                    <div className={styles.summaryRow}>
-                      <span className={styles.summaryRowLabel}>Delivery</span>
-                      <span className={styles.summaryRowVal}>
-                        {deliveryFee.status === "loading" && (
-                          <span className={styles.deliveryFeeLoading}>
-                            Calculating…
-                          </span>
-                        )}
-                        {deliveryFee.status === "free" && (
-                          <span className={styles.deliveryFeeFree}>
-                            {deliveryFee.message}
-                          </span>
-                        )}
-                        {deliveryFee.status === "fee" && (
-                          <span>${formatCartMoney(deliveryFee.fee)}</span>
-                        )}
-                        {deliveryFee.status === "out_of_range" && (
-                          <span className={styles.deliveryFeeOutOfRange}>
-                            Outside delivery zone
-                          </span>
-                        )}
-                        {deliveryFee.status === "error" && (
-                          <span className={styles.deliveryFeeError}>
-                            Unavailable
-                          </span>
-                        )}
-                      </span>
-                    </div>
-                  )}
-
-                  {!hasDelivery && (
-                    <div className={styles.summaryRow}>
-                      <span className={styles.summaryRowLabel}>Delivery</span>
-                      <span className={styles.summaryRowVal}>
-                        <span className={styles.deliveryFeeFree}>
-                          Free (Pickup)
-                        </span>
-                      </span>
-                    </div>
-                  )}
-
-                  <div className={styles.summaryRow}>
-                    <span className={styles.summaryRowLabel}>{taxLabel}</span>
-                    <span className={styles.summaryRowVal}>
-                      ${formatCartMoney(tax)}
-                    </span>
-                  </div>
-                </div>
-
-                <div className={styles.summaryTotal}>
-                  <span>Total</span>
-                  <span>${formatCartMoney(grandTotal)}</span>
-                </div>
-
-                {checkoutDisabled ? (
-                  <button
-                    type="button"
-                    className={styles.checkoutBtn}
-                    disabled
-                    aria-disabled
-                  >
-                    {!meetsMinimum
-                      ? `Add ${minOrderQty - totalQuantity} more to check out`
-                      : "Too many items"}
-                  </button>
+          <section className={styles.orderCard} aria-label="Order items">
+            {(fulfillmentLabel || cookName) && (
+              <div className={styles.fulfillmentBanner}>
+                {fulfillmentLabel ? (
+                  <p className={styles.fulfillmentWhen}>
+                    <CalendarClock size={16} aria-hidden />
+                    {fulfillmentLabel}
+                  </p>
                 ) : (
-                  <Link href="/app/checkout" className={styles.checkoutBtn}>
-                    Proceed to checkout
-                  </Link>
+                  <p className={styles.fulfillmentWhen}>
+                    <CalendarClock size={16} aria-hidden />
+                    {isDelivery ? "Delivery" : "Pickup"} windows not available
+                    right now
+                  </p>
+                )}
+                {cookName && (
+                  <p className={styles.fulfillmentKitchen}>
+                    {cookName}
+                    <span className={styles.fulfillmentHint}>
+                      {" "}
+                      · Exact time confirmed by the cook
+                    </span>
+                  </p>
                 )}
               </div>
-            </aside>
-          </div>
+            )}
+
+            <ul className={styles.itemList}>
+              {items.map((item) => (
+                <li key={item.dishId} className={styles.itemRow}>
+                  <span className={styles.itemQty} aria-hidden>
+                    {item.quantity}
+                  </span>
+                  <div className={styles.itemBody}>
+                    <div className={styles.itemMain}>
+                      <span className={styles.itemName}>{item.name}</span>
+                      <span className={styles.itemPrice}>
+                        ${formatCartMoney(item.lineTotal)}
+                      </span>
+                    </div>
+                    <div className={styles.itemMeta}>
+                      {item.quantity > 1 && (
+                        <span className={styles.itemUnit}>
+                          ${formatCartMoney(item.price)} each
+                        </span>
+                      )}
+                      {item.discountAmount > 0 && (
+                        <span className={styles.itemDiscount}>
+                          −${formatCartMoney(item.discountAmount)} promo
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        className={styles.removeBtn}
+                        onClick={() => removeItem(item.dishId)}
+                        aria-label={`Remove ${item.name}`}
+                      >
+                        <Trash2 size={14} aria-hidden />
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+
+            {notes && <NotePreview notes={notes} />}
+
+            {!meetsMinimum && (
+              <p className={styles.alert}>
+                Add {remaining} more to reach the {minOrderQty}-item minimum.
+              </p>
+            )}
+            {!withinMaximum && maxOrderQty != null && (
+              <p className={styles.alert}>
+                This kitchen allows up to {maxOrderQty} items per order (
+                {totalQuantity}/{maxOrderQty}).
+              </p>
+            )}
+          </section>
         </div>
+
+        <aside className={styles.rail} aria-label="Order summary">
+          <div className={styles.railInner}>
+            <section className={styles.summaryCard}>
+              <h2 className={styles.summaryTitle}>Order summary</h2>
+
+              <div className={styles.summaryLines}>
+                <div className={styles.summaryRow}>
+                  <span>Subtotal</span>
+                  <span>${formatCartMoney(subtotal)}</span>
+                </div>
+                <div className={styles.summaryRow}>
+                  <span>{taxLabel}</span>
+                  <span>${formatCartMoney(tax)}</span>
+                </div>
+              </div>
+
+              {isDelivery && (
+                <p className={styles.deliveryHint}>
+                  Delivery fee is calculated at checkout based on your address.
+                </p>
+              )}
+
+              <div className={styles.summaryTotal}>
+                <span>{isDelivery ? "Estimated total" : "Total"}</span>
+                <span>${formatCartMoney(estimatedTotal)}</span>
+              </div>
+
+              {checkoutDisabled ? (
+                <button
+                  type="button"
+                  className={styles.checkoutBtn}
+                  disabled
+                  aria-disabled
+                >
+                  {!meetsMinimum
+                    ? `Add ${remaining} more to check out`
+                    : "Too many items"}
+                </button>
+              ) : (
+                <Link href="/app/checkout" className={styles.checkoutBtn}>
+                  Proceed to checkout
+                </Link>
+              )}
+            </section>
+          </div>
+        </aside>
       </div>
     </div>
   );

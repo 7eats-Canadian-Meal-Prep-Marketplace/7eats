@@ -19,7 +19,7 @@ const CLIENT_PUBLIC_EXACT = new Set([
   "/app/cart",
   "/app/checkout",
 ]);
-const CLIENT_PUBLIC_PREFIXES = ["/app/cooks/", "/app/checkout/"];
+const CLIENT_PUBLIC_PREFIXES = ["/app/cooks/", "/app/checkout/", "/app/guest/"];
 
 /** Consumer routes that require a verified client account. */
 const CLIENT_PROTECTED_EXACT = new Set(["/app/inbox", "/app/settings"]);
@@ -45,9 +45,20 @@ function isOnboarded(req: NextRequest): boolean {
   return req.cookies.get(ONBOARDED_COOKIE)?.value === "1";
 }
 
+/** Cookie or session timestamp — avoids re-onboarding when cookie was cleared. */
+async function isClientOnboarded(req: NextRequest): Promise<boolean> {
+  if (isOnboarded(req)) return true;
+  if (!hasSession(req)) return false;
+  const session = await getSession(req);
+  if (session?.user.role !== "client") return false;
+  const completed = session.user.onboardingCompletedAt;
+  return completed != null && completed !== "";
+}
+
 /** Client onboarding gate — cooks/admins browsing the marketplace are treated as guests. */
 async function shouldRedirectToClientOnboarding(req: NextRequest) {
-  if (!hasSession(req) || isOnboarded(req)) return false;
+  if (!hasSession(req)) return false;
+  if (await isClientOnboarded(req)) return false;
   const session = await getSession(req);
   return session?.user.role === "client";
 }
@@ -196,7 +207,7 @@ export async function proxy(req: NextRequest) {
       return NextResponse.redirect(new URL("/app/browse", req.url));
     }
     // Already completed onboarding — skip it
-    if (isOnboarded(req)) {
+    if (await isClientOnboarded(req)) {
       return NextResponse.redirect(new URL("/app/browse", req.url));
     }
     return NextResponse.next();
@@ -209,6 +220,11 @@ export async function proxy(req: NextRequest) {
     if (session) {
       const role = session.user.role;
       if (role === "client") {
+        if (!(await isClientOnboarded(req))) {
+          return NextResponse.redirect(
+            new URL("/app-auth/onboarding", req.url),
+          );
+        }
         const next = req.nextUrl.searchParams.get("next");
         const dest =
           next?.startsWith("/app/") && !next.startsWith("//")
@@ -239,6 +255,9 @@ export async function proxy(req: NextRequest) {
     if (session?.user.role !== "client") {
       return NextResponse.redirect(new URL("/app/browse", req.url));
     }
+    if (!(await isClientOnboarded(req))) {
+      return NextResponse.redirect(new URL("/app-auth/onboarding", req.url));
+    }
     return NextResponse.next();
   }
 
@@ -258,7 +277,7 @@ export async function proxy(req: NextRequest) {
     if (!session || !isClientUser(session)) {
       return redirectToClientLogin(req, pathname);
     }
-    if (!isOnboarded(req)) {
+    if (!(await isClientOnboarded(req))) {
       return NextResponse.redirect(new URL("/app-auth/onboarding", req.url));
     }
     return NextResponse.next();

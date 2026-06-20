@@ -5,66 +5,27 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import {
+  CLIENT_PREFERENCE_QUESTIONS,
+  type ClientPreferences,
+  clearOnboardingStorage,
+  EMPTY_CLIENT_PREFERENCES,
+  readOnboardingStorage,
+  togglePreference,
+  writeOnboardingStorage,
+} from "@/lib/client-preferences";
+import { isAtLeast16 } from "@/lib/onboarding-validation";
+import {
+  formatPhoneDisplay,
+  isValidNorthAmericanPhone,
+  phoneDigits,
+} from "@/lib/phone";
 import styles from "./page.module.css";
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const DIETARY_OPTIONS = [
-  "Halal",
-  "Vegan",
-  "Vegetarian",
-  "Gluten-free",
-  "Dairy-free",
-  "Nut-free",
-  "Kosher",
-];
-
-const ALLERGY_OPTIONS = [
-  "Tree nuts",
-  "Peanuts",
-  "Dairy",
-  "Gluten",
-  "Shellfish",
-  "Eggs",
-  "Soy",
-  "None",
-];
-
-const GOAL_OPTIONS = [
-  "High protein",
-  "Weight loss",
-  "Low carb",
-  "Muscle gain",
-  "Heart health",
-  "Comfort food",
-  "Family-friendly",
-  "Balanced",
-];
-
-const WHY_OPTIONS = [
-  "Save time cooking",
-  "Eat healthier",
-  "Budget-friendly eating",
-  "Discover new cuisines",
-  "Support local home cooks",
-  "Convenient for my schedule",
-];
-
-// ─── Types ────────────────────────────────────────────────────────────────────
 
 type Step = 1 | 2;
 type PhonePhase = "idle" | "code_sent" | "verified";
 
-type Prefs = {
-  dietary: string[];
-  allergies: string[];
-  goals: string[];
-  whyMealPrep: string[];
-};
-
-// ─── Chip ─────────────────────────────────────────────────────────────────────
-
-function Chip({
+function PrefOption({
   label,
   selected,
   onToggle,
@@ -76,49 +37,59 @@ function Chip({
   return (
     <button
       type="button"
-      className={`${styles.chip} ${selected ? styles.chipSelected : ""}`}
+      className={`${styles.option} ${selected ? styles.optionSelected : ""}`}
       onClick={onToggle}
+      aria-pressed={selected}
     >
-      {selected && (
-        <Check size={11} strokeWidth={3} className={styles.chipCheck} />
-      )}
-      {label}
+      <span className={styles.optionLabel}>{label}</span>
+      <span className={styles.optionMark} aria-hidden="true">
+        {selected && <Check size={11} strokeWidth={3} />}
+      </span>
     </button>
   );
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function isAtLeast16(dob: string): boolean {
-  const birth = new Date(dob);
-  const cutoff = new Date();
-  cutoff.setFullYear(cutoff.getFullYear() - 16);
-  return birth <= cutoff;
-}
-
-// ─── Step 1: Phone ────────────────────────────────────────────────────────────
-
 function PhoneStep({
+  initialPhone,
+  initialVerified,
+  initialDob,
   onComplete,
 }: {
+  initialPhone: string;
+  initialVerified: boolean;
+  initialDob: string;
   onComplete: (phone: string, dob: string) => void;
 }) {
-  const [dob, setDob] = useState("");
+  const [dob, setDob] = useState(initialDob);
   const [ageError, setAgeError] = useState("");
-  const [phone, setPhone] = useState("");
-  const [phase, setPhase] = useState<PhonePhase>("idle");
+  const [phone, setPhone] = useState(() => phoneDigits(initialPhone));
+  const [phase, setPhase] = useState<PhonePhase>(
+    initialVerified ? "verified" : "idle",
+  );
   const [code, setCode] = useState("");
   const [sending, setSending] = useState(false);
   const [verifying, setVerifying] = useState(false);
+  const [continuing, setContinuing] = useState(false);
   const [sendError, setSendError] = useState("");
   const [codeError, setCodeError] = useState("");
+  const [continueError, setContinueError] = useState("");
 
   const todayStr = new Date().toISOString().split("T")[0];
-
-  const canSend = phone.replace(/\D/g, "").length >= 10;
+  const dobValid = dob.length > 0 && isAtLeast16(dob);
+  const canSend =
+    isValidNorthAmericanPhone(phone) && dobValid && phase !== "verified";
   const isVerified = phase === "verified";
 
   async function handleSend() {
+    if (!dob) {
+      setAgeError("Enter your date of birth to continue.");
+      return;
+    }
+    if (!isAtLeast16(dob)) {
+      setAgeError("You must be at least 16 years old to use 7eats.");
+      return;
+    }
+
     setSending(true);
     setSendError("");
     try {
@@ -135,7 +106,7 @@ function PhoneStep({
       setPhase("code_sent");
       setCode("");
       setCodeError("");
-      toast.success("Code sent!");
+      toast.success("Verification code sent by text.");
     } catch {
       setSendError("Network error. Please try again.");
     } finally {
@@ -166,26 +137,60 @@ function PhoneStep({
     }
   }
 
+  async function handleContinue() {
+    if (!dob) {
+      setAgeError("Enter your date of birth to continue.");
+      return;
+    }
+    if (!isAtLeast16(dob)) {
+      setAgeError("You must be at least 16 years old to use 7eats.");
+      return;
+    }
+    if (!isVerified) return;
+
+    setContinuing(true);
+    setContinueError("");
+    try {
+      const res = await fetch("/api/auth/client/save-dob", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ dateOfBirth: dob }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setContinueError(data.error ?? "Could not save your date of birth.");
+        return;
+      }
+      onComplete(phone, dob);
+    } catch {
+      setContinueError("Network error. Please try again.");
+    } finally {
+      setContinuing(false);
+    }
+  }
+
   return (
     <div className={styles.stepContent}>
-      <div className={styles.stepTag}>Step 1 of 2</div>
-      <h1 className={styles.stepHeading}>
-        What's your <span className={styles.accent}>phone number?</span>
-      </h1>
-      <p className={styles.stepDesc}>
-        For order updates and messages from your cooks. We'll send a quick
-        verification code.
-      </p>
+      <header className={styles.stepHeader}>
+        <p className={styles.stepTag}>Step 1 of 2</p>
+        <h1 className={styles.stepHeading}>
+          Confirm your <span className={styles.accent}>age & phone</span>
+        </h1>
+        <p className={styles.stepDesc}>
+          Enter your date of birth, then verify your mobile number with a
+          one-time text code.
+        </p>
+      </header>
 
-      <div className={`${styles.panel} ${styles.phoneBlock}`}>
-        <div className={styles.dobField}>
-          <label className={styles.dobLabel} htmlFor="dob">
+      <div className={styles.fields}>
+        <div className={styles.field}>
+          <label className={styles.label} htmlFor="dob">
             Date of birth
           </label>
           <input
             id="dob"
             type="date"
-            className={styles.phoneInput}
+            className={styles.input}
             max={todayStr}
             value={dob}
             onChange={(e) => {
@@ -193,22 +198,25 @@ function PhoneStep({
               setAgeError("");
             }}
           />
-          <p className={styles.dobHint}>
-            You must be 16 or older to use 7eats.
-          </p>
-          {ageError && <p className={styles.codeError}>{ageError}</p>}
+          <p className={styles.hint}>You must be 16 or older to use 7eats.</p>
+          {ageError && <p className={styles.fieldError}>{ageError}</p>}
         </div>
 
-        <div className={styles.phoneRow}>
+        <div className={styles.field}>
+          <label className={styles.label} htmlFor="onboarding-phone">
+            Mobile number
+          </label>
           <input
+            id="onboarding-phone"
             type="tel"
+            inputMode="numeric"
             autoComplete="tel"
-            className={`${styles.phoneInput} ${isVerified ? styles.phoneInputVerified : ""}`}
-            placeholder="+1 (416) 555-0123"
-            value={phone}
+            className={styles.input}
+            placeholder="(416) 555-0100"
+            value={formatPhoneDisplay(phone)}
             onChange={(e) => {
-              setPhone(e.target.value);
-              if (phase !== "idle") {
+              setPhone(phoneDigits(e.target.value));
+              if (phase !== "idle" && phase !== "verified") {
                 setPhase("idle");
                 setCode("");
                 setSendError("");
@@ -216,83 +224,79 @@ function PhoneStep({
             }}
             disabled={isVerified}
           />
-          {!isVerified ? (
-            <button
-              type="button"
-              className={styles.sendBtn}
-              onClick={handleSend}
-              disabled={!canSend || sending}
-            >
-              {sending
-                ? "Sending…"
-                : phase === "code_sent"
-                  ? "Resend"
-                  : "Send code"}
-            </button>
-          ) : (
-            <span className={styles.verifiedBadge}>
-              <Check size={13} strokeWidth={2.5} />
-              Verified
-            </span>
-          )}
         </div>
 
-        {sendError && <p className={styles.codeError}>{sendError}</p>}
+        {isVerified ? (
+          <p className={styles.verifiedNote}>
+            <Check size={14} strokeWidth={2.5} aria-hidden="true" />
+            Phone verified
+          </p>
+        ) : (
+          <button
+            type="button"
+            className={`btn btn-primary ${styles.actionBtn}`}
+            onClick={() => void handleSend()}
+            disabled={!canSend || sending}
+            aria-disabled={!canSend || sending}
+          >
+            {sending
+              ? "Sending…"
+              : phase === "code_sent"
+                ? "Resend code"
+                : "Send code"}
+          </button>
+        )}
 
-        {phase === "code_sent" && (
-          <div className={styles.codeRow}>
-            <input
-              type="text"
-              inputMode="numeric"
-              maxLength={6}
-              className={styles.codeInput}
-              placeholder="6-digit code"
-              value={code}
-              onChange={(e) => {
-                setCode(e.target.value.replace(/\D/g, ""));
-                setCodeError("");
-              }}
-            />
+        {sendError && <p className={styles.fieldError}>{sendError}</p>}
+
+        {phase === "code_sent" && !isVerified && (
+          <>
+            <div className={styles.field}>
+              <label className={styles.label} htmlFor="otp-code">
+                Verification code
+              </label>
+              <input
+                id="otp-code"
+                type="text"
+                inputMode="numeric"
+                maxLength={6}
+                className={styles.otpInput}
+                placeholder="6-digit code"
+                value={code}
+                onChange={(e) => {
+                  setCode(e.target.value.replace(/\D/g, ""));
+                  setCodeError("");
+                }}
+              />
+            </div>
             <button
               type="button"
-              className={styles.verifyBtn}
-              onClick={handleVerify}
+              className={`btn btn-primary ${styles.actionBtn}`}
+              onClick={() => void handleVerify()}
               disabled={code.length !== 6 || verifying}
+              aria-disabled={code.length !== 6 || verifying}
             >
               {verifying ? "Verifying…" : "Verify"}
             </button>
-          </div>
+          </>
         )}
-        {codeError && <p className={styles.codeError}>{codeError}</p>}
-      </div>
+        {codeError && <p className={styles.fieldError}>{codeError}</p>}
+        {continueError && <p className={styles.fieldError}>{continueError}</p>}
 
-      <button
-        type="button"
-        className={styles.nextBtn}
-        disabled={!isVerified}
-        onClick={() => {
-          if (!dob) {
-            setAgeError(
-              "You must be at least 16 years old to create an account.",
-            );
-            return;
-          }
-          if (!isAtLeast16(dob)) {
-            setAgeError(
-              "You must be at least 16 years old to create an account.",
-            );
-            return;
-          }
-          onComplete(phone, dob);
-        }}
-      >
-        Continue
-      </button>
+        {isVerified && (
+          <button
+            type="button"
+            className={`btn btn-primary ${styles.actionBtn}`}
+            disabled={continuing}
+            onClick={() => void handleContinue()}
+          >
+            {continuing ? "Saving…" : "Continue"}
+          </button>
+        )}
+      </div>
     </div>
   );
 }
-
-// ─── Step 2: Preferences ──────────────────────────────────────────────────────
 
 function PrefsStep({
   dob,
@@ -301,40 +305,11 @@ function PrefsStep({
   dob: string;
   onComplete: () => void;
 }) {
-  const [prefs, setPrefs] = useState<Prefs>({
-    dietary: [],
-    allergies: [],
-    goals: [],
-    whyMealPrep: [],
-  });
+  const [prefs, setPrefs] = useState<ClientPreferences>(
+    EMPTY_CLIENT_PREFERENCES,
+  );
   const [isPending, setIsPending] = useState(false);
   const [submitError, setSubmitError] = useState("");
-
-  function toggle(
-    key: "dietary" | "allergies" | "goals" | "whyMealPrep",
-    val: string,
-  ) {
-    setPrefs((p) => {
-      if (key === "allergies") {
-        const arr = p.allergies;
-        if (val === "None") {
-          return { ...p, allergies: arr.includes("None") ? [] : ["None"] };
-        }
-        const withoutNone = arr.filter((v) => v !== "None");
-        return {
-          ...p,
-          allergies: withoutNone.includes(val)
-            ? withoutNone.filter((v) => v !== val)
-            : [...withoutNone, val],
-        };
-      }
-      const arr = p[key];
-      return {
-        ...p,
-        [key]: arr.includes(val) ? arr.filter((v) => v !== val) : [...arr, val],
-      };
-    });
-  }
 
   async function handleSubmit() {
     setIsPending(true);
@@ -345,7 +320,7 @@ function PrefsStep({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           ...prefs,
-          ...(dob ? { dateOfBirth: dob } : {}),
+          dateOfBirth: dob,
         }),
       });
       const data = await res.json();
@@ -353,6 +328,7 @@ function PrefsStep({
         setSubmitError(data.error ?? "Something went wrong.");
         return;
       }
+      clearOnboardingStorage();
       onComplete();
     } catch {
       setSubmitError("Network error. Please try again.");
@@ -363,122 +339,109 @@ function PrefsStep({
 
   return (
     <div className={styles.stepContent}>
-      <div className={styles.stepTag}>Step 2 of 2</div>
-      <h1 className={styles.stepHeading}>
-        Personalize your <span className={styles.accent}>experience.</span>
-      </h1>
-      <p className={styles.stepDesc}>
-        Help us show you the right cooks and meals. All optional — you can
-        update this anytime in settings.
-      </p>
+      <header className={styles.stepHeader}>
+        <p className={styles.stepTag}>Step 2 of 2</p>
+        <h1 className={styles.stepHeading}>
+          Set your <span className={styles.accent}>preferences</span>
+        </h1>
+        <p className={styles.stepDesc}>
+          Optional. Helps us surface the right cooks and meals. Change anytime
+          in settings.
+        </p>
+      </header>
 
       <div className={styles.prefSections}>
-        <div className={styles.prefSection}>
-          <p className={styles.prefLabel}>Dietary needs</p>
-          <div className={styles.chips}>
-            {DIETARY_OPTIONS.map((o) => (
-              <Chip
-                key={o}
-                label={o}
-                selected={prefs.dietary.includes(o)}
-                onToggle={() => toggle("dietary", o)}
-              />
-            ))}
-          </div>
-        </div>
-
-        <div className={styles.prefSection}>
-          <p className={styles.prefLabel}>Allergies</p>
-          <div className={styles.chips}>
-            {ALLERGY_OPTIONS.map((o) => (
-              <Chip
-                key={o}
-                label={o}
-                selected={prefs.allergies.includes(o)}
-                onToggle={() => toggle("allergies", o)}
-              />
-            ))}
-          </div>
-        </div>
-
-        <div className={styles.prefSection}>
-          <p className={styles.prefLabel}>Goals & preferences</p>
-          <div className={styles.chips}>
-            {GOAL_OPTIONS.map((o) => (
-              <Chip
-                key={o}
-                label={o}
-                selected={prefs.goals.includes(o)}
-                onToggle={() => toggle("goals", o)}
-              />
-            ))}
-          </div>
-        </div>
-
-        <div className={styles.prefSection}>
-          <p className={styles.prefLabel}>Why do you order meal prep?</p>
-          <div className={styles.whyGrid}>
-            {WHY_OPTIONS.map((o) => (
-              <button
-                key={o}
-                type="button"
-                className={`${styles.whyOption} ${prefs.whyMealPrep.includes(o) ? styles.whyOptionSelected : ""}`}
-                onClick={() => toggle("whyMealPrep", o)}
-              >
-                {prefs.whyMealPrep.includes(o) && (
-                  <Check
-                    size={13}
-                    strokeWidth={2.5}
-                    className={styles.chipCheck}
-                  />
+        {CLIENT_PREFERENCE_QUESTIONS.map((question) => {
+          const selected = prefs[question.id];
+          return (
+            <section key={question.id} className={styles.prefGroup}>
+              <div className={styles.prefHeader}>
+                <p className={styles.prefLabel}>{question.question}</p>
+                {question.multiSelect && (
+                  <p className={styles.prefHint}>Pick any that apply</p>
                 )}
-                {o}
-              </button>
-            ))}
-          </div>
-        </div>
+              </div>
+              <div
+                className={
+                  question.id === "whyMealPrep"
+                    ? styles.optionGridWide
+                    : styles.optionGrid
+                }
+              >
+                {question.options.map((option) => (
+                  <PrefOption
+                    key={option}
+                    label={option}
+                    selected={selected.includes(option)}
+                    onToggle={() =>
+                      setPrefs((current) =>
+                        togglePreference(
+                          current,
+                          question.id,
+                          option,
+                          question.multiSelect,
+                        ),
+                      )
+                    }
+                  />
+                ))}
+              </div>
+            </section>
+          );
+        })}
       </div>
 
-      {submitError && <p className={styles.codeError}>{submitError}</p>}
+      {submitError && <p className={styles.fieldError}>{submitError}</p>}
 
       <button
         type="button"
-        className={styles.nextBtn}
-        onClick={handleSubmit}
+        className={`btn btn-primary ${styles.actionBtn}`}
+        onClick={() => void handleSubmit()}
         disabled={isPending}
       >
-        {isPending ? "Saving…" : "Let's eat →"}
+        {isPending ? "Saving…" : "Finish"}
       </button>
     </div>
   );
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
-
 export default function OnboardingPage() {
   const router = useRouter();
   const [step, setStep] = useState<Step | null>(null);
   const [dob, setDob] = useState("");
+  const [initialPhone, setInitialPhone] = useState("");
+  const [initialVerified, setInitialVerified] = useState(false);
 
-  // Restore step from session — phoneVerified=true means phone step done.
   useEffect(() => {
     fetch("/api/auth/get-session")
       .then((r) => r.json())
       .then((data) => {
-        const phoneVerified = data?.user?.phoneVerified ?? false;
-        setStep(phoneVerified ? 2 : 1);
+        const user = data?.user;
+        if (!user) {
+          router.replace("/app-auth/login");
+          return;
+        }
+
+        const stored = readOnboardingStorage();
+        const resolvedDob = user.dateOfBirth ?? stored?.dob ?? "";
+        const phoneVerified = user.phoneVerified ?? false;
+
+        setDob(resolvedDob);
+        setInitialPhone(user.phone ?? stored?.phone ?? "");
+        setInitialVerified(phoneVerified);
+
+        if (phoneVerified && resolvedDob) {
+          setStep(2);
+        } else {
+          setStep(1);
+        }
       })
       .catch(() => setStep(1));
-  }, []);
+  }, [router]);
 
   function handlePhoneComplete(phone: string, collectedDob: string) {
     setDob(collectedDob);
-    if (typeof window !== "undefined") {
-      localStorage.setItem(
-        "onboarding",
-        JSON.stringify({ step: 2, phone, dob: collectedDob }),
-      );
-    }
+    writeOnboardingStorage({ step: 2, phone, dob: collectedDob });
     setStep(2);
   }
 
@@ -486,30 +449,12 @@ export default function OnboardingPage() {
     router.push("/app/browse");
   }
 
-  // Escape hatch: onboarding preferences are optional, so let users bail out to
-  // the app instead of being trapped here on every visit. We mark onboarding
-  // complete with empty preferences (which sets the 7eats-onboarded cookie the
-  // proxy gates on) so they aren't bounced straight back.
-  async function handleSkip() {
-    try {
-      await fetch("/api/auth/complete-onboarding", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ dietary: [], allergies: [], goals: [] }),
-      });
-    } catch {
-      // Best-effort — navigate regardless.
-    }
-    router.push("/app/browse");
-  }
-
-  // Avoid hydration mismatch — step determined client-side from session.
   if (step === null) return null;
 
   const progress = step === 1 ? 50 : 100;
 
   return (
-    <div className={styles.page}>
+    <div className={styles.page} data-auth-shell>
       <div className={styles.topBar}>
         <Image
           src="/7eats-logo.svg"
@@ -518,22 +463,7 @@ export default function OnboardingPage() {
           height={38}
           priority
         />
-        <nav className={styles.stepIndicator} aria-label={`Step ${step} of 2`}>
-          <span
-            className={step === 1 ? styles.stepDotActive : styles.stepDotDone}
-          >
-            1
-          </span>
-          <span
-            className={`${styles.stepLine} ${step === 2 ? styles.stepLineDone : ""}`}
-          />
-          <span className={step === 2 ? styles.stepDotActive : styles.stepDot}>
-            2
-          </span>
-        </nav>
-        <button type="button" className={styles.skipBtn} onClick={handleSkip}>
-          Skip for now
-        </button>
+        <span className={styles.topBarStep}>Step {step} of 2</span>
       </div>
 
       <div className={styles.progressBar}>
@@ -544,7 +474,14 @@ export default function OnboardingPage() {
       </div>
 
       <div className={styles.content}>
-        {step === 1 && <PhoneStep onComplete={handlePhoneComplete} />}
+        {step === 1 && (
+          <PhoneStep
+            initialPhone={initialPhone}
+            initialVerified={initialVerified}
+            initialDob={dob}
+            onComplete={handlePhoneComplete}
+          />
+        )}
         {step === 2 && <PrefsStep dob={dob} onComplete={handlePrefsComplete} />}
       </div>
     </div>

@@ -1,50 +1,59 @@
 "use client";
 
 import { CardElement, useElements, useStripe } from "@stripe/react-stripe-js";
-import { useState } from "react";
+import { forwardRef, useImperativeHandle } from "react";
 import styles from "./page.module.css";
 
+export type CheckoutCardHandle = {
+  tokenize: () => Promise<string | null>;
+};
+
 type Props = {
-  onTokenized: (paymentMethodId: string) => Promise<void>;
-  loading: boolean;
+  cardError: string;
+  onCardError: (msg: string) => void;
+  onCardCompleteChange: (complete: boolean) => void;
 };
 
 /**
- * Renders a Stripe CardElement for new-card entry.
- * On submit it creates a PaymentMethod via Stripe.js (no raw card data is
- * ever sent to our server) and hands the resulting paymentMethodId back to
- * the parent via onTokenized.
+ * Stripe CardElement for checkout. Tokenization is triggered by the parent
+ * (after cancellation consent) via ref — no submit button here.
  */
-export function NewCardForm({ onTokenized, loading }: Props) {
-  const stripe = useStripe();
-  const elements = useElements();
-  const [cardError, setCardError] = useState("");
-  const [cardComplete, setCardComplete] = useState(false);
+export const CheckoutCardForm = forwardRef<CheckoutCardHandle, Props>(
+  function CheckoutCardForm(
+    { cardError, onCardError, onCardCompleteChange },
+    ref,
+  ) {
+    const stripe = useStripe();
+    const elements = useElements();
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!stripe || !elements) return;
+    useImperativeHandle(
+      ref,
+      () => ({
+        async tokenize() {
+          if (!stripe || !elements) return null;
 
-    const cardEl = elements.getElement(CardElement);
-    if (!cardEl) return;
+          const cardEl = elements.getElement(CardElement);
+          if (!cardEl) return null;
 
-    setCardError("");
+          onCardError("");
 
-    const { paymentMethod, error } = await stripe.createPaymentMethod({
-      type: "card",
-      card: cardEl,
-    });
+          const { paymentMethod, error } = await stripe.createPaymentMethod({
+            type: "card",
+            card: cardEl,
+          });
 
-    if (error) {
-      setCardError(error.message ?? "Card error. Please try again.");
-      return;
-    }
+          if (error) {
+            onCardError(error.message ?? "Card error. Please try again.");
+            return null;
+          }
 
-    await onTokenized(paymentMethod.id);
-  }
+          return paymentMethod.id;
+        },
+      }),
+      [stripe, elements, onCardError],
+    );
 
-  return (
-    <form id="new-card-form" onSubmit={handleSubmit}>
+    return (
       <div className={styles.formGroup}>
         <label className={styles.label} htmlFor="card-element">
           Card details
@@ -65,11 +74,11 @@ export function NewCardForm({ onTokenized, loading }: Props) {
               hidePostalCode: true,
             }}
             onChange={(e) => {
-              setCardComplete(e.complete);
+              onCardCompleteChange(e.complete);
               if (e.error) {
-                setCardError(e.error.message ?? "");
+                onCardError(e.error.message ?? "");
               } else {
-                setCardError("");
+                onCardError("");
               }
             }}
           />
@@ -80,15 +89,6 @@ export function NewCardForm({ onTokenized, loading }: Props) {
           </p>
         )}
       </div>
-
-      <button
-        type="submit"
-        className={styles.placeOrderBtn}
-        disabled={loading || !stripe || !cardComplete}
-        style={{ width: "100%", marginTop: "0.75rem" }}
-      >
-        {loading ? "Processing…" : "Place Order"}
-      </button>
-    </form>
-  );
-}
+    );
+  },
+);
