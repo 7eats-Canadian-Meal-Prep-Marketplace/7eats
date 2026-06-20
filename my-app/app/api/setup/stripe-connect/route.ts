@@ -24,15 +24,37 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true });
   }
 
+  if (!session.user.email) {
+    return NextResponse.json(
+      { error: "A contact email is required to set up payouts." },
+      { status: 400 },
+    );
+  }
+
   try {
     const stripe = getStripe();
-    const account = await stripe.accounts.create({
-      type: "express",
-      country: "CA",
-      capabilities: {
-        card_payments: { requested: true },
-        transfers: { requested: true },
+    // Accounts v2 recipient configuration: cooks receive transferred funds and
+    // payouts (destination charges without on_behalf_of). Express dashboard
+    // requires both responsibilities collectors to be `application`.
+    const account = await stripe.v2.core.accounts.create({
+      dashboard: "express",
+      contact_email: session.user.email,
+      identity: { country: "CA", entity_type: "individual" },
+      configuration: {
+        recipient: {
+          capabilities: {
+            stripe_balance: { stripe_transfers: { requested: true } },
+          },
+        },
       },
+      defaults: {
+        currency: "cad",
+        responsibilities: {
+          fees_collector: "application",
+          losses_collector: "application",
+        },
+      },
+      metadata: { cookUserId: session.user.id },
     });
 
     await db

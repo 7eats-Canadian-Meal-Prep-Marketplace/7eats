@@ -4,7 +4,9 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
@@ -75,6 +77,45 @@ type CartContextType = {
   setNotes: (notes: string | null) => void;
 };
 
+/**
+ * Shape persisted to localStorage so the cart survives a page refresh
+ * (important for guests, who have no server-side cart). Bump the version
+ * suffix if the stored shape changes in a breaking way.
+ */
+const STORAGE_KEY = "7eats:cart:v1";
+
+type PersistedCart = {
+  cook: CookMeta | null;
+  items: CartItem[];
+  fulfillmentMode: "pickup" | "delivery";
+  pickupAt: string | null;
+  deliveryAddress: DeliveryAddress | null;
+  notes: string | null;
+};
+
+/** Read and validate the persisted cart. Returns null on any problem. */
+function loadPersistedCart(): PersistedCart | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<PersistedCart>;
+    if (!parsed || !Array.isArray(parsed.items)) return null;
+    return {
+      cook: parsed.cook ?? null,
+      items: parsed.items,
+      fulfillmentMode:
+        parsed.fulfillmentMode === "delivery" ? "delivery" : "pickup",
+      pickupAt: parsed.pickupAt ?? null,
+      deliveryAddress: parsed.deliveryAddress ?? null,
+      notes: parsed.notes ?? null,
+    };
+  } catch {
+    // Corrupt or unreadable storage — start with an empty cart.
+    return null;
+  }
+}
+
 const CartContext = createContext<CartContextType | null>(null);
 
 export function useCart(): CartContextType {
@@ -102,6 +143,45 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [deliveryAddress, setDeliveryAddressState] =
     useState<DeliveryAddress | null>(null);
   const [notes, setNotesState] = useState<string | null>(null);
+
+  // Tracks whether we've hydrated from localStorage yet. The persist effect
+  // must not run until this is true, otherwise the empty initial state would
+  // overwrite a saved cart before hydration completes.
+  const hydrated = useRef(false);
+
+  // Hydrate once on mount. Done in an effect (not a lazy useState initializer)
+  // so the server-rendered and first client render stay in sync — avoiding a
+  // hydration mismatch — and the saved cart is applied immediately after.
+  useEffect(() => {
+    const saved = loadPersistedCart();
+    if (saved) {
+      setCook(saved.cook);
+      setItems(saved.items);
+      setFulfillmentMode(saved.fulfillmentMode);
+      setPickupAtState(saved.pickupAt);
+      setDeliveryAddressState(saved.deliveryAddress);
+      setNotesState(saved.notes);
+    }
+    hydrated.current = true;
+  }, []);
+
+  // Persist whenever any cart field changes (after hydration).
+  useEffect(() => {
+    if (!hydrated.current) return;
+    try {
+      const payload: PersistedCart = {
+        cook,
+        items,
+        fulfillmentMode,
+        pickupAt,
+        deliveryAddress,
+        notes,
+      };
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    } catch {
+      // Storage may be full or unavailable (private mode) — non-critical.
+    }
+  }, [cook, items, fulfillmentMode, pickupAt, deliveryAddress, notes]);
 
   const upsert = useCallback((meta: CookMeta, item: CartItem) => {
     setCook(meta);

@@ -7,12 +7,11 @@ import styles from "./StripeConnectPanel.module.css";
 
 type StripeStatusData = {
   hasAccount: boolean;
-  chargesEnabled: boolean;
-  payoutsEnabled: boolean;
-  detailsSubmitted: boolean;
-  cardPaymentsActive: boolean;
   transfersActive: boolean;
+  payoutsEnabled: boolean;
+  onboardingComplete: boolean;
   requirementsCount: number;
+  requirements: string[];
 };
 
 type Props = {
@@ -182,7 +181,7 @@ export default function StripeConnectPanel({
   const setupNote =
     status?.hasAccount && !isConnected ? (
       <p className={styles.details}>
-        {status.detailsSubmitted
+        {status.onboardingComplete
           ? "Stripe is processing your details. This usually takes a few seconds. We will refresh automatically."
           : layout === "card"
             ? "Your Stripe account is started but not finished yet. Use the button below to complete bank and verification in Stripe."

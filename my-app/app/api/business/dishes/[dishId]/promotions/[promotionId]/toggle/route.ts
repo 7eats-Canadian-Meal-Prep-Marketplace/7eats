@@ -5,7 +5,7 @@ import {
   notFound,
   unauthorized,
 } from "@/app/api/business/_lib/cook-auth";
-import { db } from "@/db";
+import { db, dbPool } from "@/db";
 import { dishes, dishPromotions } from "@/db/schema";
 
 type Params = { params: Promise<{ dishId: string; promotionId: string }> };
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest, { params }: Params) {
   if (!row) return notFound("Promotion");
 
   const next = !row.isActive;
-  await db.transaction(async (tx) => {
+  await dbPool.transaction(async (tx) => {
     if (next) {
       // Activating: ensure no other active promotion remains for this dish.
       await tx

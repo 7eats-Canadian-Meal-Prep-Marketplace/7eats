@@ -10,6 +10,7 @@ import {
   validateKitchenSettings,
   validateOrderRules,
 } from "@/lib/business-settings-validation";
+import { useDirtyState } from "@/lib/forms/use-dirty";
 import {
   formatPhoneDisplay,
   isValidNorthAmericanPhone,
@@ -58,7 +59,14 @@ type KitchenForm = {
 };
 
 function KitchenSection() {
-  const [form, setForm] = useState<KitchenForm>({
+  const {
+    value: form,
+    setValue: setForm,
+    load,
+    markClean,
+    dirty,
+    markFilesDirty,
+  } = useDirtyState<KitchenForm>({
     displayName: "",
     bio: "",
     photoUrl: null,
@@ -76,7 +84,7 @@ function KitchenSection() {
       .then((r) => r.json())
       .then((json) => {
         if (json.success) {
-          setForm({
+          load({
             displayName: json.data.displayName ?? "",
             bio: json.data.bio ?? "",
             photoUrl: json.data.photoUrl ?? null,
@@ -86,7 +94,7 @@ function KitchenSection() {
         }
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [load]);
 
   async function handleSave() {
     setSaveError(null);
@@ -149,6 +157,7 @@ function KitchenSection() {
       setSaveError(json.error ?? "Could not save kitchen settings.");
       return;
     }
+    markClean();
     triggerSaved();
   }
 
@@ -174,6 +183,7 @@ function KitchenSection() {
             alt="Kitchen profile photo"
             onFile={(file) => {
               photoFileRef.current = file;
+              markFilesDirty();
             }}
             note="JPG or PNG, max 4 MB"
           />
@@ -191,6 +201,7 @@ function KitchenSection() {
             alt="Kitchen banner"
             onFile={(file) => {
               bannerFileRef.current = file;
+              markFilesDirty();
             }}
             note="JPG or PNG, max 8 MB"
           />
@@ -250,7 +261,12 @@ function KitchenSection() {
       )}
 
       <div className={styles.cardFooter}>
-        <button type="button" className={styles.saveBtn} onClick={handleSave}>
+        <button
+          type="button"
+          className={styles.saveBtn}
+          onClick={handleSave}
+          disabled={!dirty}
+        >
           {saved ? "Saved" : "Save changes"}
         </button>
       </div>
@@ -267,7 +283,13 @@ type AccountForm = {
 };
 
 function AccountSection() {
-  const [form, setForm] = useState<AccountForm>({
+  const {
+    value: form,
+    setValue: setForm,
+    load,
+    markClean,
+    dirty,
+  } = useDirtyState<AccountForm>({
     firstName: "",
     lastName: "",
     loginEmail: "",
@@ -301,7 +323,7 @@ function AccountSection() {
       .then((r) => r.json())
       .then((json) => {
         if (json.success) {
-          setForm({
+          load({
             firstName: json.data.firstName ?? "",
             lastName: json.data.lastName ?? "",
             loginEmail: json.data.email ?? "",
@@ -311,7 +333,7 @@ function AccountSection() {
         }
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [load]);
 
   async function handleSave() {
     setSaveError(null);
@@ -335,6 +357,7 @@ function AccountSection() {
       setSaveError(json.error ?? "Could not save account settings.");
       return;
     }
+    markClean();
     triggerSaved();
   }
 
@@ -644,7 +667,12 @@ function AccountSection() {
       </div>
 
       <div className={styles.cardFooter}>
-        <button type="button" className={styles.saveBtn} onClick={handleSave}>
+        <button
+          type="button"
+          className={styles.saveBtn}
+          onClick={handleSave}
+          disabled={!dirty}
+        >
           {saved ? "Saved" : "Save changes"}
         </button>
       </div>
@@ -717,11 +745,26 @@ function Toggle({
   );
 }
 
+type OrderRulesForm = {
+  minOrderQty: string;
+  maxOrderQty: string;
+  cancellationAllowed: boolean;
+  acceptsSpecialRequests: boolean;
+};
+
 function OrderRulesSection() {
-  const [minOrderQty, setMinOrderQty] = useState("1");
-  const [maxOrderQty, setMaxOrderQty] = useState("");
-  const [cancellationAllowed, setCancellationAllowed] = useState(false);
-  const [acceptsSpecialRequests, setAcceptsSpecialRequests] = useState(false);
+  const {
+    value: form,
+    setValue: setForm,
+    load,
+    markClean,
+    dirty,
+  } = useDirtyState<OrderRulesForm>({
+    minOrderQty: "1",
+    maxOrderQty: "",
+    cancellationAllowed: false,
+    acceptsSpecialRequests: false,
+  });
   const [loading, setLoading] = useState(true);
   const [savedMsg, setSavedMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -731,37 +774,43 @@ function OrderRulesSection() {
       .then((r) => r.json())
       .then((json) => {
         if (json.success) {
-          setMinOrderQty(String(json.data.minOrderQty ?? 1));
-          setMaxOrderQty(
-            json.data.maxOrderQty != null ? String(json.data.maxOrderQty) : "",
-          );
-          setCancellationAllowed(Boolean(json.data.cancellationAllowed));
-          setAcceptsSpecialRequests(Boolean(json.data.acceptsSpecialRequests));
+          load({
+            minOrderQty: String(json.data.minOrderQty ?? 1),
+            maxOrderQty:
+              json.data.maxOrderQty != null
+                ? String(json.data.maxOrderQty)
+                : "",
+            cancellationAllowed: Boolean(json.data.cancellationAllowed),
+            acceptsSpecialRequests: Boolean(json.data.acceptsSpecialRequests),
+          });
         }
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [load]);
 
   async function save() {
     setError(null);
     setSavedMsg(null);
 
-    const validationError = validateOrderRules({ minOrderQty, maxOrderQty });
+    const validationError = validateOrderRules({
+      minOrderQty: form.minOrderQty,
+      maxOrderQty: form.maxOrderQty,
+    });
     if (validationError) {
       setError(validationError);
       return;
     }
 
-    const min = Number(minOrderQty);
-    const max = maxOrderQty === "" ? null : Number(maxOrderQty);
+    const min = Number(form.minOrderQty);
+    const max = form.maxOrderQty === "" ? null : Number(form.maxOrderQty);
     const res = await fetch("/api/business/dashboard/settings", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         minOrderQty: min,
         maxOrderQty: max,
-        cancellationAllowed,
-        acceptsSpecialRequests,
+        cancellationAllowed: form.cancellationAllowed,
+        acceptsSpecialRequests: form.acceptsSpecialRequests,
       }),
     });
     if (!res.ok) {
@@ -769,6 +818,7 @@ function OrderRulesSection() {
       setError(data.error ?? "Could not save order rules.");
       return;
     }
+    markClean();
     setSavedMsg("Saved");
     setTimeout(() => setSavedMsg(null), 2000);
   }
@@ -802,8 +852,10 @@ function OrderRulesSection() {
           type="number"
           min="1"
           step="1"
-          value={minOrderQty}
-          onChange={(e) => setMinOrderQty(e.target.value)}
+          value={form.minOrderQty}
+          onChange={(e) =>
+            setForm((f) => ({ ...f, minOrderQty: e.target.value }))
+          }
           style={{
             width: 90,
             padding: 8,
@@ -823,8 +875,10 @@ function OrderRulesSection() {
           min="1"
           step="1"
           placeholder="None"
-          value={maxOrderQty}
-          onChange={(e) => setMaxOrderQty(e.target.value)}
+          value={form.maxOrderQty}
+          onChange={(e) =>
+            setForm((f) => ({ ...f, maxOrderQty: e.target.value }))
+          }
           style={{
             width: 90,
             padding: 8,
@@ -842,8 +896,13 @@ function OrderRulesSection() {
           </span>
         </div>
         <Toggle
-          on={acceptsSpecialRequests}
-          onToggle={() => setAcceptsSpecialRequests((v) => !v)}
+          on={form.acceptsSpecialRequests}
+          onToggle={() =>
+            setForm((f) => ({
+              ...f,
+              acceptsSpecialRequests: !f.acceptsSpecialRequests,
+            }))
+          }
           label="Special requests"
         />
       </div>
@@ -856,15 +915,25 @@ function OrderRulesSection() {
           </span>
         </div>
         <Toggle
-          on={cancellationAllowed}
-          onToggle={() => setCancellationAllowed((v) => !v)}
+          on={form.cancellationAllowed}
+          onToggle={() =>
+            setForm((f) => ({
+              ...f,
+              cancellationAllowed: !f.cancellationAllowed,
+            }))
+          }
           label="Allow cancellations"
         />
       </div>
 
       {error && <p style={{ color: "var(--red, #e23744)" }}>{error}</p>}
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <button type="button" className={styles.saveBtn} onClick={save}>
+        <button
+          type="button"
+          className={styles.saveBtn}
+          onClick={save}
+          disabled={!dirty}
+        >
           Save order rules
         </button>
         {savedMsg && (
