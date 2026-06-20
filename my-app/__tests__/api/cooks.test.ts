@@ -106,9 +106,10 @@ describe("GET /api/cooks", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("returns 200 with array of cook cards", async () => {
-    // base rows, tag rows, fulfilled-order rows, window rows
+    // candidate-id select, the exists() sub-select, then loadCookCards:
+    // base rows, tag rows, window rows, fulfilled-order rows
     vi.mocked(db.select).mockImplementation(
-      selectQueue([[MOCK_COOK_ROW], [], [], []]),
+      selectQueue([[{ id: COOK_ID }], [], [MOCK_COOK_ROW], [], [], []]),
     );
 
     const res = await getCooks(makeReq("http://localhost/api/cooks"));

@@ -8,6 +8,7 @@ import {
 import { db } from "@/db";
 import { dishes } from "@/db/schema";
 import { isDishPaused, setDishActive } from "@/lib/dish-status";
+import { rebuildCookSearchIndexSafe } from "@/lib/search/index-builder";
 
 export type Params = { params: Promise<{ dishId: string }> };
 
@@ -36,6 +37,9 @@ export async function POST(req: NextRequest, { params }: Params) {
 
     const updated = await setDishActive(dishId, cookId);
     if (!updated) return notFound("Dish");
+
+    // Re-activating a dish can restore the cook's search visibility.
+    rebuildCookSearchIndexSafe(cookId);
 
     return NextResponse.json({ success: true, data: updated });
   } catch (err) {

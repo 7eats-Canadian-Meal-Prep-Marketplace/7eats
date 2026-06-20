@@ -15,6 +15,7 @@ import {
   DELIVERY_RATE_MIN,
   FREE_DELIVERY_ABOVE_MAX,
 } from "@/lib/delivery-pricing";
+import { rebuildCookSearchIndexSafe } from "@/lib/search/index-builder";
 
 const PROFILE_FIELDS = {
   id: cookProfiles.id,
@@ -159,6 +160,9 @@ export async function PATCH(req: NextRequest) {
       .set(updates)
       .where(eq(cookProfiles.id, cookId))
       .returning(PROFILE_FIELDS);
+
+    // Name, bio, pickup geo and delivery settings all feed search.
+    rebuildCookSearchIndexSafe(cookId);
 
     return NextResponse.json({ success: true, data: updated });
   } catch (err) {
