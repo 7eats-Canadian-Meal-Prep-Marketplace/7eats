@@ -6,7 +6,6 @@ import {
   Heart,
   LogOut,
   MapPin,
-  MessageSquare,
   Package,
   Plus,
   RefreshCw,
@@ -389,7 +388,6 @@ const MENU_LINKS = [
   { href: "/app/saved", label: "Favourites", Icon: Heart },
   { href: "/app/orders", label: "Orders", Icon: Package },
   { href: "/app/subscriptions", label: "Subscriptions", Icon: RefreshCw },
-  { href: "/app/inbox", label: "Inbox", Icon: MessageSquare },
   { href: "/app/settings", label: "Account", Icon: Settings },
 ];
 
@@ -496,12 +494,6 @@ const BOTTOM_NAV = [
     requiresAuth: false,
   },
   { href: "/app/orders", label: "Orders", Icon: Package, requiresAuth: true },
-  {
-    href: "/app/inbox",
-    label: "Inbox",
-    Icon: MessageSquare,
-    requiresAuth: true,
-  },
   { href: "/app/settings", label: "Account", Icon: User, requiresAuth: true },
 ];
 

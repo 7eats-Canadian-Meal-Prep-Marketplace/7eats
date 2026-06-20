@@ -1,6 +1,6 @@
 "use client";
 
-import { Calendar, ChevronRight, Inbox, Plus, TrendingUp } from "lucide-react";
+import { Calendar, ChevronRight, Plus, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useHost } from "../_host-context";
@@ -205,12 +205,6 @@ const QUICK_ACTIONS = [
     Icon: Calendar,
     label: "Calendar",
     desc: "See your upcoming pickup schedule",
-  },
-  {
-    href: "/business/inbox",
-    Icon: Inbox,
-    label: "Inbox",
-    desc: "Reply to customer messages",
   },
   {
     href: "/business/earnings",
