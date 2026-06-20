@@ -1,7 +1,6 @@
 "use client";
 
-import { ClipboardList, MessageSquare, X } from "lucide-react";
-import Link from "next/link";
+import { ClipboardList, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { PreferenceSheet } from "../_components/PreferenceSheet";
 import styles from "./page.module.css";
@@ -264,10 +263,6 @@ function OrderDetail({
       </div>
 
       <div className={styles.detailActions}>
-        <Link href="/business/inbox" className={styles.chatBtn}>
-          <MessageSquare size={15} />
-          Message customer
-        </Link>
         <button
           type="button"
           className={styles.prefsBtn}

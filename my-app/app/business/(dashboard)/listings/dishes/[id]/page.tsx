@@ -315,6 +315,7 @@ function DetailsTab() {
                       src={photo.url}
                       alt="Dish photo"
                       fill
+                      sizes="200px"
                       className={styles.photoImg}
                     />
                   )}

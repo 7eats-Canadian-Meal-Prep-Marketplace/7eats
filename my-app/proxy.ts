@@ -22,7 +22,7 @@ const CLIENT_PUBLIC_EXACT = new Set([
 const CLIENT_PUBLIC_PREFIXES = ["/app/cooks/", "/app/checkout/"];
 
 /** Consumer routes that require a verified client account. */
-const CLIENT_PROTECTED_EXACT = new Set(["/app/inbox", "/app/settings"]);
+const CLIENT_PROTECTED_EXACT = new Set(["/app/settings"]);
 const CLIENT_PROTECTED_PREFIXES = ["/app/orders"];
 
 function isClientPublicRoute(pathname: string): boolean {
@@ -180,6 +180,16 @@ export async function proxy(req: NextRequest) {
   // Saved listings are retired for launch.
   if (pathname === "/app/saved") {
     return NextResponse.redirect(new URL("/app/browse", req.url));
+  }
+  // Messaging is disabled for launch — inbox is not accessible.
+  if (pathname === "/app/inbox" || pathname.startsWith("/app/inbox/")) {
+    return NextResponse.redirect(new URL("/app/browse", req.url));
+  }
+  if (
+    pathname === "/business/inbox" ||
+    pathname.startsWith("/business/inbox/")
+  ) {
+    return NextResponse.redirect(new URL("/business/dashboard", req.url));
   }
 
   // ═══════════════════════════════════════════════════════════════════════════

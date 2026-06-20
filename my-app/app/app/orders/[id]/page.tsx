@@ -6,7 +6,6 @@ import {
   Clock,
   Edit3,
   MapPin,
-  MessageSquare,
   Package,
   Star,
   Trash2,
@@ -367,14 +366,6 @@ export default function OrderDetailPage({
               </span>
             )}
           </div>
-        )}
-
-        {/* Message CTA */}
-        {!isCancelled && !isDone && (
-          <Link href="/app/inbox" className={styles.messageCta}>
-            <MessageSquare size={16} />
-            Message {cookDisplayName}
-          </Link>
         )}
 
         {/* Code card — only shown when status is "ready" and a pickup code exists */}
