@@ -4,7 +4,8 @@
   height: 88vh;
   min-height: 520px;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
+  justify-content: center;
   overflow: hidden;
 }
 
@@ -51,10 +52,10 @@
   position: absolute;
   inset: 0;
   background: linear-gradient(
-    to top,
-    rgba(8, 8, 8, 0.82) 0%,
-    rgba(8, 8, 8, 0.48) 45%,
-    rgba(8, 8, 8, 0.18) 100%
+    to bottom,
+    rgba(8, 8, 8, 0.42) 0%,
+    rgba(8, 8, 8, 0.58) 50%,
+    rgba(8, 8, 8, 0.42) 100%
   );
   z-index: 2;
 }
@@ -64,10 +65,11 @@
   position: relative;
   z-index: 3;
   width: 100%;
-  padding: 0 var(--pad-x) clamp(56px, 10vh, 88px);
+  padding: 0 var(--pad-x);
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   text-align: center;
 }
 

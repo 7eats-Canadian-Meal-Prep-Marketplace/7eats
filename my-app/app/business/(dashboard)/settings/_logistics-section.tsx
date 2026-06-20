@@ -605,11 +605,9 @@ export function LogisticsSection() {
                 <span>${DELIVERY_RATE_MAX.toFixed(2)}/km</span>
               </div>
               <p className={styles.formHint}>
-                Based on typical local driving costs for home cooks ($
-                {DELIVERY_RATE_MIN.toFixed(2)} to $
-                {DELIVERY_RATE_MAX.toFixed(2)}
-                /km). Email <strong>contact@7eats.ca</strong> if you think this
-                range doesn&apos;t work for your area.
+                {`Based on typical local driving costs for home cooks ($${DELIVERY_RATE_MIN.toFixed(2)} to $${DELIVERY_RATE_MAX.toFixed(2)}/km). Email `}
+                <strong>contact@7eats.ca</strong>
+                {" if you think this range doesn't work for your area."}
               </p>
             </div>
 

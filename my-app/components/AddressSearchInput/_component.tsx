@@ -80,10 +80,13 @@ export function AddressSearchInput({
     onTextChange(v);
   }
 
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    // Keep Enter from submitting a parent form while picking an address.
+    if (e.key === "Enter") e.preventDefault();
+  }
+
   return (
-    // Nested in its own form so AddressAutofill can enable address autocomplete
-    // and Enter doesn't submit the surrounding application form.
-    <form onSubmit={(e) => e.preventDefault()} style={{ display: "contents" }}>
+    <div style={{ display: "contents" }}>
       <AddressAutofill
         accessToken={token}
         options={{ country: "ca", language: "en" }}
@@ -98,8 +101,9 @@ export function AddressSearchInput({
           className={className}
           value={value}
           onChange={handleChange}
+          onKeyDown={handleKeyDown}
         />
       </AddressAutofill>
-    </form>
+    </div>
   );
 }
