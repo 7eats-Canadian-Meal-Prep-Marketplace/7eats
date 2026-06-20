@@ -18,6 +18,8 @@ import {
   defaultMaxDeliveryKm,
   withDeliveryDefaults,
 } from "@/lib/delivery-pricing";
+import { useDirtyState } from "@/lib/forms/use-dirty";
+import { isPriceKeystroke } from "@/lib/price";
 import styles from "./page.module.css";
 
 type FulfillmentType = "pickup" | "delivery" | "both";
@@ -70,10 +72,9 @@ type LogisticsForm = {
   deliveryDays: (typeof DAYS)[number][];
   deliveryWindows: Record<string, DayWindow>;
   leadTime: string;
-  maxCapacity: string;
   maxDeliveryKm: number | null;
   deliveryRatePerKm: number;
-  freeDeliveryAbove: number | null;
+  freeDeliveryAbove: string;
 };
 
 function deriveFulfillment(
@@ -115,7 +116,13 @@ function windowsFromForm(
 }
 
 export function LogisticsSection() {
-  const [form, setForm] = useState<LogisticsForm>({
+  const {
+    value: form,
+    setValue: setForm,
+    load,
+    markClean,
+    dirty,
+  } = useDirtyState<LogisticsForm>({
     pickupStreet: "",
     pickupUnit: "",
     pickupCity: "",
@@ -130,10 +137,9 @@ export function LogisticsSection() {
     deliveryDays: [],
     deliveryWindows: {},
     leadTime: "",
-    maxCapacity: "",
     maxDeliveryKm: null,
     deliveryRatePerKm: defaultDeliveryRate(),
-    freeDeliveryAbove: null,
+    freeDeliveryAbove: "",
   });
   const [loading, setLoading] = useState(true);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -164,7 +170,7 @@ export function LogisticsSection() {
             })
           : null;
 
-        setForm({
+        load({
           pickupStreet: profile?.pickupStreet ?? "",
           pickupUnit: profile?.pickupUnit ?? "",
           pickupCity: profile?.pickupCity ?? "",
@@ -179,12 +185,6 @@ export function LogisticsSection() {
           deliveryDays: delivery.days,
           deliveryWindows: delivery.windows,
           leadTime: avail?.leadTime ?? profile?.leadTime ?? "",
-          maxCapacity:
-            avail?.maxCapacity != null
-              ? String(avail.maxCapacity)
-              : profile?.maxCapacity != null
-                ? String(profile.maxCapacity)
-                : "",
           maxDeliveryKm: deliveryZone?.maxDeliveryKm ?? null,
           deliveryRatePerKm:
             deliveryZone != null
@@ -192,12 +192,12 @@ export function LogisticsSection() {
               : defaultDeliveryRate(),
           freeDeliveryAbove:
             profile?.freeDeliveryAbove != null
-              ? Number(profile.freeDeliveryAbove)
-              : null,
+              ? String(profile.freeDeliveryAbove)
+              : "",
         });
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [load]);
 
   const offersPickup = form.fulfillment !== "delivery";
   const offersDelivery = form.fulfillment !== "pickup";
@@ -269,9 +269,6 @@ export function LogisticsSection() {
       return;
     }
 
-    const maxCapacityNum =
-      form.maxCapacity.trim() === "" ? undefined : Number(form.maxCapacity);
-
     const delivery = offersDelivery ? ("self" as const) : ("none" as const);
 
     const availRes = await fetch("/api/business/dashboard/availability", {
@@ -281,10 +278,6 @@ export function LogisticsSection() {
         offersPickup: offersPickup,
         delivery,
         leadTime: form.leadTime || undefined,
-        maxCapacity:
-          maxCapacityNum != null && Number.isInteger(maxCapacityNum)
-            ? maxCapacityNum
-            : undefined,
         pickupWindows: offersPickup
           ? windowsFromForm(form.pickupDays, form.pickupWindows)
           : [],
@@ -315,7 +308,10 @@ export function LogisticsSection() {
         maxDeliveryKm: deliveryZone?.maxDeliveryKm ?? null,
         deliveryRatePerKm: deliveryZone?.deliveryRatePerKm ?? null,
         deliveryFlatFee: offersDelivery ? 0 : null,
-        freeDeliveryAbove: offersDelivery ? form.freeDeliveryAbove : null,
+        freeDeliveryAbove:
+          offersDelivery && form.freeDeliveryAbove.trim() !== ""
+            ? Number(form.freeDeliveryAbove)
+            : null,
       }),
     });
     const profileJson = await profileRes.json().catch(() => ({}));
@@ -324,6 +320,7 @@ export function LogisticsSection() {
       return;
     }
 
+    markClean();
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   }
@@ -526,23 +523,6 @@ export function LogisticsSection() {
           </select>
         </div>
 
-        <div className={styles.formGroup}>
-          <label htmlFor="logistics-maxCapacity" className={styles.formLabel}>
-            Max weekly plates
-          </label>
-          <input
-            id="logistics-maxCapacity"
-            type="number"
-            min={1}
-            className={styles.formInput}
-            value={form.maxCapacity}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, maxCapacity: e.target.value }))
-            }
-            placeholder="e.g. 50"
-          />
-        </div>
-
         {offersDelivery && (
           <div className={styles.deliveryZone}>
             <span className={styles.formLabel}>Delivery zone</span>
@@ -605,9 +585,11 @@ export function LogisticsSection() {
                 <span>${DELIVERY_RATE_MAX.toFixed(2)}/km</span>
               </div>
               <p className={styles.formHint}>
-                {`Based on typical local driving costs for home cooks ($${DELIVERY_RATE_MIN.toFixed(2)} to $${DELIVERY_RATE_MAX.toFixed(2)}/km). Email `}
-                <strong>contact@7eats.ca</strong>
-                {" if you think this range doesn't work for your area."}
+                Based on typical local driving costs for home cooks ($
+                {DELIVERY_RATE_MIN.toFixed(2)} to $
+                {DELIVERY_RATE_MAX.toFixed(2)}
+                /km). Email <strong>contact@7eats.ca</strong> if you think this
+                range doesn&apos;t work for your area.
               </p>
             </div>
 
@@ -618,19 +600,16 @@ export function LogisticsSection() {
               </label>
               <input
                 id="freeDeliveryAbove"
-                type="number"
-                min={0}
-                step={0.01}
+                type="text"
+                inputMode="decimal"
                 className={styles.formInput}
-                value={form.freeDeliveryAbove ?? ""}
-                onChange={(e) =>
-                  setForm((f) => ({
-                    ...f,
-                    freeDeliveryAbove: e.target.value
-                      ? Number(e.target.value)
-                      : null,
-                  }))
-                }
+                value={form.freeDeliveryAbove}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  if (isPriceKeystroke(next)) {
+                    setForm((f) => ({ ...f, freeDeliveryAbove: next }));
+                  }
+                }}
                 placeholder="None (always charge delivery)"
               />
             </div>
@@ -648,7 +627,12 @@ export function LogisticsSection() {
       )}
 
       <div className={styles.cardFooter}>
-        <button type="button" className={styles.saveBtn} onClick={handleSave}>
+        <button
+          type="button"
+          className={styles.saveBtn}
+          onClick={handleSave}
+          disabled={!dirty}
+        >
           {saved ? "Saved" : "Save logistics"}
         </button>
       </div>

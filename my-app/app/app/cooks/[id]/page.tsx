@@ -194,10 +194,10 @@ export default function CookProfilePage({
         <button
           type="button"
           className={styles.backLink}
-          onClick={() => router.back()}
+          onClick={() => router.push(`/app/cooks/${id}/menu`)}
         >
           <ArrowLeft size={14} strokeWidth={2.5} />
-          Back
+          Back to menu
         </button>
       </div>
 

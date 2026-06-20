@@ -26,6 +26,7 @@ export default async function DashboardLayout({
       firstName: authUser.firstName,
       lastName: authUser.lastName,
       email: authUser.email,
+      photoUrl: cookProfiles.photoUrl,
       currentSetupStep: cookProfiles.currentSetupStep,
       setupComplete: cookProfiles.setupComplete,
     })
@@ -51,6 +52,7 @@ export default async function DashboardLayout({
       firstName={row?.firstName ?? ""}
       lastName={row?.lastName ?? ""}
       email={row?.email ?? session.user.email}
+      photoUrl={row?.photoUrl ?? null}
       pendingSteps={pendingSteps}
     >
       {children}

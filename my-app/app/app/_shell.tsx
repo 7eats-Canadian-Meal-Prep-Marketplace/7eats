@@ -20,10 +20,22 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState, useTransition } from "react";
-import { AddressAutocomplete } from "@/components/AddressAutocomplete";
+import {
+  AddressSearchInput,
+  type ResolvedAddress,
+} from "@/components/AddressSearchInput";
+import {
+  addressesMatch,
+  GuestAddressProvider,
+  useGuestAddress,
+} from "@/lib/hooks/use-guest-address";
 import type { NormalizedAddress } from "@/lib/types/address";
 import { AppProvider, useApp } from "./_app-context";
 import { CartProvider, useCart } from "./_cart-context";
+import {
+  ServiceAddressProvider,
+  useServiceAddress,
+} from "./_service-address-context";
 import styles from "./_shell.module.css";
 
 function HeaderSearchInner() {
@@ -35,15 +47,24 @@ function HeaderSearchInner() {
     setVal(searchParams.get("q") ?? "");
   }, [searchParams]);
 
+  function pushSearch(q: string) {
+    const params = new URLSearchParams();
+    const trimmed = q.trim();
+    if (trimmed) params.set("q", trimmed);
+    const cuisine = searchParams.get("cuisine");
+    if (cuisine) params.set("cuisine", cuisine);
+    const sort = searchParams.get("sort");
+    if (sort && sort !== "nearest") params.set("sort", sort);
+    const qs = params.toString();
+    router.push(qs ? `/app/search?${qs}` : "/app/search");
+  }
+
   return (
     <form
       className={styles.headerSearch}
       onSubmit={(e) => {
         e.preventDefault();
-        const q = val.trim();
-        router.push(
-          q ? `/app/search?q=${encodeURIComponent(q)}` : "/app/search",
-        );
+        pushSearch(val);
       }}
     >
       <Search size={16} className={styles.headerSearchIcon} />
@@ -80,29 +101,46 @@ export function FulfillmentToggle({ className = "" }: { className?: string }) {
 }
 
 function AddressModal({
-  current,
-  onConfirm,
+  mandatory,
+  onAdd,
   onClose,
 }: {
-  current: NormalizedAddress | null;
-  onConfirm: (a: NormalizedAddress) => void;
+  /** When true the modal can't be dismissed — an address must be set first. */
+  mandatory: boolean;
+  onAdd: (a: ResolvedAddress) => void | Promise<void>;
   onClose: () => void;
 }) {
-  const [draft, setDraft] = useState<Partial<NormalizedAddress>>(current ?? {});
+  const [street, setStreet] = useState("");
+  const [pending, setPending] = useState<ResolvedAddress | null>(null);
+  const [saving, setSaving] = useState(false);
 
-  const isComplete =
-    !!draft.street &&
-    !!draft.city &&
-    !!draft.province &&
-    !!draft.postal &&
-    draft.lat != null &&
-    draft.lng != null &&
-    !!draft.placeId;
+  // A pick only counts once every field resolved — a partial Mapbox result
+  // (missing postal/place id/coords) must not be confirmable.
+  const complete =
+    pending != null &&
+    !!pending.streetAddress &&
+    !!pending.city &&
+    !!pending.province &&
+    !!pending.postalCode &&
+    pending.lat != null &&
+    pending.lng != null &&
+    !!pending.placeId;
+
+  async function confirm() {
+    if (!complete || !pending) return;
+    setSaving(true);
+    try {
+      await onAdd(pending);
+      onClose();
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     // biome-ignore lint/a11y/useKeyWithClickEvents: modal backdrop dismiss
     // biome-ignore lint/a11y/noStaticElementInteractions: modal backdrop dismiss
-    <div className={styles.backdrop} onClick={onClose}>
+    <div className={styles.backdrop} onClick={mandatory ? undefined : onClose}>
       <div
         role="dialog"
         aria-modal="true"
@@ -111,36 +149,54 @@ function AddressModal({
         onKeyDown={(e) => e.stopPropagation()}
       >
         <div className={styles.addrModalHead}>
-          <span className={styles.addrModalTitle}>Change address</span>
-          <button
-            type="button"
-            className={styles.addrModalClose}
-            onClick={onClose}
-          >
-            <X size={18} />
-          </button>
+          <span className={styles.addrModalTitle}>
+            {mandatory ? "Set your delivery address" : "Add an address"}
+          </span>
+          {!mandatory && (
+            <button
+              type="button"
+              className={styles.addrModalClose}
+              onClick={onClose}
+            >
+              <X size={18} />
+            </button>
+          )}
         </div>
         <div className={styles.addrModalBody}>
-          <AddressAutocomplete
-            value={draft}
-            onChange={setDraft}
-            idPrefix="shell-address"
-            inputClassName={styles.addrInput}
+          <AddressSearchInput
+            id="shell-address"
+            className={styles.addrInput}
+            value={street}
+            onTextChange={(t) => {
+              setStreet(t);
+              setPending(null);
+            }}
+            onResolve={(a) => {
+              setStreet(a.streetAddress);
+              setPending(a);
+            }}
           />
+          <p className={styles.addrModalHint}>
+            {pending && complete
+              ? [
+                  pending.streetAddress,
+                  pending.city,
+                  pending.province,
+                  pending.postalCode,
+                ]
+                  .filter(Boolean)
+                  .join(", ")
+              : "Select a complete address from the suggestions."}
+          </p>
         </div>
         <div className={styles.addrModalFoot}>
           <button
             type="button"
             className={styles.addrConfirmBtn}
-            disabled={!isComplete}
-            onClick={() => {
-              if (isComplete) {
-                onConfirm(draft as NormalizedAddress);
-                onClose();
-              }
-            }}
+            disabled={!complete || saving}
+            onClick={confirm}
           >
-            Confirm address
+            {saving ? "Saving…" : "Confirm address"}
           </button>
         </div>
       </div>
@@ -285,27 +341,93 @@ function ShellInner({
   const pathname = usePathname();
   const { totalQuantity } = useCart();
   const { setProvince } = useApp();
-  const [address, setAddress] = useState<NormalizedAddress | null>(null);
+  const guest = useGuestAddress();
+  const { ready, currentAddress, setServerAddress } = useServiceAddress();
   const [showAddress, setShowAddress] = useState(false);
   const [showAddressDropdown, setShowAddressDropdown] = useState(false);
   const addressDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Fetch saved address on mount (only when logged in)
-  useEffect(() => {
-    if (!isLoggedIn) return;
-    fetch("/api/user/address")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.address) {
-          const normalized = data.address as NormalizedAddress;
-          setAddress(normalized);
-          setProvince(normalized.province);
-        }
-      })
-      .catch(() => {
-        // Non-critical — silently ignore fetch errors
+  const savedOptions: { id: string; label: string; active: boolean }[] =
+    isLoggedIn
+      ? currentAddress
+        ? [
+            {
+              id: "current",
+              label: currentAddress.street.split(",")[0],
+              active: true,
+            },
+          ]
+        : []
+      : guest.addresses.map((a) => ({
+          id: a.id,
+          label: a.street.split(",")[0] || a.city,
+          active: a.id === guest.selected?.id,
+        }));
+
+  // Mandatory address gate: on browse/search, force a (non-dismissable) modal
+  // until a location exists — guests can't search with an undefined location.
+  const onGatePage = pathname === "/app/browse" || pathname === "/app/search";
+  const mustSetAddress = onGatePage && ready && currentAddress === null;
+
+  async function handleAddAddress(a: ResolvedAddress) {
+    if (isLoggedIn) {
+      const normalized: NormalizedAddress = {
+        street: a.streetAddress,
+        unit: undefined,
+        city: a.city,
+        province: a.province,
+        postal: a.postalCode,
+        lat: a.lat,
+        lng: a.lng,
+        placeId: a.placeId,
+      };
+      if (
+        currentAddress &&
+        addressesMatch(
+          {
+            placeId: currentAddress.placeId,
+            street: currentAddress.street,
+            postal: currentAddress.postal,
+            lat: currentAddress.lat,
+            lng: currentAddress.lng,
+          },
+          {
+            placeId: normalized.placeId,
+            street: normalized.street,
+            postal: normalized.postal,
+            lat: normalized.lat,
+            lng: normalized.lng,
+          },
+        )
+      ) {
+        setShowAddress(false);
+        return;
+      }
+      setServerAddress(normalized);
+      setProvince(normalized.province);
+      try {
+        await fetch("/api/user/address", {
+          method: "PUT",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ ...normalized, unit: null }),
+        });
+      } catch {
+        // Non-critical — address is already updated in local state
+      }
+    } else {
+      guest.addAddress({
+        street: a.streetAddress,
+        unit: "",
+        city: a.city,
+        province: a.province,
+        postal: a.postalCode,
+        lat: a.lat,
+        lng: a.lng,
+        placeId: a.placeId,
       });
-  }, [isLoggedIn, setProvince]);
+      setProvince(a.province);
+    }
+  }
 
   useEffect(() => {
     if (!showAddressDropdown) return;
@@ -371,28 +493,55 @@ function ShellInner({
               >
                 <MapPin size={14} />
                 <span className={styles.addressChipText}>
-                  {address ? address.street.split(",")[0] : "Add address"}
+                  {currentAddress
+                    ? currentAddress.street.split(",")[0]
+                    : "Add address"}
                 </span>
                 <ChevronDown size={12} className={styles.addressChevron} />
               </button>
 
               {showAddressDropdown && (
                 <div className={styles.addressDropdown}>
-                  {address && (
-                    <button
-                      key={address.placeId}
-                      type="button"
-                      className={`${styles.addressOption} ${styles.addressOptionActive}`}
-                      onClick={() => {
-                        setShowAddressDropdown(false);
-                      }}
+                  {savedOptions.map((opt) => (
+                    <div
+                      key={opt.id}
+                      className={`${styles.addressOption} ${opt.active ? styles.addressOptionActive : ""}`}
                     >
-                      <MapPin size={13} className={styles.addressOptionIcon} />
-                      <span>{address.street.split(",")[0]}</span>
-                      <Check size={13} className={styles.addressOptionCheck} />
-                    </button>
+                      <button
+                        type="button"
+                        className={styles.addressOptionMain}
+                        onClick={() => {
+                          if (!isLoggedIn) guest.selectAddress(opt.id);
+                          setShowAddressDropdown(false);
+                        }}
+                      >
+                        <MapPin
+                          size={13}
+                          className={styles.addressOptionIcon}
+                        />
+                        <span>{opt.label}</span>
+                        {opt.active && (
+                          <Check
+                            size={13}
+                            className={styles.addressOptionCheck}
+                          />
+                        )}
+                      </button>
+                      {!isLoggedIn && guest.addresses.length > 1 && (
+                        <button
+                          type="button"
+                          className={styles.addressOptionDelete}
+                          aria-label="Remove address"
+                          onClick={() => guest.removeAddress(opt.id)}
+                        >
+                          <X size={13} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  {savedOptions.length > 0 && (
+                    <div className={styles.addressDropdownDivider} />
                   )}
-                  <div className={styles.addressDropdownDivider} />
                   <button
                     type="button"
                     className={`${styles.addressOption} ${styles.addressOptionAdd}`}
@@ -402,7 +551,9 @@ function ShellInner({
                     }}
                   >
                     <Plus size={13} className={styles.addressOptionIcon} />
-                    <span>{address ? "Change address" : "Add address"}</span>
+                    <span>
+                      {currentAddress ? "Add another address" : "Add address"}
+                    </span>
                   </button>
                 </div>
               )}
@@ -445,22 +596,10 @@ function ShellInner({
         {children}
       </main>
 
-      {showAddress && (
+      {(showAddress || mustSetAddress) && (
         <AddressModal
-          current={address}
-          onConfirm={async (newAddress) => {
-            setAddress(newAddress);
-            setProvince(newAddress.province);
-            try {
-              await fetch("/api/user/address", {
-                method: "PUT",
-                headers: { "content-type": "application/json" },
-                body: JSON.stringify(newAddress),
-              });
-            } catch {
-              // Non-critical — address is already updated in local state
-            }
-          }}
+          mandatory={mustSetAddress}
+          onAdd={handleAddAddress}
           onClose={() => setShowAddress(false)}
         />
       )}
@@ -512,14 +651,18 @@ export default function AppShell({
   return (
     <AppProvider isLoggedIn={isLoggedIn}>
       <CartProvider>
-        <ShellInner
-          isLoggedIn={isLoggedIn}
-          userInitials={userInitials}
-          userName={userName}
-          userEmail={userEmail}
-        >
-          {children}
-        </ShellInner>
+        <GuestAddressProvider>
+          <ServiceAddressProvider isLoggedIn={isLoggedIn}>
+            <ShellInner
+              isLoggedIn={isLoggedIn}
+              userInitials={userInitials}
+              userName={userName}
+              userEmail={userEmail}
+            >
+              {children}
+            </ShellInner>
+          </ServiceAddressProvider>
+        </GuestAddressProvider>
       </CartProvider>
     </AppProvider>
   );

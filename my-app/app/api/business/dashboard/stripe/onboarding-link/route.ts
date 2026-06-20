@@ -40,15 +40,38 @@ export async function POST(req: NextRequest) {
     const stripe = getStripe();
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
     const returnUrl = `${appUrl}${returnTo}`;
-    const account = await stripe.accounts.retrieve(cook.stripeAccountId);
-    const linkType = account.details_submitted
-      ? "account_update"
-      : "account_onboarding";
-    const accountLink = await stripe.accountLinks.create({
+
+    // If the recipient configuration's transfers capability is already active,
+    // the cook has onboarded and only needs an update link; otherwise onboard.
+    const account = await stripe.v2.core.accounts.retrieve(
+      cook.stripeAccountId,
+      { include: ["configuration.recipient"] },
+    );
+    const onboarded =
+      account.configuration?.recipient?.capabilities?.stripe_balance
+        ?.stripe_transfers?.status === "active";
+
+    const useCase = onboarded
+      ? {
+          type: "account_update" as const,
+          account_update: {
+            configurations: ["recipient" as const],
+            refresh_url: returnUrl,
+            return_url: returnUrl,
+          },
+        }
+      : {
+          type: "account_onboarding" as const,
+          account_onboarding: {
+            configurations: ["recipient" as const],
+            refresh_url: returnUrl,
+            return_url: returnUrl,
+          },
+        };
+
+    const accountLink = await stripe.v2.core.accountLinks.create({
       account: cook.stripeAccountId,
-      refresh_url: returnUrl,
-      return_url: returnUrl,
-      type: linkType,
+      use_case: useCase,
     });
 
     return NextResponse.json({ success: true, data: { url: accountLink.url } });

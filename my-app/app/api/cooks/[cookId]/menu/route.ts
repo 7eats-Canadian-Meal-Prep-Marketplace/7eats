@@ -6,6 +6,8 @@ import {
   cookPickupWindows,
   cookProfiles,
   dishes,
+  dishIngredients,
+  dishNutrition,
   dishPhotos,
   dishPromotions,
   dishTags,
@@ -24,6 +26,9 @@ export async function GET(
         id: cookProfiles.id,
         displayName: cookProfiles.displayName,
         photoUrl: cookProfiles.photoUrl,
+        bannerUrl: cookProfiles.bannerUrl,
+        firstName: authUser.firstName,
+        lastName: authUser.lastName,
         bio: cookProfiles.bio,
         minOrderQty: cookProfiles.minOrderQty,
         maxOrderQty: cookProfiles.maxOrderQty,
@@ -31,6 +36,7 @@ export async function GET(
         offersPickup: cookProfiles.offersPickup,
         delivery: cookProfiles.delivery,
         cancellationAllowed: cookProfiles.cancellationAllowed,
+        acceptsSpecialRequests: cookProfiles.acceptsSpecialRequests,
         pickupCity: cookProfiles.pickupCity,
       })
       .from(cookProfiles)
@@ -73,6 +79,15 @@ export async function GET(
         name: dishes.name,
         description: dishes.description,
         price: dishes.price,
+        cuisine: dishes.cuisine,
+        servingSize: dishes.servingSize,
+        isHalal: dishes.isHalal,
+        isVegan: dishes.isVegan,
+        isVegetarian: dishes.isVegetarian,
+        isGlutenFree: dishes.isGlutenFree,
+        isDairyFree: dishes.isDairyFree,
+        isNutFree: dishes.isNutFree,
+        isKosher: dishes.isKosher,
       })
       .from(dishes)
       .where(and(eq(dishes.cookId, cookId), eq(dishes.status, "active")))
@@ -80,44 +95,68 @@ export async function GET(
 
     const dishIds = dishRows.map((d) => d.id);
 
-    const [photoRows, tagRows, promoRows] = dishIds.length
-      ? await Promise.all([
-          db
-            .select({
-              dishId: dishPhotos.dishId,
-              url: dishPhotos.url,
-              sortOrder: dishPhotos.sortOrder,
-            })
-            .from(dishPhotos)
-            .where(inArray(dishPhotos.dishId, dishIds)),
-          db
-            .select({
-              dishId: dishTags.dishId,
-              slug: tags.slug,
-              label: tags.label,
-            })
-            .from(dishTags)
-            .innerJoin(tags, eq(dishTags.tagId, tags.id))
-            .where(inArray(dishTags.dishId, dishIds)),
-          db
-            .select({
-              dishId: dishPromotions.dishId,
-              id: dishPromotions.id,
-              type: dishPromotions.type,
-              value: dishPromotions.value,
-              validUntil: dishPromotions.validUntil,
-              maxUses: dishPromotions.maxUses,
-              usesCount: dishPromotions.usesCount,
-            })
-            .from(dishPromotions)
-            .where(
-              and(
-                inArray(dishPromotions.dishId, dishIds),
-                eq(dishPromotions.isActive, true),
+    const [photoRows, tagRows, promoRows, ingredientRows, nutritionRows] =
+      dishIds.length
+        ? await Promise.all([
+            db
+              .select({
+                dishId: dishPhotos.dishId,
+                url: dishPhotos.url,
+                sortOrder: dishPhotos.sortOrder,
+              })
+              .from(dishPhotos)
+              .where(inArray(dishPhotos.dishId, dishIds)),
+            db
+              .select({
+                dishId: dishTags.dishId,
+                slug: tags.slug,
+                label: tags.label,
+              })
+              .from(dishTags)
+              .innerJoin(tags, eq(dishTags.tagId, tags.id))
+              .where(inArray(dishTags.dishId, dishIds)),
+            db
+              .select({
+                dishId: dishPromotions.dishId,
+                id: dishPromotions.id,
+                type: dishPromotions.type,
+                value: dishPromotions.value,
+                validUntil: dishPromotions.validUntil,
+                maxUses: dishPromotions.maxUses,
+                usesCount: dishPromotions.usesCount,
+              })
+              .from(dishPromotions)
+              .where(
+                and(
+                  inArray(dishPromotions.dishId, dishIds),
+                  eq(dishPromotions.isActive, true),
+                ),
               ),
-            ),
-        ])
-      : [[], [], []];
+            db
+              .select({
+                dishId: dishIngredients.dishId,
+                name: dishIngredients.name,
+                isAllergen: dishIngredients.isAllergen,
+                sortOrder: dishIngredients.sortOrder,
+              })
+              .from(dishIngredients)
+              .where(inArray(dishIngredients.dishId, dishIds))
+              .orderBy(asc(dishIngredients.sortOrder)),
+            db
+              .select({
+                dishId: dishNutrition.dishId,
+                calories: dishNutrition.calories,
+                proteinG: dishNutrition.proteinG,
+                carbsG: dishNutrition.carbsG,
+                fatG: dishNutrition.fatG,
+                fiberG: dishNutrition.fiberG,
+                sugarG: dishNutrition.sugarG,
+                sodiumMg: dishNutrition.sodiumMg,
+              })
+              .from(dishNutrition)
+              .where(inArray(dishNutrition.dishId, dishIds)),
+          ])
+        : [[], [], [], [], []];
 
     const photosByDish: Record<string, { url: string; sortOrder: number }[]> =
       {};
@@ -139,15 +178,58 @@ export async function GET(
     const promoByDish: Record<string, (typeof promoRows)[number]> = {};
     for (const promo of promoRows) promoByDish[promo.dishId] = promo;
 
+    const ingredientsByDish: Record<
+      string,
+      { name: string; isAllergen: boolean }[]
+    > = {};
+    for (const ing of ingredientRows) {
+      if (!ingredientsByDish[ing.dishId]) ingredientsByDish[ing.dishId] = [];
+      ingredientsByDish[ing.dishId].push({
+        name: ing.name,
+        isAllergen: ing.isAllergen,
+      });
+    }
+
+    const nutritionByDish: Record<string, (typeof nutritionRows)[number]> = {};
+    for (const n of nutritionRows) nutritionByDish[n.dishId] = n;
+
+    const DIETARY_LABELS: [keyof (typeof dishRows)[number], string][] = [
+      ["isHalal", "Halal"],
+      ["isVegan", "Vegan"],
+      ["isVegetarian", "Vegetarian"],
+      ["isGlutenFree", "Gluten-free"],
+      ["isDairyFree", "Dairy-free"],
+      ["isNutFree", "Nut-free"],
+      ["isKosher", "Kosher"],
+    ];
+
     const assembled = dishRows.map((d) => {
       const promo = promoByDish[d.id];
+      const n = nutritionByDish[d.id];
       return {
         id: d.id,
         name: d.name,
         description: d.description ?? null,
         price: d.price,
+        cuisine: d.cuisine ?? null,
+        servingSize: d.servingSize ?? null,
+        dietary: DIETARY_LABELS.filter(([key]) => d[key]).map(
+          ([, label]) => label,
+        ),
         photos: photosByDish[d.id] ?? [],
         tags: tagsByDish[d.id] ?? [],
+        ingredients: ingredientsByDish[d.id] ?? [],
+        nutrition: n
+          ? {
+              calories: n.calories,
+              proteinG: n.proteinG,
+              carbsG: n.carbsG,
+              fatG: n.fatG,
+              fiberG: n.fiberG,
+              sugarG: n.sugarG,
+              sodiumMg: n.sodiumMg,
+            }
+          : null,
         promotion: promo
           ? {
               id: promo.id,
@@ -161,10 +243,13 @@ export async function GET(
       };
     });
 
+    const { firstName, lastName, ...cookRest } = cook;
+    const cookName = [firstName, lastName].filter(Boolean).join(" ") || null;
+
     return NextResponse.json({
       success: true,
       data: {
-        cook: { ...cook, pickupWindows, deliveryWindows },
+        cook: { ...cookRest, cookName, pickupWindows, deliveryWindows },
         dishes: assembled,
       },
     });

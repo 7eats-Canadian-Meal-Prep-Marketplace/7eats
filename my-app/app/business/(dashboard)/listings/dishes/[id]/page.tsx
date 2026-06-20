@@ -2,17 +2,19 @@
 
 import { Camera, Plus, Trash2, X } from "lucide-react";
 import Image from "next/image";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { deepEqual } from "@/lib/forms/use-dirty";
 import {
   DISH_PHOTO_ACCEPT,
   validateDishPhotoFile,
 } from "@/lib/upload-validation";
-import { BackToDishes } from "../../_back-link";
 import {
   ALLERGENS,
   DishDetailProvider,
+  type IngredientRow,
+  type NutritionForm,
   useDishDetail,
 } from "./_dish-detail-context";
 import { PromotionsTab } from "./_promotions-tab";
@@ -25,32 +27,123 @@ const DESCRIPTION_MAX = 500;
 
 // ─── Details tab ──────────────────────────────────────────────────────────────
 
+// A photo in the working set: either an existing server photo (has serverId)
+// or a newly added local file (has file + a blob: preview url). Changes stay
+// local until "Save changes" so leaving the page never mutates the dish.
+type WorkingPhoto = {
+  key: string;
+  serverId?: string;
+  url: string;
+  file?: File;
+};
+
+function isBlobUrl(url: string): boolean {
+  return url.startsWith("blob:");
+}
+
 function DetailsTab() {
-  const { stats, form, photos, saveDetails, removePhoto, addPhoto, loading } =
+  const { dishId, stats, form, photos, saveDetails, reload, loading } =
     useDishDetail();
+  const router = useRouter();
   const [localForm, setLocalForm] = useState({
     name: "",
     price: "",
     description: "",
     status: "active" as "active" | "inactive",
   });
-  const [saved, setSaved] = useState(false);
+  const [workingPhotos, setWorkingPhotos] = useState<WorkingPhoto[]>([]);
+  const [saving, setSaving] = useState(false);
   const [initialized, setInitialized] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
-  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const photoKeyRef = useRef(0);
+  const workingRef = useRef<WorkingPhoto[]>([]);
 
+  useEffect(() => {
+    workingRef.current = workingPhotos;
+  }, [workingPhotos]);
+
+  // Revoke any object URLs still held when the tab unmounts.
+  useEffect(() => {
+    return () => {
+      for (const p of workingRef.current) {
+        if (p.file && isBlobUrl(p.url)) URL.revokeObjectURL(p.url);
+      }
+    };
+  }, []);
+
+  // Initialise (and re-sync after a save) from the loaded dish.
   useEffect(() => {
     if (form && !initialized) {
       setLocalForm(form);
+      setWorkingPhotos((prev) => {
+        for (const p of prev) {
+          if (p.file && isBlobUrl(p.url)) URL.revokeObjectURL(p.url);
+        }
+        return photos.map((p) => ({ key: p.id, serverId: p.id, url: p.url }));
+      });
       setInitialized(true);
     }
-  }, [form, initialized]);
+  }, [form, photos, initialized]);
 
-  async function handleRemovePhoto(id: string) {
-    await removePhoto(id);
+  function addLocalPhotos(files: File[]) {
+    if (files.length === 0) return;
+    setWorkingPhotos((prev) => {
+      const room = MAX_PHOTOS - prev.length;
+      if (room <= 0) {
+        toast.error(`You can add up to ${MAX_PHOTOS} photos.`);
+        return prev;
+      }
+      const next = [...prev];
+      let skippedForLimit = false;
+      for (const file of files) {
+        if (next.length - prev.length >= room) {
+          skippedForLimit = true;
+          break;
+        }
+        const err = validateDishPhotoFile(file);
+        if (err) {
+          toast.error(err);
+          continue;
+        }
+        photoKeyRef.current += 1;
+        next.push({
+          key: `new-${photoKeyRef.current}`,
+          url: URL.createObjectURL(file),
+          file,
+        });
+      }
+      if (skippedForLimit) {
+        toast.error(`You can add up to ${MAX_PHOTOS} photos.`);
+      }
+      return next;
+    });
+  }
+
+  function removeLocalPhoto(key: string) {
+    setWorkingPhotos((prev) => {
+      const target = prev.find((p) => p.key === key);
+      if (target?.file && isBlobUrl(target.url)) {
+        URL.revokeObjectURL(target.url);
+      }
+      return prev.filter((p) => p.key !== key);
+    });
+  }
+
+  function handlePhotoSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files ? Array.from(e.target.files) : [];
+    e.target.value = "";
+    addLocalPhotos(files);
+  }
+
+  function handleCancel() {
+    router.push("/business/listings");
   }
 
   async function handleSave() {
+    if (workingPhotos.length === 0) {
+      toast.error("Add at least one photo before saving.");
+      return;
+    }
     if (!localForm.name.trim()) {
       toast.error("Enter a dish name.");
       return;
@@ -61,38 +154,75 @@ function DetailsTab() {
       );
       return;
     }
-    const ok = await saveDetails({
-      name: localForm.name,
-      price: localForm.price,
-      description: localForm.description,
-      status: localForm.status,
-    });
-    if (!ok) {
+
+    setSaving(true);
+    try {
+      // 1. Delete server photos the cook removed from the working set.
+      const survivingIds = new Set(
+        workingPhotos.filter((p) => p.serverId).map((p) => p.serverId),
+      );
+      const toDelete = photos.filter((p) => !survivingIds.has(p.id));
+      for (const p of toDelete) {
+        await fetch(`/api/business/dishes/${dishId}/photos/${p.id}`, {
+          method: "DELETE",
+        });
+      }
+
+      // 2. Upload newly added photos in order. If no existing photo survives,
+      //    the first new upload becomes the primary/cover.
+      const noneSurvive = survivingIds.size === 0;
+      const firstNewIdx = workingPhotos.findIndex((p) => p.file);
+      for (let i = 0; i < workingPhotos.length; i++) {
+        const wp = workingPhotos[i];
+        if (!wp.file) continue;
+        const fd = new FormData();
+        fd.set("photo", wp.file);
+        fd.set(
+          "isPrimary",
+          noneSurvive && i === firstNewIdx ? "true" : "false",
+        );
+        const res = await fetch(
+          `/api/business/dishes/${dishId}/photos/upload`,
+          { method: "POST", body: fd },
+        );
+        if (!res.ok) {
+          toast.error("A photo failed to upload.");
+        }
+      }
+
+      // 3. Save the text details (this reloads the dish).
+      const ok = await saveDetails({
+        name: localForm.name,
+        price: localForm.price,
+        description: localForm.description,
+        status: localForm.status,
+      });
+      if (!ok) {
+        toast.error("Could not save changes.");
+        await reload();
+        setInitialized(false);
+        return;
+      }
+      toast.success("Changes saved.");
+      router.push("/business/listings");
+    } catch {
       toast.error("Could not save changes.");
-      return;
+      await reload();
+      setInitialized(false);
+    } finally {
+      setSaving(false);
     }
-    toast.success("Changes saved.");
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
   }
 
-  async function handlePhotoSelect(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-    const err = validateDishPhotoFile(file);
-    if (err) {
-      toast.error(err);
-      return;
-    }
-    setUploadingPhoto(true);
-    try {
-      const ok = await addPhoto(file);
-      if (!ok) toast.error("Photo upload failed.");
-    } finally {
-      setUploadingPhoto(false);
-    }
-  }
+  // Dirty when the text fields changed, or photos were added/removed.
+  const photosDirty =
+    workingPhotos.some((p) => p.file) ||
+    workingPhotos
+      .filter((p) => p.serverId)
+      .map((p) => p.serverId)
+      .join(",") !== photos.map((p) => p.id).join(",");
+  const formDirty = form ? !deepEqual(localForm, form) : false;
+  const dirty = formDirty || photosDirty;
 
   if (loading && !initialized) {
     return <p className={styles.emptyNote}>Loading dish…</p>;
@@ -114,7 +244,6 @@ function DetailsTab() {
       </div>
 
       <div className={styles.overviewColumns}>
-        {/* Left — primary info + photos + save */}
         <div className={styles.overviewLeft}>
           <div className={styles.formGroup}>
             <label htmlFor="f-name" className={styles.formLabel}>
@@ -168,34 +297,44 @@ function DetailsTab() {
             <div className={styles.photoLabelRow}>
               <span className={styles.formLabel}>Photos</span>
               <span className={styles.photoCount}>
-                {photos.length} / {MAX_PHOTOS}
+                {workingPhotos.length} / {MAX_PHOTOS}
               </span>
             </div>
             <div className={styles.photoStrip}>
-              {photos.map((photo) => (
-                <div key={photo.id} className={styles.photoThumb}>
-                  <Image
-                    src={photo.url}
-                    alt="Dish photo"
-                    fill
-                    className={styles.photoImg}
-                  />
+              {workingPhotos.map((photo) => (
+                <div key={photo.key} className={styles.photoThumb}>
+                  {photo.file ? (
+                    // biome-ignore lint/performance/noImgElement: local file preview
+                    <img
+                      src={photo.url}
+                      alt="Dish preview"
+                      className={styles.photoImg}
+                    />
+                  ) : (
+                    <Image
+                      src={photo.url}
+                      alt="Dish photo"
+                      fill
+                      className={styles.photoImg}
+                    />
+                  )}
                   <button
                     type="button"
                     className={styles.photoRemove}
-                    onClick={() => void handleRemovePhoto(photo.id)}
+                    onClick={() => removeLocalPhoto(photo.key)}
                     aria-label="Remove photo"
                   >
                     <X size={11} />
                   </button>
                 </div>
               ))}
-              {photos.length < MAX_PHOTOS && (
+              {workingPhotos.length < MAX_PHOTOS && (
                 <>
                   <input
                     ref={photoInputRef}
                     type="file"
                     accept={DISH_PHOTO_ACCEPT}
+                    multiple
                     hidden
                     onChange={handlePhotoSelect}
                   />
@@ -203,10 +342,9 @@ function DetailsTab() {
                     type="button"
                     className={styles.photoAdd}
                     onClick={() => photoInputRef.current?.click()}
-                    disabled={uploadingPhoto}
                   >
                     <Camera size={15} className={styles.photoAddIcon} />
-                    <span>{uploadingPhoto ? "Uploading…" : "Add photo"}</span>
+                    <span>Add photo</span>
                   </button>
                 </>
               )}
@@ -216,31 +354,25 @@ function DetailsTab() {
           <div className={styles.formActions}>
             <button
               type="button"
+              className={styles.cancelBtn}
+              onClick={handleCancel}
+              disabled={saving}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
               className={styles.saveBtn}
               onClick={handleSave}
+              disabled={workingPhotos.length === 0 || saving || !dirty}
             >
-              {saved ? "Saved" : "Save changes"}
+              {saving ? "Saving…" : "Save changes"}
             </button>
-          </div>
-        </div>
-
-        {/* Right — availability card */}
-        <div className={styles.overviewRight}>
-          <div className={styles.statusCard}>
-            <span className={styles.statusCardLabel}>Availability</span>
-            <select
-              className={styles.formSelect}
-              value={localForm.status}
-              onChange={(e) =>
-                setLocalForm((f) => ({
-                  ...f,
-                  status: e.target.value as typeof localForm.status,
-                }))
-              }
-            >
-              <option value="active">Active</option>
-              <option value="inactive">Paused</option>
-            </select>
+            {workingPhotos.length === 0 && (
+              <span className={styles.saveHint}>
+                Add at least one photo to save.
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -259,17 +391,35 @@ function NutritionTab() {
     saveNutrition,
     loading,
   } = useDishDetail();
-  const [saved, setSaved] = useState(false);
+  const router = useRouter();
   const [otherChecked, setOtherChecked] = useState(false);
   const [otherText, setOtherText] = useState("");
   const [noneApplies, setNoneApplies] = useState(false);
   const [initialized, setInitialized] = useState(false);
+  const baselineRef = useRef<{
+    ingredients: IngredientRow[];
+    nutrition: NutritionForm;
+  } | null>(null);
 
   useEffect(() => {
     if (!loading && !initialized) {
+      baselineRef.current = { ingredients, nutrition };
       setInitialized(true);
     }
-  }, [loading, initialized]);
+  }, [loading, initialized, ingredients, nutrition]);
+
+  const dirty = baselineRef.current
+    ? !deepEqual(
+        { ingredients, nutrition, otherChecked, otherText, noneApplies },
+        {
+          ingredients: baselineRef.current.ingredients,
+          nutrition: baselineRef.current.nutrition,
+          otherChecked: false,
+          otherText: "",
+          noneApplies: false,
+        },
+      )
+    : false;
 
   function addIngredient() {
     setIngredients((prev) => [...prev, { id: `ing-${Date.now()}`, name: "" }]);
@@ -325,8 +475,7 @@ function NutritionTab() {
       return;
     }
     toast.success("Nutrition saved.");
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    router.push("/business/listings");
   }
 
   if (loading && !initialized) {
@@ -510,8 +659,20 @@ function NutritionTab() {
       </section>
 
       <div className={styles.formActions}>
-        <button type="button" className={styles.saveBtn} onClick={handleSave}>
-          {saved ? "Saved" : "Save changes"}
+        <button
+          type="button"
+          className={styles.cancelBtn}
+          onClick={() => router.push("/business/listings")}
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          className={styles.saveBtn}
+          onClick={handleSave}
+          disabled={!dirty}
+        >
+          Save changes
         </button>
       </div>
     </div>
@@ -548,7 +709,6 @@ function DishDetailContent() {
   if (loading) {
     return (
       <div className={styles.page}>
-        <BackToDishes />
         <p className={styles.emptyNote}>Loading dish…</p>
       </div>
     );
@@ -557,7 +717,6 @@ function DishDetailContent() {
   if (error) {
     return (
       <div className={styles.page}>
-        <BackToDishes />
         <p className={styles.emptyNote}>{error}</p>
       </div>
     );
@@ -565,7 +724,6 @@ function DishDetailContent() {
 
   return (
     <div className={styles.page}>
-      <BackToDishes />
       <div className={styles.tabRow}>
         {TABS.map((t) => (
           <button

@@ -65,7 +65,6 @@ export const cookProfiles = pgTable(
       scale: 2,
     }),
     leadTime: leadTimeEnum("lead_time"),
-    maxCapacity: integer("max_capacity"),
     offersPickup: boolean("offers_pickup").notNull().default(true),
     delivery: deliveryEnum("delivery"),
     acceptsSpecialRequests: boolean("accepts_special_requests")

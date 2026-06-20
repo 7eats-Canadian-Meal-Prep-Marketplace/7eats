@@ -6,7 +6,7 @@ import {
   notFound,
   unauthorized,
 } from "@/app/api/business/_lib/cook-auth";
-import { db } from "@/db";
+import { db, dbPool } from "@/db";
 import { dishes, dishPromotions } from "@/db/schema";
 import { logAndCheckRateLimit } from "@/lib/rate-limit";
 import { validatePromotionWindow } from "./_validate";
@@ -99,7 +99,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     // Only one promotion may be active per dish — deactivate the current one
     // before inserting the new active promotion (also guarded by a partial
     // unique index at the DB level).
-    const inserted = await db.transaction(async (tx) => {
+    const inserted = await dbPool.transaction(async (tx) => {
       await tx
         .update(dishPromotions)
         .set({ isActive: false })

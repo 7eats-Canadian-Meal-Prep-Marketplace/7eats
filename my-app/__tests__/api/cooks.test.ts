@@ -8,6 +8,7 @@ vi.mock("@/db/schema", () => ({
   authUser: {},
   cookProfiles: {},
   cookProfileTags: {},
+  cookPickupWindows: {},
   dishes: { id: "id", cookId: "cookId", status: "status" },
   tags: {},
   reviews: {},
@@ -75,6 +76,7 @@ const MOCK_COOK_ROW = {
   bio: "Home-cooked West African meals",
   leadTime: "1_day",
   delivery: "self",
+  offersPickup: true,
   pickupCity: "Toronto",
   avgRating: "4.5",
   reviewCount: "3",
@@ -104,9 +106,9 @@ describe("GET /api/cooks", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("returns 200 with array of cook cards", async () => {
-    // base rows, tag rows, fulfilled-order rows
+    // base rows, tag rows, fulfilled-order rows, window rows
     vi.mocked(db.select).mockImplementation(
-      selectQueue([[MOCK_COOK_ROW], [], []]),
+      selectQueue([[MOCK_COOK_ROW], [], [], []]),
     );
 
     const res = await getCooks(makeReq("http://localhost/api/cooks"));
@@ -120,7 +122,7 @@ describe("GET /api/cooks", () => {
   });
 
   it("returns 200 with empty array when no cooks", async () => {
-    vi.mocked(db.select).mockImplementation(selectQueue([[], [], []]));
+    vi.mocked(db.select).mockImplementation(selectQueue([[], [], [], []]));
 
     const res = await getCooks(makeReq("http://localhost/api/cooks"));
     expect(res.status).toBe(200);

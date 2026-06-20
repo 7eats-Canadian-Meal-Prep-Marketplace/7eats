@@ -317,6 +317,10 @@
   color: var(--white);
 }
 
+.dayPillActive:hover {
+  color: var(--white);
+}
+
 .perDayWindows {
   display: flex;
   flex-direction: column;
@@ -491,8 +495,13 @@
   transition: opacity 0.12s;
 }
 
-.saveBtn:hover {
+.saveBtn:hover:not(:disabled) {
   opacity: 0.82;
+}
+
+.saveBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .outlineBtn {

@@ -27,7 +27,9 @@ export async function GET(req: NextRequest) {
     }
 
     const stripe = getStripe();
-    const account = await stripe.accounts.retrieve(stripeAccountId);
+    const account = await stripe.v2.core.accounts.retrieve(stripeAccountId, {
+      include: ["configuration.recipient", "requirements"],
+    });
 
     return NextResponse.json({
       success: true,

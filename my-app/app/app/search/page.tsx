@@ -1,109 +1,121 @@
 "use client";
 
-import { Search, Star } from "lucide-react";
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
-import { kitchenDisplayName } from "@/lib/cook-display";
+import { parseCookSort, sortCooks } from "@/lib/cook-sort";
+import { useApp } from "../_app-context";
+import {
+  type BrowseCookCard,
+  CookGrid,
+  normalizeBrowseCook,
+} from "../_cook-card";
+import { SearchSortDropdown } from "../_search-sort";
+import { useServiceAddress } from "../_service-address-context";
 import { Skeleton } from "../_skeleton";
-import styles from "../browse/page.module.css";
+import browseStyles from "../browse/page.module.css";
+import searchStyles from "./page.module.css";
 
-type CookCard = {
-  id: string;
-  displayName: string | null;
-  cookName: string | null;
-  photoUrl: string | null;
-  bannerUrl: string | null;
-  bio: string | null;
-  tags: { slug: string; label: string }[];
-  pickupCity: string | null;
-  rating: number | null;
-  reviewCount: number;
-  representativeDishPhoto: string | null;
-  distanceKm: number | null;
-};
+function matchesQuery(cook: BrowseCookCard, q: string): boolean {
+  const hay = [
+    cook.displayName ?? "",
+    cook.cookName ?? "",
+    cook.pickupCity ?? "",
+    cook.bio ?? "",
+    ...cook.tags.map((t) => t.label),
+    ...cook.niches.map((t) => t.label),
+    ...cook.cuisines.map((t) => t.label),
+  ]
+    .join(" ")
+    .toLowerCase();
+  return hay.includes(q);
+}
 
-function initials(name: string | null): string {
-  if (!name) return "C";
-  return name
-    .split(" ")
-    .map((w) => w.charAt(0))
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
+function matchesCuisine(cook: BrowseCookCard, cuisine: string): boolean {
+  const needle = cuisine.toLowerCase();
+  return (
+    cook.cuisines.some((t) => t.label.toLowerCase().includes(needle)) ||
+    cook.tags.some((t) => t.label.toLowerCase().includes(needle))
+  );
 }
 
 function SearchContent() {
   const searchParams = useSearchParams();
+  const qParam = searchParams.get("q") ?? "";
   const cuisineParam = searchParams.get("cuisine") ?? "";
+  const sortKey = parseCookSort(searchParams.get("sort"));
 
-  const [cooks, setCooks] = useState<CookCard[]>([]);
-  const [query, setQuery] = useState(cuisineParam);
+  const [cooks, setCooks] = useState<BrowseCookCard[]>([]);
   const [loading, setLoading] = useState(true);
+  const { ready, currentAddress, coordsKey } = useServiceAddress();
+  const { fulfillment: fulfillmentMode } = useApp();
 
   useEffect(() => {
-    fetch("/api/cooks", { cache: "no-store" })
+    if (!ready) return;
+    if (!currentAddress || !coordsKey) {
+      setCooks([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    const params = new URLSearchParams();
+    params.set("lat", String(currentAddress.lat));
+    params.set("lng", String(currentAddress.lng));
+    fetch(`/api/cooks?${params.toString()}`, { cache: "no-store" })
       .then((r) => r.json())
-      .then((json) => setCooks(Array.isArray(json.data) ? json.data : []))
+      .then((json) => {
+        const rows = Array.isArray(json.data) ? json.data : [];
+        setCooks(
+          rows.map((r: Record<string, unknown>) => normalizeBrowseCook(r)),
+        );
+      })
       .catch(() => setCooks([]))
       .finally(() => setLoading(false));
-  }, []);
+  }, [coordsKey, currentAddress, ready]);
 
   const results = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return cooks;
-    return cooks.filter((c) => {
-      const hay = [
-        c.displayName ?? "",
-        c.cookName ?? "",
-        c.pickupCity ?? "",
-        c.bio ?? "",
-        ...c.tags.map((t) => t.label),
-      ]
-        .join(" ")
-        .toLowerCase();
-      return hay.includes(q);
-    });
-  }, [cooks, query]);
+    let list = cooks;
+    const q = qParam.trim().toLowerCase();
+    if (q) list = list.filter((c) => matchesQuery(c, q));
+    const cuisine = cuisineParam.trim();
+    if (cuisine && cuisine.toLowerCase() !== "all") {
+      list = list.filter((c) => matchesCuisine(c, cuisine));
+    }
+    return sortCooks(list, sortKey, fulfillmentMode);
+  }, [cooks, qParam, cuisineParam, sortKey, fulfillmentMode]);
+
+  const filterLabel = useMemo(() => {
+    const parts: string[] = [];
+    const q = qParam.trim();
+    const cuisine = cuisineParam.trim();
+    if (q) parts.push(`matching “${q}”`);
+    if (cuisine && cuisine.toLowerCase() !== "all") parts.push(cuisine);
+    return parts.join(" · ");
+  }, [qParam, cuisineParam]);
+
+  const hasFilter = filterLabel.length > 0;
 
   return (
-    <div className={styles.page}>
-      <div className={styles.filterBar}>
-        <div className={styles.filterInner}>
-          <label
-            className={styles.chipScroller}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              width: "100%",
-            }}
-          >
-            <Search size={18} aria-hidden />
-            <input
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search kitchens, cuisines, cities…"
-              style={{
-                flex: 1,
-                border: "none",
-                outline: "none",
-                font: "inherit",
-                background: "transparent",
-              }}
-            />
-          </label>
-        </div>
-      </div>
+    <div className={browseStyles.page}>
+      <div className={browseStyles.content}>
+        {hasFilter && !loading && (
+          <p className={browseStyles.searchSummary}>{filterLabel}</p>
+        )}
 
-      <div className={styles.content}>
+        {!loading && results.length > 0 && (
+          <div className={searchStyles.resultsBar}>
+            <p className={searchStyles.resultCount}>
+              {results.length} kitchen{results.length === 1 ? "" : "s"}
+            </p>
+            <SearchSortDropdown />
+          </div>
+        )}
+
         {loading ? (
-          <section className={styles.section}>
-            <div className={styles.grid}>
+          <section className={browseStyles.section}>
+            <div className={browseStyles.grid}>
               {[0, 1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className={styles.card} aria-hidden="true">
-                  <div className={styles.cardCover}>
+                <div key={i} className={browseStyles.card} aria-hidden="true">
+                  <div className={browseStyles.cardCover}>
                     <Skeleton
                       style={{ position: "absolute", inset: 0 }}
                       radius={0}
@@ -123,70 +135,15 @@ function SearchContent() {
             </div>
           </section>
         ) : results.length === 0 ? (
-          <div className={styles.emptyState}>
-            <p className={styles.emptyTitle}>No kitchens found</p>
-            <p className={styles.emptyDesc}>Try a different search.</p>
+          <div className={browseStyles.emptyState}>
+            <p className={browseStyles.emptyTitle}>No kitchens found</p>
+            <p className={browseStyles.emptyDesc}>
+              Try a different search in the bar above.
+            </p>
           </div>
         ) : (
-          <section className={styles.section}>
-            <div className={styles.grid}>
-              {results.map((cook) => (
-                <Link
-                  key={cook.id}
-                  href={`/app/cooks/${cook.id}/menu`}
-                  className={styles.card}
-                >
-                  <div className={styles.cardCover}>
-                    {cook.bannerUrl || cook.representativeDishPhoto ? (
-                      // biome-ignore lint/performance/noImgElement: cover
-                      <img
-                        src={
-                          cook.bannerUrl ??
-                          cook.representativeDishPhoto ??
-                          undefined
-                        }
-                        alt=""
-                        className={styles.cardImage}
-                      />
-                    ) : (
-                      <div className={styles.cardCoverPlaceholder} />
-                    )}
-                    <div className={styles.cardAvatar}>
-                      {cook.photoUrl ? (
-                        // biome-ignore lint/performance/noImgElement: avatar
-                        <img
-                          src={cook.photoUrl}
-                          alt=""
-                          className={styles.cookAvatarImg}
-                        />
-                      ) : (
-                        initials(cook.displayName)
-                      )}
-                    </div>
-                  </div>
-                  <div className={styles.cardBody}>
-                    <h3 className={styles.cardTitle}>
-                      {kitchenDisplayName(cook)}
-                    </h3>
-                    <p className={styles.metaLine}>{cook.pickupCity ?? ""}</p>
-                    {cook.tags.length > 0 && (
-                      <p className={styles.metaLine}>
-                        {cook.tags
-                          .slice(0, 3)
-                          .map((t) => t.label)
-                          .join(" · ")}
-                      </p>
-                    )}
-                    {cook.rating != null && (
-                      <p className={styles.metaLine}>
-                        <Star size={12} fill="currentColor" /> {cook.rating} (
-                        {cook.reviewCount})
-                      </p>
-                    )}
-                  </div>
-                </Link>
-              ))}
-            </div>
+          <section className={browseStyles.section}>
+            <CookGrid cooks={results} fulfillmentMode={fulfillmentMode} />
           </section>
         )}
       </div>

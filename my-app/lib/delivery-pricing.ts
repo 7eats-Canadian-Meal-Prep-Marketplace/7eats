@@ -10,6 +10,9 @@ export const DELIVERY_MAX_KM_MAX = 15;
 /** Sensible starting zone for home-cook self-delivery (km). */
 export const DEFAULT_MAX_DELIVERY_KM = 8;
 
+/** Upper bound for the optional "free delivery above subtotal" threshold (CAD). */
+export const FREE_DELIVERY_ABOVE_MAX = 9999.99;
+
 export function clampDeliveryRate(rate: number): number {
   const stepped = Math.round(rate / DELIVERY_RATE_STEP) * DELIVERY_RATE_STEP;
   return Math.min(

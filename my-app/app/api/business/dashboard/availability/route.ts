@@ -32,7 +32,6 @@ const bodySchema = z.object({
   leadTime: z
     .enum(["same_day", "1_day", "2_days", "3_days", "4_days", "5_days"])
     .optional(),
-  maxCapacity: z.number().int().min(1).max(1000).optional(),
   delivery: z.enum(["none", "self"]).optional(),
 });
 
@@ -81,7 +80,6 @@ export async function GET(req: NextRequest) {
       db
         .select({
           leadTime: cookProfiles.leadTime,
-          maxCapacity: cookProfiles.maxCapacity,
           offersPickup: cookProfiles.offersPickup,
           delivery: cookProfiles.delivery,
         })
@@ -205,7 +203,6 @@ export async function PUT(req: NextRequest) {
     await dbPool.transaction(async (tx) => {
       const profileUpdate: {
         leadTime?: (typeof profileFields)["leadTime"];
-        maxCapacity?: number;
         delivery?: "none" | "self";
         offersPickup?: boolean;
       } = { ...profileFields };
@@ -257,7 +254,6 @@ export async function PUT(req: NextRequest) {
       db
         .select({
           leadTime: cookProfiles.leadTime,
-          maxCapacity: cookProfiles.maxCapacity,
           offersPickup: cookProfiles.offersPickup,
           delivery: cookProfiles.delivery,
         })

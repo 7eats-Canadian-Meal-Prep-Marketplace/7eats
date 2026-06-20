@@ -109,7 +109,6 @@ type FormState = {
   deliveryDays: string[];
   fulfillment: FulfillmentType;
   leadTime: string;
-  maxCapacity: string;
   acceptsSpecialRequests: boolean;
   cancellationAllowed: boolean;
   // Step 3
@@ -139,7 +138,6 @@ type InitialData = {
   pickupWindows: Array<{ day: string; from: string; to: string }>;
   deliveryWindows?: Array<{ day: string; from: string; to: string }>;
   leadTime: string;
-  maxCapacity: string;
   delivery: string;
   offersPickup?: boolean;
   acceptsSpecialRequests: boolean;
@@ -273,7 +271,6 @@ export default function OnboardingWizard({
       return offersDelivery ? "delivery" : "pickup";
     })(),
     leadTime: initialData?.leadTime ?? "",
-    maxCapacity: initialData?.maxCapacity ?? "",
     acceptsSpecialRequests: initialData?.acceptsSpecialRequests ?? false,
     cancellationAllowed: initialData?.cancellationAllowed ?? false,
     certIdNumber: initialData?.certIdNumber ?? "",
@@ -475,7 +472,6 @@ export default function OnboardingWizard({
               : [],
             leadTime: form.leadTime,
             cancellationAllowed: form.cancellationAllowed,
-            maxCapacity: form.maxCapacity,
             delivery: offersDelivery ? "self" : "none",
             acceptsSpecialRequests: form.acceptsSpecialRequests,
           }),
@@ -1051,29 +1047,6 @@ function Step2({
                 ? "delivery day"
                 : "pickup day"}
             . Cancellations before it receive a full refund; no refund after.
-          </p>
-        </div>
-
-        <div className={styles.field}>
-          <label htmlFor="maxCapacity" className={styles.label}>
-            Max weekly plates
-          </label>
-          <input
-            id="maxCapacity"
-            type="number"
-            min={5}
-            max={500}
-            className={styles.input}
-            value={form.maxCapacity}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, maxCapacity: e.target.value }))
-            }
-            placeholder="e.g. 250"
-          />
-          <p className={styles.hint}>
-            Total plates (portions) you can make per week - not orders, since an
-            order may include several plates. We&apos;ll pause new orders once
-            this is reached.
           </p>
         </div>
 
