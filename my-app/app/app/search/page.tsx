@@ -15,52 +15,46 @@ import { Skeleton } from "../_skeleton";
 import browseStyles from "../browse/page.module.css";
 import searchStyles from "./page.module.css";
 
-function matchesQuery(cook: BrowseCookCard, q: string): boolean {
-  const hay = [
-    cook.displayName ?? "",
-    cook.cookName ?? "",
-    cook.pickupCity ?? "",
-    cook.bio ?? "",
-    ...cook.tags.map((t) => t.label),
-    ...cook.niches.map((t) => t.label),
-    ...cook.cuisines.map((t) => t.label),
-  ]
-    .join(" ")
-    .toLowerCase();
-  return hay.includes(q);
-}
-
-function matchesCuisine(cook: BrowseCookCard, cuisine: string): boolean {
-  const needle = cuisine.toLowerCase();
-  return (
-    cook.cuisines.some((t) => t.label.toLowerCase().includes(needle)) ||
-    cook.tags.some((t) => t.label.toLowerCase().includes(needle))
-  );
-}
-
 function SearchContent() {
   const searchParams = useSearchParams();
   const qParam = searchParams.get("q") ?? "";
   const cuisineParam = searchParams.get("cuisine") ?? "";
-  const sortKey = parseCookSort(searchParams.get("sort"));
+  const sortParam = searchParams.get("sort");
+  const sortKey = parseCookSort(sortParam);
 
   const [cooks, setCooks] = useState<BrowseCookCard[]>([]);
   const [loading, setLoading] = useState(true);
   const { ready, currentAddress, coordsKey } = useServiceAddress();
   const { fulfillment: fulfillmentMode } = useApp();
 
+  // The effective query: explicit search text, else a cuisine chip.
+  const effectiveQuery = useMemo(() => {
+    const q = qParam.trim();
+    if (q) return q;
+    const cuisine = cuisineParam.trim();
+    if (cuisine && cuisine.toLowerCase() !== "all") return cuisine;
+    return "";
+  }, [qParam, cuisineParam]);
+
   useEffect(() => {
     if (!ready) return;
-    if (!currentAddress || !coordsKey) {
+    if (!currentAddress || !coordsKey || !effectiveQuery) {
       setCooks([]);
       setLoading(false);
       return;
     }
     setLoading(true);
-    const params = new URLSearchParams();
-    params.set("lat", String(currentAddress.lat));
-    params.set("lng", String(currentAddress.lng));
-    fetch(`/api/cooks?${params.toString()}`, { cache: "no-store" })
+    const controller = new AbortController();
+    const params = new URLSearchParams({
+      q: effectiveQuery,
+      lat: String(currentAddress.lat),
+      lng: String(currentAddress.lng),
+      mode: fulfillmentMode,
+    });
+    fetch(`/api/search?${params.toString()}`, {
+      cache: "no-store",
+      signal: controller.signal,
+    })
       .then((r) => r.json())
       .then((json) => {
         const rows = Array.isArray(json.data) ? json.data : [];
@@ -68,20 +62,21 @@ function SearchContent() {
           rows.map((r: Record<string, unknown>) => normalizeBrowseCook(r)),
         );
       })
-      .catch(() => setCooks([]))
-      .finally(() => setLoading(false));
-  }, [coordsKey, currentAddress, ready]);
+      .catch((err) => {
+        if (err?.name !== "AbortError") setCooks([]);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
+  }, [coordsKey, currentAddress, ready, effectiveQuery, fulfillmentMode]);
 
   const results = useMemo(() => {
-    let list = cooks;
-    const q = qParam.trim().toLowerCase();
-    if (q) list = list.filter((c) => matchesQuery(c, q));
-    const cuisine = cuisineParam.trim();
-    if (cuisine && cuisine.toLowerCase() !== "all") {
-      list = list.filter((c) => matchesCuisine(c, cuisine));
-    }
-    return sortCooks(list, sortKey, fulfillmentMode);
-  }, [cooks, qParam, cuisineParam, sortKey, fulfillmentMode]);
+    // Default order is the server's relevance ranking. Only re-order when the
+    // user explicitly picks a sort from the dropdown.
+    if (!sortParam) return cooks;
+    return sortCooks(cooks, sortKey, fulfillmentMode);
+  }, [cooks, sortParam, sortKey, fulfillmentMode]);
 
   const filterLabel = useMemo(() => {
     const parts: string[] = [];
@@ -134,11 +129,18 @@ function SearchContent() {
               ))}
             </div>
           </section>
+        ) : !effectiveQuery ? (
+          <div className={browseStyles.emptyState}>
+            <p className={browseStyles.emptyTitle}>Search for a craving</p>
+            <p className={browseStyles.emptyDesc}>
+              Try a dish, cuisine, or kitchen name in the bar above.
+            </p>
+          </div>
         ) : results.length === 0 ? (
           <div className={browseStyles.emptyState}>
             <p className={browseStyles.emptyTitle}>No kitchens found</p>
             <p className={browseStyles.emptyDesc}>
-              Try a different search in the bar above.
+              Nothing nearby matches “{effectiveQuery}”. Try another search.
             </p>
           </div>
         ) : (

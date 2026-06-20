@@ -10,6 +10,7 @@ import {
 } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { withDeliveryDefaults } from "@/lib/delivery-pricing";
+import { rebuildCookSearchIndexSafe } from "@/lib/search/index-builder";
 import { uploadAvatar, uploadBanner } from "@/lib/storage/avatars";
 import { uploadCert } from "@/lib/storage/certs";
 import { getStripe } from "@/lib/stripe";
@@ -192,6 +193,9 @@ async function step1(req: Request, userId: string) {
     }
   });
 
+  // Name, bio and cuisine/niche tags feed the search document.
+  rebuildCookSearchIndexSafe(profile.id);
+
   return NextResponse.json({ success: true });
 }
 
@@ -341,6 +345,9 @@ async function step2(req: Request, userId: string) {
     }
   });
 
+  // Pickup geo, delivery mode and offers-pickup feed search reachability.
+  rebuildCookSearchIndexSafe(profile.id);
+
   return NextResponse.json({ success: true });
 }
 
@@ -462,6 +469,7 @@ async function step4(req: Request, userId: string) {
 
   const [profile] = await db
     .select({
+      id: cookProfiles.id,
       currentSetupStep: cookProfiles.currentSetupStep,
       stripeAccountId: cookProfiles.stripeAccountId,
     })
@@ -507,6 +515,9 @@ async function step4(req: Request, userId: string) {
       currentSetupStep: Math.max(profile.currentSetupStep, 4),
     })
     .where(eq(cookProfiles.userId, userId));
+
+  // setup_complete flips the cook into public visibility for search.
+  rebuildCookSearchIndexSafe(profile.id);
 
   return NextResponse.json({ success: true });
 }

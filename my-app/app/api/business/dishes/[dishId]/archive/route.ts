@@ -8,6 +8,7 @@ import {
 import { db } from "@/db";
 import { dishes } from "@/db/schema";
 import { isDishPaused, setDishPaused } from "@/lib/dish-status";
+import { rebuildCookSearchIndexSafe } from "@/lib/search/index-builder";
 
 export type Params = { params: Promise<{ dishId: string }> };
 
@@ -36,6 +37,9 @@ export async function POST(req: NextRequest, { params }: Params) {
 
     const updated = await setDishPaused(dishId, cookId);
     if (!updated) return notFound("Dish");
+
+    // Pausing may drop the cook below the "has an active dish" visibility bar.
+    rebuildCookSearchIndexSafe(cookId);
 
     return NextResponse.json({ success: true, data: updated });
   } catch (err) {

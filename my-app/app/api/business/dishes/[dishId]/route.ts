@@ -17,6 +17,7 @@ import {
   tags,
 } from "@/db/schema";
 import { mapDishStatusForDb, normalizeDishStatus } from "@/lib/dish-status";
+import { rebuildCookSearchIndexSafe } from "@/lib/search/index-builder";
 
 export type Params = { params: Promise<{ dishId: string }> };
 
@@ -184,6 +185,9 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       .where(and(eq(dishes.id, dishId), eq(dishes.cookId, cookId)))
       .returning();
 
+    // Name/description/cuisine/categories/status feed the search document.
+    rebuildCookSearchIndexSafe(cookId);
+
     return NextResponse.json({
       success: true,
       data: {
@@ -245,6 +249,8 @@ export async function DELETE(req: NextRequest, { params }: Params) {
     await db
       .delete(dishes)
       .where(and(eq(dishes.id, dishId), eq(dishes.cookId, cookId)));
+
+    rebuildCookSearchIndexSafe(cookId);
 
     return NextResponse.json({ success: true });
   } catch (err) {

@@ -38,7 +38,7 @@ function makeRequest(body: unknown) {
 
 function mockSession(userId: string | null) {
   vi.mocked(auth.api.getSession).mockResolvedValue(
-    userId ? ({ user: { id: userId } } as never) : null,
+    userId ? ({ user: { id: userId, role: "client" } } as never) : null,
   );
 }
 

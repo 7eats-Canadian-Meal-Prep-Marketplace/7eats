@@ -37,7 +37,7 @@ const USER_ID = "user-uuid";
 
 function mockSession(id: string | null) {
   vi.mocked(auth.api.getSession).mockResolvedValue(
-    id ? ({ user: { id } } as never) : null,
+    id ? ({ user: { id, role: "client" } } as never) : null,
   );
 }
 

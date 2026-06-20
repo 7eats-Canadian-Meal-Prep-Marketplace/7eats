@@ -163,6 +163,117 @@
   border-radius: var(--radius-pill);
 }
 
+/* ─── Search autocomplete ───────────────────────────────────────────────────── */
+.headerSearchWrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+}
+
+.suggestMenu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 60;
+  background: var(--white);
+  border: 1px solid var(--grey-200);
+  border-radius: 14px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+  padding: 6px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.suggestSection {
+  display: flex;
+  flex-direction: column;
+}
+
+.suggestSection + .suggestSection {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--grey-100);
+}
+
+.suggestTerm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  background: transparent;
+  border-radius: 9px;
+  font-size: 13.5px;
+  font-family: inherit;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.suggestTermIcon {
+  color: var(--grey-500);
+  flex-shrink: 0;
+}
+
+.suggestKitchen {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 10px;
+  border: none;
+  background: transparent;
+  border-radius: 9px;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.suggestActive {
+  background: var(--grey-100);
+}
+
+.suggestThumb {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--grey-100);
+}
+
+.suggestThumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.suggestKitchenText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.suggestKitchenName {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.suggestKitchenMeta {
+  font-size: 12px;
+  color: var(--grey-500);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 @media (max-width: 600px) {
   .headerSearch {
     padding: 8px 12px;

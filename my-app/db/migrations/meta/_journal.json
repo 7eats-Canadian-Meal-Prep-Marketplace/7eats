@@ -55,7 +55,14 @@
       "idx": 7,
       "version": "7",
       "when": 1782600000000,
-      "tag": "0007_guest_order_access",
+      "tag": "0007_cook_search_index",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1782700000000,
+      "tag": "0008_guest_order_access",
       "breakpoints": true
     }
   ]
