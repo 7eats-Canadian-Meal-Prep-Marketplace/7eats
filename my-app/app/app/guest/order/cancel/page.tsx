@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
-import styles from "../../checkout/confirmation/page.module.css";
+import styles from "../../../checkout/confirmation/page.module.css";
 
 function GuestCancelInner() {
   const searchParams = useSearchParams();

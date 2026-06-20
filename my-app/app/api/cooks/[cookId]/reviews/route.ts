@@ -1,4 +1,4 @@
-import { count, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, count, desc, eq, inArray, sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { authUser, cookProfiles, orderDishes, reviews } from "@/db/schema";
@@ -20,10 +20,19 @@ export async function GET(
   const offset = Number.isNaN(rawOffset) ? 0 : Math.max(0, rawOffset);
 
   try {
+    // Reviews are part of the public kitchen — hidden until onboarding is
+    // complete, so an incomplete (or inactive) cook 404s like a missing one.
     const [cook] = await db
       .select({ id: cookProfiles.id })
       .from(cookProfiles)
-      .where(eq(cookProfiles.id, cookId))
+      .innerJoin(authUser, eq(cookProfiles.userId, authUser.id))
+      .where(
+        and(
+          eq(cookProfiles.id, cookId),
+          eq(authUser.status, "active"),
+          eq(cookProfiles.setupComplete, true),
+        ),
+      )
       .limit(1);
 
     if (!cook) {

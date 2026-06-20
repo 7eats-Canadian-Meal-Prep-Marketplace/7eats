@@ -1,4 +1,4 @@
-import { avg, count, eq, sql } from "drizzle-orm";
+import { and, avg, count, eq, sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import {
@@ -43,7 +43,15 @@ export async function GET(
       })
       .from(cookProfiles)
       .innerJoin(authUser, eq(cookProfiles.userId, authUser.id))
-      .where(eq(cookProfiles.id, cookId))
+      // Kitchen stays hidden until onboarding is complete — incomplete or
+      // inactive cooks 404 even via direct link.
+      .where(
+        and(
+          eq(cookProfiles.id, cookId),
+          eq(authUser.status, "active"),
+          eq(cookProfiles.setupComplete, true),
+        ),
+      )
       .limit(1);
 
     if (!row) {

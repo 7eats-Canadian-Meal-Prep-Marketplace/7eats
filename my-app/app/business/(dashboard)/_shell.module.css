@@ -544,6 +544,14 @@
   color: var(--grey-700);
 }
 
+.bannerNote {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--grey-700);
+  max-width: 52ch;
+}
+
 .bannerSteps {
   display: flex;
   flex-direction: column;
