@@ -50,6 +50,13 @@
       "when": 1782500000000,
       "tag": "0006_drop_max_capacity",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1782600000000,
+      "tag": "0007_cook_search_index",
+      "breakpoints": true
     }
   ]
 }

@@ -12,6 +12,7 @@ export * from "./notifications";
 export * from "./orders";
 export * from "./payments";
 export * from "./preferences";
+export * from "./search";
 export * from "./social";
 export * from "./subscriptions";
 export * from "./tags";

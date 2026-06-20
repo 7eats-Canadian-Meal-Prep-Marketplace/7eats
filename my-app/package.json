@@ -13,6 +13,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node scripts/db-migrate.mjs",
     "db:push": "drizzle-kit push",
+    "db:search:backfill": "node scripts/backfill-search-index.mjs",
     "prepare": "cd .. && husky"
   },
   "lint-staged": {
