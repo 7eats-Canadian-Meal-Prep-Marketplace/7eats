@@ -14,20 +14,53 @@
   margin-bottom: 40px;
 }
 
+/* Pinned back control — stays reachable through the whole scroll. Lives as a
+   direct child of .page (not .header) so its sticky box spans the full page
+   height; a translucent blurred pill keeps it legible over scrolling cards. */
 .back {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  align-self: flex-start;
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  min-height: 36px;
+  margin-bottom: 18px;
+  padding: 7px 14px 7px 11px;
+  touch-action: manipulation;
   font-size: 13.5px;
   font-weight: 500;
   color: var(--grey-700);
   text-decoration: none;
-  transition: color 0.12s;
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--grey-200);
+  border-radius: 999px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
   width: fit-content;
+  transition:
+    color 0.12s,
+    border-color 0.12s,
+    box-shadow 0.12s;
 }
 
 .back:hover {
   color: var(--ink);
+  border-color: var(--grey-300);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.07);
+}
+
+.back:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .back {
+    transition: none;
+  }
 }
 
 .title {
