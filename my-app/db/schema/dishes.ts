@@ -25,8 +25,10 @@ const ownDish = sql`cook_id IN (
   SELECT id FROM cook_profiles WHERE user_id = auth.uid()::text
 )`;
 
-// dish is publicly visible when it is active
-const dishIsActive = sql`status = 'active'`;
+// dish is publicly visible when it is active AND its cook's kitchen is public
+// (onboarding complete + active account) — hides dishes of cooks who saved
+// their setup for later.
+const dishIsActive = sql`status = 'active' AND app_cook_is_public(cook_id)`;
 
 // helper for child tables: cook owns the parent dish
 const ownDishChild = sql`dish_id IN (
@@ -35,9 +37,9 @@ const ownDishChild = sql`dish_id IN (
   WHERE cp.user_id = auth.uid()
 )`;
 
-// helper for child tables: parent dish is active
+// helper for child tables: parent dish is active and its cook's kitchen is public
 const dishChildOfActive = sql`dish_id IN (
-  SELECT id FROM dishes WHERE status = 'active'
+  SELECT id FROM dishes WHERE status = 'active' AND app_cook_is_public(cook_id)
 )`;
 
 // ─── Dish ────────────────────────────────────────────────────────────────────
@@ -305,7 +307,7 @@ export const dishTags = pgTable(
       for: "select",
       to: "public",
       using: sql`dish_id IN (
-        SELECT id FROM dishes WHERE status = 'active'
+        SELECT id FROM dishes WHERE status = 'active' AND app_cook_is_public(cook_id)
       )`,
     }),
     pgPolicy("dish_tags_select_own", {
@@ -393,7 +395,7 @@ export const dishPromotions = pgTable(
       to: "public",
       using: sql`
         is_active = TRUE
-        AND dish_id IN (SELECT id FROM dishes WHERE status = 'active')
+        AND dish_id IN (SELECT id FROM dishes WHERE status = 'active' AND app_cook_is_public(cook_id))
         AND (valid_from IS NULL OR valid_from <= NOW())
         AND (valid_until IS NULL OR valid_until > NOW())
         AND (max_uses IS NULL OR uses_count < max_uses)

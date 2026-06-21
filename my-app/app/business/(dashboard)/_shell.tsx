@@ -355,6 +355,11 @@ export default function DashboardShell({
                 <span className={styles.bannerSub}>
                   Complete the remaining steps to go live on 7eats.
                 </span>
+                <span className={styles.bannerNote}>
+                  Until then, your kitchen and dishes stay hidden from customers
+                  — you can keep adding them now and they’ll appear the moment
+                  setup is complete.
+                </span>
               </div>
               <ul className={styles.bannerSteps}>
                 {pendingSteps.map((s) => (

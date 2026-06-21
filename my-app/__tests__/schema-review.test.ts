@@ -8,6 +8,10 @@ function schemaFile(name: string) {
   return readFileSync(join(schemaDir, name), "utf8");
 }
 
+function sqlFile(name: string) {
+  return readFileSync(join(process.cwd(), "db", "sql", name), "utf8");
+}
+
 describe("reviewed database schema safeguards", () => {
   it("avoids self-referential admin RLS checks on users", () => {
     // user fields migrated to Better Auth (db/schema/auth.ts); admin RLS
@@ -113,6 +117,29 @@ describe("reviewed database schema safeguards", () => {
     expect(ordersSchema).toContain("o.status = 'fulfilled'");
     // listing_id was dropped from review validation
     expect(ordersSchema).not.toContain("o.listing_id = reviews.listing_id");
+  });
+
+  it("hides a cook's kitchen from public reads until onboarding completes", () => {
+    const helpers = sqlFile("neon-auth-helpers.sql");
+    const cooksSchema = schemaFile("cooks.ts");
+    const dishesSchema = schemaFile("dishes.ts");
+
+    // The centralized public-visibility predicate must exist.
+    expect(helpers).toContain(
+      "CREATE OR REPLACE FUNCTION public.app_cook_is_public(cook_id uuid)",
+    );
+    expect(helpers).toContain("cp.setup_complete = true");
+
+    // Cook profile public-select is gated on setup_complete.
+    expect(cooksSchema).toContain("cook_profiles_select_active");
+    expect(cooksSchema).toContain("cook_profiles.setup_complete = true");
+
+    // Dishes and their child tables only surface for a public cook.
+    expect(dishesSchema).toContain(
+      "status = 'active' AND app_cook_is_public(cook_id)",
+    );
+    // No public dish-read predicate may rely on status alone.
+    expect(dishesSchema).not.toContain("WHERE status = 'active')");
   });
 
   it("records per-dish pricing on order_dishes", () => {

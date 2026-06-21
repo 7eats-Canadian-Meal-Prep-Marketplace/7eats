@@ -4,6 +4,7 @@ import { getCookId, unauthorized } from "@/app/api/business/_lib/cook-auth";
 import { db } from "@/db";
 import { cookProfiles } from "@/db/schema";
 import { getStripe } from "@/lib/stripe";
+import { getCachedStripeAccount } from "@/lib/stripe-account-cache";
 import { readStripeConnectAccountStatus } from "@/lib/stripe-connect";
 
 export async function GET(req: NextRequest) {
@@ -27,9 +28,11 @@ export async function GET(req: NextRequest) {
     }
 
     const stripe = getStripe();
-    const account = await stripe.v2.core.accounts.retrieve(stripeAccountId, {
-      include: ["configuration.recipient", "requirements"],
-    });
+    const account = await getCachedStripeAccount(stripeAccountId, () =>
+      stripe.v2.core.accounts.retrieve(stripeAccountId, {
+        include: ["configuration.recipient", "requirements"],
+      }),
+    );
 
     return NextResponse.json({
       success: true,
