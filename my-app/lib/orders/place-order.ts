@@ -86,6 +86,7 @@ export async function placeClientOrder(
       id: cookProfiles.id,
       displayName: cookProfiles.displayName,
       userStatus: authUser.status,
+      setupComplete: cookProfiles.setupComplete,
       minOrderQty: cookProfiles.minOrderQty,
       maxOrderQty: cookProfiles.maxOrderQty,
       cancellationAllowed: cookProfiles.cancellationAllowed,
@@ -105,7 +106,9 @@ export async function placeClientOrder(
     .where(eq(cookProfiles.id, cookId))
     .limit(1);
 
-  if (!cook || cook.userStatus !== "active") {
+  // A cook whose onboarding is incomplete has a hidden kitchen — treat as
+  // not found so orders can't be placed against it via direct API calls.
+  if (!cook || cook.userStatus !== "active" || !cook.setupComplete) {
     return { ok: false, status: 404, error: "Cook not found." };
   }
   if (!cook.stripeAccountId) {

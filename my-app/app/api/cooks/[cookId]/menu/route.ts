@@ -42,7 +42,15 @@ export async function GET(
       })
       .from(cookProfiles)
       .innerJoin(authUser, eq(cookProfiles.userId, authUser.id))
-      .where(and(eq(cookProfiles.id, cookId), eq(authUser.status, "active")))
+      // Kitchen stays hidden until onboarding is complete — incomplete cooks
+      // 404 even via direct link, the same as a non-existent cook.
+      .where(
+        and(
+          eq(cookProfiles.id, cookId),
+          eq(authUser.status, "active"),
+          eq(cookProfiles.setupComplete, true),
+        ),
+      )
       .limit(1);
 
     if (!cook) {
