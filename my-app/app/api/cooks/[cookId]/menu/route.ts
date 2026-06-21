@@ -38,6 +38,7 @@ export async function GET(
         cancellationAllowed: cookProfiles.cancellationAllowed,
         acceptsSpecialRequests: cookProfiles.acceptsSpecialRequests,
         pickupCity: cookProfiles.pickupCity,
+        pickupProvince: cookProfiles.pickupProvince,
       })
       .from(cookProfiles)
       .innerJoin(authUser, eq(cookProfiles.userId, authUser.id))

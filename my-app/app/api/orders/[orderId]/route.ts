@@ -6,6 +6,7 @@ import { authUser, cookProfiles, orderDishes, orders } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { isRefundEligible } from "@/lib/order-pricing";
 import { cancelClientOrder } from "@/lib/orders/cancel-order";
+import { getTaxLabel } from "@/lib/tax";
 
 function formatPickupDate(isoString: string): string {
   const d = new Date(isoString);
@@ -53,6 +54,8 @@ export async function GET(req: NextRequest, { params }: Params) {
         id: orders.id,
         status: orders.status,
         totalPrice: orders.totalPrice,
+        taxAmount: orders.taxAmount,
+        taxProvince: orders.taxProvince,
         currency: orders.currency,
         pickupAt: orders.pickupAt,
         notes: orders.notes,
@@ -132,6 +135,9 @@ export async function GET(req: NextRequest, { params }: Params) {
       id: row.id,
       status: row.status,
       totalPrice: row.totalPrice,
+      taxAmount: row.taxAmount,
+      taxProvince: row.taxProvince,
+      taxLabel: row.taxProvince ? getTaxLabel(row.taxProvince) : null,
       currency: row.currency,
       pickupAt: pickupAtIso,
       notes: row.notes ?? null,

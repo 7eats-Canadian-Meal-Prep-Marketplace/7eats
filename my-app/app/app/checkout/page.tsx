@@ -113,7 +113,7 @@ function resolvedToNormalized(resolved: ResolvedAddress): NormalizedAddress {
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { isLoggedIn, userName, userEmail, province, setProvince } = useApp();
+  const { isLoggedIn, userName, userEmail, setProvince } = useApp();
   const {
     currentAddress,
     ready: addressReady,
@@ -125,6 +125,7 @@ export default function CheckoutPage() {
   const {
     cookId,
     cookName,
+    cookProvince,
     items,
     subtotal,
     totalQuantity,
@@ -160,6 +161,11 @@ export default function CheckoutPage() {
   const [deliveryWindows, setDeliveryWindows] = useState<FulfillmentWindow[]>(
     [],
   );
+  const [pendingPayment, setPendingPayment] = useState<{
+    orderId: string;
+    clientSecret: string;
+    guestAccessToken?: string;
+  } | null>(null);
 
   const isDelivery = fulfillmentMode === "delivery";
   const displayAddress = pendingAddress ?? currentAddress;
@@ -236,13 +242,13 @@ export default function CheckoutPage() {
 
   const { tax, grandTotal, taxLabel } = useMemo(() => {
     const taxAmount =
-      Math.round(calcTax(subtotal + deliveryFee, province) * 100) / 100;
+      Math.round(calcTax(subtotal + deliveryFee, cookProvince) * 100) / 100;
     return {
       tax: taxAmount,
       grandTotal: Math.round((subtotal + deliveryFee + taxAmount) * 100) / 100,
-      taxLabel: getTaxLabel(province),
+      taxLabel: getTaxLabel(cookProvince),
     };
-  }, [subtotal, deliveryFee, province]);
+  }, [subtotal, deliveryFee, cookProvince]);
 
   const refundPickupAt = useMemo(
     () =>
@@ -386,86 +392,127 @@ export default function CheckoutPage() {
       }
     }
 
-    const paymentMethodId = await paymentRef.current?.resolvePaymentMethodId();
-    if (!paymentMethodId) return;
+    if (!pendingPayment) {
+      setPlacing(true);
+      try {
+        if (notes !== noteDraft) setNotes(noteDraft.trim() || null);
 
-    setPlacing(true);
+        const orderPayload = {
+          cookId,
+          dishes: items.map((i) => ({
+            dishId: i.dishId,
+            quantity: i.quantity,
+            promotionId: i.promotionId,
+          })),
+          fulfillmentMode,
+          deliveryAddress: isDelivery ? deliveryAddress : undefined,
+          customerLat: isDelivery ? displayAddress?.lat : undefined,
+          customerLng: isDelivery ? displayAddress?.lng : undefined,
+          notes: (noteDraft.trim() || notes) ?? undefined,
+        };
 
-    try {
-      if (notes !== noteDraft) setNotes(noteDraft.trim() || null);
+        if (!isLoggedIn) {
+          const guestRes = await fetch("/api/orders/guest", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              ...orderPayload,
+              firstName: firstName.trim(),
+              lastName: lastName.trim(),
+              email: email.trim(),
+              phone: phone.trim(),
+              acceptedTerms: true,
+            }),
+          });
+          const guestData = await guestRes.json();
+          if (guestData.needsLogin) {
+            setNeedsLogin({ email: guestData.email ?? email.trim() });
+            return;
+          }
+          if (!guestRes.ok) {
+            setError(guestData.error ?? "Could not place your order.");
+            return;
+          }
 
-      const orderPayload = {
-        cookId,
-        dishes: items.map((i) => ({
-          dishId: i.dishId,
-          quantity: i.quantity,
-          promotionId: i.promotionId,
-        })),
-        paymentMethodId,
-        fulfillmentMode,
-        deliveryAddress: isDelivery ? deliveryAddress : undefined,
-        customerLat: isDelivery ? displayAddress?.lat : undefined,
-        customerLng: isDelivery ? displayAddress?.lng : undefined,
-        notes: (noteDraft.trim() || notes) ?? undefined,
-      };
+          setPendingPayment({
+            orderId: guestData.data.orderId,
+            clientSecret: guestData.data.clientSecret,
+            guestAccessToken: guestData.data.accessToken,
+          });
+          setPaymentReady(false);
+          return;
+        }
 
-      if (!isLoggedIn) {
-        const guestRes = await fetch("/api/orders/guest", {
+        const res = await fetch("/api/orders", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            ...orderPayload,
-            firstName: firstName.trim(),
-            lastName: lastName.trim(),
-            email: email.trim(),
-            phone: phone.trim(),
-            acceptedTerms: true,
-          }),
+          body: JSON.stringify(orderPayload),
         });
-        const guestData = await guestRes.json();
-        if (guestData.needsLogin) {
-          setNeedsLogin({ email: guestData.email ?? email.trim() });
-          setPlacing(false);
-          return;
-        }
-        if (!guestRes.ok) {
-          setError(guestData.error ?? "Could not place your order.");
-          setPlacing(false);
+        const data = await res.json();
+        if (!res.ok) {
+          setError(data.error ?? "Could not place your order.");
           return;
         }
 
-        setOrdered(true);
-        clearCart();
-        const token = guestData.data.accessToken as string;
-        router.push(
-          `/app/checkout/guest-confirmation?token=${encodeURIComponent(token)}`,
-        );
+        setPendingPayment({
+          orderId: data.data.orderId,
+          clientSecret: data.data.clientSecret,
+        });
+        setPaymentReady(false);
+      } catch {
+        setError("Network error. Please try again.");
+      } finally {
+        setPlacing(false);
+      }
+      return;
+    }
+
+    setPlacing(true);
+    try {
+      const payResult = await paymentRef.current?.confirmPayment();
+      if (!payResult?.ok) {
+        setError(payResult?.error ?? "Payment failed. Please try again.");
         return;
       }
 
-      const res = await fetch("/api/orders", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(orderPayload),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error ?? "Could not place your order.");
-        setPlacing(false);
+      const confirmRes = await fetch(
+        `/api/orders/${pendingPayment.orderId}/confirm-payment`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(
+            pendingPayment.guestAccessToken
+              ? { guestAccessToken: pendingPayment.guestAccessToken }
+              : {},
+          ),
+        },
+      );
+      const confirmData = await confirmRes.json();
+      if (!confirmRes.ok) {
+        setError(confirmData.error ?? "Could not confirm your payment.");
         return;
       }
 
       setOrdered(true);
+      clearCart();
+
+      if (pendingPayment.guestAccessToken) {
+        router.push(
+          `/app/checkout/guest-confirmation?token=${encodeURIComponent(pendingPayment.guestAccessToken)}`,
+        );
+        return;
+      }
+
       const params = new URLSearchParams({
         count: "1",
-        oid0: data.data.orderId,
+        oid0: pendingPayment.orderId,
         cook0: cookName ?? "Your cook",
         mode0: fulfillmentMode,
       });
-      clearCart();
       router.push(`/app/checkout/confirmation?${params.toString()}`);
     } catch {
-      setError("Network error — please try again.");
+      setError("Network error. Please try again.");
+    } finally {
       setPlacing(false);
     }
   }
@@ -732,7 +779,7 @@ export default function CheckoutPage() {
             <h2 className={styles.formTitle}>Payment</h2>
             <CheckoutPaymentSection
               ref={paymentRef}
-              isLoggedIn={isLoggedIn}
+              clientSecret={pendingPayment?.clientSecret ?? null}
               onReadyChange={setPaymentReady}
             />
           </section>
@@ -781,10 +828,18 @@ export default function CheckoutPage() {
               <button
                 type="button"
                 className={styles.placeOrderBtn}
-                disabled={placing || !paymentReady}
+                disabled={
+                  placing ||
+                  (pendingPayment ? !paymentReady : false) ||
+                  !agreedPolicy
+                }
                 onClick={() => void placeOrder()}
               >
-                {placing ? "Processing…" : "Place order"}
+                {placing
+                  ? "Processing…"
+                  : pendingPayment
+                    ? `Pay $${formatCartMoney(grandTotal)}`
+                    : "Continue to payment"}
               </button>
 
               <p className={styles.terms}>

@@ -14,6 +14,7 @@ import {
   orders,
   stripeWebhookEvents,
 } from "@/db/schema";
+import { markOrderPaymentAuthorized } from "@/lib/orders/confirm-order-payment";
 import { getStripe } from "@/lib/stripe";
 
 export async function POST(req: NextRequest) {
@@ -399,6 +400,14 @@ export async function POST(req: NextRequest) {
           .update(cookPayouts)
           .set({ status: "cancelled" })
           .where(eq(cookPayouts.stripePayoutId, payout.id));
+        break;
+      }
+
+      case "payment_intent.amount_capturable_updated": {
+        const pi = event.data.object as Stripe.PaymentIntent;
+        if (pi.status === "requires_capture") {
+          await markOrderPaymentAuthorized(pi.id, { sendEmails: true });
+        }
         break;
       }
 

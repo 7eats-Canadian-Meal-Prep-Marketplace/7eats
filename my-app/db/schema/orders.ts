@@ -59,6 +59,9 @@ export const orders = pgTable(
       scale: 2,
     }),
     deliveryDistanceKm: integer("delivery_distance_km"),
+    /** HST/GST collected on subtotal + delivery; place of supply = cook province. */
+    taxAmount: numeric("tax_amount", { precision: 10, scale: 2 }),
+    taxProvince: varchar("tax_province", { length: 2 }),
     fulfillmentMode: varchar("fulfillment_mode", { length: 20 }),
     fulfilledAt: timestamp("fulfilled_at"),
     cancelledAt: timestamp("cancelled_at"),
@@ -111,6 +114,10 @@ export const orders = pgTable(
       sql`${t.discountAmount} IS NULL OR ${t.discountAmount} >= 0`,
     ),
     check("orders_total_price_non_negative", sql`${t.totalPrice} >= 0`),
+    check(
+      "orders_tax_amount_non_negative",
+      sql`${t.taxAmount} IS NULL OR ${t.taxAmount} >= 0`,
+    ),
     check(
       "orders_pickup_code_attempts_non_negative",
       sql`${t.pickupCodeAttempts} >= 0`,

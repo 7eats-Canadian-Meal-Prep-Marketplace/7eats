@@ -42,6 +42,10 @@ type ApiOrder = {
   id: string;
   status: OrderStatus;
   totalPrice: string | null;
+  taxAmount: string | null;
+  taxProvince: string | null;
+  taxLabel: string | null;
+  deliveryFeeSnapshot: string | null;
   currency: string | null;
   pickupAt: string | null;
   pickupDate: string | null;
@@ -538,6 +542,46 @@ export default function OrderDetailPage({
               )}
             </div>
           ))}
+          <div className={styles.totalDivider} />
+          {(() => {
+            const subtotal = order.dishes.reduce(
+              (sum, dish) => sum + Number(dish.lineTotal ?? 0),
+              0,
+            );
+            const deliveryFee = Number(order.deliveryFeeSnapshot ?? 0);
+            const taxAmount = Number(order.taxAmount ?? 0);
+            return (
+              <>
+                <div className={styles.dishRow}>
+                  <span className={styles.dishQty} />
+                  <span className={styles.totalLabel}>Subtotal</span>
+                  <span className={styles.totalVal}>
+                    ${subtotal.toFixed(2)}
+                  </span>
+                </div>
+                {deliveryFee > 0 && (
+                  <div className={styles.dishRow}>
+                    <span className={styles.dishQty} />
+                    <span className={styles.totalLabel}>Delivery</span>
+                    <span className={styles.totalVal}>
+                      ${deliveryFee.toFixed(2)}
+                    </span>
+                  </div>
+                )}
+                {taxAmount > 0 && (
+                  <div className={styles.dishRow}>
+                    <span className={styles.dishQty} />
+                    <span className={styles.totalLabel}>
+                      {order.taxLabel ?? "Tax"}
+                    </span>
+                    <span className={styles.totalVal}>
+                      ${taxAmount.toFixed(2)}
+                    </span>
+                  </div>
+                )}
+              </>
+            );
+          })()}
           <div className={styles.totalDivider} />
           <div className={`${styles.dishRow} ${styles.totalRow}`}>
             <span className={styles.dishQty} />

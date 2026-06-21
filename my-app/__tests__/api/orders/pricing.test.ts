@@ -7,6 +7,54 @@ import {
   LEAD_TIME_HOURS,
   refundCutoffExclusive,
 } from "@/lib/order-pricing";
+import { computeOrderChargeBreakdown } from "@/lib/order-totals";
+
+describe("computeOrderChargeBreakdown", () => {
+  it("includes Ontario HST in total and Stripe application fee", () => {
+    const charges = computeOrderChargeBreakdown({
+      subtotal: 100,
+      deliveryFee: 10,
+      taxProvince: "ON",
+      platformFeePct: 7.5,
+    });
+
+    expect(charges.taxableBase).toBe(110);
+    expect(charges.taxAmount).toBe(14.3);
+    expect(charges.totalPrice).toBe(124.3);
+    expect(charges.totalCents).toBe(12430);
+    expect(charges.platformFeeCents).toBe(825);
+    expect(charges.taxCents).toBe(1430);
+    expect(charges.applicationFeeCents).toBe(2255);
+    expect(charges.cookPayoutCents).toBe(10175);
+  });
+
+  it("defaults tax province to ON when cook province is missing", () => {
+    const charges = computeOrderChargeBreakdown({
+      subtotal: 50,
+      deliveryFee: 0,
+      taxProvince: null,
+      platformFeePct: 10,
+    });
+
+    expect(charges.taxProvince).toBe("ON");
+    expect(charges.taxAmount).toBe(6.5);
+    expect(charges.totalPrice).toBe(56.5);
+  });
+
+  it("platform fee is on pre-tax subtotal + delivery only", () => {
+    const charges = computeOrderChargeBreakdown({
+      subtotal: 80,
+      deliveryFee: 5,
+      taxProvince: "ON",
+      platformFeePct: 10,
+    });
+
+    expect(charges.platformFeeCents).toBe(850);
+    expect(charges.cookPayoutCents).toBe(
+      charges.totalCents - charges.applicationFeeCents,
+    );
+  });
+});
 
 describe("computeLineTotal", () => {
   it("no promo", () => {

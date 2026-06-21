@@ -909,6 +909,13 @@
   margin: 0;
 }
 
+.paymentPendingHint {
+  font-size: 13.5px;
+  color: var(--grey-500);
+  line-height: 1.55;
+  margin: 0;
+}
+
 .walletList {
   display: flex;
   flex-direction: column;

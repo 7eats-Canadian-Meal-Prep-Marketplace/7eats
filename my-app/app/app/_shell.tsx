@@ -24,6 +24,7 @@ import {
   AddressSearchInput,
   type ResolvedAddress,
 } from "@/components/AddressSearchInput";
+import { OPEN_ADDRESS_EVENT } from "@/lib/address-events";
 import { useDebounce } from "@/lib/hooks/use-debounce";
 import {
   addressesMatch,
@@ -124,8 +125,8 @@ function HeaderSearchInner() {
     const params = new URLSearchParams();
     const trimmed = q.trim();
     if (trimmed) params.set("q", trimmed);
-    const cuisine = searchParams.get("cuisine");
-    if (cuisine) params.set("cuisine", cuisine);
+    // Cuisine pills are standalone quick searches — a typed keyword replaces the
+    // active cuisine rather than stacking on top of it. Carry only the sort.
     const sort = searchParams.get("sort");
     if (sort && sort !== "nearest") params.set("sort", sort);
     const qs = params.toString();
@@ -526,6 +527,14 @@ function ShellInner({
   const [showAddress, setShowAddress] = useState(false);
   const [showAddressDropdown, setShowAddressDropdown] = useState(false);
   const addressDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Let other parts of the app (e.g. the browse empty state) open the address
+  // editor without threading a callback through context.
+  useEffect(() => {
+    const open = () => setShowAddress(true);
+    window.addEventListener(OPEN_ADDRESS_EVENT, open);
+    return () => window.removeEventListener(OPEN_ADDRESS_EVENT, open);
+  }, []);
 
   const savedOptions: { id: string; label: string; active: boolean }[] =
     isLoggedIn

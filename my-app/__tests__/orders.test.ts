@@ -68,7 +68,7 @@ vi.mock("drizzle-orm", () => ({
 }));
 
 vi.mock("@/lib/stripe-payments", () => ({
-  createFullPaymentIntent: createPiMock,
+  createCheckoutPaymentIntent: createPiMock,
   cancelPaymentIntent: cancelPiMock,
 }));
 vi.mock("@/lib/guest-client", () => ({
@@ -157,7 +157,6 @@ const COOK_ROW = {
 const validBody = {
   cookId: COOK_ID,
   dishes: [{ dishId: DISH_ID, quantity: 2 }],
-  paymentMethodId: "pm_test",
 };
 
 function asClient() {
@@ -174,6 +173,7 @@ describe("POST /api/orders", () => {
     placeClientOrderMock.mockResolvedValue({
       ok: true,
       orderId: "order-test-id",
+      clientSecret: "pi_test_secret",
     });
     // Rate-limit writes a log row; default select returns an under-limit count.
     vi.mocked(db.insert).mockReturnValue({

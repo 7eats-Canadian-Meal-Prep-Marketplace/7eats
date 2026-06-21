@@ -1,8 +1,11 @@
-import { and, asc, eq, exists, sql } from "drizzle-orm";
+import { and, asc, eq, exists, or, sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { authUser, cookProfiles, dishes } from "@/db/schema";
 import { loadCookCards } from "@/lib/cooks/load-cards";
+import { DEFAULT_MAX_DELIVERY_KM } from "@/lib/delivery-pricing";
+import { SEARCH_PICKUP_MAX_KM } from "@/lib/search/config";
+import { boundingBox } from "@/lib/search/normalize";
 
 function parseCoord(value: string | null, min: number, max: number) {
   if (value == null) return null;
@@ -31,6 +34,27 @@ export async function GET(req: NextRequest) {
         )`
       : sql<number | null>`NULL`;
 
+    // Reachability gate — mirror /api/search so a cook shown on browse is never
+    // missing from search. Browse has no pickup/delivery toggle, so a cook
+    // qualifies if it is reachable by EITHER fulfillment mode (the union of what
+    // search could surface). A bounding-box pre-filter (on the wider pickup cap)
+    // keeps the candidate scan index-friendly before the exact haversine check.
+    const reachable = hasGeo
+      ? (() => {
+          const box = boundingBox(lat, lng, SEARCH_PICKUP_MAX_KM);
+          return and(
+            sql`${cookProfiles.pickupLat} IS NOT NULL`,
+            sql`${cookProfiles.pickupLng} IS NOT NULL`,
+            sql`${cookProfiles.pickupLat} BETWEEN ${box.minLat} AND ${box.maxLat}`,
+            sql`${cookProfiles.pickupLng} BETWEEN ${box.minLng} AND ${box.maxLng}`,
+            or(
+              sql`${cookProfiles.offersPickup} = true AND ${distanceExpr} <= ${SEARCH_PICKUP_MAX_KM}`,
+              sql`${cookProfiles.delivery} = 'self' AND ${distanceExpr} <= COALESCE(${cookProfiles.maxDeliveryKm}, ${DEFAULT_MAX_DELIVERY_KM})`,
+            ),
+          );
+        })()
+      : undefined;
+
     // Visible cooks: setup complete, active account, at least one active dish.
     const candidates = await db
       .select({ id: cookProfiles.id })
@@ -51,6 +75,7 @@ export async function GET(req: NextRequest) {
                 ),
               ),
           ),
+          reachable,
         ),
       )
       .orderBy(hasGeo ? asc(distanceExpr) : asc(cookProfiles.createdAt))

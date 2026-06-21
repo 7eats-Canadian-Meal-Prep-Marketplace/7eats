@@ -1,93 +1,74 @@
 "use client";
 
-import { CardElement, useElements, useStripe } from "@stripe/react-stripe-js";
-import { forwardRef, useImperativeHandle } from "react";
+import {
+  PaymentElement,
+  useElements,
+  useStripe,
+} from "@stripe/react-stripe-js";
+import { forwardRef, useEffect, useImperativeHandle } from "react";
 import styles from "./page.module.css";
 
-export type CheckoutCardHandle = {
-  tokenize: () => Promise<string | null>;
+export type CheckoutPaymentHandle = {
+  confirmPayment: () => Promise<{ ok: boolean; error?: string }>;
 };
 
 type Props = {
-  cardError: string;
-  onCardError: (msg: string) => void;
-  onCardCompleteChange: (complete: boolean) => void;
+  onReadyChange: (ready: boolean) => void;
 };
 
-/**
- * Stripe CardElement for checkout. Tokenization is triggered by the parent
- * (after cancellation consent) via ref — no submit button here.
- */
-export const CheckoutCardForm = forwardRef<CheckoutCardHandle, Props>(
-  function CheckoutCardForm(
-    { cardError, onCardError, onCardCompleteChange },
-    ref,
-  ) {
+export const CheckoutPaymentForm = forwardRef<CheckoutPaymentHandle, Props>(
+  function CheckoutPaymentForm({ onReadyChange }, ref) {
     const stripe = useStripe();
     const elements = useElements();
+
+    useEffect(() => {
+      onReadyChange(Boolean(stripe && elements));
+    }, [stripe, elements, onReadyChange]);
 
     useImperativeHandle(
       ref,
       () => ({
-        async tokenize() {
-          if (!stripe || !elements) return null;
+        async confirmPayment() {
+          if (!stripe || !elements) {
+            return { ok: false, error: "Payment form is still loading." };
+          }
 
-          const cardEl = elements.getElement(CardElement);
-          if (!cardEl) return null;
-
-          onCardError("");
-
-          const { paymentMethod, error } = await stripe.createPaymentMethod({
-            type: "card",
-            card: cardEl,
+          const { error, paymentIntent } = await stripe.confirmPayment({
+            elements,
+            redirect: "if_required",
           });
 
           if (error) {
-            onCardError(error.message ?? "Card error. Please try again.");
-            return null;
+            return {
+              ok: false,
+              error: error.message ?? "Payment failed. Please try again.",
+            };
           }
 
-          return paymentMethod.id;
+          if (paymentIntent?.status !== "requires_capture") {
+            return {
+              ok: false,
+              error: "Payment could not be authorized. Try another method.",
+            };
+          }
+
+          return { ok: true };
         },
       }),
-      [stripe, elements, onCardError],
+      [stripe, elements],
     );
 
     return (
       <div className={styles.formGroup}>
-        <label className={styles.label} htmlFor="card-element">
-          Card details
-        </label>
         <div className={styles.stripeCardWrapper}>
-          <CardElement
-            id="card-element"
+          <PaymentElement
+            id="payment-element"
             options={{
-              style: {
-                base: {
-                  fontSize: "15px",
-                  color: "#1a1a1a",
-                  fontFamily: "inherit",
-                  "::placeholder": { color: "#aaa" },
-                },
-                invalid: { color: "#e53e3e" },
-              },
-              hidePostalCode: true,
+              layout: "tabs",
             }}
-            onChange={(e) => {
-              onCardCompleteChange(e.complete);
-              if (e.error) {
-                onCardError(e.error.message ?? "");
-              } else {
-                onCardError("");
-              }
-            }}
+            onReady={() => onReadyChange(true)}
           />
         </div>
-        {cardError && (
-          <p className={styles.fieldError} role="alert">
-            {cardError}
-          </p>
-        )}
       </div>
     );
   },

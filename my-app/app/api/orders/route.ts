@@ -84,6 +84,9 @@ export async function GET(req: NextRequest) {
         id: orders.id,
         status: orders.status,
         totalPrice: orders.totalPrice,
+        taxAmount: orders.taxAmount,
+        taxProvince: orders.taxProvince,
+        deliveryFeeSnapshot: orders.deliveryFeeSnapshot,
         currency: orders.currency,
         pickupAt: orders.pickupAt,
         notes: orders.notes,
@@ -131,6 +134,9 @@ export async function GET(req: NextRequest) {
         id: r.id,
         status: r.status,
         totalPrice: r.totalPrice,
+        taxAmount: r.taxAmount,
+        taxProvince: r.taxProvince,
+        deliveryFeeSnapshot: r.deliveryFeeSnapshot,
         currency: r.currency,
         pickupAt: pickupAtIso,
         notes: r.notes ?? null,
@@ -273,7 +279,10 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json(
-      { success: true, data: { orderId: result.orderId } },
+      {
+        success: true,
+        data: { orderId: result.orderId, clientSecret: result.clientSecret },
+      },
       { status: 201 },
     );
   } catch (err) {

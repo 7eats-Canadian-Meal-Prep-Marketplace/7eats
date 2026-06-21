@@ -37,6 +37,7 @@ export type DeliveryAddress = {
 type AddItemInput = {
   cookId: string;
   cookName: string;
+  cookProvince: string;
   minOrderQty: number;
   maxOrderQty: number | null;
   leadTime: string | null;
@@ -47,6 +48,8 @@ type AddItemInput = {
 type CartContextType = {
   cookId: string | null;
   cookName: string | null;
+  /** Cook pickup province for tax (place of supply). Defaults to ON when unset. */
+  cookProvince: string;
   minOrderQty: number;
   maxOrderQty: number | null;
   leadTime: string | null;
@@ -140,6 +143,7 @@ export function useCart(): CartContextType {
 type CookMeta = {
   cookId: string;
   cookName: string;
+  cookProvince: string;
   minOrderQty: number;
   maxOrderQty: number | null;
   leadTime: string | null;
@@ -214,6 +218,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         {
           cookId: input.cookId,
           cookName: input.cookName,
+          cookProvince: input.cookProvince,
           minOrderQty: input.minOrderQty,
           maxOrderQty: input.maxOrderQty,
           leadTime: input.leadTime,
@@ -234,6 +239,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         {
           cookId: input.cookId,
           cookName: input.cookName,
+          cookProvince: input.cookProvince,
           minOrderQty: input.minOrderQty,
           maxOrderQty: input.maxOrderQty,
           leadTime: input.leadTime,
@@ -274,6 +280,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const value: CartContextType = {
     cookId: cook?.cookId ?? null,
     cookName: cook?.cookName ?? null,
+    cookProvince: cook?.cookProvince ?? "ON",
     minOrderQty,
     maxOrderQty,
     leadTime: cook?.leadTime ?? null,

@@ -4,7 +4,7 @@ import Footer from "@/app/components/Footer";
 import Header from "@/app/components/Header";
 
 export const metadata: Metadata = {
-  title: "7eats — Canada's Meal Prep Marketplace",
+  title: "7eats - Canada's Meal Prep Marketplace",
   description:
     "7eats connects Toronto's home cooks and meal prep businesses with customers looking for fresh, local, made-to-order meals. List your menu, reach new customers, and get paid without the admin overhead.",
   alternates: {

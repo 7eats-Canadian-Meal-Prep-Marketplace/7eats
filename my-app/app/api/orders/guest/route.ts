@@ -165,6 +165,7 @@ export async function POST(req: NextRequest) {
         success: true,
         data: {
           orderId: result.orderId,
+          clientSecret: result.clientSecret,
           confirmationCode,
           accessToken,
         },

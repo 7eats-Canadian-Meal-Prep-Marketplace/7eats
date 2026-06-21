@@ -5,7 +5,7 @@ import LoginForm from "@/app/components/LoginForm";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
-  title: "Sign in — 7eats",
+  title: "Sign in - 7eats",
 };
 
 export default async function LoginPage({

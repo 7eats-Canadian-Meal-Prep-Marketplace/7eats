@@ -152,7 +152,7 @@ async function executeCancellation(
     if (!payment.stripePaymentIntentId) continue;
 
     if (refundEligible) {
-      if (payment.status === "authorized") {
+      if (payment.status === "authorized" || payment.status === "pending") {
         await cancelPaymentIntent(
           payment.stripePaymentIntentId,
           `client-cancel-${order.id}`,
@@ -183,6 +183,15 @@ async function executeCancellation(
       await db
         .update(orderPayments)
         .set({ status: "released", releasedAt: new Date() })
+        .where(eq(orderPayments.id, payment.id));
+    } else if (payment.status === "pending") {
+      await cancelPaymentIntent(
+        payment.stripePaymentIntentId,
+        `client-cancel-${order.id}`,
+      );
+      await db
+        .update(orderPayments)
+        .set({ status: "refunded", refundedAt: new Date() })
         .where(eq(orderPayments.id, payment.id));
     }
   }

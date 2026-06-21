@@ -13,7 +13,6 @@ import {
   type FulfillmentWindow,
   nextFulfillmentWindowLabel,
 } from "@/lib/cook-card-schedule";
-import { useApp } from "../_app-context";
 import { useCart } from "../_cart-context";
 import { calcTax, formatCartMoney, getTaxLabel } from "./_cart-tax";
 import styles from "./page.module.css";
@@ -55,6 +54,7 @@ export default function CartPage() {
   const {
     cookId,
     cookName,
+    cookProvince,
     items,
     subtotal,
     totalQuantity,
@@ -66,7 +66,6 @@ export default function CartPage() {
     notes,
     removeItem,
   } = useCart();
-  const { province } = useApp();
 
   const [pickupWindows, setPickupWindows] = useState<FulfillmentWindow[]>([]);
   const [deliveryWindows, setDeliveryWindows] = useState<FulfillmentWindow[]>(
@@ -107,13 +106,13 @@ export default function CartPage() {
   );
 
   const { tax, estimatedTotal, taxLabel } = useMemo(() => {
-    const taxAmount = Math.round(calcTax(subtotal, province) * 100) / 100;
+    const taxAmount = Math.round(calcTax(subtotal, cookProvince) * 100) / 100;
     return {
       tax: taxAmount,
       estimatedTotal: Math.round((subtotal + taxAmount) * 100) / 100,
-      taxLabel: getTaxLabel(province),
+      taxLabel: getTaxLabel(cookProvince),
     };
-  }, [subtotal, province]);
+  }, [subtotal, cookProvince]);
 
   if (items.length === 0) {
     return (
@@ -125,11 +124,11 @@ export default function CartPage() {
           <p className={styles.emptyEyebrow}>Cart</p>
           <h1 className={styles.emptyTitle}>Your cart is empty</h1>
           <p className={styles.emptyDesc}>
-            Browse home kitchens near you, add a few plates, and checkout when
-            you&apos;re ready.
+            Browse meal prep services near you, add a few plates, and checkout
+            when you&apos;re ready.
           </p>
           <Link href="/app/browse" className={styles.browseBtn}>
-            Browse kitchens
+            Browse services
           </Link>
         </div>
       </div>

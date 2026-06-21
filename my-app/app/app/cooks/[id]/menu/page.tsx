@@ -169,6 +169,7 @@ type MenuData = {
     cancellationAllowed: boolean;
     acceptsSpecialRequests: boolean;
     pickupCity: string | null;
+    pickupProvince: string | null;
     pickupWindows: Window[];
     deliveryWindows: Window[];
   };
@@ -279,6 +280,7 @@ export default function CookMenuPage() {
     return {
       cookId,
       cookName: data?.cook.displayName ?? "Cook",
+      cookProvince: data?.cook.pickupProvince ?? "ON",
       minOrderQty: data?.cook.minOrderQty ?? 1,
       maxOrderQty: data?.cook.maxOrderQty ?? null,
       leadTime: data?.cook.leadTime ?? null,

@@ -11,16 +11,12 @@ import {
   orders,
 } from "@/db/schema";
 import { calcDeliveryFee } from "@/lib/delivery-fee";
-import {
-  sendGuestOrderReceiptToClient,
-  sendOrderPlacedEmailToCook,
-  sendOrderReceiptToClient,
-} from "@/lib/emails/order-events";
 import { getDrivingDistanceKm } from "@/lib/mapbox-directions";
 import { computeLineTotal } from "@/lib/order-pricing";
+import { computeOrderChargeBreakdown } from "@/lib/order-totals";
 import {
   cancelPaymentIntent,
-  createFullPaymentIntent,
+  createCheckoutPaymentIntent,
 } from "@/lib/stripe-payments";
 
 export const orderLineSchema = z.object({
@@ -32,7 +28,6 @@ export const orderLineSchema = z.object({
 export const createOrderBodySchema = z.object({
   cookId: z.string().uuid(),
   dishes: z.array(orderLineSchema).min(1),
-  paymentMethodId: z.string().min(1),
   pickupAt: z.string().datetime().optional(),
   fulfillmentMode: z.enum(["pickup", "delivery"]).optional(),
   deliveryAddress: z
@@ -67,7 +62,7 @@ export type GuestOrderMeta = {
 };
 
 export type PlaceOrderResult =
-  | { ok: true; orderId: string; guest?: GuestOrderMeta }
+  | { ok: true; orderId: string; clientSecret: string; guest?: GuestOrderMeta }
   | { ok: false; status: number; error: string; dishId?: string };
 
 export async function placeClientOrder(
@@ -78,7 +73,6 @@ export async function placeClientOrder(
   const {
     cookId,
     dishes: lines,
-    paymentMethodId,
     pickupAt,
     fulfillmentMode,
     deliveryAddress,
@@ -104,6 +98,7 @@ export async function placeClientOrder(
       deliveryRatePerKm: cookProfiles.deliveryRatePerKm,
       deliveryFlatFee: cookProfiles.deliveryFlatFee,
       freeDeliveryAbove: cookProfiles.freeDeliveryAbove,
+      pickupProvince: cookProfiles.pickupProvince,
     })
     .from(cookProfiles)
     .innerJoin(authUser, eq(cookProfiles.userId, authUser.id))
@@ -278,23 +273,35 @@ export async function placeClientOrder(
     }
   }
 
-  const totalPrice = Math.round((subtotal + deliveryFeeSnapshot) * 100) / 100;
-  const totalCents = Math.round(totalPrice * 100);
   const platformFeePct = Number.parseFloat(cook.platformFeePct);
-  const platformFeeCents = Math.round((totalCents * platformFeePct) / 100);
-  const cookPayoutCents = totalCents - platformFeeCents;
+  const charges = computeOrderChargeBreakdown({
+    subtotal,
+    deliveryFee: deliveryFeeSnapshot,
+    taxProvince: cook.pickupProvince,
+    platformFeePct,
+  });
 
   let piId: string | null = null;
+  let clientSecret: string | null = null;
   try {
-    const pi = await createFullPaymentIntent({
-      totalAmountCents: totalCents,
-      platformFeeCents,
+    const pi = await createCheckoutPaymentIntent({
+      totalAmountCents: charges.totalCents,
+      applicationFeeCents: charges.applicationFeeCents,
       stripeCustomerId: client.stripeCustomerId,
-      paymentMethodId,
       connectedAccountId: cook.stripeAccountId as string,
       idempotencyKey: `full-${orderId}`,
+      orderId,
     });
+    if (!pi.clientSecret) {
+      await cancelPaymentIntent(pi.piId, `cancel-${orderId}`).catch(() => {});
+      return {
+        ok: false,
+        status: 502,
+        error: "Payment could not be initialized.",
+      };
+    }
     piId = pi.piId;
+    clientSecret = pi.clientSecret;
   } catch (stripeErr) {
     console.error("[placeClientOrder] stripe", stripeErr);
     return {
@@ -342,8 +349,10 @@ export async function placeClientOrder(
         cookId,
         status: "pending",
         cancellationAllowed: cook.cancellationAllowed,
-        totalPrice: String(totalPrice.toFixed(2)),
+        totalPrice: String(charges.totalPrice.toFixed(2)),
         currency: "CAD",
+        taxAmount: String(charges.taxAmount.toFixed(2)),
+        taxProvince: charges.taxProvince,
         pickupAt: pickupAt ? new Date(pickupAt) : null,
         deliveryAddress: deliveryAddress ?? null,
         fulfillmentMode: fulfillmentMode ?? null,
@@ -378,14 +387,13 @@ export async function placeClientOrder(
         cookId,
         clientId: client.id,
         type: "full",
-        status: "authorized",
-        totalAmount: String(totalPrice.toFixed(2)),
+        status: "pending",
+        totalAmount: String(charges.totalPrice.toFixed(2)),
         platformFeePct: cook.platformFeePct,
-        platformFeeAmount: String((platformFeeCents / 100).toFixed(2)),
-        cookPayoutAmount: String((cookPayoutCents / 100).toFixed(2)),
+        platformFeeAmount: String((charges.platformFeeCents / 100).toFixed(2)),
+        cookPayoutAmount: String((charges.cookPayoutCents / 100).toFixed(2)),
         currency: "CAD",
         stripePaymentIntentId: piId,
-        authorizedAt: new Date(),
       });
 
       for (const c of computed) {
@@ -412,59 +420,10 @@ export async function placeClientOrder(
     throw txErr;
   }
 
-  const listingTitle = computed.map((c) => c.dishName).join(", ");
-  const orderEmailPayload = {
-    id: orderId,
-    listingTitle,
-    quantity: totalQty,
-    totalPrice: String((subtotal + deliveryFeeSnapshot).toFixed(2)),
-    currency: "CAD" as const,
-    pickupAt: pickupAt ? new Date(pickupAt) : null,
-    fulfillmentMode: fulfillmentMode ?? null,
-  };
-
-  db.select({ email: authUser.email, firstName: authUser.firstName })
-    .from(cookProfiles)
-    .innerJoin(authUser, eq(cookProfiles.userId, authUser.id))
-    .where(eq(cookProfiles.id, cookId))
-    .limit(1)
-    .then(([cookUser]) => {
-      if (!cookUser) return;
-      return sendOrderPlacedEmailToCook(
-        { email: cookUser.email, firstName: cookUser.firstName },
-        { name: client.displayName },
-        orderEmailPayload,
-      );
-    })
-    .catch((err) => console.error("[placeClientOrder] cook email", err));
-
-  if (guestMeta?.accessToken) {
-    sendGuestOrderReceiptToClient(
-      {
-        email: client.email,
-        firstName: client.firstName,
-      },
-      { name: cook.displayName ?? "your cook" },
-      {
-        ...orderEmailPayload,
-        cancellationAllowed: cook.cancellationAllowed,
-      },
-      {
-        confirmationCode: guestMeta.confirmationCode,
-        accessToken: guestMeta.accessToken,
-      },
-    ).catch((err) => console.error("[placeClientOrder] guest receipt", err));
-  } else {
-    sendOrderReceiptToClient(
-      { email: client.email, firstName: client.firstName },
-      { name: cook.displayName ?? "your cook" },
-      orderEmailPayload,
-    ).catch((err) => console.error("[placeClientOrder] receipt", err));
-  }
-
   return {
     ok: true,
     orderId,
+    clientSecret: clientSecret as string,
     guest: guestMeta?.accessToken
       ? {
           confirmationCode: guestMeta.confirmationCode,

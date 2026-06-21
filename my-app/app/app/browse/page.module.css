@@ -604,6 +604,127 @@
   color: var(--grey-500);
 }
 
+/* ─── Coming-soon empty state (location aware) ───────────────────────────────── */
+.comingSoon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 88px 24px 96px;
+  max-width: 460px;
+  margin: 0 auto;
+}
+
+/* Radar emblem: a red pin with rings rippling outward — "coverage on the way". */
+.radar {
+  position: relative;
+  width: 132px;
+  height: 132px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 30px;
+}
+
+.radarRing {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 1.5px solid var(--red);
+  opacity: 0;
+  transform: scale(0.4);
+  animation: radarPulse 2.6s cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
+}
+
+.radarRing:nth-child(2) {
+  animation-delay: 0.85s;
+}
+
+.radarRing:nth-child(3) {
+  animation-delay: 1.7s;
+}
+
+@keyframes radarPulse {
+  0% {
+    opacity: 0.55;
+    transform: scale(0.4);
+  }
+  80% {
+    opacity: 0;
+    transform: scale(2.3);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2.3);
+  }
+}
+
+.radarPin {
+  position: relative;
+  z-index: 1;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: var(--white);
+  background: linear-gradient(135deg, var(--red), #a5343a);
+  box-shadow: 0 8px 22px rgba(214, 64, 69, 0.34);
+}
+
+.comingSoonTitle {
+  font-size: 25px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.12;
+  color: var(--ink);
+  margin: 0 0 12px;
+}
+
+.comingSoonDesc {
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--grey-600);
+  margin: 0 0 12px;
+}
+
+.comingSoonBtn {
+  margin-top: 14px;
+  padding: 12px 26px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--ink);
+  color: var(--white);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(15, 15, 15, 0.14);
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s,
+    background 0.15s;
+}
+
+.comingSoonBtn:hover {
+  background: var(--red);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(214, 64, 69, 0.28);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .radarRing {
+    animation: none;
+    opacity: 0.3;
+    transform: scale(1.5);
+  }
+  .radarRing:nth-child(3) {
+    display: none;
+  }
+}
+
 /* ─── Responsive ─────────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
   .filterInner {

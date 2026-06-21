@@ -11,6 +11,7 @@ import {
 import { useServiceAddress } from "../_service-address-context";
 import { FulfillmentToggle } from "../_shell";
 import { Skeleton } from "../_skeleton";
+import { BrowseEmpty } from "./_browse-empty";
 import styles from "./page.module.css";
 
 const CUISINE_OPTIONS = [
@@ -79,7 +80,7 @@ export default function BrowsePage() {
                 key={label}
                 href={
                   value === "all"
-                    ? "/app/search"
+                    ? "/app/search?all=1"
                     : `/app/search?cuisine=${encodeURIComponent(value)}`
                 }
                 className={styles.chip}
@@ -128,16 +129,15 @@ export default function BrowsePage() {
             </div>
           </section>
         ) : cooks.length === 0 ? (
-          <div className={styles.emptyState}>
-            <p className={styles.emptyTitle}>No cooks nearby yet</p>
-            <p className={styles.emptyDesc}>Check back soon.</p>
-          </div>
+          <BrowseEmpty address={currentAddress} />
         ) : (
           <>
             <section className={styles.section}>
               <div className={styles.sectionHead}>
                 <div className={styles.sectionHeadText}>
-                  <h2 className={styles.sectionTitle}>Kitchens near you</h2>
+                  <h2 className={styles.sectionTitle}>
+                    Meal prep services near you
+                  </h2>
                   <p className={styles.sectionSub}>
                     Home cooks serving your neighbourhood
                   </p>
@@ -153,7 +153,7 @@ export default function BrowsePage() {
                     Loved by your neighbours
                   </h2>
                   <p className={styles.sectionSub}>
-                    The most-ordered kitchens this week
+                    The most-ordered meal prep services this week
                   </p>
                 </div>
               </div>
@@ -167,10 +167,10 @@ export default function BrowsePage() {
               <div className={styles.sectionHead}>
                 <div className={styles.sectionHeadText}>
                   <h2 className={styles.sectionTitle}>
-                    Fresh picks for tonight
+                    Fresh picks for the week
                   </h2>
                   <p className={styles.sectionSub}>
-                    Discover something new to try
+                    New meal prep services to add to your rotation
                   </p>
                 </div>
               </div>
