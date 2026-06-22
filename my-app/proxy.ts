@@ -242,16 +242,11 @@ export async function proxy(req: NextRequest) {
             : "/app/browse";
         return NextResponse.redirect(new URL(dest, req.url));
       }
-      // Cook/admin can create a separate client account — let them through signup.
-      if (pathname === "/app-auth/signup") {
-        return NextResponse.next();
-      }
-      // Cook/admin may need to switch accounts for a protected consumer route.
-      const next = req.nextUrl.searchParams.get("next");
-      if (next?.startsWith("/app/")) {
-        return NextResponse.next();
-      }
-      return NextResponse.redirect(new URL("/app/browse", req.url));
+      // Cook/admin: allow access to the client login and signup pages so they
+      // can switch to (or create) a separate customer account. Better Auth uses
+      // a single session cookie, so signing in as a client overwrites the cook
+      // session — effectively logging them out of the cook account.
+      return NextResponse.next();
     }
     return NextResponse.next();
   }
