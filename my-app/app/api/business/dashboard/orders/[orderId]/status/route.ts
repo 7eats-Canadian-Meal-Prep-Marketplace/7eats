@@ -287,7 +287,11 @@ export async function PATCH(req: NextRequest, { params }: Params) {
             quantity: dishRows.reduce((s, d) => s + d.quantity, 0),
             totalPrice: row.totalPrice,
             currency: row.currency,
-            pickupAt: row.pickupAt ?? new Date(),
+            // Use the order's real pickup time from the DB — never fall back to
+            // `new Date()`, which would put the confirmation moment in the email
+            // instead of the actual pickup date/time. The email template renders
+            // a null pickupAt as "TBD".
+            pickupAt: row.pickupAt,
           };
           if (newStatus === "confirmed") {
             return sendOrderConfirmedEmailToClient(
