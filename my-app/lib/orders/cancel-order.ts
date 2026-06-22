@@ -48,6 +48,8 @@ export async function cancelClientOrder(
       status: orders.status,
       totalPrice: orders.totalPrice,
       currency: orders.currency,
+      deliveryFeeSnapshot: orders.deliveryFeeSnapshot,
+      taxAmount: orders.taxAmount,
       pickupAt: orders.pickupAt,
       fulfillmentWindowStart: orders.fulfillmentWindowStart,
       fulfillmentWindowEnd: orders.fulfillmentWindowEnd,
@@ -87,6 +89,8 @@ export async function cancelGuestOrderByToken(
       status: orders.status,
       totalPrice: orders.totalPrice,
       currency: orders.currency,
+      deliveryFeeSnapshot: orders.deliveryFeeSnapshot,
+      taxAmount: orders.taxAmount,
       pickupAt: orders.pickupAt,
       fulfillmentWindowStart: orders.fulfillmentWindowStart,
       fulfillmentWindowEnd: orders.fulfillmentWindowEnd,
@@ -123,6 +127,8 @@ async function executeCancellation(
     status: string;
     totalPrice: string;
     currency: string;
+    deliveryFeeSnapshot: string | null;
+    taxAmount: string | null;
     pickupAt: Date | null;
     fulfillmentWindowStart: Date | null;
     fulfillmentWindowEnd: Date | null;
@@ -231,6 +237,8 @@ async function notifyOfClientCancellation(
     cookId: string;
     totalPrice: string;
     currency: string;
+    deliveryFeeSnapshot: string | null;
+    taxAmount: string | null;
     pickupAt: Date | null;
     fulfillmentWindowStart: Date | null;
     fulfillmentWindowEnd: Date | null;
@@ -268,11 +276,15 @@ async function notifyOfClientCancellation(
     .select({
       dishName: orderDishes.dishName,
       quantity: orderDishes.quantity,
+      lineTotal: orderDishes.lineTotal,
+      discountAmount: orderDishes.discountAmount,
+      sortOrder: orderDishes.sortOrder,
     })
     .from(orderDishes)
     .where(eq(orderDishes.orderId, order.id));
+  const orderedDishes = [...dishRows].sort((a, b) => a.sortOrder - b.sortOrder);
 
-  const qty = dishRows.reduce((s, d) => s + d.quantity, 0);
+  const qty = orderedDishes.reduce((s, d) => s + d.quantity, 0);
   const customerName =
     [clientUser?.firstName, clientUser?.lastName].filter(Boolean).join(" ") ||
     "A customer";
@@ -284,7 +296,7 @@ async function notifyOfClientCancellation(
 
   const orderEmail = {
     id: order.id,
-    listingTitle: dishRows.map((d) => d.dishName).join(", "),
+    listingTitle: orderedDishes.map((d) => d.dishName).join(", "),
     quantity: qty,
     totalPrice: order.totalPrice,
     currency: order.currency,
@@ -292,6 +304,14 @@ async function notifyOfClientCancellation(
     fulfillmentMode,
     fulfillmentWindowStart: order.fulfillmentWindowStart,
     fulfillmentWindowEnd: order.fulfillmentWindowEnd,
+    items: orderedDishes.map((d) => ({
+      name: d.dishName,
+      quantity: d.quantity,
+      lineTotal: d.lineTotal,
+      discountAmount: d.discountAmount,
+    })),
+    deliveryFee: order.deliveryFeeSnapshot,
+    taxAmount: order.taxAmount,
   };
 
   await sendOrderCancelledByClientEmailToCook(

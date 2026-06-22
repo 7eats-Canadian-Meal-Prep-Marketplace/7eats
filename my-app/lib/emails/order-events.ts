@@ -5,9 +5,17 @@ import {
   contactTextLine,
   htmlEmail,
   orderDetailsTable,
+  orderSummaryTable,
   paragraph,
   pickupCodeBlock,
 } from "./base";
+
+type OrderEmailItem = {
+  name: string;
+  quantity: number;
+  lineTotal?: string | null;
+  discountAmount?: string | null;
+};
 
 type OrderEmailData = {
   id: string;
@@ -19,6 +27,12 @@ type OrderEmailData = {
   fulfillmentMode?: "pickup" | "delivery" | null;
   fulfillmentWindowStart?: Date | string | null;
   fulfillmentWindowEnd?: Date | string | null;
+  // Per-dish breakdown for the itemised summary. When absent, client emails
+  // fall back to the flat `listingTitle` + `totalPrice` rows.
+  items?: OrderEmailItem[];
+  deliveryFee?: string | number | null;
+  taxAmount?: string | number | null;
+  taxLabel?: string | null;
 };
 
 function fulfillmentLabel(mode: OrderEmailData["fulfillmentMode"]): string {
@@ -70,6 +84,64 @@ function cancellationScheduleClause(order: OrderEmailData): string {
 
 function formatMoney(total: string, currency: string): string {
   return `$${total} ${currency}`;
+}
+
+function hasItemizedSummary(
+  order: OrderEmailData,
+): order is OrderEmailData & { items: OrderEmailItem[] } {
+  return Array.isArray(order.items) && order.items.length > 0;
+}
+
+/**
+ * Itemised order summary for client emails. Renders the rich per-dish table
+ * when line items are available, otherwise falls back to the flat
+ * Items + Total rows so older callers keep working.
+ */
+function orderSummaryHtml(order: OrderEmailData): string {
+  if (hasItemizedSummary(order)) {
+    return orderSummaryTable({
+      items: order.items,
+      deliveryFee: order.deliveryFee != null ? Number(order.deliveryFee) : 0,
+      tax: order.taxAmount != null ? Number(order.taxAmount) : 0,
+      taxLabel: order.taxLabel,
+      total: order.totalPrice,
+      currency: order.currency,
+    });
+  }
+  return orderDetailsTable([
+    { label: "Items", value: order.listingTitle },
+    { label: "Total", value: formatMoney(order.totalPrice, order.currency) },
+  ]);
+}
+
+function orderSummaryText(order: OrderEmailData): string[] {
+  if (!hasItemizedSummary(order)) {
+    return [
+      `Items: ${order.listingTitle}`,
+      `Total: ${formatMoney(order.totalPrice, order.currency)}`,
+    ];
+  }
+  const itemLines = order.items.map((it) => {
+    const price =
+      it.lineTotal != null && it.lineTotal !== ""
+        ? `  $${Number(it.lineTotal).toFixed(2)}`
+        : "";
+    return `  ${it.quantity}× ${it.name}${price}`;
+  });
+  const subtotal = order.items.reduce(
+    (sum, it) => sum + Number(it.lineTotal ?? 0),
+    0,
+  );
+  const deliveryFee = order.deliveryFee != null ? Number(order.deliveryFee) : 0;
+  const tax = order.taxAmount != null ? Number(order.taxAmount) : 0;
+  return [
+    "Items:",
+    ...itemLines,
+    `Subtotal: $${subtotal.toFixed(2)}`,
+    ...(deliveryFee > 0 ? [`Delivery: $${deliveryFee.toFixed(2)}`] : []),
+    ...(tax > 0 ? [`${order.taxLabel ?? "Tax"}: $${tax.toFixed(2)}`] : []),
+    `Total: ${formatMoney(order.totalPrice, order.currency)}`,
+  ];
 }
 
 function greeting(firstName: string | null): string {
@@ -144,12 +216,8 @@ export async function sendOrderReceiptToClient(
       bodyHtml:
         paragraph(greeting(client.firstName)) +
         paragraph(`Thanks for your order with <strong>${cook.name}</strong>.`) +
+        orderSummaryHtml(order) +
         orderDetailsTable([
-          { label: "Items", value: order.listingTitle },
-          {
-            label: "Total",
-            value: formatMoney(order.totalPrice, order.currency),
-          },
           {
             label: "Fulfillment",
             value: fulfillmentLabel(order.fulfillmentMode),
@@ -168,8 +236,8 @@ export async function sendOrderReceiptToClient(
       "",
       `Thanks for your order with ${cook.name}.`,
       "",
-      `Items: ${order.listingTitle}`,
-      `Total: ${formatMoney(order.totalPrice, order.currency)}`,
+      ...orderSummaryText(order),
+      "",
       `Fulfillment: ${fulfillmentLabel(order.fulfillmentMode)}`,
       `Timing: ${timing}`,
       "",
@@ -207,13 +275,9 @@ export async function sendGuestOrderReceiptToClient(
       bodyHtml:
         paragraph(greeting(client.firstName)) +
         paragraph(`Thanks for your order with <strong>${cook.name}</strong>.`) +
+        orderSummaryHtml(order) +
         orderDetailsTable([
           { label: "Confirmation code", value: guest.confirmationCode },
-          { label: "Items", value: order.listingTitle },
-          {
-            label: "Total",
-            value: formatMoney(order.totalPrice, order.currency),
-          },
           {
             label: "Fulfillment",
             value: fulfillmentLabel(order.fulfillmentMode),
@@ -234,9 +298,9 @@ export async function sendGuestOrderReceiptToClient(
       "",
       `Thanks for your order with ${cook.name}.`,
       "",
+      ...orderSummaryText(order),
+      "",
       `Confirmation code: ${guest.confirmationCode}`,
-      `Items: ${order.listingTitle}`,
-      `Total: ${formatMoney(order.totalPrice, order.currency)}`,
       `Fulfillment: ${fulfillmentLabel(order.fulfillmentMode)}`,
       `Timing: ${timing}`,
       "",
@@ -270,13 +334,8 @@ export async function sendOrderConfirmedEmailToClient(
       bodyHtml:
         paragraph(greeting(client.firstName)) +
         paragraph(`${cook.name} confirmed your order. See you at pickup.`) +
+        orderSummaryHtml(order) +
         orderDetailsTable([
-          { label: "Order", value: order.listingTitle },
-          { label: "Quantity", value: String(order.quantity) },
-          {
-            label: "Total",
-            value: formatMoney(order.totalPrice, order.currency),
-          },
           { label: fulfillmentLabel(order.fulfillmentMode), value: timing },
         ]) +
         paragraph(
@@ -289,9 +348,8 @@ export async function sendOrderConfirmedEmailToClient(
       "",
       `${cook.name} confirmed your order. See you at pickup.`,
       "",
-      `Order: ${order.listingTitle}`,
-      `Quantity: ${order.quantity}`,
-      `Total: ${formatMoney(order.totalPrice, order.currency)}`,
+      ...orderSummaryText(order),
+      "",
       `${fulfillmentLabel(order.fulfillmentMode)}: ${timing}`,
       "",
       "You'll get another email with your pickup code once the order is ready.",
@@ -404,13 +462,7 @@ export async function sendOrderCompletedEmailToClient(
         paragraph(
           `Your order from <strong>${cook.name}</strong> is all yours — we hope every bite is wonderful. Thanks for supporting a home cook in your neighbourhood.`,
         ) +
-        orderDetailsTable([
-          { label: "Order", value: order.listingTitle },
-          {
-            label: "Total",
-            value: formatMoney(order.totalPrice, order.currency),
-          },
-        ]) +
+        orderSummaryHtml(order) +
         paragraph(
           `Enjoyed it? A quick review helps ${cook.name} reach more neighbours.`,
         ) +
@@ -423,8 +475,7 @@ export async function sendOrderCompletedEmailToClient(
       "",
       `Your order from ${cook.name} is all yours — we hope every bite is wonderful. Thanks for supporting a home cook in your neighbourhood.`,
       "",
-      `Order: ${order.listingTitle}`,
-      `Total: ${formatMoney(order.totalPrice, order.currency)}`,
+      ...orderSummaryText(order),
       "",
       `Enjoyed it? Leave a quick review to help ${cook.name} reach more neighbours:`,
       orderUrl,
@@ -550,15 +601,11 @@ export async function sendOrderCancelledByClientEmailToClient(
         paragraph(
           `Your order with <strong>${cook.name}</strong> has been cancelled.`,
         ) +
+        orderSummaryHtml(order) +
         orderDetailsTable([
           ...(options.confirmationCode
             ? [{ label: "Confirmation code", value: options.confirmationCode }]
             : []),
-          { label: "Items", value: order.listingTitle },
-          {
-            label: "Total",
-            value: formatMoney(order.totalPrice, order.currency),
-          },
           {
             label: "Fulfillment",
             value: fulfillmentLabel(order.fulfillmentMode),
@@ -577,8 +624,8 @@ export async function sendOrderCancelledByClientEmailToClient(
       ...(options.confirmationCode
         ? [`Confirmation code: ${options.confirmationCode}`, ""]
         : []),
-      `Items: ${order.listingTitle}`,
-      `Total: ${formatMoney(order.totalPrice, order.currency)}`,
+      ...orderSummaryText(order),
+      "",
       `Fulfillment: ${fulfillmentLabel(order.fulfillmentMode)}`,
       ...(timing ? [`Timing: ${timing}`, ""] : []),
       options.refunded

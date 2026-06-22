@@ -35,8 +35,14 @@ export async function GET(req: NextRequest) {
   const conditions = [eq(orders.cookId, cookId)];
   if (status) conditions.push(eq(orders.status, status));
   if (listingId) conditions.push(eq(orders.listingId, listingId));
-  if (dateFrom) conditions.push(gte(orders.pickupAt, new Date(dateFrom)));
-  if (dateTo) conditions.push(lte(orders.pickupAt, new Date(dateTo)));
+  // Date range filters the *scheduled* day. `pickupAt` is only ever set for
+  // delivery once a cook pins an exact minute and is always null for pickup
+  // orders, so filtering on it alone hides every pickup order (and confirmed
+  // orders that lack a pinned time) from the calendar. Fall back to the
+  // fulfillment window, which is captured for both modes at placement.
+  const scheduledAt = sql`COALESCE(${orders.fulfillmentWindowStart}, ${orders.pickupAt})`;
+  if (dateFrom) conditions.push(gte(scheduledAt, new Date(dateFrom)));
+  if (dateTo) conditions.push(lte(scheduledAt, new Date(dateTo)));
 
   const where = and(...conditions);
 

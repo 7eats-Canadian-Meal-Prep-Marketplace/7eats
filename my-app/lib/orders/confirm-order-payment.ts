@@ -28,6 +28,8 @@ async function sendOrderConfirmationEmails(
       id: orders.id,
       totalPrice: orders.totalPrice,
       currency: orders.currency,
+      deliveryFeeSnapshot: orders.deliveryFeeSnapshot,
+      taxAmount: orders.taxAmount,
       pickupAt: orders.pickupAt,
       fulfillmentMode: orders.fulfillmentMode,
       fulfillmentWindowStart: orders.fulfillmentWindowStart,
@@ -48,9 +50,13 @@ async function sendOrderConfirmationEmails(
     .select({
       dishName: orderDishes.dishName,
       quantity: orderDishes.quantity,
+      lineTotal: orderDishes.lineTotal,
+      discountAmount: orderDishes.discountAmount,
+      sortOrder: orderDishes.sortOrder,
     })
     .from(orderDishes)
     .where(eq(orderDishes.orderId, orderId));
+  const orderedDishes = [...dishRows].sort((a, b) => a.sortOrder - b.sortOrder);
 
   const [clientUser] = await db
     .select({
@@ -75,8 +81,8 @@ async function sendOrderConfirmationEmails(
 
   if (!clientUser || !cookRow) return;
 
-  const listingTitle = dishRows.map((d) => d.dishName).join(", ");
-  const totalQty = dishRows.reduce((sum, d) => sum + d.quantity, 0);
+  const listingTitle = orderedDishes.map((d) => d.dishName).join(", ");
+  const totalQty = orderedDishes.reduce((sum, d) => sum + d.quantity, 0);
   const displayName =
     [clientUser.firstName, clientUser.lastName].filter(Boolean).join(" ") ||
     clientUser.email;
@@ -91,6 +97,14 @@ async function sendOrderConfirmationEmails(
     fulfillmentMode: orderRow.fulfillmentMode as "pickup" | "delivery" | null,
     fulfillmentWindowStart: orderRow.fulfillmentWindowStart,
     fulfillmentWindowEnd: orderRow.fulfillmentWindowEnd,
+    items: orderedDishes.map((d) => ({
+      name: d.dishName,
+      quantity: d.quantity,
+      lineTotal: d.lineTotal,
+      discountAmount: d.discountAmount,
+    })),
+    deliveryFee: orderRow.deliveryFeeSnapshot,
+    taxAmount: orderRow.taxAmount,
   };
 
   sendOrderPlacedEmailToCook(
