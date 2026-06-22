@@ -122,25 +122,39 @@ export function CartAddressGuardProvider({
             onClick={keep}
           />
           <div className={styles.card}>
-            <h2 id="addr-guard-title" className={styles.title}>
-              Change address?
-            </h2>
-            <p className={styles.body}>
-              {cookName ?? "This kitchen"} can&apos;t deliver to{" "}
-              <strong>{pending.label || "your new address"}</strong>. Changing
-              your address will clear this order.
-            </p>
-            <div className={styles.actions}>
-              <button type="button" className={styles.secondary} onClick={keep}>
-                Keep current address
-              </button>
-              <button
-                type="button"
-                className={styles.primary}
-                onClick={changeAnyway}
-              >
-                Change &amp; clear order
-              </button>
+            <div className={styles.cardHead}>
+              <h2 id="addr-guard-title" className={styles.title}>
+                Change address?
+              </h2>
+            </div>
+            <div className={styles.cardBody}>
+              <p className={styles.body}>
+                {cookName ?? "This kitchen"} can&apos;t deliver to:
+              </p>
+              <p className={styles.addressLine}>
+                {pending.label || "your new address"}
+              </p>
+              <p className={styles.note}>
+                Changing your address will clear this order.
+              </p>
+            </div>
+            <div className={styles.cardFoot}>
+              <div className={styles.actions}>
+                <button
+                  type="button"
+                  className={styles.secondary}
+                  onClick={keep}
+                >
+                  Keep current address
+                </button>
+                <button
+                  type="button"
+                  className={styles.primary}
+                  onClick={changeAnyway}
+                >
+                  Change &amp; clear order
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -88,9 +88,9 @@ export function htmlEmail({
 </table>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:20px 0 0;">
 <tr>
-<td style="padding:14px 16px;background-color:${COLOR.grey100};border-radius:12px;">
-<p style="margin:0 0 6px;font-family:${FONT_STACK};font-size:12px;line-height:1.5;color:${COLOR.grey500};">Button not working? Paste this link into your browser:</p>
-<a href="${ctaUrl}" target="_blank" rel="noopener noreferrer" style="font-family:${FONT_STACK};font-size:12px;line-height:1.5;color:${COLOR.red};word-break:break-all;text-decoration:none;">${ctaUrl}</a>
+<td style="padding:16px 18px;background-color:${COLOR.white};border:1px solid ${COLOR.grey200};border-left:3px solid ${COLOR.red};border-radius:12px;">
+<p style="margin:0 0 8px;font-family:${FONT_STACK};font-size:12px;line-height:1.5;color:${COLOR.grey700};">Button not working? Copy and paste this link:</p>
+<a href="${ctaUrl}" target="_blank" rel="noopener noreferrer" style="font-family:${FONT_STACK};font-size:12px;line-height:1.55;color:${COLOR.red};word-break:break-all;text-decoration:underline;text-underline-offset:2px;">${ctaUrl}</a>
 </td>
 </tr>
 </table>`

@@ -4,8 +4,12 @@ import { z } from "zod";
 import { db } from "@/db";
 import { authUser, cookProfiles, orderDishes, orders } from "@/db/schema";
 import { auth } from "@/lib/auth";
-import { isRefundEligible } from "@/lib/order-pricing";
-import { cancelClientOrder } from "@/lib/orders/cancel-order";
+import { formatClientOrderTiming } from "@/lib/order-timing-label";
+import {
+  cancelClientOrder,
+  getClientCancelPolicy,
+} from "@/lib/orders/cancel-order";
+import { resolveOrderCookFields } from "@/lib/orders/cook-order-fields";
 import { getTaxLabel } from "@/lib/tax";
 
 function formatPickupDate(isoString: string): string {
@@ -58,6 +62,8 @@ export async function GET(req: NextRequest, { params }: Params) {
         taxProvince: orders.taxProvince,
         currency: orders.currency,
         pickupAt: orders.pickupAt,
+        fulfillmentWindowStart: orders.fulfillmentWindowStart,
+        fulfillmentWindowEnd: orders.fulfillmentWindowEnd,
         notes: orders.notes,
         createdAt: orders.createdAt,
         pickupCode: orders.pickupCode,
@@ -68,6 +74,9 @@ export async function GET(req: NextRequest, { params }: Params) {
         cancelledAt: orders.cancelledAt,
         cookFirstName: authUser.firstName,
         cookLastName: authUser.lastName,
+        cookDisplayName: cookProfiles.displayName,
+        cookPhotoUrl: cookProfiles.photoUrl,
+        cookBannerUrl: cookProfiles.bannerUrl,
         cookNeighborhood: authUser.neighborhood,
         cookPickupAddress: cookProfiles.pickupAddress,
         cookLeadTime: cookProfiles.leadTime,
@@ -97,13 +106,18 @@ export async function GET(req: NextRequest, { params }: Params) {
 
     const pickupAtIso =
       row.pickupAt instanceof Date ? row.pickupAt.toISOString() : row.pickupAt;
+    const fulfillmentMode =
+      row.fulfillmentMode === "delivery" || row.fulfillmentMode === "pickup"
+        ? row.fulfillmentMode
+        : null;
+    const timing = formatClientOrderTiming({
+      pickupAt: pickupAtIso,
+      fulfillmentWindowStart: row.fulfillmentWindowStart,
+      fulfillmentWindowEnd: row.fulfillmentWindowEnd,
+      fulfillmentMode,
+    });
 
-    const cookName =
-      [row.cookFirstName, row.cookLastName].filter(Boolean).join(" ") || null;
-    const cookInitials =
-      [row.cookFirstName?.[0], row.cookLastName?.[0]]
-        .filter(Boolean)
-        .join("") || null;
+    const cookFields = resolveOrderCookFields(row);
 
     let pickupAddress: string | null = null;
     if (row.fulfillmentMode === "delivery") {
@@ -123,13 +137,17 @@ export async function GET(req: NextRequest, { params }: Params) {
       pickupAddress = row.cookPickupAddress ?? row.cookNeighborhood ?? null;
     }
 
-    const refundEligible = isRefundEligible(
-      row.pickupAt instanceof Date ? row.pickupAt : null,
-      row.cookLeadTime,
-      row.cancellationAllowed,
-    );
-    const cancellable =
-      ["pending", "confirmed"].includes(row.status) && row.pickupAt != null;
+    const cancelPolicy = getClientCancelPolicy({
+      status: row.status,
+      cancellationAllowed: row.cancellationAllowed,
+      pickupAt: row.pickupAt instanceof Date ? row.pickupAt : null,
+      fulfillmentWindowStart: row.fulfillmentWindowStart,
+      cookLeadTime: row.cookLeadTime,
+      fulfillmentMode:
+        row.fulfillmentMode === "delivery" || row.fulfillmentMode === "pickup"
+          ? row.fulfillmentMode
+          : null,
+    });
 
     const data = {
       id: row.id,
@@ -146,13 +164,19 @@ export async function GET(req: NextRequest, { params }: Params) {
           ? row.createdAt.toISOString()
           : row.createdAt,
       pickupCode: row.status === "ready" ? (row.pickupCode ?? null) : null,
-      cookName,
-      cookInitials,
+      ...cookFields,
       fulfillmentMode: row.fulfillmentMode,
       deliveryFeeSnapshot: row.deliveryFeeSnapshot,
       cancellationAllowed: row.cancellationAllowed,
-      cancellable,
-      refundEligible,
+      cancellable: cancelPolicy.cancellable,
+      refundEligible: cancelPolicy.refundEligible,
+      refundDeadline: cancelPolicy.refundDeadline,
+      refundDeadlineLabel: cancelPolicy.refundDeadlineLabel,
+      cancelSummary: cancelPolicy.summary,
+      cancelDetail: cancelPolicy.detail,
+      cancelModalReminder: cancelPolicy.modalReminder,
+      timingSchedule: timing.schedule,
+      timingHint: timing.hint,
       pickupDate: pickupAtIso ? formatPickupDate(pickupAtIso) : null,
       pickupWindow: pickupAtIso ? formatPickupWindow(pickupAtIso) : null,
       pickupAddress,

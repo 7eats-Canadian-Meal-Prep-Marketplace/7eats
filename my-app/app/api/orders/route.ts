@@ -4,6 +4,8 @@ import { db } from "@/db";
 import { authUser, cookProfiles, orderDishes, orders } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { ensureStripeCustomer } from "@/lib/guest-client";
+import { formatClientOrderTiming } from "@/lib/order-timing-label";
+import { resolveOrderCookFields } from "@/lib/orders/cook-order-fields";
 import {
   createOrderBodySchema,
   placeClientOrder,
@@ -89,11 +91,16 @@ export async function GET(req: NextRequest) {
         deliveryFeeSnapshot: orders.deliveryFeeSnapshot,
         currency: orders.currency,
         pickupAt: orders.pickupAt,
+        fulfillmentWindowStart: orders.fulfillmentWindowStart,
+        fulfillmentWindowEnd: orders.fulfillmentWindowEnd,
         notes: orders.notes,
         createdAt: orders.createdAt,
         pickupCode: orders.pickupCode,
         cookFirstName: authUser.firstName,
         cookLastName: authUser.lastName,
+        cookDisplayName: cookProfiles.displayName,
+        cookPhotoUrl: cookProfiles.photoUrl,
+        cookBannerUrl: cookProfiles.bannerUrl,
         fulfillmentMode: orders.fulfillmentMode,
       })
       .from(orders)
@@ -130,6 +137,16 @@ export async function GET(req: NextRequest) {
     const data = rows.map((r) => {
       const pickupAtIso =
         r.pickupAt instanceof Date ? r.pickupAt.toISOString() : r.pickupAt;
+      const fulfillmentMode =
+        r.fulfillmentMode === "delivery" || r.fulfillmentMode === "pickup"
+          ? r.fulfillmentMode
+          : null;
+      const timing = formatClientOrderTiming({
+        pickupAt: pickupAtIso,
+        fulfillmentWindowStart: r.fulfillmentWindowStart,
+        fulfillmentWindowEnd: r.fulfillmentWindowEnd,
+        fulfillmentMode,
+      });
       return {
         id: r.id,
         status: r.status,
@@ -152,13 +169,10 @@ export async function GET(req: NextRequest) {
           lineTotal: d.lineTotal,
           sortOrder: d.sortOrder,
         })),
-        cookName:
-          [r.cookFirstName, r.cookLastName].filter(Boolean).join(" ") || null,
-        cookInitials:
-          [r.cookFirstName?.[0], r.cookLastName?.[0]]
-            .filter(Boolean)
-            .join("") || null,
+        ...resolveOrderCookFields(r),
         fulfillmentMode: r.fulfillmentMode,
+        timingSchedule: timing.schedule,
+        timingHint: timing.hint,
         pickupDate: pickupAtIso ? formatPickupDate(pickupAtIso) : null,
         pickupWindow: pickupAtIso ? formatPickupWindow(pickupAtIso) : null,
       };

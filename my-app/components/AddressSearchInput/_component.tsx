@@ -86,7 +86,7 @@ export function AddressSearchInput({
   }
 
   return (
-    <div style={{ display: "contents" }}>
+    <div style={{ width: "100%" }}>
       <AddressAutofill
         accessToken={token}
         options={{ country: "ca", language: "en" }}

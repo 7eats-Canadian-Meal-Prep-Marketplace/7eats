@@ -729,25 +729,35 @@ export default function CheckoutPage() {
               {!addressReady ? (
                 <p className={styles.sectionLead}>Loading address…</p>
               ) : editingAddress || !displayAddress ? (
-                <>
-                  <AddressSearchInput
-                    id="checkout-address"
-                    value={addressInput}
-                    onTextChange={setAddressInput}
-                    onResolve={handleAddressResolve}
-                    className={styles.input}
-                    placeholder="Start typing your address…"
-                  />
+                <div className={styles.addressEditBlock}>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label} htmlFor="checkout-address">
+                      Street address
+                    </label>
+                    <AddressSearchInput
+                      id="checkout-address"
+                      value={addressInput}
+                      onTextChange={setAddressInput}
+                      onResolve={handleAddressResolve}
+                      className={styles.addressEditInput}
+                      placeholder="Start typing your address…"
+                    />
+                    <p className={styles.addressEditHint}>
+                      Choose a complete address from the suggestions.
+                    </p>
+                  </div>
                   {displayAddress && (
-                    <button
-                      type="button"
-                      className={styles.textBtn}
-                      onClick={() => setEditingAddress(false)}
-                    >
-                      Cancel
-                    </button>
+                    <div className={styles.addressEditActions}>
+                      <button
+                        type="button"
+                        className={styles.addressEditCancelBtn}
+                        onClick={() => setEditingAddress(false)}
+                      >
+                        Cancel
+                      </button>
+                    </div>
                   )}
-                </>
+                </div>
               ) : (
                 <div className={styles.addressSummary}>
                   <p className={styles.addressLine}>

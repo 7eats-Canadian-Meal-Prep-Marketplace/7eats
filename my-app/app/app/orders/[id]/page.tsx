@@ -15,17 +15,17 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { use, useEffect, useState } from "react";
+import {
+  type ClientOrderStatus,
+  clientOrderTrackerSteps,
+} from "@/lib/client-order-status";
 import { Skeleton } from "../../_skeleton";
+import { OrderCookHero } from "../_cook-visual";
 import styles from "./page.module.css";
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
 
-type OrderStatus =
-  | "pending"
-  | "confirmed"
-  | "ready"
-  | "fulfilled"
-  | "cancelled";
+type OrderStatus = ClientOrderStatus;
 
 type ApiDish = {
   id: string;
@@ -49,14 +49,22 @@ type ApiOrder = {
   pickupAt: string | null;
   pickupDate: string | null;
   pickupWindow: string | null;
+  timingSchedule: string;
+  timingHint: string | null;
   pickupCode: string | null;
   pickupAddress: string | null;
   fulfillmentMode: "pickup" | "delivery" | null;
   cancellationAllowed: boolean;
   cancellable: boolean;
   refundEligible: boolean;
+  refundDeadlineLabel: string | null;
+  cancelSummary: string;
+  cancelDetail: string;
+  cancelModalReminder: string;
   cookName: string | null;
   cookInitials: string | null;
+  cookPhotoUrl: string | null;
+  cookBannerUrl: string | null;
   dishes: ApiDish[];
   cancelledAt: string | null;
 };
@@ -69,6 +77,91 @@ function orderTitle(o: ApiOrder): string {
       : o.dishes[0].dishName;
   }
   return "Order";
+}
+
+// ─── Cancel modal ──────────────────────────────────────────────────────────────
+
+function CancelOrderModal({
+  cookName,
+  listingTitle,
+  policyLine,
+  refundEligible,
+  reminder,
+  loading,
+  error,
+  onConfirm,
+  onClose,
+}: {
+  cookName: string;
+  listingTitle: string;
+  policyLine: string;
+  refundEligible: boolean;
+  reminder: string;
+  loading: boolean;
+  error: string | null;
+  onConfirm: () => void;
+  onClose: () => void;
+}) {
+  return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: modal backdrop dismiss
+    // biome-ignore lint/a11y/useKeyWithClickEvents: modal backdrop dismiss
+    <div className={styles.modalBackdrop} onClick={onClose}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="cancel-order-title"
+        className={styles.cancelModal}
+        onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
+      >
+        <div className={styles.cancelModalHead}>
+          <div>
+            <p className={styles.modalEyebrow}>{cookName}</p>
+            <h2 id="cancel-order-title" className={styles.cancelModalTitle}>
+              Cancel this order?
+            </h2>
+          </div>
+          <button type="button" className={styles.modalClose} onClick={onClose}>
+            <X size={18} />
+          </button>
+        </div>
+
+        <p className={styles.cancelModalOrder}>{listingTitle}</p>
+
+        {policyLine && <p className={styles.cancelModalPolicy}>{policyLine}</p>}
+        {reminder && <p className={styles.cancelModalReminder}>{reminder}</p>}
+
+        {error && (
+          <p className={styles.cancelModalError} role="alert">
+            {error}
+          </p>
+        )}
+
+        <div className={styles.cancelModalActions}>
+          <button
+            type="button"
+            className={styles.cancelModalKeep}
+            onClick={onClose}
+            disabled={loading}
+          >
+            Keep order
+          </button>
+          <button
+            type="button"
+            className={styles.cancelModalConfirm}
+            onClick={onConfirm}
+            disabled={loading}
+          >
+            {loading
+              ? "Cancelling…"
+              : refundEligible
+                ? "Cancel and refund"
+                : "Cancel without refund"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // ─── Review modal ──────────────────────────────────────────────────────────────
@@ -188,29 +281,29 @@ export default function OrderDetailPage({
     comment: string;
   } | null>(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
 
   async function handleCancel() {
     if (cancelling) return;
-    const msg = order?.refundEligible
-      ? "Cancel this order? You'll receive a full refund."
-      : "Cancel this order? No refund will be issued.";
-    if (!window.confirm(msg)) return;
     setCancelling(true);
+    setCancelError(null);
     try {
       const res = await fetch(`/api/orders/${id}`, { method: "DELETE" });
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        window.alert(
+        setShowCancelModal(false);
+        router.replace(
           data.refunded
-            ? "Order cancelled — your refund is on its way."
-            : "Order cancelled.",
+            ? "/app/orders?cancelled=refunded"
+            : "/app/orders?cancelled=1",
         );
-        router.refresh();
-        router.replace("/app/orders");
-      } else {
-        window.alert(data.error ?? "Could not cancel the order.");
+        return;
       }
+      setCancelError(data.error ?? "Could not cancel the order.");
+    } catch {
+      setCancelError("Something went wrong. Please try again.");
     } finally {
       setCancelling(false);
     }
@@ -251,19 +344,21 @@ export default function OrderDetailPage({
             </Link>
             <Skeleton width={72} height={12} radius={4} />
           </div>
-          <div
-            className={styles.heroCard}
-            style={{
-              background: "linear-gradient(135deg, #3a3a3a 0%, #1a1a1a 100%)",
-            }}
-          >
-            <Skeleton circle width={56} height={56} />
-            <div
-              className={styles.heroInfo}
-              style={{ display: "flex", flexDirection: "column", gap: 8 }}
-            >
-              <Skeleton width="45%" height={14} radius={6} />
-              <Skeleton width="70%" height={22} radius={6} />
+          <div className={styles.heroSkeleton}>
+            <Skeleton width="100%" height={84} radius={0} />
+            <div className={styles.heroSkeletonBody}>
+              <Skeleton circle width={56} height={56} />
+              <div
+                style={{
+                  flex: 1,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 8,
+                }}
+              >
+                <Skeleton width="45%" height={14} radius={6} />
+                <Skeleton width="70%" height={22} radius={6} />
+              </div>
             </div>
           </div>
           <div
@@ -304,25 +399,7 @@ export default function OrderDetailPage({
   const cookInitials = order.cookInitials ?? "?";
   const listingTitle = orderTitle(order);
 
-  const steps = [
-    { label: "Order placed", done: true },
-    {
-      label: "Awaiting confirmation",
-      done: ["confirmed", "ready", "fulfilled"].includes(order.status),
-    },
-    {
-      label: "Cook is preparing",
-      done: ["confirmed", "ready", "fulfilled"].includes(order.status),
-    },
-    {
-      label: isDelivery ? "Out for delivery" : "Ready for pickup",
-      done: ["ready", "fulfilled"].includes(order.status),
-    },
-    {
-      label: isDelivery ? "Delivered" : "Picked up",
-      done: order.status === "fulfilled",
-    },
-  ];
+  const steps = clientOrderTrackerSteps(order.status, order.fulfillmentMode);
 
   return (
     <div className={styles.page}>
@@ -337,21 +414,13 @@ export default function OrderDetailPage({
           </span>
         </div>
 
-        {/* Header */}
-        <div
-          className={styles.heroCard}
-          style={{
-            background: "linear-gradient(135deg, #3a3a3a 0%, #1a1a1a 100%)",
-          }}
-        >
-          <div className={styles.heroInitials}>
-            {cookInitials.toUpperCase()}
-          </div>
-          <div className={styles.heroInfo}>
-            <div className={styles.heroCook}>{cookDisplayName}</div>
-            <div className={styles.heroTitle}>{listingTitle}</div>
-          </div>
-        </div>
+        <OrderCookHero
+          bannerUrl={order.cookBannerUrl}
+          photoUrl={order.cookPhotoUrl}
+          initials={cookInitials}
+          cookName={cookDisplayName}
+          title={listingTitle}
+        />
 
         {/* Cancellation banner */}
         {isCancelled && (
@@ -479,17 +548,20 @@ export default function OrderDetailPage({
           <h2 className={styles.sectionTitle}>
             {isDelivery ? "Delivery details" : "Pickup details"}
           </h2>
-          <div className={styles.detailRow}>
-            <Clock size={15} className={styles.detailIcon} />
-            <div>
-              <div className={styles.detailLabel}>Date & time</div>
-              <div className={styles.detailVal}>
-                {order.pickupDate && order.pickupWindow
-                  ? `${order.pickupDate} · ${order.pickupWindow}`
-                  : (order.pickupDate ?? order.pickupWindow ?? "TBD")}
+          {!isCancelled && (
+            <div className={styles.detailRow}>
+              <Clock size={15} className={styles.detailIcon} />
+              <div>
+                <div className={styles.detailLabel}>Date & time</div>
+                <div className={styles.detailVal}>
+                  {order.timingSchedule ?? "TBD"}
+                </div>
+                {order.timingHint && (
+                  <p className={styles.detailHint}>{order.timingHint}</p>
+                )}
               </div>
             </div>
-          </div>
+          )}
           {order.pickupAddress && (
             <div className={styles.detailRow}>
               {isDelivery ? (
@@ -587,23 +659,41 @@ export default function OrderDetailPage({
         </div>
 
         {order.cancellable && (
-          <div className={styles.itemsCard}>
+          <section className={styles.cancelCard}>
+            <h2 className={styles.cancelTitle}>Need to cancel?</h2>
+            <p className={styles.cancelSummary}>{order.cancelSummary}</p>
+            {order.cancelDetail ? (
+              <p className={styles.cancelDesc}>{order.cancelDetail}</p>
+            ) : null}
             <button
               type="button"
-              className={styles.modalCancel}
-              onClick={handleCancel}
-              disabled={cancelling}
+              className={styles.cancelBtn}
+              onClick={() => {
+                setCancelError(null);
+                setShowCancelModal(true);
+              }}
             >
-              {cancelling ? "Cancelling…" : "Cancel order"}
+              Cancel order
             </button>
-            <p className={styles.codeDesc}>
-              {order.refundEligible
-                ? "You can cancel now for a full refund."
-                : "Cancelling now will not be refunded."}
-            </p>
-          </div>
+          </section>
         )}
       </div>
+
+      {showCancelModal && order && (
+        <CancelOrderModal
+          cookName={cookDisplayName}
+          listingTitle={listingTitle}
+          policyLine={order.cancelSummary}
+          refundEligible={order.refundEligible}
+          reminder={order.cancelModalReminder}
+          loading={cancelling}
+          error={cancelError}
+          onConfirm={() => void handleCancel()}
+          onClose={() => {
+            if (!cancelling) setShowCancelModal(false);
+          }}
+        />
+      )}
 
       {/* Review modal */}
       {showReviewModal && (

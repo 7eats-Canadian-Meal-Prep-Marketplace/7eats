@@ -30,6 +30,7 @@ vi.mock("@/lib/order-pricing", async (importOriginal) => {
 vi.mock("@/lib/auth", () => ({ auth: { api: { getSession: vi.fn() } } }));
 vi.mock("@/lib/emails/order-events", () => ({
   sendOrderCancelledByClientEmailToCook: vi.fn().mockResolvedValue(undefined),
+  sendOrderCancelledByClientEmailToClient: vi.fn().mockResolvedValue(undefined),
 }));
 
 import { NextRequest } from "next/server";
@@ -124,8 +125,15 @@ describe("DELETE /api/orders/[orderId]", () => {
       selectQueue([
         [orderRow()],
         [{ id: "p1", status: "authorized", stripePaymentIntentId: "pi_1" }],
-        [{ cookEmail: "k@t.com", cookFirstName: "K" }],
-        [{ name: "Soup", quantity: 1 }],
+        [
+          {
+            cookEmail: "k@t.com",
+            cookFirstName: "K",
+            cookDisplayName: "Kitchen",
+          },
+        ],
+        [{ firstName: "C", lastName: "D", email: "c@t.com" }],
+        [{ dishName: "Soup", quantity: 1 }],
       ]),
     );
 
@@ -144,8 +152,15 @@ describe("DELETE /api/orders/[orderId]", () => {
       selectQueue([
         [orderRow({ cancellationAllowed: false })],
         [{ id: "p1", status: "authorized", stripePaymentIntentId: "pi_1" }],
-        [{ cookEmail: "k@t.com", cookFirstName: "K" }],
-        [{ name: "Soup", quantity: 1 }],
+        [
+          {
+            cookEmail: "k@t.com",
+            cookFirstName: "K",
+            cookDisplayName: "Kitchen",
+          },
+        ],
+        [{ firstName: "C", lastName: "D", email: "c@t.com" }],
+        [{ dishName: "Soup", quantity: 1 }],
       ]),
     );
 

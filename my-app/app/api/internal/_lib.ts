@@ -35,7 +35,7 @@ export async function sendSetupEmail(
 
   await sendMail({
     to,
-    subject: `${kitchenName} — complete your 7eats setup`,
+    subject: `${kitchenName} - complete your 7eats setup`,
     text: [
       "Hi,",
       "",
