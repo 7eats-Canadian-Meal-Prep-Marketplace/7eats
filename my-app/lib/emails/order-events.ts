@@ -262,7 +262,7 @@ export async function sendOrderConfirmedEmailToClient(
   order: OrderEmailData,
 ): Promise<void> {
   try {
-    const pickup = formatPickup(order.pickupAt);
+    const timing = formatTiming(order);
     const subject = "Your order is confirmed";
     const html = htmlEmail({
       title: subject,
@@ -277,7 +277,7 @@ export async function sendOrderConfirmedEmailToClient(
             label: "Total",
             value: formatMoney(order.totalPrice, order.currency),
           },
-          { label: "Pickup", value: pickup },
+          { label: fulfillmentLabel(order.fulfillmentMode), value: timing },
         ]) +
         paragraph(
           "You'll get another email with your pickup code once the order is ready.",
@@ -292,13 +292,55 @@ export async function sendOrderConfirmedEmailToClient(
       `Order: ${order.listingTitle}`,
       `Quantity: ${order.quantity}`,
       `Total: ${formatMoney(order.totalPrice, order.currency)}`,
-      `Pickup: ${pickup}`,
+      `${fulfillmentLabel(order.fulfillmentMode)}: ${timing}`,
       "",
       "You'll get another email with your pickup code once the order is ready.",
     ]);
     await sendMail({ to: client.email, subject, text, html });
   } catch (err) {
     console.error("[email/order-confirmed-client]", err);
+  }
+}
+
+export async function sendOrderNotReadyEmailToClient(
+  client: { email: string; firstName: string | null },
+  cook: { name: string },
+  order: OrderEmailData,
+): Promise<void> {
+  try {
+    const timingRow = emailTimingRow(order);
+    const codeNoun =
+      order.fulfillmentMode === "delivery" ? "delivery code" : "pickup code";
+    const subject = `Your order from ${cook.name} is taking a little longer`;
+    const html = htmlEmail({
+      title: subject,
+      preheader: `${cook.name} is still preparing your order.`,
+      bodyHtml:
+        paragraph(greeting(client.firstName)) +
+        paragraph(
+          `Quick heads up. Your order from <strong>${cook.name}</strong> is taking a little longer than expected. They're still hard at work on it and will have it ready as soon as they can.`,
+        ) +
+        orderDetailsTable([
+          { label: "Order", value: order.listingTitle },
+          ...(timingRow ? [timingRow] : []),
+        ]) +
+        paragraph(
+          `No need to do anything. We'll email you a fresh ${codeNoun} the moment it's ready. Thanks for your patience!`,
+        ) +
+        contactParagraph(),
+    });
+    const text = textWithContact([
+      greeting(client.firstName),
+      "",
+      `Quick heads up. Your order from ${cook.name} is taking a little longer than expected. They're still hard at work on it and will have it ready as soon as they can.`,
+      "",
+      `Order: ${order.listingTitle}`,
+      ...(timingRow ? [`${timingRow.label}: ${timingRow.value}`, ""] : []),
+      `No need to do anything. We'll email you a fresh ${codeNoun} the moment it's ready. Thanks for your patience!`,
+    ]);
+    await sendMail({ to: client.email, subject, text, html });
+  } catch (err) {
+    console.error("[email/order-not-ready-client]", err);
   }
 }
 
@@ -346,45 +388,50 @@ export async function sendOrderReadyEmailToClient(
   }
 }
 
-export async function sendOrderNotReadyEmailToClient(
+export async function sendOrderCompletedEmailToClient(
   client: { email: string; firstName: string | null },
   cook: { name: string },
   order: OrderEmailData,
 ): Promise<void> {
   try {
-    const timingRow = emailTimingRow(order);
-    const codeNoun =
-      order.fulfillmentMode === "delivery" ? "delivery code" : "pickup code";
-    const subject = `Your order from ${cook.name} is taking a little longer`;
+    const subject = `Thanks for your order with ${cook.name}`;
+    const orderUrl = `${process.env.NEXT_PUBLIC_APP_URL}/app/orders/${order.id}`;
     const html = htmlEmail({
-      title: subject,
-      preheader: `${cook.name} is still preparing your order.`,
+      title: "Enjoy your order!",
+      preheader: `Your order from ${cook.name} is all yours.`,
       bodyHtml:
         paragraph(greeting(client.firstName)) +
         paragraph(
-          `Quick heads up. Your order from <strong>${cook.name}</strong> is taking a little longer than expected. They're still hard at work on it and will have it ready as soon as they can.`,
+          `Your order from <strong>${cook.name}</strong> is all yours — we hope every bite is wonderful. Thanks for supporting a home cook in your neighbourhood.`,
         ) +
         orderDetailsTable([
           { label: "Order", value: order.listingTitle },
-          ...(timingRow ? [timingRow] : []),
+          {
+            label: "Total",
+            value: formatMoney(order.totalPrice, order.currency),
+          },
         ]) +
         paragraph(
-          `No need to do anything. We'll email you a fresh ${codeNoun} the moment it's ready. Thanks for your patience!`,
+          `Enjoyed it? A quick review helps ${cook.name} reach more neighbours.`,
         ) +
         contactParagraph(),
+      ctaLabel: "Leave a review",
+      ctaUrl: orderUrl,
     });
     const text = textWithContact([
       greeting(client.firstName),
       "",
-      `Quick heads up. Your order from ${cook.name} is taking a little longer than expected. They're still hard at work on it and will have it ready as soon as they can.`,
+      `Your order from ${cook.name} is all yours — we hope every bite is wonderful. Thanks for supporting a home cook in your neighbourhood.`,
       "",
       `Order: ${order.listingTitle}`,
-      ...(timingRow ? [`${timingRow.label}: ${timingRow.value}`, ""] : []),
-      `No need to do anything. We'll email you a fresh ${codeNoun} the moment it's ready. Thanks for your patience!`,
+      `Total: ${formatMoney(order.totalPrice, order.currency)}`,
+      "",
+      `Enjoyed it? Leave a quick review to help ${cook.name} reach more neighbours:`,
+      orderUrl,
     ]);
     await sendMail({ to: client.email, subject, text, html });
   } catch (err) {
-    console.error("[email/order-not-ready-client]", err);
+    console.error("[email/order-completed-client]", err);
   }
 }
 

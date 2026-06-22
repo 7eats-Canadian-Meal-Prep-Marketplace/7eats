@@ -4,6 +4,10 @@ import { z } from "zod";
 import { db } from "@/db";
 import { authUser, cookProfiles, orderDishes, orders } from "@/db/schema";
 import { auth } from "@/lib/auth";
+import {
+  formatOrderTimingDate,
+  formatOrderTimingWindow,
+} from "@/lib/order-timing";
 import { formatClientOrderTiming } from "@/lib/order-timing-label";
 import {
   cancelClientOrder,
@@ -11,28 +15,6 @@ import {
 } from "@/lib/orders/cancel-order";
 import { resolveOrderCookFields } from "@/lib/orders/cook-order-fields";
 import { getTaxLabel } from "@/lib/tax";
-
-function formatPickupDate(isoString: string): string {
-  const d = new Date(isoString);
-  return d.toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  });
-}
-
-function formatPickupWindow(isoString: string, windowHours = 2): string {
-  const d = new Date(isoString);
-  const start = d
-    .toLocaleTimeString("en-US", { hour: "numeric", hour12: true })
-    .toLowerCase()
-    .replace(":00", "");
-  const end = new Date(d.getTime() + windowHours * 3600000)
-    .toLocaleTimeString("en-US", { hour: "numeric", hour12: true })
-    .toLowerCase()
-    .replace(":00", "");
-  return `${start} – ${end}`;
-}
 
 export type Params = { params: Promise<{ orderId: string }> };
 
@@ -106,11 +88,24 @@ export async function GET(req: NextRequest, { params }: Params) {
 
     const pickupAtIso =
       row.pickupAt instanceof Date ? row.pickupAt.toISOString() : row.pickupAt;
+    const fulfillmentWindowStartIso =
+      row.fulfillmentWindowStart instanceof Date
+        ? row.fulfillmentWindowStart.toISOString()
+        : row.fulfillmentWindowStart;
+    const fulfillmentWindowEndIso =
+      row.fulfillmentWindowEnd instanceof Date
+        ? row.fulfillmentWindowEnd.toISOString()
+        : row.fulfillmentWindowEnd;
+    const timing = {
+      pickupAt: pickupAtIso,
+      fulfillmentWindowStart: fulfillmentWindowStartIso,
+      fulfillmentWindowEnd: fulfillmentWindowEndIso,
+    };
     const fulfillmentMode =
       row.fulfillmentMode === "delivery" || row.fulfillmentMode === "pickup"
         ? row.fulfillmentMode
         : null;
-    const timing = formatClientOrderTiming({
+    const clientTiming = formatClientOrderTiming({
       pickupAt: pickupAtIso,
       fulfillmentWindowStart: row.fulfillmentWindowStart,
       fulfillmentWindowEnd: row.fulfillmentWindowEnd,
@@ -158,6 +153,8 @@ export async function GET(req: NextRequest, { params }: Params) {
       taxLabel: row.taxProvince ? getTaxLabel(row.taxProvince) : null,
       currency: row.currency,
       pickupAt: pickupAtIso,
+      fulfillmentWindowStart: fulfillmentWindowStartIso,
+      fulfillmentWindowEnd: fulfillmentWindowEndIso,
       notes: row.notes ?? null,
       createdAt:
         row.createdAt instanceof Date
@@ -175,10 +172,10 @@ export async function GET(req: NextRequest, { params }: Params) {
       cancelSummary: cancelPolicy.summary,
       cancelDetail: cancelPolicy.detail,
       cancelModalReminder: cancelPolicy.modalReminder,
-      timingSchedule: timing.schedule,
-      timingHint: timing.hint,
-      pickupDate: pickupAtIso ? formatPickupDate(pickupAtIso) : null,
-      pickupWindow: pickupAtIso ? formatPickupWindow(pickupAtIso) : null,
+      timingSchedule: clientTiming.schedule,
+      timingHint: clientTiming.hint,
+      pickupDate: formatOrderTimingDate(timing),
+      pickupWindow: formatOrderTimingWindow(timing),
       pickupAddress,
       cancelledAt:
         row.cancelledAt instanceof Date

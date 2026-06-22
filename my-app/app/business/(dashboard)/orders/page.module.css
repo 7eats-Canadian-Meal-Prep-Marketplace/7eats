@@ -112,15 +112,6 @@
   text-overflow: ellipsis;
 }
 
-.listRowListing {
-  font-size: 13px;
-  font-weight: 500;
-  color: #555560;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 .listRowMeta {
   font-size: 12px;
   color: #8a8a96;
@@ -229,32 +220,61 @@
 }
 
 .detailHeader {
-  margin-bottom: 24px;
+  margin-bottom: 18px;
+}
+
+.detailHeaderTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .detailTitle {
-  font-size: 22px;
+  font-size: 21px;
   font-weight: 800;
   color: var(--ink);
   letter-spacing: -0.03em;
-  margin: 0 0 6px;
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.detailSubline {
+.detailSubMeta {
+  margin: 6px 0 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: #8a8a96;
+}
+
+/* ─── Fulfillment time card ──────────────────────────────────────────────────── */
+.timeCard {
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  background: var(--grey-100);
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-sm);
 }
 
-.detailCustomer {
-  font-size: 14px;
-  font-weight: 500;
-  color: #6e6e7a;
+.timeCardLabel {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #8a8a96;
 }
 
-.detailDot {
-  font-size: 14px;
-  color: #c0c0c8;
+.timeCardValue {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+  text-align: right;
 }
 
 .chatBtn {
@@ -318,93 +338,139 @@
   border-color: var(--ink);
 }
 
-/* ─── Meta block ─────────────────────────────────────────────────────────────── */
-.metaBlock {
+/* ─── Receipt ────────────────────────────────────────────────────────────────── */
+.receipt {
   border: 1px solid var(--grey-200);
   border-radius: var(--radius-sm);
   overflow: hidden;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
-.metaRow {
-  display: flex;
-  align-items: baseline;
-  gap: 16px;
-  padding: 11px 16px;
-  border-bottom: 1px solid var(--grey-200);
-}
-
-.metaRow:last-child {
-  border-bottom: none;
-}
-
-.metaKey {
-  font-size: 13px;
-  font-weight: 600;
-  color: #8a8a96;
-  width: 84px;
-  flex: none;
-}
-
-.metaVal {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--ink);
-}
-
-.metaValBold {
-  font-weight: 800;
-  font-feature-settings: "tnum";
-}
-
-/* ─── Dish breakdown ─────────────────────────────────────────────────────────── */
-.dishSection {
-  margin-bottom: 24px;
-}
-
-.dishSectionLabel {
+.receiptLabel {
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--ink);
-  margin: 0 0 10px;
+  color: #8a8a96;
+  margin: 0;
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--grey-200);
+  background: var(--grey-100);
 }
 
-.dishRow {
+.receiptItems {
+  padding: 6px 0;
+}
+
+.receiptRow {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: 12px;
-  padding: 11px 16px;
-  border: 1px solid var(--grey-200);
-  border-radius: var(--radius-sm);
-  margin-bottom: 4px;
+  padding: 9px 16px;
 }
 
-.dishName {
+.receiptQty {
   font-size: 13.5px;
+  font-weight: 800;
+  color: var(--ink);
+  font-feature-settings: "tnum";
+  flex: none;
+  min-width: 26px;
+}
+
+.receiptItemMain {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.receiptItemName {
+  font-size: 14px;
   font-weight: 600;
   color: var(--ink);
-  flex: 1;
 }
 
-.dishCuisine {
+.receiptItemUnit {
   font-size: 12px;
   color: #8a8a96;
 }
 
-.dishQtyBox {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  background: #f0f0f3;
-  border-radius: 5px;
-  font-size: 12.5px;
-  font-weight: 700;
+.receiptPromo {
+  color: var(--red);
+  font-weight: 600;
+}
+
+.receiptLineTotal {
+  font-size: 14px;
+  font-weight: 600;
   color: var(--ink);
+  font-feature-settings: "tnum";
   flex: none;
+}
+
+.receiptTotals {
+  padding: 12px 16px;
+  border-top: 1px solid var(--grey-200);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.receiptTotalRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #6e6e7a;
+}
+
+.receiptTotalRow span:last-child {
+  font-feature-settings: "tnum";
+  color: var(--ink);
+}
+
+.receiptGrandTotal {
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid var(--grey-200);
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+
+.receiptGrandTotal span:last-child {
+  font-weight: 800;
+}
+
+/* ─── Customer note ──────────────────────────────────────────────────────────── */
+.notesBlock {
+  padding: 13px 16px;
+  margin-bottom: 20px;
+  background: none;
+  border: 1px solid #d92d20;
+  border-radius: var(--radius-sm);
+}
+
+.notesLabel {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #d92d20;
+  margin: 0 0 5px;
+}
+
+.notesText {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--ink);
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 /* ─── Action zone ────────────────────────────────────────────────────────────── */
@@ -543,6 +609,175 @@
   border-color: #a0a0aa;
 }
 
+/* ─── Button spinner ─────────────────────────────────────────────────────────── */
+.btnLoading {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  opacity: 0.9;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation-duration: 1.4s;
+  }
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ─── Confirm dialog (state-changing actions) ────────────────────────────────── */
+.confirmRoot {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.confirmOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 15, 15, 0.45);
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: default;
+  animation: confirmFade 0.14s ease both;
+}
+
+.confirmModal {
+  position: relative;
+  width: 100%;
+  max-width: 380px;
+  background: var(--white);
+  border-radius: var(--radius-md, 14px);
+  padding: 24px;
+  box-shadow:
+    0 18px 48px rgba(0, 0, 0, 0.22),
+    0 2px 8px rgba(0, 0, 0, 0.12);
+  animation: confirmPop 0.16s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.confirmTitle {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--ink);
+  margin: 0 0 8px;
+}
+
+.confirmText {
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--grey-500);
+  margin: 0 0 20px;
+}
+
+.confirmBtns {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.confirmYes {
+  padding: 11px 18px;
+  background: var(--ink);
+  color: var(--white);
+  font-size: 13.5px;
+  font-weight: 700;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transition: opacity 0.12s;
+}
+
+.confirmYes:hover {
+  opacity: 0.82;
+}
+
+.confirmYes:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.confirmYesDanger {
+  background: #d92d20;
+}
+
+.confirmNo {
+  padding: 11px 18px;
+  background: none;
+  color: #444444;
+  font-size: 13.5px;
+  font-weight: 500;
+  border: 1px solid #d0d0d8;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition:
+    border-color 0.12s,
+    color 0.12s;
+}
+
+.confirmNo:hover {
+  border-color: #a0a0aa;
+  color: var(--ink);
+}
+
+.confirmNo:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+@keyframes confirmFade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes confirmPop {
+  from {
+    transform: scale(0.96);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
 /* ─── Verify code ────────────────────────────────────────────────────────────── */
 .verifyForm {
   display: flex;
@@ -630,6 +865,213 @@
   border-top: 1px solid var(--grey-200);
   font-size: 13.5px;
   color: var(--grey-500);
+}
+
+/* Calm completed state — shown when reopening an already-finished order. */
+.completedCalm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--grey-200);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--grey-500);
+}
+
+.completedCalm svg {
+  color: #a0a0aa;
+  flex: none;
+}
+
+/* ─── Order complete celebration ─────────────────────────────────────────────── */
+.complete {
+  position: relative;
+  margin-top: 4px;
+  padding: 30px 16px 10px;
+  border-top: 1px solid var(--grey-200);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  overflow: hidden;
+}
+
+.completeSeal {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 16px;
+}
+
+.completeRing {
+  position: absolute;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--red);
+  opacity: 0;
+  transform: scale(0.6);
+  animation: sealRing 0.9s ease-out 0.12s both;
+}
+
+.completeCheck {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  transform: scale(0.5);
+  opacity: 0;
+  animation: sealPop 0.42s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.completeCheckCircle {
+  fill: var(--red);
+}
+
+.completeCheckMark {
+  stroke: var(--white);
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 40;
+  stroke-dashoffset: 40;
+  animation: sealDraw 0.4s ease-out 0.34s forwards;
+}
+
+.completeTitle {
+  margin: 0 0 6px;
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  opacity: 0;
+  animation: completeRise 0.4s ease-out 0.36s both;
+}
+
+.completeText {
+  max-width: 280px;
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #555560;
+  opacity: 0;
+  animation: completeRise 0.4s ease-out 0.44s both;
+}
+
+.completePayout {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--grey-500);
+  opacity: 0;
+  animation: completeRise 0.4s ease-out 0.52s both;
+}
+
+.confetti {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  pointer-events: none;
+}
+
+.confettiPiece {
+  position: absolute;
+  top: 6px;
+  width: 7px;
+  height: 11px;
+  border-radius: 2px;
+  opacity: 0;
+  transform: translateY(-12px) rotate(var(--rot, 0deg));
+  animation: confettiFall 1.15s cubic-bezier(0.2, 0.6, 0.3, 1) both;
+}
+
+@keyframes sealPop {
+  from {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes sealRing {
+  from {
+    transform: scale(0.6);
+    opacity: 0.3;
+  }
+  to {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+}
+
+@keyframes sealDraw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes completeRise {
+  from {
+    transform: translateY(8px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes confettiFall {
+  0% {
+    transform: translateY(-12px) rotate(var(--rot, 0deg));
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(190px) rotate(calc(var(--rot, 0deg) * 4));
+    opacity: 0;
+  }
+}
+
+/* Honour reduced-motion: show the final, settled state with no animation. */
+@media (prefers-reduced-motion: reduce) {
+  .completeRing {
+    animation: none;
+    opacity: 0;
+  }
+
+  .completeCheck {
+    animation: none;
+    transform: none;
+    opacity: 1;
+  }
+
+  .completeCheckMark {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+
+  .completeTitle,
+  .completeText,
+  .completePayout {
+    animation: none;
+    opacity: 1;
+  }
+
+  .confettiPiece {
+    animation: none;
+    display: none;
+  }
 }
 
 /* ─── Tablet ─────────────────────────────────────────────────────────────────── */

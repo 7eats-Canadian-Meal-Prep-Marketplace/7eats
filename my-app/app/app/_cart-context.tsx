@@ -8,6 +8,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { computeLineTotal } from "@/lib/order-pricing";
 
 /** A single dish line in the cart. */
 export type CartItem = {
@@ -319,16 +320,11 @@ export function buildCartItem(
     value: number;
   } | null,
 ): CartItem {
-  const gross = dish.price * quantity;
-  let discountAmount = 0;
-  if (promo) {
-    discountAmount =
-      promo.type === "percentage_off"
-        ? (gross * promo.value) / 100
-        : promo.value;
-    discountAmount = Math.min(discountAmount, gross);
-  }
-  discountAmount = Math.round(discountAmount * 100) / 100;
+  const { discountAmount, lineTotal } = computeLineTotal(
+    dish.price,
+    quantity,
+    promo,
+  );
   return {
     dishId: dish.id,
     name: dish.name,
@@ -336,6 +332,6 @@ export function buildCartItem(
     quantity,
     promotionId: promo?.id ?? null,
     discountAmount,
-    lineTotal: Math.round((gross - discountAmount) * 100) / 100,
+    lineTotal,
   };
 }

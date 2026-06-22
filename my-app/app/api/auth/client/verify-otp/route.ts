@@ -7,6 +7,11 @@ import { authUserTable } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { verifySignedPhone } from "@/lib/cookie";
 import { DEV_OTP_CODE, OTP_DEV_BYPASS } from "@/lib/otp-dev";
+import {
+  isPhoneTakenForRole,
+  isUniqueViolation,
+  phoneTakenMessage,
+} from "@/lib/phone-availability";
 import { logAndCheckRateLimit } from "@/lib/rate-limit";
 
 function twilioClient() {
@@ -93,10 +98,29 @@ export async function POST(req: Request) {
     );
   }
 
-  await db
-    .update(authUserTable)
-    .set({ phone, phoneVerified: true })
-    .where(eq(authUserTable.id, session.user.id));
+  // A phone may be verified on at most one client account. Cross-role sharing
+  // (e.g. the same number on a cook account) is allowed and not checked here.
+  if (await isPhoneTakenForRole(phone, "client", session.user.id)) {
+    return NextResponse.json(
+      { error: phoneTakenMessage("client") },
+      { status: 409 },
+    );
+  }
+
+  try {
+    await db
+      .update(authUserTable)
+      .set({ phone, phoneVerified: true })
+      .where(eq(authUserTable.id, session.user.id));
+  } catch (err) {
+    if (isUniqueViolation(err)) {
+      return NextResponse.json(
+        { error: phoneTakenMessage("client") },
+        { status: 409 },
+      );
+    }
+    throw err;
+  }
 
   const res = NextResponse.json({ success: true });
   res.cookies.delete("pending_phone");

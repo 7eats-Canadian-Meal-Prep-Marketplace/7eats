@@ -4,6 +4,10 @@ import { db } from "@/db";
 import { authUser, cookProfiles, orderDishes, orders } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { ensureStripeCustomer } from "@/lib/guest-client";
+import {
+  formatOrderTimingDate,
+  formatOrderTimingWindow,
+} from "@/lib/order-timing";
 import { formatClientOrderTiming } from "@/lib/order-timing-label";
 import { resolveOrderCookFields } from "@/lib/orders/cook-order-fields";
 import {
@@ -11,28 +15,6 @@ import {
   placeClientOrder,
 } from "@/lib/orders/place-order";
 import { logAndCheckRateLimit } from "@/lib/rate-limit";
-
-function formatPickupDate(isoString: string): string {
-  const d = new Date(isoString);
-  return d.toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  });
-}
-
-function formatPickupWindow(isoString: string, windowHours = 2): string {
-  const d = new Date(isoString);
-  const start = d
-    .toLocaleTimeString("en-US", { hour: "numeric", hour12: true })
-    .toLowerCase()
-    .replace(":00", "");
-  const end = new Date(d.getTime() + windowHours * 3600000)
-    .toLocaleTimeString("en-US", { hour: "numeric", hour12: true })
-    .toLowerCase()
-    .replace(":00", "");
-  return `${start} – ${end}`;
-}
 
 const VALID_ORDER_STATUSES = [
   "pending",
@@ -137,11 +119,24 @@ export async function GET(req: NextRequest) {
     const data = rows.map((r) => {
       const pickupAtIso =
         r.pickupAt instanceof Date ? r.pickupAt.toISOString() : r.pickupAt;
+      const fulfillmentWindowStartIso =
+        r.fulfillmentWindowStart instanceof Date
+          ? r.fulfillmentWindowStart.toISOString()
+          : r.fulfillmentWindowStart;
+      const fulfillmentWindowEndIso =
+        r.fulfillmentWindowEnd instanceof Date
+          ? r.fulfillmentWindowEnd.toISOString()
+          : r.fulfillmentWindowEnd;
+      const timing = {
+        pickupAt: pickupAtIso,
+        fulfillmentWindowStart: fulfillmentWindowStartIso,
+        fulfillmentWindowEnd: fulfillmentWindowEndIso,
+      };
       const fulfillmentMode =
         r.fulfillmentMode === "delivery" || r.fulfillmentMode === "pickup"
           ? r.fulfillmentMode
           : null;
-      const timing = formatClientOrderTiming({
+      const clientTiming = formatClientOrderTiming({
         pickupAt: pickupAtIso,
         fulfillmentWindowStart: r.fulfillmentWindowStart,
         fulfillmentWindowEnd: r.fulfillmentWindowEnd,
@@ -156,6 +151,8 @@ export async function GET(req: NextRequest) {
         deliveryFeeSnapshot: r.deliveryFeeSnapshot,
         currency: r.currency,
         pickupAt: pickupAtIso,
+        fulfillmentWindowStart: fulfillmentWindowStartIso,
+        fulfillmentWindowEnd: fulfillmentWindowEndIso,
         notes: r.notes ?? null,
         createdAt:
           r.createdAt instanceof Date ? r.createdAt.toISOString() : r.createdAt,
@@ -171,10 +168,10 @@ export async function GET(req: NextRequest) {
         })),
         ...resolveOrderCookFields(r),
         fulfillmentMode: r.fulfillmentMode,
-        timingSchedule: timing.schedule,
-        timingHint: timing.hint,
-        pickupDate: pickupAtIso ? formatPickupDate(pickupAtIso) : null,
-        pickupWindow: pickupAtIso ? formatPickupWindow(pickupAtIso) : null,
+        pickupDate: formatOrderTimingDate(timing),
+        pickupWindow: formatOrderTimingWindow(timing),
+        timingSchedule: clientTiming.schedule,
+        timingHint: clientTiming.hint,
       };
     });
 

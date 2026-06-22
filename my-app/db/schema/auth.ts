@@ -7,6 +7,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   varchar,
 } from "drizzle-orm/pg-core";
 import { accountStatus, userRole } from "./enums";
@@ -50,7 +51,13 @@ const authUserTable = pgTable(
       channels: { sms: boolean; email: boolean };
     }>(),
   },
-  () => [
+  (table) => [
+    // A phone number may be verified on at most one account *per role*: one cook
+    // and one client can share a number, but not two cooks or two clients.
+    // Partial index so unverified/guest rows (phone_verified=false) never block.
+    uniqueIndex("user_phone_role_verified_unique")
+      .on(table.phone, table.role)
+      .where(sql`${table.phoneVerified} = true AND ${table.phone} IS NOT NULL`),
     pgPolicy("user_select_own", {
       for: "select",
       to: "public",

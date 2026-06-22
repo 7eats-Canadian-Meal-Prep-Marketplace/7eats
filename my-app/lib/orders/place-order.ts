@@ -30,7 +30,6 @@ export const orderLineSchema = z.object({
 export const createOrderBodySchema = z.object({
   cookId: z.string().uuid(),
   dishes: z.array(orderLineSchema).min(1),
-  pickupAt: z.string().datetime().optional(),
   fulfillmentMode: z.enum(["pickup", "delivery"]).optional(),
   deliveryAddress: z
     .object({
@@ -75,7 +74,6 @@ export async function placeClientOrder(
   const {
     cookId,
     dishes: lines,
-    pickupAt,
     fulfillmentMode,
     deliveryAddress,
     customerLat,
@@ -421,7 +419,7 @@ export async function placeClientOrder(
         currency: "CAD",
         taxAmount: String(charges.taxAmount.toFixed(2)),
         taxProvince: charges.taxProvince,
-        pickupAt: pickupAt ? new Date(pickupAt) : null,
+        pickupAt: null,
         deliveryAddress: deliveryAddress ?? null,
         fulfillmentMode: fulfillmentMode ?? null,
         fulfillmentWindowStart: fw?.start ?? null,

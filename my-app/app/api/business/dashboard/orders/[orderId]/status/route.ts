@@ -17,6 +17,7 @@ import {
   sendOrderNotReadyEmailToClient,
   sendOrderReadyEmailToClient,
 } from "@/lib/emails/order-events";
+import { findUncollectiblePayment } from "@/lib/orders/fulfillment-readiness";
 import {
   cancelPaymentIntent,
   capturePaymentIntent,
@@ -32,6 +33,10 @@ const bodySchema = z.object({
   reason: z.enum(["client_no_show"]).optional(),
 });
 
+// Allowed forward/backward moves a cook can make. Note `confirmed` can only go
+// to `ready` or `cancelled` — never back to `pending`. Once a cook accepts an
+// order they cannot "unaccept" it; this is enforced both here and by the body
+// schema, which doesn't accept `pending` as a target at all.
 const VALID_TRANSITIONS: Record<string, string[]> = {
   pending: ["confirmed", "cancelled"],
   confirmed: ["ready", "cancelled"],
@@ -77,6 +82,8 @@ export async function PATCH(req: NextRequest, { params }: Params) {
         totalPrice: orders.totalPrice,
         currency: orders.currency,
         pickupAt: orders.pickupAt,
+        fulfillmentWindowStart: orders.fulfillmentWindowStart,
+        fulfillmentWindowEnd: orders.fulfillmentWindowEnd,
         lateCancelFeeEnabled: orders.lateCancelFeeEnabled,
         lateCancelFeeType: orders.lateCancelFeeType,
         lateCancelFeeValue: orders.lateCancelFeeValue,
@@ -91,6 +98,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       return NextResponse.json({ error: "Order not found." }, { status: 404 });
     }
 
+    const previousStatus = order.status;
     const allowedTransitions = VALID_TRANSITIONS[order.status] ?? [];
     if (!allowedTransitions.includes(newStatus)) {
       return NextResponse.json(
@@ -210,7 +218,26 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       }
     }
 
-    const previousStatus = order.status;
+    // Guard before issuing a pickup/delivery code so cooks never release food
+    // for an order whose remaining payment cannot be collected.
+    if (newStatus === "ready") {
+      const paymentRows = await db
+        .select({
+          type: orderPayments.type,
+          status: orderPayments.status,
+        })
+        .from(orderPayments)
+        .where(eq(orderPayments.orderId, orderId));
+      if (findUncollectiblePayment(paymentRows)) {
+        return NextResponse.json(
+          {
+            error:
+              "Payment hasn't been authorized yet. The customer must complete payment before this order can be marked ready.",
+          },
+          { status: 402 },
+        );
+      }
+    }
 
     const updateFields: Partial<typeof orders.$inferInsert> = {
       status: newStatus,
@@ -287,6 +314,11 @@ export async function PATCH(req: NextRequest, { params }: Params) {
             email: row.clientEmail as string,
             firstName: row.clientFirstName as string | null,
           };
+          const fulfillmentMode: "pickup" | "delivery" | null =
+            row.fulfillmentMode === "pickup" ||
+            row.fulfillmentMode === "delivery"
+              ? row.fulfillmentMode
+              : null;
           const orderData = {
             id: orderId,
             listingTitle: dishRows.map((d) => d.name).join(", "),
@@ -294,7 +326,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
             totalPrice: row.totalPrice,
             currency: row.currency,
             pickupAt: row.pickupAt,
-            fulfillmentMode: row.fulfillmentMode,
+            fulfillmentMode,
             fulfillmentWindowStart: row.fulfillmentWindowStart,
             fulfillmentWindowEnd: row.fulfillmentWindowEnd,
           };

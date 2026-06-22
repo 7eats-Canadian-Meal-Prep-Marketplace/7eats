@@ -3,8 +3,11 @@ import type { leadTimeEnum } from "@/db/schema";
 export type PromoLike = { type: "percentage_off" | "fixed_off"; value: number };
 
 /**
- * Compute the discount and line total for one order line. The discount is
- * clamped so a line never goes negative. Values are rounded to cents.
+ * Compute the discount and line total for one order line. The promo applies
+ * per unit and is then multiplied by the quantity: a $5 fixed_off on 4 items
+ * discounts $5 from each item ($20 total), not $5 off the whole line. The
+ * per-unit discount is clamped to the unit price so a line never goes negative.
+ * Values are rounded to cents.
  */
 export function computeLineTotal(
   price: number,
@@ -14,11 +17,11 @@ export function computeLineTotal(
   const gross = price * quantity;
   let discount = 0;
   if (promo) {
-    discount =
+    const perUnitDiscount =
       promo.type === "percentage_off"
-        ? (gross * promo.value) / 100
+        ? (price * promo.value) / 100
         : promo.value;
-    discount = Math.min(discount, gross);
+    discount = Math.min(perUnitDiscount, price) * quantity;
   }
   const round = (n: number) => Math.round(n * 100) / 100;
   return {
