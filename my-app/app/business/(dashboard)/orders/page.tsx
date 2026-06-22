@@ -32,7 +32,7 @@ type Order = {
   quantity: number;
   unitPrice: string;
   totalPrice: string;
-  pickupAt: string;
+  pickupAt: string | null;
   notes: string | null;
   pickupCodeAttempts: number;
   createdAt: string;
@@ -41,8 +41,10 @@ type Order = {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function formatTime(iso: string): string {
+function formatTime(iso: string | null): string {
+  if (!iso) return "Not scheduled";
   const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "Not scheduled";
   const now = new Date();
   const tomorrow = new Date(now);
   tomorrow.setDate(tomorrow.getDate() + 1);
