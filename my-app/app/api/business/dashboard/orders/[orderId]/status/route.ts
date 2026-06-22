@@ -76,6 +76,8 @@ export async function PATCH(req: NextRequest, { params }: Params) {
         totalPrice: orders.totalPrice,
         currency: orders.currency,
         pickupAt: orders.pickupAt,
+        fulfillmentWindowStart: orders.fulfillmentWindowStart,
+        fulfillmentWindowEnd: orders.fulfillmentWindowEnd,
         lateCancelFeeEnabled: orders.lateCancelFeeEnabled,
         lateCancelFeeType: orders.lateCancelFeeType,
         lateCancelFeeValue: orders.lateCancelFeeValue,
@@ -261,6 +263,8 @@ export async function PATCH(req: NextRequest, { params }: Params) {
         totalPrice: orders.totalPrice,
         currency: orders.currency,
         pickupAt: orders.pickupAt,
+        fulfillmentWindowStart: orders.fulfillmentWindowStart,
+        fulfillmentWindowEnd: orders.fulfillmentWindowEnd,
         cookName: cookProfiles.displayName,
       })
         .from(orders)
@@ -292,6 +296,8 @@ export async function PATCH(req: NextRequest, { params }: Params) {
             // instead of the actual pickup date/time. The email template renders
             // a null pickupAt as "TBD".
             pickupAt: row.pickupAt,
+            fulfillmentWindowStart: row.fulfillmentWindowStart,
+            fulfillmentWindowEnd: row.fulfillmentWindowEnd,
           };
           if (newStatus === "confirmed") {
             return sendOrderConfirmedEmailToClient(

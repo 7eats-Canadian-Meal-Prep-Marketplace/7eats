@@ -284,7 +284,7 @@ export async function sendOrderConfirmedEmailToClient(
   order: OrderEmailData,
 ): Promise<void> {
   try {
-    const pickup = formatPickup(order.pickupAt);
+    const timing = formatTiming(order);
     const subject = "Your order is confirmed";
     const html = htmlEmail({
       title: subject,
@@ -299,7 +299,7 @@ export async function sendOrderConfirmedEmailToClient(
             label: "Total",
             value: formatMoney(order.totalPrice, order.currency),
           },
-          { label: "Pickup", value: pickup },
+          { label: fulfillmentLabel(order.fulfillmentMode), value: timing },
         ]) +
         paragraph(
           "You'll get another email with your pickup code once the order is ready.",
@@ -314,7 +314,7 @@ export async function sendOrderConfirmedEmailToClient(
       `Order: ${order.listingTitle}`,
       `Quantity: ${order.quantity}`,
       `Total: ${formatMoney(order.totalPrice, order.currency)}`,
-      `Pickup: ${pickup}`,
+      `${fulfillmentLabel(order.fulfillmentMode)}: ${timing}`,
       "",
       "You'll get another email with your pickup code once the order is ready.",
     ]);

@@ -36,6 +36,8 @@ export async function GET(req: NextRequest, { params }: Params) {
           discountAmount: orders.discountAmount,
           currency: orders.currency,
           pickupAt: orders.pickupAt,
+          fulfillmentWindowStart: orders.fulfillmentWindowStart,
+          fulfillmentWindowEnd: orders.fulfillmentWindowEnd,
           fulfilledAt: orders.fulfilledAt,
           cancelledAt: orders.cancelledAt,
           notes: orders.notes,

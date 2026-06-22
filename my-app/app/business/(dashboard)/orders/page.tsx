@@ -33,6 +33,8 @@ type Order = {
   unitPrice: string;
   totalPrice: string;
   pickupAt: string | null;
+  fulfillmentWindowStart: string | null;
+  fulfillmentWindowEnd: string | null;
   notes: string | null;
   pickupCodeAttempts: number;
   createdAt: string;
@@ -41,19 +43,34 @@ type Order = {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function formatTime(iso: string | null): string {
+function formatClock(date: Date): string {
+  return date.toLocaleTimeString("en-CA", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function formatTime(
+  order: Pick<
+    Order,
+    "pickupAt" | "fulfillmentWindowStart" | "fulfillmentWindowEnd"
+  >,
+): string {
+  const iso = order.pickupAt ?? order.fulfillmentWindowStart;
   if (!iso) return "Not scheduled";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "Not scheduled";
+  const windowEnd = order.pickupAt ? null : order.fulfillmentWindowEnd;
+  const end = windowEnd ? new Date(windowEnd) : null;
   const now = new Date();
   const tomorrow = new Date(now);
   tomorrow.setDate(tomorrow.getDate() + 1);
   const yesterday = new Date(now);
   yesterday.setDate(yesterday.getDate() - 1);
-  const time = d.toLocaleTimeString("en-CA", {
-    hour: "numeric",
-    minute: "2-digit",
-  });
+  const time =
+    end && !Number.isNaN(end.getTime())
+      ? `${formatClock(d)}–${formatClock(end)}`
+      : formatClock(d);
   if (d.toDateString() === now.toDateString()) return `Today · ${time}`;
   if (d.toDateString() === tomorrow.toDateString()) return `Tomorrow · ${time}`;
   if (d.toDateString() === yesterday.toDateString())
@@ -278,7 +295,7 @@ function OrderDetail({
       <div className={styles.metaBlock}>
         <div className={styles.metaRow}>
           <span className={styles.metaKey}>Pickup</span>
-          <span className={styles.metaVal}>{formatTime(order.pickupAt)}</span>
+          <span className={styles.metaVal}>{formatTime(order)}</span>
         </div>
         <div className={styles.metaRow}>
           <span className={styles.metaKey}>Quantity</span>
@@ -427,7 +444,7 @@ function OrderListRow({
           {order.listingTitle ?? "Order"}
         </span>
         <span className={styles.listRowMeta}>
-          {formatTime(order.pickupAt)} &middot;{" "}
+          {formatTime(order)} &middot;{" "}
           <span className={styles.listRowQty}>
             {order.quantity} item{order.quantity !== 1 ? "s" : ""}
           </span>{" "}

@@ -253,10 +253,7 @@ export default function CheckoutPage() {
     };
   }, [subtotal, deliveryFee, cookProvince]);
 
-  // The next open fulfillment slot. Drives the refund-policy copy AND is stored
-  // on the order as its pickup time so the cook (and customer) see a real date
-  // instead of a missing/epoch value.
-  const pickupAtIso = useMemo(
+  const refundPickupAt = useMemo(
     () =>
       nextFulfillmentSlotIso(
         fulfillmentMode,
@@ -268,8 +265,8 @@ export default function CheckoutPage() {
   );
 
   const cancellationPolicyText = useMemo(
-    () => refundPolicyText(cancellationAllowed, pickupAtIso, leadTime),
-    [cancellationAllowed, pickupAtIso, leadTime],
+    () => refundPolicyText(cancellationAllowed, refundPickupAt, leadTime),
+    [cancellationAllowed, refundPickupAt, leadTime],
   );
 
   const contactValues = useMemo(
@@ -418,7 +415,6 @@ export default function CheckoutPage() {
             promotionId: i.promotionId,
           })),
           fulfillmentMode,
-          pickupAt: pickupAtIso ?? undefined,
           deliveryAddress: isDelivery ? deliveryAddress : undefined,
           customerLat: isDelivery ? displayAddress?.lat : undefined,
           customerLng: isDelivery ? displayAddress?.lng : undefined,
