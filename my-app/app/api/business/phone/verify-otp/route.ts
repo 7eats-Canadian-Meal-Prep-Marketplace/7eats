@@ -7,6 +7,12 @@ import { authUser, authUserTable } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { verifySignedPhone } from "@/lib/cookie";
 import { DEV_OTP_CODE, OTP_DEV_BYPASS } from "@/lib/otp-dev";
+import {
+  isPhoneTakenForRole,
+  isUniqueViolation,
+  type PhoneOwnerRole,
+  phoneTakenMessage,
+} from "@/lib/phone-availability";
 import { logAndCheckRateLimit } from "@/lib/rate-limit";
 
 function twilioClient() {
@@ -86,14 +92,35 @@ export async function POST(req: Request) {
     );
   }
 
-  const [updated] = await db
-    .update(authUserTable)
-    .set({ phone, phoneVerified: true })
-    .where(eq(authUser.id, session.user.id))
-    .returning({
-      phone: authUser.phone,
-      phoneVerified: authUser.phoneVerified,
-    });
+  // A phone may be verified on at most one account of this role. Cross-role
+  // sharing (e.g. the same number on a client account) is allowed.
+  const role = session.user.role as PhoneOwnerRole;
+  if (await isPhoneTakenForRole(phone, role, session.user.id)) {
+    return NextResponse.json(
+      { error: phoneTakenMessage(role) },
+      { status: 409 },
+    );
+  }
+
+  let updated: { phone: string | null; phoneVerified: boolean } | undefined;
+  try {
+    [updated] = await db
+      .update(authUserTable)
+      .set({ phone, phoneVerified: true })
+      .where(eq(authUser.id, session.user.id))
+      .returning({
+        phone: authUser.phone,
+        phoneVerified: authUser.phoneVerified,
+      });
+  } catch (err) {
+    if (isUniqueViolation(err)) {
+      return NextResponse.json(
+        { error: phoneTakenMessage(role) },
+        { status: 409 },
+      );
+    }
+    throw err;
+  }
 
   if (!updated) {
     return NextResponse.json({ error: "User not found." }, { status: 404 });

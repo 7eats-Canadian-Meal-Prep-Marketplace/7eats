@@ -7,6 +7,11 @@ import { authUser, authUserTable } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { verifySignedPhone } from "@/lib/cookie";
 import { DEV_OTP_CODE, OTP_DEV_BYPASS } from "@/lib/otp-dev";
+import {
+  isPhoneTakenForRole,
+  isUniqueViolation,
+  phoneTakenMessage,
+} from "@/lib/phone-availability";
 import { logAndCheckRateLimit } from "@/lib/rate-limit";
 
 function twilioClient() {
@@ -86,10 +91,29 @@ export async function POST(req: Request) {
     );
   }
 
-  await db
-    .update(authUserTable)
-    .set({ phone, phoneVerified: true })
-    .where(eq(authUser.id, session.user.id));
+  // A phone may be verified on at most one cook account. Cross-role sharing
+  // (e.g. the same number on a client account) is allowed and not checked here.
+  if (await isPhoneTakenForRole(phone, "cook", session.user.id)) {
+    return NextResponse.json(
+      { error: phoneTakenMessage("cook") },
+      { status: 409 },
+    );
+  }
+
+  try {
+    await db
+      .update(authUserTable)
+      .set({ phone, phoneVerified: true })
+      .where(eq(authUser.id, session.user.id));
+  } catch (err) {
+    if (isUniqueViolation(err)) {
+      return NextResponse.json(
+        { error: phoneTakenMessage("cook") },
+        { status: 409 },
+      );
+    }
+    throw err;
+  }
 
   const res = NextResponse.json({
     redirect: "/business-auth/setup/onboarding?step=1",
