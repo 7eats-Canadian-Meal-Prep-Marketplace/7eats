@@ -211,16 +211,18 @@ describe("POST /api/business/dashboard/orders/[orderId]/verify-code", () => {
     expect(captureMock).not.toHaveBeenCalled();
   });
 
+  // Payments + connected account are now loaded BEFORE the fulfilled update so
+  // an order whose money can't be collected is rejected before handover. Select
+  // order: 1 cook, 2 order, 3 payments (no limit), 4 cook stripeAccountId,
+  // 5 fire-and-forget completion email.
   it("fulfils the order, captures payment, and releases funds on the correct code", async () => {
     let call = 0;
     vi.mocked(db.select).mockImplementation(() => {
       call++;
       if (call === 1) return mockCook(true);
       if (call === 2) return selectChain([readyOrder]);
-      // call 3: fire-and-forget completion email lookup
-      if (call === 3) return selectEmailChain([]);
-      // call 4: orderPayments list (no .limit())
-      if (call === 4)
+      // call 3: orderPayments list (no .limit())
+      if (call === 3)
         return selectChainNoLimit([
           {
             id: "pay-1",
@@ -230,8 +232,10 @@ describe("POST /api/business/dashboard/orders/[orderId]/verify-code", () => {
             cookPayoutAmount: null,
           },
         ]);
-      // call 5: cookProfiles stripeAccountId lookup
-      return selectChain([{ stripeAccountId: "acct_test" }]);
+      // call 4: cookProfiles stripeAccountId lookup
+      if (call === 4) return selectChain([{ stripeAccountId: "acct_test" }]);
+      // call 5: fire-and-forget completion email lookup
+      return selectEmailChain([]);
     });
     mockUpdate([{ id: ORDER_ID, fulfilledAt: new Date() }]);
 
@@ -247,11 +251,50 @@ describe("POST /api/business/dashboard/orders/[orderId]/verify-code", () => {
     );
   });
 
+  it("returns 402 and does not fulfil when the payment is still pending", async () => {
+    let call = 0;
+    vi.mocked(db.select).mockImplementation(() => {
+      call++;
+      if (call === 1) return mockCook(true);
+      if (call === 2) return selectChain([readyOrder]);
+      if (call === 3)
+        return selectChainNoLimit([
+          {
+            id: "pay-1",
+            type: "full",
+            stripePaymentIntentId: "pi_123",
+            status: "pending",
+            cookPayoutAmount: null,
+          },
+        ]);
+      return selectChain([{ stripeAccountId: "acct_test" }]);
+    });
+    const { set } = mockUpdate([{ id: ORDER_ID, fulfilledAt: new Date() }]);
+
+    const res = await POST(makePost({ code: "1234" }), { params });
+
+    expect(res.status).toBe(402);
+    expect(captureMock).not.toHaveBeenCalled();
+    expect(set).not.toHaveBeenCalled(); // never marked fulfilled
+  });
+
   it("returns 409 and does not capture when the ready->fulfilled update loses the race", async () => {
     let call = 0;
     vi.mocked(db.select).mockImplementation(() => {
       call++;
-      return call === 1 ? mockCook(true) : selectChain([readyOrder]);
+      if (call === 1) return mockCook(true);
+      if (call === 2) return selectChain([readyOrder]);
+      if (call === 3)
+        return selectChainNoLimit([
+          {
+            id: "pay-1",
+            type: "full",
+            stripePaymentIntentId: "pi_123",
+            status: "authorized",
+            cookPayoutAmount: null,
+          },
+        ]);
+      return selectChain([{ stripeAccountId: "acct_test" }]);
     });
     mockUpdate([]);
 
@@ -261,16 +304,14 @@ describe("POST /api/business/dashboard/orders/[orderId]/verify-code", () => {
     expect(captureMock).not.toHaveBeenCalled();
   });
 
-  it("does not capture when the payment is no longer authorized", async () => {
+  it("does not capture when the payment is already released", async () => {
     let call = 0;
     vi.mocked(db.select).mockImplementation(() => {
       call++;
       if (call === 1) return mockCook(true);
       if (call === 2) return selectChain([readyOrder]);
-      // call 3: fire-and-forget completion email lookup
-      if (call === 3) return selectEmailChain([]);
-      // call 4: orderPayments with status "released" — should not trigger capture
-      if (call === 4)
+      // call 3: orderPayments with status "released" — collectible, no capture
+      if (call === 3)
         return selectChainNoLimit([
           {
             id: "pay-1",
@@ -280,8 +321,10 @@ describe("POST /api/business/dashboard/orders/[orderId]/verify-code", () => {
             cookPayoutAmount: null,
           },
         ]);
-      // call 5: cookProfiles lookup
-      return selectChain([{ stripeAccountId: "acct_test" }]);
+      // call 4: cookProfiles lookup
+      if (call === 4) return selectChain([{ stripeAccountId: "acct_test" }]);
+      // call 5: fire-and-forget completion email lookup
+      return selectEmailChain([]);
     });
     mockUpdate([{ id: ORDER_ID, fulfilledAt: new Date() }]);
 

@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
         )
         .groupBy(orders.status),
 
-      // Earnings this ISO week (fulfilled orders)
+      // Earnings this ISO week (fulfilled orders, by fulfillment time)
       db
         .select({ total: sum(orders.totalPrice) })
         .from(orders)
@@ -43,15 +43,15 @@ export async function GET(req: NextRequest) {
           and(
             eq(orders.cookId, cookId),
             eq(orders.status, "fulfilled"),
-            gte(orders.pickupAt, sql`date_trunc('week', now())`),
+            gte(orders.fulfilledAt, sql`date_trunc('week', now())`),
             lte(
-              orders.pickupAt,
+              orders.fulfilledAt,
               sql`date_trunc('week', now()) + interval '7 days'`,
             ),
           ),
         ),
 
-      // Earnings this calendar month (fulfilled orders)
+      // Earnings this calendar month (fulfilled orders, by fulfillment time)
       db
         .select({ total: sum(orders.totalPrice) })
         .from(orders)
@@ -59,9 +59,9 @@ export async function GET(req: NextRequest) {
           and(
             eq(orders.cookId, cookId),
             eq(orders.status, "fulfilled"),
-            gte(orders.pickupAt, sql`date_trunc('month', now())`),
+            gte(orders.fulfilledAt, sql`date_trunc('month', now())`),
             lte(
-              orders.pickupAt,
+              orders.fulfilledAt,
               sql`date_trunc('month', now()) + interval '1 month'`,
             ),
           ),
@@ -121,9 +121,9 @@ export async function GET(req: NextRequest) {
         and(
           eq(orders.cookId, cookId),
           eq(orders.status, "fulfilled"),
-          gte(orders.pickupAt, sql`date_trunc('month', now())`),
+          gte(orders.fulfilledAt, sql`date_trunc('month', now())`),
           lte(
-            orders.pickupAt,
+            orders.fulfilledAt,
             sql`date_trunc('month', now()) + interval '1 month'`,
           ),
         ),

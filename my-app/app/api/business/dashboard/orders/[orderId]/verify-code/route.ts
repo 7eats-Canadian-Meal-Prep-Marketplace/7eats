@@ -12,6 +12,7 @@ import {
   orders,
 } from "@/db/schema";
 import { sendOrderCompletedEmailToClient } from "@/lib/emails/order-events";
+import { findUncollectiblePayment } from "@/lib/orders/fulfillment-readiness";
 import {
   capturePaymentIntent,
   createSubscriptionTransfer,
@@ -117,6 +118,39 @@ export async function POST(req: NextRequest, { params }: Params) {
       );
     }
 
+    // Load the order's payments (and the cook's connected account) up front so
+    // we can refuse to complete an order whose money can't be collected BEFORE
+    // handing the food over. Capture used to run after the fulfilled update and
+    // silently skip any non-authorized payment, so an unpaid order could be
+    // completed with the cook never getting paid.
+    const payments = await db
+      .select({
+        id: orderPayments.id,
+        type: orderPayments.type,
+        status: orderPayments.status,
+        stripePaymentIntentId: orderPayments.stripePaymentIntentId,
+        cookPayoutAmount: orderPayments.cookPayoutAmount,
+      })
+      .from(orderPayments)
+      .where(eq(orderPayments.orderId, orderId));
+
+    // Cook's stripeAccountId — needed for the manual subscription transfer path.
+    const [cookRow] = await db
+      .select({ stripeAccountId: cookProfiles.stripeAccountId })
+      .from(cookProfiles)
+      .where(eq(cookProfiles.id, cookId))
+      .limit(1);
+
+    if (findUncollectiblePayment(payments)) {
+      return NextResponse.json(
+        {
+          error:
+            "This order's payment hasn't been authorized, so it can't be completed. Ask the customer to complete payment first.",
+        },
+        { status: 402 },
+      );
+    }
+
     const fulfilledAt = new Date();
     const [fulfilled] = await db
       .update(orders)
@@ -179,25 +213,9 @@ export async function POST(req: NextRequest, { params }: Params) {
       })
       .catch((err) => console.error("[verify-code/email]", err));
 
-    // Release payment to cook based on payment type
-    const payments = await db
-      .select({
-        id: orderPayments.id,
-        type: orderPayments.type,
-        status: orderPayments.status,
-        stripePaymentIntentId: orderPayments.stripePaymentIntentId,
-        cookPayoutAmount: orderPayments.cookPayoutAmount,
-      })
-      .from(orderPayments)
-      .where(eq(orderPayments.orderId, orderId));
-
-    // Load cook's stripeAccountId for subscription transfer
-    const [cookRow] = await db
-      .select({ stripeAccountId: cookProfiles.stripeAccountId })
-      .from(cookProfiles)
-      .where(eq(cookProfiles.id, cookId))
-      .limit(1);
-
+    // Release payment to cook based on payment type. Every non-deposit payment
+    // here is guaranteed collectible (guarded above); deposit rows were already
+    // released at confirmation, and `released` rows are idempotent no-ops.
     for (const payment of payments) {
       if (payment.type === "deposit") continue; // deposit released at confirmation — skip
 

@@ -131,6 +131,17 @@ function allPaymentsChain(
   return { from } as never;
 }
 
+/** Returns a select chain for the ready-guard payment lookup (no limit). */
+function readyPaymentsChain(
+  payments: Array<{ type: string; status: string }> = [
+    { type: "full", status: "authorized" },
+  ],
+) {
+  const where = vi.fn().mockResolvedValue(payments);
+  const from = vi.fn(() => ({ where }));
+  return { from } as never;
+}
+
 /** Returns a select chain for the cookProfiles userId lookup on cancel. */
 function cookUserChain(userId: string | null = COOK_USER_ID) {
   const limit = vi.fn().mockResolvedValue(userId ? [{ userId }] : []);
@@ -180,14 +191,21 @@ function mockUpdate(row: object) {
 /**
  * Sequences db.select calls for a "ready" path:
  * 1. cook lookup
- * 2. order fetch (no payment queries needed)
+ * 2. order fetch
+ * 3. payment readiness guard lookup
  */
-function withOrderForReady(pickupAt?: Date) {
+function withOrderForReady(
+  pickupAt?: Date,
+  payments: Array<{ type: string; status: string }> = [
+    { type: "full", status: "authorized" },
+  ],
+) {
   let call = 0;
   vi.mocked(db.select).mockImplementation(() => {
     call++;
     if (call === 1) return mockCook(true);
     if (call === 2) return orderChain("confirmed", pickupAt);
+    if (call === 3) return readyPaymentsChain(payments);
     return emailLookupChain();
   });
 }
@@ -336,6 +354,14 @@ describe("PATCH /api/business/dashboard/orders/[orderId]/status", () => {
   });
 
   // ─── Ready: pickup code generation ────────────────────────────────────────
+
+  it("rejects ready (402) when the order's payment is still pending", async () => {
+    withOrderForReady(undefined, [{ type: "full", status: "pending" }]);
+    const { set } = mockUpdate({ id: ORDER_ID, status: "ready" });
+    const res = await PATCH(makePatch({ status: "ready" }), { params });
+    expect(res.status).toBe(402);
+    expect(set).not.toHaveBeenCalled(); // never marked ready, no pickup code
+  });
 
   it("generates a pickup code when transitioning to ready", async () => {
     withOrderForReady();

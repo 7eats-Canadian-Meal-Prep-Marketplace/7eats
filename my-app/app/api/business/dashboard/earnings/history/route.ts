@@ -128,7 +128,11 @@ export async function GET(req: NextRequest) {
   try {
     const rawOrders = await db
       .select({
-        pickupAt: orders.pickupAt,
+        // Earnings are bucketed by when the order was actually completed
+        // (`fulfilledAt`), not the scheduled pickup time. `pickupAt` is null for
+        // pickup orders (the server owns timing), so filtering by it returned
+        // nothing and the chart always showed $0.
+        fulfilledAt: orders.fulfilledAt,
         totalPrice: orders.totalPrice,
       })
       .from(orders)
@@ -136,8 +140,8 @@ export async function GET(req: NextRequest) {
         and(
           eq(orders.cookId, cookId),
           eq(orders.status, "fulfilled"),
-          gte(orders.pickupAt, rangeStart),
-          lte(orders.pickupAt, rangeEnd),
+          gte(orders.fulfilledAt, rangeStart),
+          lte(orders.fulfilledAt, rangeEnd),
         ),
       );
 
@@ -147,12 +151,12 @@ export async function GET(req: NextRequest) {
     );
 
     for (const row of rawOrders) {
-      if (!row.pickupAt) continue;
-      const pickupTime = row.pickupAt.getTime();
+      if (!row.fulfilledAt) continue;
+      const fulfilledTime = row.fulfilledAt.getTime();
       for (const bucket of periods) {
         if (
-          pickupTime >= bucket.start.getTime() &&
-          pickupTime < bucket.end.getTime()
+          fulfilledTime >= bucket.start.getTime() &&
+          fulfilledTime < bucket.end.getTime()
         ) {
           bucketTotals.set(
             bucket.label,

@@ -17,6 +17,7 @@ import {
   sendOrderNotReadyEmailToClient,
   sendOrderReadyEmailToClient,
 } from "@/lib/emails/order-events";
+import { findUncollectiblePayment } from "@/lib/orders/fulfillment-readiness";
 import {
   cancelPaymentIntent,
   capturePaymentIntent,
@@ -210,6 +211,29 @@ export async function PATCH(req: NextRequest, { params }: Params) {
             })
             .where(eq(orderPayments.id, payment.id));
         }
+      }
+    }
+
+    // Guard: an order can only be marked ready for pickup once its payment can
+    // actually be collected. If the customer never authorized the charge (the
+    // payment is still `pending`), capture at verify-code would silently no-op
+    // and the cook would hand over food for free. Surface it here instead.
+    if (newStatus === "ready") {
+      const paymentRows = await db
+        .select({
+          type: orderPayments.type,
+          status: orderPayments.status,
+        })
+        .from(orderPayments)
+        .where(eq(orderPayments.orderId, orderId));
+      if (findUncollectiblePayment(paymentRows)) {
+        return NextResponse.json(
+          {
+            error:
+              "Payment hasn't been authorized yet. The customer must complete payment before this order can be marked ready for pickup.",
+          },
+          { status: 402 },
+        );
       }
     }
 
