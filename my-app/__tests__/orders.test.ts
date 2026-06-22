@@ -136,7 +136,7 @@ function selectQueue(results: unknown[][]) {
   return () => chain(all[i++] ?? []);
 }
 
-const COOK_ROW = {
+const _COOK_ROW = {
   id: COOK_ID,
   userStatus: "active",
   minOrderQty: 1,

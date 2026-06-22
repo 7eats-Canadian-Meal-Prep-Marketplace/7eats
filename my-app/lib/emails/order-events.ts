@@ -55,6 +55,14 @@ function knownTimingLabel(order: OrderEmailData): string | null {
   return timing === "TBD" ? null : timing;
 }
 
+function emailTimingRow(
+  order: OrderEmailData,
+): { label: string; value: string } | null {
+  const timing = knownTimingLabel(order);
+  if (!timing) return null;
+  return { label: fulfillmentLabel(order.fulfillmentMode), value: timing };
+}
+
 function cancellationScheduleClause(order: OrderEmailData): string {
   const timing = knownTimingLabel(order);
   return timing ? ` scheduled for ${timing}` : "";
@@ -300,34 +308,35 @@ export async function sendOrderNotReadyEmailToClient(
   order: OrderEmailData,
 ): Promise<void> {
   try {
-    const timing = formatTiming(order);
+    const timingRow = emailTimingRow(order);
+    const codeNoun =
+      order.fulfillmentMode === "delivery" ? "delivery code" : "pickup code";
     const subject = `Your order from ${cook.name} is taking a little longer`;
     const html = htmlEmail({
       title: subject,
-      preheader: `${cook.name} needs a bit more time on your order.`,
+      preheader: `${cook.name} is still preparing your order.`,
       bodyHtml:
         paragraph(greeting(client.firstName)) +
         paragraph(
-          `Quick heads-up — your order from <strong>${cook.name}</strong> is taking a little longer than expected. They're still hard at work on it and will have it ready as soon as they can.`,
+          `Quick heads up. Your order from <strong>${cook.name}</strong> is taking a little longer than expected. They're still hard at work on it and will have it ready as soon as they can.`,
         ) +
         orderDetailsTable([
           { label: "Order", value: order.listingTitle },
-          { label: fulfillmentLabel(order.fulfillmentMode), value: timing },
+          ...(timingRow ? [timingRow] : []),
         ]) +
         paragraph(
-          "No need to do anything — we'll email you a fresh pickup code the moment it's ready. Thanks for your patience!",
+          `No need to do anything. We'll email you a fresh ${codeNoun} the moment it's ready. Thanks for your patience!`,
         ) +
         contactParagraph(),
     });
     const text = textWithContact([
       greeting(client.firstName),
       "",
-      `Quick heads-up — your order from ${cook.name} is taking a little longer than expected. They're still hard at work on it and will have it ready as soon as they can.`,
+      `Quick heads up. Your order from ${cook.name} is taking a little longer than expected. They're still hard at work on it and will have it ready as soon as they can.`,
       "",
       `Order: ${order.listingTitle}`,
-      `${fulfillmentLabel(order.fulfillmentMode)}: ${timing}`,
-      "",
-      "No need to do anything — we'll email you a fresh pickup code the moment it's ready. Thanks for your patience!",
+      ...(timingRow ? [`${timingRow.label}: ${timingRow.value}`, ""] : []),
+      `No need to do anything. We'll email you a fresh ${codeNoun} the moment it's ready. Thanks for your patience!`,
     ]);
     await sendMail({ to: client.email, subject, text, html });
   } catch (err) {
@@ -342,20 +351,22 @@ export async function sendOrderReadyEmailToClient(
   pickupCode: string,
 ): Promise<void> {
   try {
-    const pickup = formatPickup(order.pickupAt);
-    const subject = `Your order is ready, pickup code ${pickupCode}`;
+    const isDelivery = order.fulfillmentMode === "delivery";
+    const codeLabel = isDelivery ? "Delivery code" : "Pickup code";
+    const timingRow = emailTimingRow(order);
+    const subject = `Your order is ready, ${isDelivery ? "delivery" : "pickup"} code ${pickupCode}`;
     const html = htmlEmail({
       title: subject,
-      preheader: `Your order from ${cook.name} is ready for pickup.`,
+      preheader: `Your order from ${cook.name} is ready.`,
       bodyHtml:
         paragraph(greeting(client.firstName)) +
         paragraph(
-          `Your order from ${cook.name} is ready. Show this code when you arrive:`,
+          `Your order from <strong>${cook.name}</strong> is ready. Show this code when you arrive:`,
         ) +
-        pickupCodeBlock(pickupCode) +
+        pickupCodeBlock(pickupCode, codeLabel) +
         orderDetailsTable([
           { label: "Order", value: order.listingTitle },
-          { label: "Pickup", value: pickup },
+          ...(timingRow ? [timingRow] : []),
         ]) +
         paragraph("This code expires 24 hours after it was issued.") +
         contactParagraph(),
@@ -368,8 +379,7 @@ export async function sendOrderReadyEmailToClient(
       pickupCode,
       "",
       `Order: ${order.listingTitle}`,
-      `Pickup: ${pickup}`,
-      "",
+      ...(timingRow ? [`${timingRow.label}: ${timingRow.value}`, ""] : []),
       "This code expires 24 hours after it was issued.",
     ]);
     await sendMail({ to: client.email, subject, text, html });

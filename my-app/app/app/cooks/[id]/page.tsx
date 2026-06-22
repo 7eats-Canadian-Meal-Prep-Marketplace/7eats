@@ -11,6 +11,11 @@ import {
 import Link from "next/link";
 import { notFound, useRouter } from "next/navigation";
 import { use, useEffect, useState } from "react";
+import {
+  fetchCookFollowState,
+  followCook,
+  unfollowCook,
+} from "@/lib/favourites/follow-cook";
 import { formatLeadTime } from "@/lib/refund-policy";
 import { useApp } from "../../_app-context";
 import { Skeleton } from "../../_skeleton";
@@ -139,6 +144,7 @@ export default function CookProfilePage({
   const router = useRouter();
   const { isLoggedIn } = useApp();
   const [following, setFollowing] = useState(false);
+  const [followLoading, setFollowLoading] = useState(false);
 
   const [cook, setCook] = useState<ApiCook | null>(null);
   const [reviews, setReviews] = useState<ApiReview[]>([]);
@@ -178,6 +184,35 @@ export default function CookProfilePage({
       cancelled = true;
     };
   }, [id]);
+
+  useEffect(() => {
+    if (!isLoggedIn || !id) return;
+    let cancelled = false;
+    void fetchCookFollowState(id).then((state) => {
+      if (!cancelled && state !== null) setFollowing(state);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [id, isLoggedIn]);
+
+  async function toggleFollow() {
+    if (!isLoggedIn) {
+      router.push(`/app-auth/login?next=/app/cooks/${id}`);
+      return;
+    }
+    if (followLoading) return;
+
+    const next = !following;
+    setFollowLoading(true);
+    const result = next ? await followCook(id) : await unfollowCook(id);
+    if (result === "auth") {
+      router.push(`/app-auth/login?next=/app/cooks/${id}`);
+    } else if (result === "ok") {
+      setFollowing(next);
+    }
+    setFollowLoading(false);
+  }
 
   if (notFoundFlag) notFound();
 
@@ -291,7 +326,8 @@ export default function CookProfilePage({
               <button
                 type="button"
                 className={`${styles.followBtn} ${following ? styles.followBtnActive : ""}`}
-                onClick={() => setFollowing((f) => !f)}
+                disabled={followLoading}
+                onClick={() => void toggleFollow()}
               >
                 <Heart
                   size={13}

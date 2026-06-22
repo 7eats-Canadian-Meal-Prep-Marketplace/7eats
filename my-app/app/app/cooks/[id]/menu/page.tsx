@@ -11,6 +11,7 @@ import {
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { SPECIAL_REQUESTS_DISCLAIMER } from "@/lib/orders/special-requests-copy";
 import {
   cancelByDate,
   formatLeadTime,
@@ -521,9 +522,9 @@ export default function CookMenuPage() {
                             ${final.toFixed(2)}
                           </span>
                         </div>
-                        {dish.description && (
-                          <p className={styles.dishDesc}>{dish.description}</p>
-                        )}
+                        <p className={styles.dishDesc}>
+                          {dish.description ?? ""}
+                        </p>
                         {dish.dietary.length > 0 && (
                           <div className={styles.pills}>
                             {dish.dietary.slice(0, 3).map((d) => (
@@ -709,38 +710,41 @@ export default function CookMenuPage() {
                 </p>
               )}
 
-              {activeForThisCook &&
-                cook.acceptsSpecialRequests &&
-                (totalQty > 0 || cart.notes) && (
-                  <div className={styles.note}>
-                    {cart.notes ? (
-                      <>
-                        <div className={styles.noteHead}>
-                          <span className={styles.noteLabel}>
-                            <NotebookPen size={13} /> Note for the cook
-                          </span>
-                          <button
-                            type="button"
-                            className={styles.noteEdit}
-                            onClick={() => setNoteOpen(true)}
-                          >
-                            Modify
-                          </button>
-                        </div>
-                        <p className={styles.noteText}>{cart.notes}</p>
-                      </>
-                    ) : (
-                      <button
-                        type="button"
-                        className={styles.noteAdd}
-                        onClick={() => setNoteOpen(true)}
-                      >
-                        <NotebookPen size={15} />
-                        Add a note for the cook
-                      </button>
-                    )}
-                  </div>
-                )}
+              {activeForThisCook && (totalQty > 0 || cart.notes) && (
+                <div className={styles.note}>
+                  {cart.notes ? (
+                    <>
+                      <div className={styles.noteHead}>
+                        <span className={styles.noteLabel}>
+                          <NotebookPen size={13} /> Note for the cook
+                        </span>
+                        <button
+                          type="button"
+                          className={styles.noteEdit}
+                          onClick={() => setNoteOpen(true)}
+                        >
+                          Modify
+                        </button>
+                      </div>
+                      <p className={styles.noteText}>{cart.notes}</p>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      className={styles.noteAdd}
+                      onClick={() => setNoteOpen(true)}
+                    >
+                      <NotebookPen size={15} />
+                      Add a note for the cook
+                    </button>
+                  )}
+                  {!cook.acceptsSpecialRequests && (
+                    <p className={styles.noteDisclaimer}>
+                      {SPECIAL_REQUESTS_DISCLAIMER}
+                    </p>
+                  )}
+                </div>
+              )}
 
               <button
                 type="button"
@@ -773,6 +777,7 @@ export default function CookMenuPage() {
       {noteOpen && activeForThisCook && (totalQty > 0 || cart.notes) && (
         <NoteModal
           initial={cart.notes ?? ""}
+          acceptsSpecialRequests={cook.acceptsSpecialRequests}
           onSave={(text) => cart.setNotes(text.trim() ? text.trim() : null)}
           onClose={() => setNoteOpen(false)}
         />
@@ -1043,10 +1048,12 @@ const NOTE_MAX = 500;
 
 function NoteModal({
   initial,
+  acceptsSpecialRequests,
   onSave,
   onClose,
 }: {
   initial: string;
+  acceptsSpecialRequests: boolean;
   onSave: (text: string) => void;
   onClose: () => void;
 }) {
@@ -1086,15 +1093,20 @@ function NoteModal({
           </button>
         </div>
         <p className={styles.noteModalSub}>
-          Allergies, spice level, dietary questions — anything the cook should
-          know. They’ll confirm with you if needed.
+          {acceptsSpecialRequests
+            ? "Allergies, spice level, dietary questions. Anything the cook should know. They'll confirm with you if needed."
+            : SPECIAL_REQUESTS_DISCLAIMER}
         </p>
         <textarea
           className={styles.noteTextarea}
           value={text}
           maxLength={NOTE_MAX}
           onChange={(e) => setText(e.target.value)}
-          placeholder="e.g. No peanuts, mild spice, swap rice for salad…"
+          placeholder={
+            acceptsSpecialRequests
+              ? "e.g. No peanuts, mild spice, swap rice for salad…"
+              : "e.g. Peanut allergy, gluten-free, lactose intolerant…"
+          }
         />
         <div className={styles.noteModalFoot}>
           <span className={styles.noteCount}>

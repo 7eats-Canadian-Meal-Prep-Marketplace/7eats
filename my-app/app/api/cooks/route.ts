@@ -23,10 +23,18 @@ function parseCoord(value: string | null, min: number, max: number) {
   return n;
 }
 
+function parseFulfillmentMode(
+  value: string | null,
+): "pickup" | "delivery" | null {
+  if (value === "pickup" || value === "delivery") return value;
+  return null;
+}
+
 export async function GET(req: NextRequest) {
   const params = new URL(req.url).searchParams;
   const lat = parseCoord(params.get("lat"), -90, 90);
   const lng = parseCoord(params.get("lng"), -180, 180);
+  const mode = parseFulfillmentMode(params.get("mode"));
   const hasGeo = lat != null && lng != null;
 
   try {
@@ -43,23 +51,26 @@ export async function GET(req: NextRequest) {
         )`
       : sql<number | null>`NULL`;
 
-    // Reachability gate — mirror /api/search so a cook shown on browse is never
-    // missing from search. Browse has no pickup/delivery toggle, so a cook
-    // qualifies if it is reachable by EITHER fulfillment mode (the union of what
-    // search could surface). A bounding-box pre-filter (on the wider pickup cap)
-    // keeps the candidate scan index-friendly before the exact haversine check.
+    // Reachability gate — mirror /api/search. When mode is omitted, a cook
+    // qualifies if reachable by either fulfillment mode (union). Browse and
+    // search pass mode so pickup-only kitchens are hidden in delivery mode.
     const reachable = hasGeo
       ? (() => {
           const box = boundingBox(lat, lng, REACH_BOX_KM);
+          const pickupReachable = sql`${cookProfiles.offersPickup} = true AND ${distanceExpr} <= ${SEARCH_PICKUP_MAX_KM}`;
+          const deliveryReachable = sql`${cookProfiles.delivery} = 'self' AND ${distanceExpr} <= COALESCE(${cookProfiles.maxDeliveryKm}, ${DEFAULT_MAX_DELIVERY_KM})`;
+          const modeReachable =
+            mode === "pickup"
+              ? pickupReachable
+              : mode === "delivery"
+                ? deliveryReachable
+                : or(pickupReachable, deliveryReachable);
           return and(
             sql`${cookProfiles.pickupLat} IS NOT NULL`,
             sql`${cookProfiles.pickupLng} IS NOT NULL`,
             sql`${cookProfiles.pickupLat} BETWEEN ${box.minLat} AND ${box.maxLat}`,
             sql`${cookProfiles.pickupLng} BETWEEN ${box.minLng} AND ${box.maxLng}`,
-            or(
-              sql`${cookProfiles.offersPickup} = true AND ${distanceExpr} <= ${SEARCH_PICKUP_MAX_KM}`,
-              sql`${cookProfiles.delivery} = 'self' AND ${distanceExpr} <= COALESCE(${cookProfiles.maxDeliveryKm}, ${DEFAULT_MAX_DELIVERY_KM})`,
-            ),
+            modeReachable,
           );
         })()
       : undefined;

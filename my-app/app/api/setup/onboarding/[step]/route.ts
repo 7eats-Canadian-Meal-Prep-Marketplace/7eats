@@ -305,8 +305,11 @@ async function step2(req: Request, userId: string) {
         delivery,
         ...(offersDelivery
           ? {
-              maxDeliveryKm: deliveryZone!.maxDeliveryKm,
-              deliveryRatePerKm: String(deliveryZone!.deliveryRatePerKm),
+              maxDeliveryKm: deliveryZone?.maxDeliveryKm ?? null,
+              deliveryRatePerKm:
+                deliveryZone?.deliveryRatePerKm != null
+                  ? String(deliveryZone.deliveryRatePerKm)
+                  : null,
               deliveryFlatFee: "0",
             }
           : {

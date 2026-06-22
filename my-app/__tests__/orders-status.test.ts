@@ -25,6 +25,7 @@ vi.mock("@/lib/stripe-payments", () => ({
 }));
 vi.mock("@/lib/emails/order-events", () => ({
   sendOrderConfirmedEmailToClient: vi.fn().mockResolvedValue(undefined),
+  sendOrderNotReadyEmailToClient: vi.fn().mockResolvedValue(undefined),
   sendOrderReadyEmailToClient: vi.fn().mockResolvedValue(undefined),
   sendOrderCancelledByCookEmailToClient: vi.fn().mockResolvedValue(undefined),
 }));
@@ -36,6 +37,7 @@ import { auth } from "@/lib/auth";
 import {
   sendOrderCancelledByCookEmailToClient,
   sendOrderConfirmedEmailToClient,
+  sendOrderNotReadyEmailToClient,
   sendOrderReadyEmailToClient,
 } from "@/lib/emails/order-events";
 import {
@@ -577,6 +579,23 @@ describe("PATCH /api/business/dashboard/orders/[orderId]/status", () => {
       expect.anything(),
       expect.stringMatching(/^\d{6}$/),
     );
+  });
+
+  it("sends the not-ready email when reverting from ready to confirmed", async () => {
+    let call = 0;
+    vi.mocked(db.select).mockImplementation(() => {
+      call++;
+      if (call === 1) return mockCook(true);
+      if (call === 2) return orderChain("ready");
+      return emailLookupChain();
+    });
+    mockUpdate({ id: ORDER_ID, status: "confirmed" });
+    const res = await PATCH(makePatch({ status: "confirmed" }), { params });
+    expect(res.status).toBe(200);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(sendOrderNotReadyEmailToClient).toHaveBeenCalled();
+    expect(sendOrderConfirmedEmailToClient).not.toHaveBeenCalled();
   });
 
   it("sends the cancelled-by-cook email to the client on cancel", async () => {

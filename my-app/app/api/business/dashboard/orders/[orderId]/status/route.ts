@@ -218,10 +218,8 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       }
     }
 
-    // Guard: an order can only be marked ready for pickup once its payment can
-    // actually be collected. If the customer never authorized the charge (the
-    // payment is still `pending`), capture at verify-code would silently no-op
-    // and the cook would hand over food for free. Surface it here instead.
+    // Guard before issuing a pickup/delivery code so cooks never release food
+    // for an order whose remaining payment cannot be collected.
     if (newStatus === "ready") {
       const paymentRows = await db
         .select({
@@ -234,7 +232,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
         return NextResponse.json(
           {
             error:
-              "Payment hasn't been authorized yet. The customer must complete payment before this order can be marked ready for pickup.",
+              "Payment hasn't been authorized yet. The customer must complete payment before this order can be marked ready.",
           },
           { status: 402 },
         );
@@ -293,6 +291,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
         totalPrice: orders.totalPrice,
         currency: orders.currency,
         pickupAt: orders.pickupAt,
+        fulfillmentMode: orders.fulfillmentMode,
         fulfillmentWindowStart: orders.fulfillmentWindowStart,
         fulfillmentWindowEnd: orders.fulfillmentWindowEnd,
         cookName: cookProfiles.displayName,
@@ -315,24 +314,23 @@ export async function PATCH(req: NextRequest, { params }: Params) {
             email: row.clientEmail as string,
             firstName: row.clientFirstName as string | null,
           };
+          const fulfillmentMode: "pickup" | "delivery" | null =
+            row.fulfillmentMode === "pickup" ||
+            row.fulfillmentMode === "delivery"
+              ? row.fulfillmentMode
+              : null;
           const orderData = {
             id: orderId,
             listingTitle: dishRows.map((d) => d.name).join(", "),
             quantity: dishRows.reduce((s, d) => s + d.quantity, 0),
             totalPrice: row.totalPrice,
             currency: row.currency,
-            // Use the order's real pickup time from the DB — never fall back to
-            // `new Date()`, which would put the confirmation moment in the email
-            // instead of the actual pickup date/time. The email template renders
-            // a null pickupAt as "TBD".
             pickupAt: row.pickupAt,
+            fulfillmentMode,
             fulfillmentWindowStart: row.fulfillmentWindowStart,
             fulfillmentWindowEnd: row.fulfillmentWindowEnd,
           };
           if (newStatus === "confirmed") {
-            // Reverting a ready order back to confirmed means the cook hit
-            // "Mark as not ready" — let the customer know it's running late
-            // instead of re-sending the initial confirmation email.
             if (previousStatus === "ready") {
               return sendOrderNotReadyEmailToClient(
                 client,
