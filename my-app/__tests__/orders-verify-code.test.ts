@@ -10,7 +10,9 @@ vi.mock("@/db", () => ({
   db: { select: vi.fn(), update: vi.fn() },
 }));
 vi.mock("@/db/schema", () => ({
+  authUser: {},
   orders: {},
+  orderDishes: {},
   orderPayments: {},
   cookProfiles: {},
 }));
@@ -73,6 +75,17 @@ function selectChain(rows: unknown[]) {
 function selectChainNoLimit(rows: unknown[]) {
   const where = vi.fn().mockResolvedValue(rows);
   const from = vi.fn(() => ({ where }));
+  return { from } as never;
+}
+
+// For the fire-and-forget completion email query:
+// db.select(...).from(...).innerJoin(...).innerJoin(...).where(...).limit(1)
+function selectEmailChain(rows: unknown[]) {
+  const limit = vi.fn().mockResolvedValue(rows);
+  const where = vi.fn(() => ({ limit }));
+  const secondInnerJoin = vi.fn(() => ({ where }));
+  const firstInnerJoin = vi.fn(() => ({ innerJoin: secondInnerJoin }));
+  const from = vi.fn(() => ({ innerJoin: firstInnerJoin }));
   return { from } as never;
 }
 
@@ -204,8 +217,10 @@ describe("POST /api/business/dashboard/orders/[orderId]/verify-code", () => {
       call++;
       if (call === 1) return mockCook(true);
       if (call === 2) return selectChain([readyOrder]);
-      // call 3: orderPayments list (no .limit())
-      if (call === 3)
+      // call 3: fire-and-forget completion email lookup
+      if (call === 3) return selectEmailChain([]);
+      // call 4: orderPayments list (no .limit())
+      if (call === 4)
         return selectChainNoLimit([
           {
             id: "pay-1",
@@ -215,7 +230,7 @@ describe("POST /api/business/dashboard/orders/[orderId]/verify-code", () => {
             cookPayoutAmount: null,
           },
         ]);
-      // call 4: cookProfiles stripeAccountId lookup
+      // call 5: cookProfiles stripeAccountId lookup
       return selectChain([{ stripeAccountId: "acct_test" }]);
     });
     mockUpdate([{ id: ORDER_ID, fulfilledAt: new Date() }]);
@@ -252,8 +267,10 @@ describe("POST /api/business/dashboard/orders/[orderId]/verify-code", () => {
       call++;
       if (call === 1) return mockCook(true);
       if (call === 2) return selectChain([readyOrder]);
-      // call 3: orderPayments with status "released" — should not trigger capture
-      if (call === 3)
+      // call 3: fire-and-forget completion email lookup
+      if (call === 3) return selectEmailChain([]);
+      // call 4: orderPayments with status "released" — should not trigger capture
+      if (call === 4)
         return selectChainNoLimit([
           {
             id: "pay-1",
@@ -263,7 +280,7 @@ describe("POST /api/business/dashboard/orders/[orderId]/verify-code", () => {
             cookPayoutAmount: null,
           },
         ]);
-      // call 4: cookProfiles lookup
+      // call 5: cookProfiles lookup
       return selectChain([{ stripeAccountId: "acct_test" }]);
     });
     mockUpdate([{ id: ORDER_ID, fulfilledAt: new Date() }]);
