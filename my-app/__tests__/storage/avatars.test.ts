@@ -35,6 +35,7 @@ vi.mock("@/lib/storage/buckets", () => ({
 }));
 
 import {
+  avatarKeyFromUrl,
   deleteAvatar,
   getAvatarUrl,
   uploadAvatar,
@@ -75,6 +76,16 @@ describe("avatars", () => {
       expect(url).toBe(
         "https://avatars.example.com/avatars/user-789/avatar.png",
       );
+    });
+  });
+
+  describe("avatarKeyFromUrl", () => {
+    it("extracts the storage key from a CDN URL", () => {
+      expect(
+        avatarKeyFromUrl(
+          "https://avatars.example.com/avatars/user-789/avatar.png",
+        ),
+      ).toBe("avatars/user-789/avatar.png");
     });
   });
 

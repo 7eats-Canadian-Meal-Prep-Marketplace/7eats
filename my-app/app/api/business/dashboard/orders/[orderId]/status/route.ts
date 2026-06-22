@@ -288,6 +288,9 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       db.select({
         clientEmail: authUser.email,
         clientFirstName: authUser.firstName,
+        clientPhone: authUser.phone,
+        clientPhoneVerified: authUser.phoneVerified,
+        clientNotificationPreferences: authUser.notificationPreferences,
         totalPrice: orders.totalPrice,
         currency: orders.currency,
         pickupAt: orders.pickupAt,
@@ -313,6 +316,9 @@ export async function PATCH(req: NextRequest, { params }: Params) {
           const client = {
             email: row.clientEmail as string,
             firstName: row.clientFirstName as string | null,
+            phone: row.clientPhone as string | null,
+            phoneVerified: row.clientPhoneVerified as boolean,
+            notificationPreferences: row.clientNotificationPreferences,
           };
           const fulfillmentMode: "pickup" | "delivery" | null =
             row.fulfillmentMode === "pickup" ||

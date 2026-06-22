@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { authUser } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { getStripe } from "@/lib/stripe";
+import { formatPaymentMethodBrand } from "@/lib/stripe/browser";
 
 /**
  * Returns the logged-in customer's saved Stripe payment methods (cards only).
@@ -34,7 +35,7 @@ export async function GET(req: Request) {
 
   const data = methods.data.map((pm) => ({
     id: pm.id,
-    brand: pm.card?.brand ?? "card",
+    brand: formatPaymentMethodBrand(pm.card?.brand ?? "card"),
     last4: pm.card?.last4 ?? "••••",
     expMonth: pm.card?.exp_month,
     expYear: pm.card?.exp_year,

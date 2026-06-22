@@ -48,6 +48,8 @@ export async function POST(req: Request) {
   const setupIntent = await stripe.setupIntents.create({
     customer: stripeCustomerId,
     usage: "off_session",
+    payment_method_types: ["card"],
+    metadata: { purpose: "save_card" },
   });
 
   return NextResponse.json({ clientSecret: setupIntent.client_secret });

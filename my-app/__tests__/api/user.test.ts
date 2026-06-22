@@ -73,17 +73,16 @@ const MOCK_USER = {
   firstName: "Alice",
   lastName: "Smith",
   phone: "+14165550123",
-  neighborhood: "Kensington",
+  phoneVerified: true,
   dateOfBirth: "1990-01-01",
   email: "alice@example.com",
+  image: null,
 };
 
 const DEFAULT_NOTIF_PREFS = {
   notifs: {
-    new_listing: true,
     order_updates: true,
-    messages: true,
-    marketing: false,
+    marketing: true,
   },
   channels: { sms: true, email: true },
 };
@@ -234,9 +233,7 @@ describe("GET /api/user/notifications", () => {
     mockSession(USER_ID);
     const prefs = {
       notifs: {
-        new_listing: false,
         order_updates: true,
-        messages: true,
         marketing: false,
       },
       channels: { sms: false, email: true },
@@ -251,10 +248,11 @@ describe("GET /api/user/notifications", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.success).toBe(true);
+    expect(body.data.notifs.marketing).toBe(false);
     expect(body.data.channels.email).toBe(true);
   });
 
-  it("returns 200 with default prefs when user has no saved prefs", async () => {
+  it("returns 200 with default prefs when none saved (without persisting)", async () => {
     mockSession(USER_ID);
     vi.mocked(db.select).mockImplementation(() =>
       limitChain([{ notificationPreferences: null }]),
@@ -266,6 +264,7 @@ describe("GET /api/user/notifications", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.data).toMatchObject(DEFAULT_NOTIF_PREFS);
+    expect(db.update).not.toHaveBeenCalled();
   });
 
   it("returns 404 when user not found", async () => {

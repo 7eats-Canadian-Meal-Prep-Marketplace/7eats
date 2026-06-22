@@ -1,4 +1,4 @@
-import { and, desc, eq, gte } from "drizzle-orm";
+import { and, desc, eq, gte, sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { getCookId, unauthorized } from "@/app/api/business/_lib/cook-auth";
 import { db } from "@/db";
@@ -51,13 +51,15 @@ export async function GET(req: NextRequest) {
           id: reviews.id,
           rating: reviews.rating,
           createdAt: reviews.createdAt,
-          listingId: reviews.listingId,
-          listingTitle: listings.title,
+          orderSummary: sql<string | null>`(
+            SELECT string_agg(od.dish_name, ', ' ORDER BY od.sort_order)
+            FROM order_dishes od
+            WHERE od.order_id = ${reviews.orderId}
+          )`,
           customerFirstName: authUser.firstName,
           customerLastName: authUser.lastName,
         })
         .from(reviews)
-        .leftJoin(listings, eq(reviews.listingId, listings.id))
         .leftJoin(authUser, eq(reviews.clientId, authUser.id))
         .where(and(eq(reviews.cookId, cookId), gte(reviews.createdAt, since)))
         .orderBy(desc(reviews.createdAt))

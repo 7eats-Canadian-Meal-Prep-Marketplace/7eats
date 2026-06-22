@@ -433,6 +433,13 @@
   letter-spacing: -0.01em;
 }
 
+.ratingCount {
+  font-size: 12px;
+  font-weight: 600;
+  color: #737373;
+  letter-spacing: -0.01em;
+}
+
 .ratingFallback {
   display: none;
 }

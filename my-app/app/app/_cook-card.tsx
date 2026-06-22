@@ -105,6 +105,7 @@ function CookCardRating({
           aria-hidden
         />
         <span className={styles.ratingValue}>{rating}</span>
+        <span className={styles.ratingCount}>({reviewCount})</span>
       </span>
     );
   }

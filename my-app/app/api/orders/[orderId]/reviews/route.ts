@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { orders, reviews } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { logAndCheckRateLimit } from "@/lib/rate-limit";
+import { notifyCookNewReview } from "@/lib/reviews/notify-cook-new-review";
 
 export type Params = { params: Promise<{ orderId: string }> };
 
@@ -111,6 +112,10 @@ export async function POST(req: NextRequest, { params }: Params) {
         comment: comment ?? null,
       })
       .returning();
+
+    notifyCookNewReview(review.id).catch((err) =>
+      console.error("[orders/[orderId]/reviews/POST] notify cook", err),
+    );
 
     return NextResponse.json({ success: true, data: review }, { status: 201 });
   } catch (err) {

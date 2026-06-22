@@ -46,6 +46,16 @@ export function getAvatarUrl(key: string): string {
   return `${base.replace(/\/+$/, "")}/${key}`;
 }
 
+/** Reverse of getAvatarUrl — returns null if the URL is not from our avatars CDN. */
+export function avatarKeyFromUrl(url: string): string | null {
+  const base = BUCKET_CONFIG[BUCKETS.AVATARS].cdnBaseUrl?.replace(/\/+$/, "");
+  if (!base) return null;
+  const prefix = `${base}/`;
+  if (!url.startsWith(prefix)) return null;
+  const key = url.slice(prefix.length);
+  return key.length > 0 ? key : null;
+}
+
 export async function deleteAvatar(key: string): Promise<void> {
   await getR2Client().send(
     new DeleteObjectCommand({ Bucket: BUCKETS.AVATARS, Key: key }),

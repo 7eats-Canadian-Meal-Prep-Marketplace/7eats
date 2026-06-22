@@ -259,6 +259,9 @@ async function notifyOfClientCancellation(
       email: authUser.email,
       firstName: authUser.firstName,
       lastName: authUser.lastName,
+      phone: authUser.phone,
+      phoneVerified: authUser.phoneVerified,
+      notificationPreferences: authUser.notificationPreferences,
     })
     .from(authUser)
     .where(eq(authUser.id, order.clientId))
@@ -309,7 +312,13 @@ async function notifyOfClientCancellation(
         : null;
 
     await sendOrderCancelledByClientEmailToClient(
-      { email: clientUser.email, firstName: clientUser.firstName },
+      {
+        email: clientUser.email,
+        firstName: clientUser.firstName,
+        phone: clientUser.phone,
+        phoneVerified: clientUser.phoneVerified,
+        notificationPreferences: clientUser.notificationPreferences,
+      },
       { name: cookName },
       orderEmail,
       {

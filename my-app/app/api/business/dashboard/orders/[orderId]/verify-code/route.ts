@@ -179,6 +179,9 @@ export async function POST(req: NextRequest, { params }: Params) {
     db.select({
       clientEmail: authUser.email,
       clientFirstName: authUser.firstName,
+      clientPhone: authUser.phone,
+      clientPhoneVerified: authUser.phoneVerified,
+      clientNotificationPreferences: authUser.notificationPreferences,
       totalPrice: orders.totalPrice,
       currency: orders.currency,
       pickupAt: orders.pickupAt,
@@ -199,7 +202,13 @@ export async function POST(req: NextRequest, { params }: Params) {
           .from(orderDishes)
           .where(eq(orderDishes.orderId, orderId));
         return sendOrderCompletedEmailToClient(
-          { email: row.clientEmail, firstName: row.clientFirstName },
+          {
+            email: row.clientEmail,
+            firstName: row.clientFirstName,
+            phone: row.clientPhone,
+            phoneVerified: row.clientPhoneVerified,
+            notificationPreferences: row.clientNotificationPreferences,
+          },
           { name: row.cookName },
           {
             id: orderId,

@@ -43,9 +43,7 @@ const authUserTable = pgTable(
     neighborhood: varchar("neighborhood", { length: 100 }),
     notificationPreferences: jsonb("notification_preferences").$type<{
       notifs: {
-        new_listing: boolean;
         order_updates: boolean;
-        messages: boolean;
         marketing: boolean;
       };
       channels: { sms: boolean; email: boolean };

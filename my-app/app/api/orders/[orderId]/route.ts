@@ -2,7 +2,13 @@ import { and, eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/db";
-import { authUser, cookProfiles, orderDishes, orders } from "@/db/schema";
+import {
+  authUser,
+  cookProfiles,
+  orderDishes,
+  orders,
+  reviews,
+} from "@/db/schema";
 import { auth } from "@/lib/auth";
 import {
   formatOrderTimingDate,
@@ -85,6 +91,16 @@ export async function GET(req: NextRequest, { params }: Params) {
       })
       .from(orderDishes)
       .where(eq(orderDishes.orderId, orderId));
+
+    const [reviewRow] = await db
+      .select({
+        id: reviews.id,
+        rating: reviews.rating,
+        comment: reviews.comment,
+      })
+      .from(reviews)
+      .where(eq(reviews.orderId, orderId))
+      .limit(1);
 
     const pickupAtIso =
       row.pickupAt instanceof Date ? row.pickupAt.toISOString() : row.pickupAt;
@@ -186,6 +202,13 @@ export async function GET(req: NextRequest, { params }: Params) {
           ? (row.deliveryAddress as object | null)
           : null,
       dishes: dishRows.sort((a, b) => a.sortOrder - b.sortOrder),
+      review: reviewRow
+        ? {
+            id: reviewRow.id,
+            rating: reviewRow.rating,
+            comment: reviewRow.comment ?? "",
+          }
+        : null,
     };
 
     return NextResponse.json({ success: true, data });

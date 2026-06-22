@@ -1,45 +1,54 @@
 "use client";
 
 import { Elements } from "@stripe/react-stripe-js";
-import { loadStripe } from "@stripe/stripe-js";
 import { forwardRef } from "react";
+import { stripeElementsAppearance, stripePromise } from "@/lib/stripe/browser";
+import { CheckoutWalletPayment } from "./_checkout-wallet-payment";
 import {
   CheckoutPaymentForm,
   type CheckoutPaymentHandle,
 } from "./_payment-form";
 
-const stripePromise = loadStripe(
-  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "",
-);
-
 type Props = {
   clientSecret: string | null;
+  isLoggedIn: boolean;
+  userEmail: string | null;
   onReadyChange: (ready: boolean) => void;
 };
 
 export type { CheckoutPaymentHandle };
 
 export const CheckoutPaymentSection = forwardRef<CheckoutPaymentHandle, Props>(
-  function CheckoutPaymentSection({ clientSecret, onReadyChange }, ref) {
-    // The parent only mounts this once a payment session exists; this guard is
-    // just defensive — render nothing rather than an empty-state placeholder.
+  function CheckoutPaymentSection(
+    { clientSecret, isLoggedIn, userEmail, onReadyChange },
+    ref,
+  ) {
     if (!clientSecret) return null;
+
+    if (isLoggedIn) {
+      return (
+        <CheckoutWalletPayment
+          ref={ref}
+          clientSecret={clientSecret}
+          userEmail={userEmail}
+          onReadyChange={onReadyChange}
+        />
+      );
+    }
 
     return (
       <Elements
         stripe={stripePromise}
         options={{
           clientSecret,
-          appearance: {
-            theme: "stripe",
-            variables: {
-              colorPrimary: "#d64045",
-              borderRadius: "8px",
-            },
-          },
+          appearance: stripeElementsAppearance,
         }}
       >
-        <CheckoutPaymentForm ref={ref} onReadyChange={onReadyChange} />
+        <CheckoutPaymentForm
+          ref={ref}
+          onReadyChange={onReadyChange}
+          variant="guest"
+        />
       </Elements>
     );
   },

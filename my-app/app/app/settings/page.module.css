@@ -31,6 +31,14 @@
   justify-content: center;
   flex-shrink: 0;
   letter-spacing: -0.02em;
+  overflow: hidden;
+}
+
+.avatarLgImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .profileName {
@@ -117,6 +125,293 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+.cardBody {
+  padding: 18px 22px 22px;
+}
+
+.photoSaveRow {
+  margin-top: 14px;
+}
+
+.secondaryActionBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 44px;
+  padding: 12px 18px;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: inherit;
+  letter-spacing: -0.01em;
+  border-radius: var(--radius-pill);
+  border: 1.5px solid var(--grey-200);
+  background: var(--white);
+  color: var(--ink);
+  cursor: pointer;
+  transition:
+    border-color 0.12s,
+    background 0.12s,
+    opacity 0.12s;
+}
+
+.secondaryActionBtn:hover:not(:disabled) {
+  border-color: var(--grey-400);
+}
+
+.secondaryActionBtn:active:not(:disabled) {
+  background: var(--grey-100);
+}
+
+.secondaryActionBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.secondaryActionBtnDanger {
+  color: var(--red);
+  border-color: color-mix(in srgb, var(--red) 35%, var(--grey-200));
+}
+
+.secondaryActionBtnDanger:hover:not(:disabled) {
+  border-color: var(--grey-400);
+  background: var(--white);
+}
+
+.secondaryActionBtnDanger:active:not(:disabled) {
+  background: var(--grey-100);
+}
+
+.passwordHint {
+  margin: 0 0 14px;
+  font-size: 13px;
+  color: var(--grey-500);
+  line-height: 1.45;
+}
+
+.phoneDisplay {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.phoneBadge {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink);
+  background: var(--white);
+  padding: 4px 8px;
+  border: 1px solid var(--grey-300);
+  border-radius: 100px;
+}
+
+.phoneSection {
+  padding: 12px 22px 20px;
+}
+
+.phoneSectionOpen {
+  border-top: 1px solid var(--grey-200);
+  padding-top: 18px;
+}
+
+.phoneChangePanel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.phonePanelHead {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.phonePanelTitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+
+.phonePanelDesc {
+  margin: 0;
+  font-size: 13px;
+  color: var(--grey-500);
+  line-height: 1.45;
+}
+
+.phoneField {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.phoneFieldLabel {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--grey-700);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.phoneFieldInput,
+.phoneFieldInputOtp {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--grey-200);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 15px;
+  font-family: inherit;
+  color: var(--ink);
+  background: var(--white);
+  outline: none;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+
+.phoneFieldInput {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+.phoneFieldInputOtp {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.22em;
+  text-align: center;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.phoneFieldInput:focus,
+.phoneFieldInputOtp:focus {
+  border-color: var(--ink);
+  box-shadow: 0 0 0 1px var(--ink);
+}
+
+.phoneFieldInput:disabled,
+.phoneFieldInputOtp:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.phoneActionRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.phonePrimaryBtn,
+.phonePrimaryBtnFull {
+  padding: 11px 18px;
+  background: var(--ink);
+  color: var(--white);
+  font-size: 13px;
+  font-weight: 800;
+  border: none;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  font-family: inherit;
+  letter-spacing: -0.01em;
+  transition: opacity 0.12s;
+}
+
+.phonePrimaryBtnFull {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.phonePrimaryBtn:hover:not(:disabled),
+.phonePrimaryBtnFull:hover:not(:disabled) {
+  opacity: 0.82;
+}
+
+.phonePrimaryBtn:disabled,
+.phonePrimaryBtnFull:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+.phoneGhostBtn {
+  padding: 11px 14px;
+  background: none;
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--grey-600);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.phoneGhostBtn:hover:not(:disabled) {
+  color: var(--ink);
+}
+
+.phoneGhostBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.phoneSecondaryRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+.phoneTextBtn {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--grey-600);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.phoneTextBtn:hover:not(:disabled) {
+  color: var(--ink);
+}
+
+.phoneTextBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.fieldError {
+  margin: 0;
+  font-size: 13px;
+  color: var(--red);
+  line-height: 1.4;
+}
+
+.cardDesc {
+  font-size: 13px;
+  color: var(--grey-500);
+  margin: -4px 0 16px;
+  line-height: 1.5;
+}
+
+.cardBody .cardDesc {
+  margin: 0 0 16px;
+}
+
+.card > .cardDesc {
+  padding: 0 22px;
+  margin: 0 0 16px;
 }
 
 /* ─── Profile info read-only rows ────────────────────────────────────────── */
@@ -338,6 +633,19 @@
 
 .saveBtn:hover {
   opacity: 0.82;
+}
+
+.saveBtn:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+.saveBtn:disabled:hover {
+  opacity: 0.38;
+}
+
+.cardBody .saveBtn {
+  width: 100%;
 }
 
 /* ─── Danger card ────────────────────────────────────────────────────────── */
@@ -589,11 +897,100 @@
 }
 
 /* ─── Payment tab ────────────────────────────────────────────────────────── */
-.cardDesc {
+.paymentLoading {
+  margin: 0;
+  font-size: 14px;
+  color: var(--grey-500);
+}
+
+.paymentEmptyPanel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 28px 8px 8px;
+}
+
+.paymentEmptyCta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 20px;
+  padding: 11px 20px;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--white);
+  background: var(--ink);
+  border: none;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  font-family: inherit;
+  letter-spacing: -0.01em;
+  transition: opacity 0.12s;
+}
+
+.paymentEmptyCta:hover {
+  opacity: 0.86;
+}
+
+.cardsEmptyIcon {
+  color: var(--grey-400);
+  margin-bottom: 12px;
+}
+
+.cardsEmptyText {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0 0 6px;
+  letter-spacing: -0.01em;
+}
+
+.cardsEmptyDesc {
   font-size: 13px;
   color: var(--grey-500);
-  margin: -4px 0 16px;
+  margin: 0;
+  line-height: 1.45;
+  max-width: 240px;
+}
+
+.paymentTrustNote {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 20px 0 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--grey-200);
+  font-size: 12px;
+  color: var(--grey-500);
   line-height: 1.5;
+}
+
+.paymentTrustIcon {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--grey-400);
+}
+
+.addCardLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 14px;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity 0.12s;
+}
+
+.addCardLink:hover {
+  opacity: 0.7;
 }
 
 .cardList {
@@ -602,7 +999,6 @@
   border: 1px solid var(--grey-200);
   border-radius: 8px;
   overflow: hidden;
-  margin-bottom: 12px;
 }
 
 .paymentRow {
@@ -701,30 +1097,6 @@
 .removeCardBtn:hover {
   color: var(--red);
   background: rgba(214, 64, 69, 0.07);
-}
-
-.addCardBtn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13.5px;
-  font-weight: 600;
-  color: var(--ink);
-  background: none;
-  border: 1.5px dashed var(--grey-300);
-  border-radius: 8px;
-  padding: 10px 16px;
-  width: 100%;
-  cursor: pointer;
-  font-family: inherit;
-  justify-content: center;
-  transition:
-    border-color 0.12s,
-    color 0.12s;
-}
-
-.addCardBtn:hover {
-  border-color: var(--ink);
 }
 
 /* ─── Subscriptions tab ──────────────────────────────────────────────────── */
@@ -957,7 +1329,8 @@
   gap: 12px;
   padding: 13px 14px;
   border-bottom: 1px solid var(--grey-200);
-  background: #fff8f0;
+  background: var(--white);
+  box-shadow: inset 3px 0 0 var(--red);
   animation: fadeIn 0.15s ease;
 }
 
@@ -1053,175 +1426,4 @@
     flex: unset;
     width: 100%;
   }
-}
-
-/* ─── Card brand detected hint ───────────────────────────────────────────── */
-.cardDetected {
-  font-size: 12px;
-  font-weight: 600;
-  color: #16a34a;
-  margin: 4px 0 0;
-}
-
-/* ─── Modal (shared with settings add card) ──────────────────────────────── */
-.modalBackdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 15, 15, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 500;
-  padding: 20px;
-  animation: fadeIn 0.15s ease;
-}
-
-.modal {
-  width: 100%;
-  max-width: 420px;
-  background: var(--white);
-  border-radius: 16px;
-  padding: 24px;
-  box-shadow: 0 20px 60px rgba(15, 15, 15, 0.2);
-  animation: slideUp 0.2s cubic-bezier(0.34, 1.2, 0.64, 1);
-}
-
-@keyframes slideUp {
-  from {
-    transform: translateY(12px);
-    opacity: 0.6;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-.modalHead {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 20px;
-}
-
-.modalTitle {
-  font-size: 17px;
-  font-weight: 800;
-  color: var(--ink);
-  letter-spacing: -0.025em;
-  margin: 0;
-}
-
-.modalClose {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: none;
-  background: var(--grey-100);
-  color: var(--grey-700);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: background 0.12s;
-}
-
-.modalClose:hover {
-  background: var(--grey-200);
-}
-
-.modalForm {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.modalField {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.modalRow {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-
-.modalLabel {
-  font-size: 10.5px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--grey-700);
-}
-
-.modalInput {
-  padding: 10px 13px;
-  border: 1.5px solid var(--grey-200);
-  border-radius: 8px;
-  font-size: 15px;
-  font-family: inherit;
-  color: var(--ink);
-  background: var(--white);
-  outline: none;
-  transition: border-color 0.15s;
-}
-
-.modalInput:focus {
-  border-color: var(--ink);
-}
-
-.modalInputError {
-  border-color: var(--red);
-}
-
-.modalError {
-  font-size: 12px;
-  color: var(--red);
-  margin: 0;
-}
-
-.modalActions {
-  display: flex;
-  gap: 10px;
-  margin-top: 20px;
-}
-
-.modalCancel {
-  flex: 1;
-  padding: 12px;
-  border: 1.5px solid var(--grey-200);
-  border-radius: 8px;
-  background: var(--white);
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--grey-700);
-  cursor: pointer;
-  font-family: inherit;
-  transition: border-color 0.12s;
-}
-
-.modalCancel:hover {
-  border-color: var(--grey-500);
-}
-
-.modalSubmit {
-  flex: 2;
-  padding: 12px;
-  border: none;
-  border-radius: 8px;
-  background: var(--ink);
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--white);
-  cursor: pointer;
-  font-family: inherit;
-  transition: opacity 0.12s;
-}
-
-.modalSubmit:hover {
-  opacity: 0.88;
 }
