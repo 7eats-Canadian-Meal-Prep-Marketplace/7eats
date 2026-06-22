@@ -22,7 +22,10 @@ vi.mock("drizzle-orm", () => ({
 }));
 
 import { NextRequest } from "next/server";
-import { DELETE as deleteFavCook } from "@/app/api/favourites/cooks/[cookId]/route";
+import {
+  DELETE as deleteFavCook,
+  GET as getFollowStatus,
+} from "@/app/api/favourites/cooks/[cookId]/route";
 import {
   GET as getFavCooks,
   POST as postFavCook,
@@ -199,6 +202,51 @@ describe("POST /api/favourites/cooks", () => {
     expect(res.status).toBe(201);
     const body = await res.json();
     expect(body.success).toBe(true);
+  });
+});
+
+// ─── GET /api/favourites/cooks/[cookId] ─────────────────────────────────────
+
+describe("GET /api/favourites/cooks/[cookId]", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  const ctx = { params: Promise.resolve({ cookId: COOK_ID }) };
+
+  it("returns 401 when no session", async () => {
+    mockSession(null);
+    const res = await getFollowStatus(
+      makeReq(`http://localhost/api/favourites/cooks/${COOK_ID}`),
+      ctx,
+    );
+    expect(res.status).toBe(401);
+  });
+
+  it("returns following true when row exists", async () => {
+    mockSession(USER_ID);
+    vi.mocked(db.select).mockImplementation(() =>
+      limitChain([{ id: "follow-1" }]),
+    );
+
+    const res = await getFollowStatus(
+      makeReq(`http://localhost/api/favourites/cooks/${COOK_ID}`),
+      ctx,
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.data.following).toBe(true);
+  });
+
+  it("returns following false when not saved", async () => {
+    mockSession(USER_ID);
+    vi.mocked(db.select).mockImplementation(() => limitChain([]));
+
+    const res = await getFollowStatus(
+      makeReq(`http://localhost/api/favourites/cooks/${COOK_ID}`),
+      ctx,
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.data.following).toBe(false);
   });
 });
 

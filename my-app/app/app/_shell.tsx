@@ -8,7 +8,6 @@ import {
   MapPin,
   Package,
   Plus,
-  RefreshCw,
   Search,
   Settings,
   ShoppingCart,
@@ -392,7 +391,6 @@ const MENU_LINKS = [
   { href: "/app/search", label: "Search", Icon: Search },
   { href: "/app/saved", label: "Favourites", Icon: Heart },
   { href: "/app/orders", label: "Orders", Icon: Package },
-  { href: "/app/subscriptions", label: "Subscriptions", Icon: RefreshCw },
   { href: "/app/settings", label: "Account", Icon: Settings },
 ];
 

@@ -11,6 +11,7 @@ import {
   nextFulfillmentSlotIso,
 } from "@/lib/cook-card-schedule";
 import { useGuestAddress } from "@/lib/hooks/use-guest-address";
+import { SPECIAL_REQUESTS_DISCLAIMER } from "@/lib/orders/special-requests-copy";
 import {
   formatPhoneDisplay,
   isValidNorthAmericanPhone,
@@ -162,6 +163,9 @@ export default function CheckoutPage() {
   const [deliveryWindows, setDeliveryWindows] = useState<FulfillmentWindow[]>(
     [],
   );
+  const [acceptsSpecialRequests, setAcceptsSpecialRequests] = useState<
+    boolean | null
+  >(null);
   const [pendingPayment, setPendingPayment] = useState<{
     orderId: string;
     clientSecret: string;
@@ -189,6 +193,7 @@ export default function CheckoutPage() {
         const cook = json.data.cook;
         setPickupWindows(cook.pickupWindows ?? []);
         setDeliveryWindows(cook.deliveryWindows ?? []);
+        setAcceptsSpecialRequests(Boolean(cook.acceptsSpecialRequests));
       })
       .catch(() => {});
     return () => {
@@ -782,24 +787,31 @@ export default function CheckoutPage() {
             </section>
           )}
 
-          {/* Note — only when cart already has one */}
-          {notes && (
-            <section className={styles.formSection}>
-              <h2 className={styles.formTitle}>Note for the cook</h2>
-              <div className={styles.formGroup}>
-                <label className={styles.label} htmlFor="checkout-note">
-                  Special request
-                </label>
-                <textarea
-                  id="checkout-note"
-                  className={styles.textarea}
-                  rows={3}
-                  value={noteDraft}
-                  onChange={(e) => setNoteDraft(e.target.value)}
-                />
-              </div>
-            </section>
-          )}
+          <section className={styles.formSection}>
+            <h2 className={styles.formTitle}>Note for the cook</h2>
+            <div className={styles.formGroup}>
+              <label className={styles.label} htmlFor="checkout-note">
+                Special request (optional)
+              </label>
+              <textarea
+                id="checkout-note"
+                className={styles.textarea}
+                rows={3}
+                placeholder={
+                  acceptsSpecialRequests === false
+                    ? "Allergies, dietary restrictions, health-related needs…"
+                    : "Allergies, spice level, pickup instructions…"
+                }
+                value={noteDraft}
+                onChange={(e) => setNoteDraft(e.target.value)}
+              />
+              {acceptsSpecialRequests === false && (
+                <p className={styles.noteDisclaimer}>
+                  {SPECIAL_REQUESTS_DISCLAIMER}
+                </p>
+              )}
+            </div>
+          </section>
 
           {/* Payment — only appears once the order total is locked in and a
               secure payment session exists (after "Continue to payment"), so

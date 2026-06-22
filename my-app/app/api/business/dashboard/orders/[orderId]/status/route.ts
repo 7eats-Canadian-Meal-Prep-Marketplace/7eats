@@ -14,6 +14,7 @@ import {
 import {
   sendOrderCancelledByCookEmailToClient,
   sendOrderConfirmedEmailToClient,
+  sendOrderNotReadyEmailToClient,
   sendOrderReadyEmailToClient,
 } from "@/lib/emails/order-events";
 import {
@@ -209,6 +210,8 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       }
     }
 
+    const previousStatus = order.status;
+
     const updateFields: Partial<typeof orders.$inferInsert> = {
       status: newStatus,
     };
@@ -261,6 +264,9 @@ export async function PATCH(req: NextRequest, { params }: Params) {
         totalPrice: orders.totalPrice,
         currency: orders.currency,
         pickupAt: orders.pickupAt,
+        fulfillmentMode: orders.fulfillmentMode,
+        fulfillmentWindowStart: orders.fulfillmentWindowStart,
+        fulfillmentWindowEnd: orders.fulfillmentWindowEnd,
         cookName: cookProfiles.displayName,
       })
         .from(orders)
@@ -287,9 +293,19 @@ export async function PATCH(req: NextRequest, { params }: Params) {
             quantity: dishRows.reduce((s, d) => s + d.quantity, 0),
             totalPrice: row.totalPrice,
             currency: row.currency,
-            pickupAt: row.pickupAt ?? new Date(),
+            pickupAt: row.pickupAt,
+            fulfillmentMode: row.fulfillmentMode,
+            fulfillmentWindowStart: row.fulfillmentWindowStart,
+            fulfillmentWindowEnd: row.fulfillmentWindowEnd,
           };
           if (newStatus === "confirmed") {
+            if (previousStatus === "ready") {
+              return sendOrderNotReadyEmailToClient(
+                client,
+                { name: row.cookName },
+                orderData,
+              );
+            }
             return sendOrderConfirmedEmailToClient(
               client,
               { name: row.cookName },

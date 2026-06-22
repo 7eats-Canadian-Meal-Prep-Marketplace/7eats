@@ -22,7 +22,7 @@ const CLIENT_PUBLIC_EXACT = new Set([
 const CLIENT_PUBLIC_PREFIXES = ["/app/cooks/", "/app/checkout/", "/app/guest/"];
 
 /** Consumer routes that require a verified client account. */
-const CLIENT_PROTECTED_EXACT = new Set(["/app/settings"]);
+const CLIENT_PROTECTED_EXACT = new Set(["/app/settings", "/app/saved"]);
 const CLIENT_PROTECTED_PREFIXES = ["/app/orders"];
 
 function isClientPublicRoute(pathname: string): boolean {
@@ -186,10 +186,6 @@ export async function proxy(req: NextRequest) {
   // ── Legacy listing routes → browse ───────────────────────────────────────
   // Listings were removed in the dishes redesign; bounce any old links.
   if (pathname === "/app/listings" || pathname.startsWith("/app/listings/")) {
-    return NextResponse.redirect(new URL("/app/browse", req.url));
-  }
-  // Saved listings are retired for launch.
-  if (pathname === "/app/saved") {
     return NextResponse.redirect(new URL("/app/browse", req.url));
   }
   // Messaging is disabled for launch — inbox is not accessible.
@@ -386,10 +382,11 @@ export async function proxy(req: NextRequest) {
   ) {
     const { session, deny } = await requireCookSession(req);
     if (deny) return deny;
+    if (!session?.user?.id) return NextResponse.next();
 
     const blocked = await enforceCookSetupProgress(
       req,
-      session!.user.id,
+      session.user.id,
       pathname,
     );
     if (blocked) return blocked;

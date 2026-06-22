@@ -107,7 +107,7 @@ export function validateLogisticsSettings(input: {
       maxDeliveryKm: input.maxDeliveryKm,
       deliveryRatePerKm: input.deliveryRatePerKm,
     });
-    const maxDeliveryKm = zone.maxDeliveryKm!;
+    const maxDeliveryKm = zone.maxDeliveryKm ?? NaN;
     const deliveryRatePerKm = Number(zone.deliveryRatePerKm);
 
     if (

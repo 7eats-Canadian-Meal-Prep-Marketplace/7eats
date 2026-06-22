@@ -381,6 +381,13 @@
   border-color: var(--ink);
 }
 
+.noteDisclaimer {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--grey-600);
+}
+
 .addressSummary {
   border: 1px solid var(--grey-200);
   border-radius: var(--radius-sm, 8px);

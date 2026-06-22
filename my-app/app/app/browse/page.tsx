@@ -31,18 +31,24 @@ export default function BrowsePage() {
   const [loading, setLoading] = useState(true);
   const { ready, currentAddress, coordsKey } = useServiceAddress();
   const { fulfillment: fulfillmentMode } = useApp();
+  const browseFetchKey = coordsKey ? `${coordsKey}|${fulfillmentMode}` : null;
 
   useEffect(() => {
     if (!ready) return;
-    if (!currentAddress || !coordsKey) {
+    if (!currentAddress || !browseFetchKey) {
       setCooks([]);
       setLoading(false);
       return;
     }
+    const mode = browseFetchKey.split("|")[1] as
+      | "pickup"
+      | "delivery"
+      | undefined;
     setLoading(true);
     const params = new URLSearchParams();
     params.set("lat", String(currentAddress.lat));
     params.set("lng", String(currentAddress.lng));
+    params.set("mode", mode ?? "pickup");
     const qs = params.toString();
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
     const path = `/api/cooks?${qs}`;
@@ -58,7 +64,7 @@ export default function BrowsePage() {
       })
       .catch(() => setCooks([]))
       .finally(() => setLoading(false));
-  }, [coordsKey, currentAddress, ready]);
+  }, [browseFetchKey, currentAddress, ready]);
 
   const nearYou = cooks;
   const lovedByNeighbours = [...cooks].sort(

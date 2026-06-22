@@ -166,12 +166,13 @@ export function paragraph(text: string): string {
   return `<p style="margin:0 0 16px;font-family:${FONT_STACK};font-size:15px;line-height:1.65;color:${COLOR.ink};">${text}</p>`;
 }
 
-export function pickupCodeBlock(code: string): string {
+export function pickupCodeBlock(code: string, label = "Pickup code"): string {
+  const spaced = escapeHtml(code.split("").join(" "));
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0;">
 <tr>
-<td align="center" style="padding:24px;background-color:${COLOR.redTint};border:1px solid ${COLOR.red};border-radius:16px;">
-<p style="margin:0 0 10px;font-family:${FONT_STACK};font-size:11px;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;color:${COLOR.red};">Pickup code</p>
-<div style="font-family:${FONT_STACK};font-size:38px;font-weight:700;line-height:1;letter-spacing:8px;color:${COLOR.ink};">${escapeHtml(code)}</div>
+<td align="center" style="padding:28px 24px;background-color:${COLOR.white};border:1.5px solid ${COLOR.red};border-radius:14px;">
+<p style="margin:0 0 12px;font-family:${FONT_STACK};font-size:11px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:${COLOR.red};">${escapeHtml(label)}</p>
+<div style="font-family:${FONT_STACK};font-size:36px;font-weight:700;line-height:1;letter-spacing:0.22em;color:${COLOR.ink};">${spaced}</div>
 </td>
 </tr>
 </table>`;
