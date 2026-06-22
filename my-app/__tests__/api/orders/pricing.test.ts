@@ -70,7 +70,22 @@ describe("computeLineTotal", () => {
     ).toEqual({ discountAmount: 10, lineTotal: 10 });
   });
 
-  it("fixed_off never goes negative", () => {
+  it("fixed_off applies per unit, not once per line", () => {
+    // 4 burgers @ $10 with a $5 fixed_off → $5 off each = $20 off, $20 total.
+    expect(computeLineTotal(10, 4, { type: "fixed_off", value: 5 })).toEqual({
+      discountAmount: 20,
+      lineTotal: 20,
+    });
+  });
+
+  it("percentage_off applies per unit", () => {
+    // 4 burgers @ $10 with 25% off → $2.50 off each = $10 off, $30 total.
+    expect(
+      computeLineTotal(10, 4, { type: "percentage_off", value: 25 }),
+    ).toEqual({ discountAmount: 10, lineTotal: 30 });
+  });
+
+  it("fixed_off never goes negative (clamped to unit price)", () => {
     expect(computeLineTotal(5, 1, { type: "fixed_off", value: 999 })).toEqual({
       discountAmount: 5,
       lineTotal: 0,
