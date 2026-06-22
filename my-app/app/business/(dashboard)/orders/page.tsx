@@ -149,6 +149,19 @@ function nextStatus(s: OrderStatus): "confirmed" | "ready" | null {
   return map[s] ?? null;
 }
 
+// ─── Spinner ──────────────────────────────────────────────────────────────────
+
+// Inline spinner for buttons mid-request. `label` doubles as the accessible
+// status text so screen readers announce that the action is processing.
+function Spinner({ label = "Processing" }: { label?: string }) {
+  return (
+    <span className={styles.btnLoading}>
+      <span className={styles.spinner} aria-hidden="true" />
+      <output className={styles.srOnly}>{label}</output>
+    </span>
+  );
+}
+
 // ─── Status badge ─────────────────────────────────────────────────────────────
 
 function StatusBadge({ status }: { status: OrderStatus }) {
@@ -234,7 +247,7 @@ function VerifyCode({
           className={styles.verifyBtn}
           disabled={code.length < 6 || submitting}
         >
-          {submitting ? "…" : "Verify"}
+          {submitting ? <Spinner label="Verifying" /> : "Verify"}
         </button>
       </div>
       {error && <p className={styles.verifyError}>{error}</p>}
@@ -315,6 +328,101 @@ function OrderComplete({ customerName }: { customerName: string }) {
   );
 }
 
+// ─── Confirmation dialog ──────────────────────────────────────────────────────
+
+// Guards every cook action that changes an order's state so an accidental tap
+// never silently advances (or reverts) an order.
+function ConfirmDialog({
+  title,
+  message,
+  confirmLabel,
+  busy,
+  tone = "default",
+  onConfirm,
+  onClose,
+}: {
+  title: string;
+  message: string;
+  confirmLabel: string;
+  busy: boolean;
+  tone?: "default" | "danger";
+  onConfirm: () => void;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape" && !busy) onClose();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [busy, onClose]);
+
+  return (
+    <div className={styles.confirmRoot} role="presentation">
+      <button
+        type="button"
+        aria-label="Cancel"
+        className={styles.confirmOverlay}
+        onClick={() => !busy && onClose()}
+      />
+      <div
+        className={styles.confirmModal}
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="confirm-title"
+        aria-describedby="confirm-message"
+      >
+        <h3 id="confirm-title" className={styles.confirmTitle}>
+          {title}
+        </h3>
+        <p id="confirm-message" className={styles.confirmText}>
+          {message}
+        </p>
+        <div className={styles.confirmBtns}>
+          <button
+            type="button"
+            className={`${styles.confirmYes} ${tone === "danger" ? styles.confirmYesDanger : ""}`}
+            onClick={onConfirm}
+            disabled={busy}
+          >
+            {busy ? <Spinner label="Saving" /> : confirmLabel}
+          </button>
+          <button
+            type="button"
+            className={styles.confirmNo}
+            onClick={onClose}
+            disabled={busy}
+          >
+            Go back
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Copy for each state-changing action, keyed off the action and current status.
+function advanceDialogCopy(status: OrderStatus): {
+  title: string;
+  message: string;
+  confirmLabel: string;
+} {
+  if (status === "pending") {
+    return {
+      title: "Confirm this order?",
+      message:
+        "The customer will be notified that you've accepted their order. You won't be able to send it back to pending afterward.",
+      confirmLabel: "Yes, confirm order",
+    };
+  }
+  return {
+    title: "Mark order as ready?",
+    message:
+      "The customer will receive a pickup code and be notified their order is ready for pickup.",
+    confirmLabel: "Yes, mark ready",
+  };
+}
+
 // ─── Order detail ─────────────────────────────────────────────────────────────
 
 function OrderDetail({
@@ -327,6 +435,10 @@ function OrderDetail({
   onClose?: () => void;
 }) {
   const [cancelConfirm, setCancelConfirm] = useState(false);
+  // Pending state-changing action awaiting confirmation in the popup.
+  const [confirmAction, setConfirmAction] = useState<
+    "advance" | "revert" | null
+  >(null);
   const [mutating, setMutating] = useState(false);
   const [prefsOpen, setPrefsOpen] = useState(false);
   // True only when this cook just verified the code in-session, so the
@@ -363,13 +475,15 @@ function OrderDetail({
     }
   }
 
-  async function handleRevert() {
-    await patchStatus("confirmed");
-  }
-
-  async function handleAdvance() {
-    const next = nextStatus(order.status);
-    if (next) await patchStatus(next);
+  // Runs the confirmed action, then dismisses the popup.
+  async function handleConfirmAction() {
+    if (confirmAction === "advance") {
+      const next = nextStatus(order.status);
+      if (next) await patchStatus(next);
+    } else if (confirmAction === "revert") {
+      await patchStatus("confirmed");
+    }
+    setConfirmAction(null);
   }
 
   async function handleCancel() {
@@ -500,7 +614,7 @@ function OrderDetail({
             <button
               type="button"
               className={styles.revertBtn}
-              onClick={handleRevert}
+              onClick={() => setConfirmAction("revert")}
               disabled={mutating}
             >
               Mark as not ready
@@ -540,7 +654,7 @@ function OrderDetail({
                 <button
                   type="button"
                   className={styles.advanceBtn}
-                  onClick={handleAdvance}
+                  onClick={() => setConfirmAction("advance")}
                   disabled={mutating}
                 >
                   {ACTION_LABEL[order.status]}
@@ -573,6 +687,24 @@ function OrderDetail({
       {order.status === "cancelled" && (
         <div className={styles.statusNote}>This order was cancelled.</div>
       )}
+
+      {confirmAction === "revert" ? (
+        <ConfirmDialog
+          title="Mark as not ready?"
+          message="We'll let the customer know their order isn't ready yet. Their current pickup code will stop working until you mark it ready again."
+          confirmLabel="Yes, not ready"
+          busy={mutating}
+          onConfirm={handleConfirmAction}
+          onClose={() => setConfirmAction(null)}
+        />
+      ) : confirmAction === "advance" ? (
+        <ConfirmDialog
+          {...advanceDialogCopy(order.status)}
+          busy={mutating}
+          onConfirm={handleConfirmAction}
+          onClose={() => setConfirmAction(null)}
+        />
+      ) : null}
 
       <PreferenceSheet
         clientId={order.clientId}

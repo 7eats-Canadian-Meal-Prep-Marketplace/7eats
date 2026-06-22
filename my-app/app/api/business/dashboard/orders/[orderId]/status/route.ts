@@ -33,6 +33,10 @@ const bodySchema = z.object({
   reason: z.enum(["client_no_show"]).optional(),
 });
 
+// Allowed forward/backward moves a cook can make. Note `confirmed` can only go
+// to `ready` or `cancelled` — never back to `pending`. Once a cook accepts an
+// order they cannot "unaccept" it; this is enforced both here and by the body
+// schema, which doesn't accept `pending` as a target at all.
 const VALID_TRANSITIONS: Record<string, string[]> = {
   pending: ["confirmed", "cancelled"],
   confirmed: ["ready", "cancelled"],
