@@ -277,7 +277,7 @@ async function notifyOfClientCancellation(
     [clientUser?.firstName, clientUser?.lastName].filter(Boolean).join(" ") ||
     "A customer";
   const cookName = cookUser.cookDisplayName ?? "Your cook";
-  const fulfillmentMode =
+  const fulfillmentMode: "pickup" | "delivery" | null =
     order.fulfillmentMode === "delivery" || order.fulfillmentMode === "pickup"
       ? order.fulfillmentMode
       : null;
