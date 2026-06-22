@@ -14,6 +14,7 @@ import {
 import {
   sendOrderCancelledByCookEmailToClient,
   sendOrderConfirmedEmailToClient,
+  sendOrderNotReadyEmailToClient,
   sendOrderReadyEmailToClient,
 } from "@/lib/emails/order-events";
 import {
@@ -92,6 +93,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       return NextResponse.json({ error: "Order not found." }, { status: 404 });
     }
 
+    const previousStatus = order.status;
     const allowedTransitions = VALID_TRANSITIONS[order.status] ?? [];
     if (!allowedTransitions.includes(newStatus)) {
       return NextResponse.json(
@@ -300,6 +302,16 @@ export async function PATCH(req: NextRequest, { params }: Params) {
             fulfillmentWindowEnd: row.fulfillmentWindowEnd,
           };
           if (newStatus === "confirmed") {
+            // Reverting a ready order back to confirmed means the cook hit
+            // "Mark as not ready" — let the customer know it's running late
+            // instead of re-sending the initial confirmation email.
+            if (previousStatus === "ready") {
+              return sendOrderNotReadyEmailToClient(
+                client,
+                { name: row.cookName },
+                orderData,
+              );
+            }
             return sendOrderConfirmedEmailToClient(
               client,
               { name: row.cookName },

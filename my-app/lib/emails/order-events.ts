@@ -324,6 +324,47 @@ export async function sendOrderConfirmedEmailToClient(
   }
 }
 
+export async function sendOrderNotReadyEmailToClient(
+  client: { email: string; firstName: string | null },
+  cook: { name: string },
+  order: OrderEmailData,
+): Promise<void> {
+  try {
+    const timing = formatTiming(order);
+    const subject = `Your order from ${cook.name} is taking a little longer`;
+    const html = htmlEmail({
+      title: subject,
+      preheader: `${cook.name} needs a bit more time on your order.`,
+      bodyHtml:
+        paragraph(greeting(client.firstName)) +
+        paragraph(
+          `Quick heads-up — your order from <strong>${cook.name}</strong> is taking a little longer than expected. They're still hard at work on it and will have it ready as soon as they can.`,
+        ) +
+        orderDetailsTable([
+          { label: "Order", value: order.listingTitle },
+          { label: fulfillmentLabel(order.fulfillmentMode), value: timing },
+        ]) +
+        paragraph(
+          "No need to do anything — we'll email you a fresh pickup code the moment it's ready. Thanks for your patience!",
+        ) +
+        contactParagraph(),
+    });
+    const text = textWithContact([
+      greeting(client.firstName),
+      "",
+      `Quick heads-up — your order from ${cook.name} is taking a little longer than expected. They're still hard at work on it and will have it ready as soon as they can.`,
+      "",
+      `Order: ${order.listingTitle}`,
+      `${fulfillmentLabel(order.fulfillmentMode)}: ${timing}`,
+      "",
+      "No need to do anything — we'll email you a fresh pickup code the moment it's ready. Thanks for your patience!",
+    ]);
+    await sendMail({ to: client.email, subject, text, html });
+  } catch (err) {
+    console.error("[email/order-not-ready-client]", err);
+  }
+}
+
 export async function sendOrderReadyEmailToClient(
   client: { email: string; firstName: string | null },
   cook: { name: string },
