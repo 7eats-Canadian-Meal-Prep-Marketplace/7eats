@@ -16,6 +16,8 @@ type OrderEmailData = {
   currency: string;
   pickupAt: Date | string | null;
   fulfillmentMode?: "pickup" | "delivery" | null;
+  fulfillmentWindowStart?: Date | string | null;
+  fulfillmentWindowEnd?: Date | string | null;
 };
 
 function fulfillmentLabel(mode: OrderEmailData["fulfillmentMode"]): string {
@@ -41,6 +43,48 @@ function formatPickup(pickupAt: Date | string | null): string {
   return `${day} at ${time}`;
 }
 
+function formatTimeFromDate(date: Date): string {
+  const h = date.getHours();
+  const m = date.getMinutes();
+  const period = h >= 12 ? "pm" : "am";
+  const hour = h % 12 === 0 ? 12 : h % 12;
+  return m === 0
+    ? `${hour}${period}`
+    : `${hour}:${String(m).padStart(2, "0")}${period}`;
+}
+
+/** Confirmation emails only — status/cancel emails keep using formatPickup. */
+function formatTiming(order: OrderEmailData): string {
+  if (order.pickupAt) {
+    const exact = formatPickup(order.pickupAt);
+    if (exact !== "TBD") return exact;
+  }
+
+  const { fulfillmentWindowStart: start, fulfillmentWindowEnd: end } = order;
+  if (start && end) {
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+    if (
+      !Number.isNaN(startDate.getTime()) &&
+      !Number.isNaN(endDate.getTime())
+    ) {
+      const dayPart = startDate.toLocaleString("en-CA", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+      });
+      const range = `${formatTimeFromDate(startDate)}–${formatTimeFromDate(endDate)}`;
+      const suffix =
+        order.fulfillmentMode === "delivery"
+          ? " (exact time confirmed by your cook)"
+          : " (come any time during this window)";
+      return `${dayPart} · ${range}${suffix}`;
+    }
+  }
+
+  return "TBD";
+}
+
 function formatMoney(total: string, currency: string): string {
   return `$${total} ${currency}`;
 }
@@ -59,7 +103,7 @@ export async function sendOrderPlacedEmailToCook(
   order: OrderEmailData,
 ): Promise<void> {
   try {
-    const pickup = formatPickup(order.pickupAt);
+    const timing = formatTiming(order);
     const subject = `New order from ${customer.name}: ${order.listingTitle}`;
     const html = htmlEmail({
       title: subject,
@@ -74,7 +118,7 @@ export async function sendOrderPlacedEmailToCook(
             label: "Total",
             value: formatMoney(order.totalPrice, order.currency),
           },
-          { label: "Pickup", value: pickup },
+          { label: fulfillmentLabel(order.fulfillmentMode), value: timing },
         ]) +
         paragraph(
           "Review it in your dashboard and confirm when you're ready.",
@@ -92,7 +136,7 @@ export async function sendOrderPlacedEmailToCook(
       `Quantity: ${order.quantity}`,
       `Total: ${formatMoney(order.totalPrice, order.currency)}`,
       `Fulfillment: ${fulfillmentLabel(order.fulfillmentMode)}`,
-      `Timing: ${pickup}`,
+      `Timing: ${timing}`,
       "",
       "Review it in your dashboard and confirm when you're ready.",
       `${process.env.NEXT_PUBLIC_APP_URL}/business/orders`,
@@ -109,7 +153,7 @@ export async function sendOrderReceiptToClient(
   order: OrderEmailData,
 ): Promise<void> {
   try {
-    const pickup = formatPickup(order.pickupAt);
+    const timing = formatTiming(order);
     const subject = `Your 7eats order with ${cook.name} is confirmed`;
     const html = htmlEmail({
       title: subject,
@@ -127,7 +171,7 @@ export async function sendOrderReceiptToClient(
             label: "Fulfillment",
             value: fulfillmentLabel(order.fulfillmentMode),
           },
-          { label: "Timing", value: pickup },
+          { label: "Timing", value: timing },
         ]) +
         paragraph(
           "You can track its status and pickup code any time from your orders.",
@@ -144,7 +188,7 @@ export async function sendOrderReceiptToClient(
       `Items: ${order.listingTitle}`,
       `Total: ${formatMoney(order.totalPrice, order.currency)}`,
       `Fulfillment: ${fulfillmentLabel(order.fulfillmentMode)}`,
-      `Timing: ${pickup}`,
+      `Timing: ${timing}`,
       "",
       "Track it any time from your orders:",
       `${process.env.NEXT_PUBLIC_APP_URL}/app/orders/${order.id}`,
@@ -162,7 +206,7 @@ export async function sendGuestOrderReceiptToClient(
   guest: { confirmationCode: string; accessToken: string },
 ): Promise<void> {
   try {
-    const pickup = formatPickup(order.pickupAt);
+    const timing = formatTiming(order);
     const receiptUrl = `${process.env.NEXT_PUBLIC_APP_URL}/app/checkout/guest-confirmation?token=${encodeURIComponent(guest.accessToken)}`;
     const cancelUrl = `${process.env.NEXT_PUBLIC_APP_URL}/app/guest/order/cancel?token=${encodeURIComponent(guest.accessToken)}`;
     const subject = `Order confirmed — ${guest.confirmationCode}`;
@@ -195,7 +239,7 @@ export async function sendGuestOrderReceiptToClient(
             label: "Fulfillment",
             value: fulfillmentLabel(order.fulfillmentMode),
           },
-          { label: "Timing", value: pickup },
+          { label: "Timing", value: timing },
         ]) +
         paragraph(
           "<strong>The cook will confirm your exact pickup or delivery time.</strong> Save your confirmation code — you'll need it if you contact support.",
@@ -216,7 +260,7 @@ export async function sendGuestOrderReceiptToClient(
       `Items: ${order.listingTitle}`,
       `Total: ${formatMoney(order.totalPrice, order.currency)}`,
       `Fulfillment: ${fulfillmentLabel(order.fulfillmentMode)}`,
-      `Timing: ${pickup}`,
+      `Timing: ${timing}`,
       "",
       "The cook will confirm your exact pickup or delivery time.",
       "",

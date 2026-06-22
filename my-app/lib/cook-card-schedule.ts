@@ -201,3 +201,39 @@ export function nextFulfillmentSlotIso(
   const slots = generateSlots(windows, leadTime, now);
   return slots[0] ?? null;
 }
+
+/**
+ * Earliest eligible fulfillment window (the pinned day + that day's time range)
+ * for an order, snapshotted onto the order at placement so the customer sees a
+ * concrete day instead of "TBD". Reuses the same slot logic as the menu/checkout
+ * so the stored day matches what the customer saw, and returns the window's
+ * start/end as Dates in the app's existing runtime-local convention (matching
+ * how `pickupAt` is handled elsewhere). Returns null when the cook has no
+ * upcoming window for the mode, so callers fall back gracefully.
+ */
+export function earliestFulfillmentWindow(
+  mode: "pickup" | "delivery",
+  pickupWindows: FulfillmentWindow[],
+  deliveryWindows: FulfillmentWindow[],
+  leadTime: string | null,
+  now = new Date(),
+): { start: Date; end: Date } | null {
+  const windows = mode === "delivery" ? deliveryWindows : pickupWindows;
+  if (windows.length === 0) return null;
+
+  const slots = generateSlots(windows, leadTime, now);
+  if (slots.length === 0) return null;
+
+  const first = new Date(slots[0]);
+  const dayKey = DAY_NAMES[first.getDay()];
+  const win = windows.find((w) => normalizeDay(w.dayOfWeek) === dayKey);
+  if (!win) return null;
+
+  const [fh, fm] = win.fromTime.split(":").map(Number);
+  const [th, tm] = win.toTime.split(":").map(Number);
+  const start = new Date(first);
+  start.setHours(fh, fm, 0, 0);
+  const end = new Date(first);
+  end.setHours(th, tm, 0, 0);
+  return { start, end };
+}
