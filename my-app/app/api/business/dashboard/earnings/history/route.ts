@@ -3,7 +3,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getCookId, unauthorized } from "@/app/api/business/_lib/cook-auth";
 import { db } from "@/db";
-import { orders } from "@/db/schema";
+import { orderPayments, orders } from "@/db/schema";
 
 const MONTH_LABELS = [
   "Jan",
@@ -133,9 +133,19 @@ export async function GET(req: NextRequest) {
         // pickup orders (the server owns timing), so filtering by it returned
         // nothing and the chart always showed $0.
         fulfilledAt: orders.fulfilledAt,
-        totalPrice: orders.totalPrice,
+        // Net payout to the cook (total − platform fee − tax), snapshotted on
+        // the payment at order time. This is what the cook actually receives,
+        // not the gross `orders.totalPrice` the customer paid.
+        cookPayoutAmount: orderPayments.cookPayoutAmount,
       })
       .from(orders)
+      .innerJoin(
+        orderPayments,
+        and(
+          eq(orderPayments.orderId, orders.id),
+          eq(orderPayments.type, "full"),
+        ),
+      )
       .where(
         and(
           eq(orders.cookId, cookId),
@@ -160,7 +170,8 @@ export async function GET(req: NextRequest) {
         ) {
           bucketTotals.set(
             bucket.label,
-            (bucketTotals.get(bucket.label) ?? 0) + Number(row.totalPrice),
+            (bucketTotals.get(bucket.label) ?? 0) +
+              Number(row.cookPayoutAmount ?? 0),
           );
           break;
         }

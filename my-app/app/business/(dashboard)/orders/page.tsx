@@ -41,6 +41,11 @@ type Order = {
   totalPrice: string;
   taxAmount: string | null;
   deliveryFeeSnapshot: string | null;
+  // Money breakdown from order_payments — only present on the order detail
+  // fetch, so the cook can see the platform cut and their net payout.
+  platformFeePct?: string | null;
+  platformFeeAmount?: string | null;
+  cookPayoutAmount?: string | null;
   fulfillmentMode: string | null;
   pickupAt: string | null;
   fulfillmentWindowStart: string | null;
@@ -452,6 +457,14 @@ function OrderDetail({
   const subtotal = dishesSubtotal(order.dishes);
   const deliveryFee = Number.parseFloat(order.deliveryFeeSnapshot ?? "0");
   const tax = Number.parseFloat(order.taxAmount ?? "0");
+  // Cook earnings: what's left after the platform cut and remitted tax.
+  // `cookPayoutAmount` is the authoritative snapshot (total − fee − tax).
+  const hasPayout = order.cookPayoutAmount != null;
+  const platformFee = Number.parseFloat(order.platformFeeAmount ?? "0");
+  const feePctLabel =
+    order.platformFeePct != null
+      ? `${Number.parseFloat(order.platformFeePct)}%`
+      : null;
   const totalItems =
     order.dishes?.reduce((sum, d) => sum + d.quantity, 0) ??
     order.itemCount ??
@@ -590,6 +603,38 @@ function OrderDetail({
             <span>{money(order.totalPrice)}</span>
           </div>
         </div>
+
+        {hasPayout && (
+          <div className={styles.payout}>
+            <p className={styles.payoutLabel}>Your earnings</p>
+            <div className={styles.payoutRows}>
+              <div className={styles.payoutRow}>
+                <span>
+                  Platform fee{feePctLabel ? ` (${feePctLabel})` : ""}
+                </span>
+                <span className={styles.payoutDeduct}>
+                  &minus;{money(platformFee)}
+                </span>
+              </div>
+              {tax > 0 && (
+                <div className={styles.payoutRow}>
+                  <span>Tax (collected &amp; remitted)</span>
+                  <span className={styles.payoutDeduct}>
+                    &minus;{money(tax)}
+                  </span>
+                </div>
+              )}
+              <div className={`${styles.payoutRow} ${styles.payoutNet}`}>
+                <span>You earn</span>
+                <span>{money(order.cookPayoutAmount)}</span>
+              </div>
+            </div>
+            <p className={styles.payoutNote}>
+              Tax is collected from the customer and remitted on your behalf, so
+              it isn&apos;t part of your earnings.
+            </p>
+          </div>
+        )}
       </div>
 
       {order.notes && (

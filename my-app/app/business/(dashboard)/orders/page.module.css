@@ -446,6 +446,67 @@
   font-weight: 800;
 }
 
+/* ─── Cook earnings breakdown ──────────────────────────────────────────────── */
+.payout {
+  padding: 14px 16px 16px;
+  border-top: 1px solid var(--grey-200);
+  background: var(--grey-100);
+}
+
+.payoutLabel {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #8a8a96;
+  margin: 0 0 10px;
+}
+
+.payoutRows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.payoutRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #6e6e7a;
+}
+
+.payoutRow span:last-child {
+  font-feature-settings: "tnum";
+  color: var(--ink);
+}
+
+.payoutRow span.payoutDeduct {
+  color: var(--red);
+}
+
+.payoutNet {
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid var(--grey-200);
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+
+.payoutNet span:last-child {
+  font-weight: 800;
+}
+
+.payoutNote {
+  margin: 12px 0 0;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: #8a8a96;
+}
+
 /* ─── Customer note ──────────────────────────────────────────────────────────── */
 .notesBlock {
   padding: 13px 16px;
