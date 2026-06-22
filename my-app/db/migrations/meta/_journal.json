@@ -71,6 +71,13 @@
       "when": 1782800000000,
       "tag": "0009_order_tax",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1782900000000,
+      "tag": "0010_order_fulfillment_window",
+      "breakpoints": true
     }
   ]
 }

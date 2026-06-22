@@ -63,6 +63,12 @@ export const orders = pgTable(
     taxAmount: numeric("tax_amount", { precision: 10, scale: 2 }),
     taxProvince: varchar("tax_province", { length: 2 }),
     fulfillmentMode: varchar("fulfillment_mode", { length: 20 }),
+    // Snapshot of the pinned fulfillment day + that day's time range, captured
+    // at placement (so a later cook windows change can't rewrite this order).
+    // The exact minute stays in `pickupAt` (filled later when a cook confirms a
+    // delivery time); pickup never needs one.
+    fulfillmentWindowStart: timestamp("fulfillment_window_start"),
+    fulfillmentWindowEnd: timestamp("fulfillment_window_end"),
     fulfilledAt: timestamp("fulfilled_at"),
     cancelledAt: timestamp("cancelled_at"),
     cancelledBy: text("cancelled_by").references(() => authUser.id, {

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db, dbPool } from "@/db";
 import {
   authUser,
+  cookPickupWindows,
   cookProfiles,
   dishes,
   dishPromotions,
@@ -10,6 +11,7 @@ import {
   orderPayments,
   orders,
 } from "@/db/schema";
+import { earliestFulfillmentWindow } from "@/lib/cook-card-schedule";
 import { calcDeliveryFee } from "@/lib/delivery-fee";
 import { getDrivingDistanceKm } from "@/lib/mapbox-directions";
 import { computeLineTotal } from "@/lib/order-pricing";
@@ -100,6 +102,7 @@ export async function placeClientOrder(
       deliveryFlatFee: cookProfiles.deliveryFlatFee,
       freeDeliveryAbove: cookProfiles.freeDeliveryAbove,
       pickupProvince: cookProfiles.pickupProvince,
+      leadTime: cookProfiles.leadTime,
     })
     .from(cookProfiles)
     .innerJoin(authUser, eq(cookProfiles.userId, authUser.id))
@@ -299,6 +302,45 @@ export async function placeClientOrder(
     }
   }
 
+  const windowRows = await db
+    .select({
+      windowType: cookPickupWindows.windowType,
+      dayOfWeek: cookPickupWindows.dayOfWeek,
+      fromTime: cookPickupWindows.fromTime,
+      toTime: cookPickupWindows.toTime,
+    })
+    .from(cookPickupWindows)
+    .where(eq(cookPickupWindows.cookId, cookId));
+
+  const pickupWindows: {
+    dayOfWeek: string;
+    fromTime: string;
+    toTime: string;
+  }[] = [];
+  const deliveryWindows: {
+    dayOfWeek: string;
+    fromTime: string;
+    toTime: string;
+  }[] = [];
+  for (const w of windowRows) {
+    const entry = {
+      dayOfWeek: w.dayOfWeek,
+      fromTime: w.fromTime,
+      toTime: w.toTime,
+    };
+    if (w.windowType === "delivery") deliveryWindows.push(entry);
+    else pickupWindows.push(entry);
+  }
+
+  const placementNow = new Date();
+  const fw = earliestFulfillmentWindow(
+    fulfillmentMode ?? "pickup",
+    pickupWindows,
+    deliveryWindows,
+    cook.leadTime,
+    placementNow,
+  );
+
   const platformFeePct = Number.parseFloat(cook.platformFeePct);
   const charges = computeOrderChargeBreakdown({
     subtotal,
@@ -382,6 +424,8 @@ export async function placeClientOrder(
         pickupAt: pickupAt ? new Date(pickupAt) : null,
         deliveryAddress: deliveryAddress ?? null,
         fulfillmentMode: fulfillmentMode ?? null,
+        fulfillmentWindowStart: fw?.start ?? null,
+        fulfillmentWindowEnd: fw?.end ?? null,
         deliveryFeeSnapshot:
           deliveryFeeSnapshot > 0
             ? String(deliveryFeeSnapshot.toFixed(2))

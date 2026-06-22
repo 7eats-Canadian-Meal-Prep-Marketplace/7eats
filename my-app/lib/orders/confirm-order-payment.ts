@@ -30,6 +30,8 @@ async function sendOrderConfirmationEmails(
       currency: orders.currency,
       pickupAt: orders.pickupAt,
       fulfillmentMode: orders.fulfillmentMode,
+      fulfillmentWindowStart: orders.fulfillmentWindowStart,
+      fulfillmentWindowEnd: orders.fulfillmentWindowEnd,
       cancellationAllowed: orders.cancellationAllowed,
       isGuestCheckout: orders.isGuestCheckout,
       confirmationCode: orders.confirmationCode,
@@ -87,6 +89,8 @@ async function sendOrderConfirmationEmails(
     currency: orderRow.currency ?? "CAD",
     pickupAt: orderRow.pickupAt,
     fulfillmentMode: orderRow.fulfillmentMode as "pickup" | "delivery" | null,
+    fulfillmentWindowStart: orderRow.fulfillmentWindowStart,
+    fulfillmentWindowEnd: orderRow.fulfillmentWindowEnd,
   };
 
   sendOrderPlacedEmailToCook(
