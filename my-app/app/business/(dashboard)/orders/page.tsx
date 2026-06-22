@@ -1,6 +1,6 @@
 "use client";
 
-import { ClipboardList, X } from "lucide-react";
+import { CheckCircle2, ClipboardList, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { PreferenceSheet } from "../_components/PreferenceSheet";
 import styles from "./page.module.css";
@@ -214,6 +214,79 @@ function VerifyCode({
   );
 }
 
+// ─── Order complete celebration ───────────────────────────────────────────────
+
+// Deterministic confetti so the burst is identical every render (no hydration
+// or random-key churn). Brand palette only: red, deep red, gold, ink.
+const CONFETTI = [
+  { id: "c1", left: "8%", delay: "0ms", color: "#d64045", rot: "-18deg" },
+  { id: "c2", left: "18%", delay: "90ms", color: "#e0a92e", rot: "24deg" },
+  { id: "c3", left: "27%", delay: "40ms", color: "#0f0f0f", rot: "-8deg" },
+  { id: "c4", left: "37%", delay: "150ms", color: "#f4b8ba", rot: "30deg" },
+  { id: "c5", left: "46%", delay: "20ms", color: "#d64045", rot: "12deg" },
+  { id: "c6", left: "55%", delay: "120ms", color: "#e0a92e", rot: "-26deg" },
+  { id: "c7", left: "63%", delay: "60ms", color: "#b6353a", rot: "16deg" },
+  { id: "c8", left: "71%", delay: "180ms", color: "#0f0f0f", rot: "-14deg" },
+  { id: "c9", left: "80%", delay: "30ms", color: "#d64045", rot: "22deg" },
+  { id: "c10", left: "88%", delay: "140ms", color: "#e0a92e", rot: "-20deg" },
+  { id: "c11", left: "14%", delay: "210ms", color: "#f4b8ba", rot: "10deg" },
+  { id: "c12", left: "33%", delay: "240ms", color: "#d64045", rot: "-30deg" },
+  { id: "c13", left: "61%", delay: "260ms", color: "#b6353a", rot: "28deg" },
+  { id: "c14", left: "77%", delay: "200ms", color: "#0f0f0f", rot: "-12deg" },
+] as const;
+
+function OrderComplete({ customerName }: { customerName: string }) {
+  return (
+    <div className={styles.complete} aria-live="polite" aria-atomic="true">
+      <div className={styles.confetti} aria-hidden="true">
+        {CONFETTI.map((c) => (
+          <span
+            key={c.id}
+            className={styles.confettiPiece}
+            style={
+              {
+                left: c.left,
+                backgroundColor: c.color,
+                animationDelay: c.delay,
+                "--rot": c.rot,
+              } as React.CSSProperties
+            }
+          />
+        ))}
+      </div>
+
+      <div className={styles.completeSeal}>
+        <span className={styles.completeRing} aria-hidden="true" />
+        <svg
+          className={styles.completeCheck}
+          viewBox="0 0 52 52"
+          aria-hidden="true"
+        >
+          <circle
+            className={styles.completeCheckCircle}
+            cx="26"
+            cy="26"
+            r="25"
+          />
+          <path
+            className={styles.completeCheckMark}
+            fill="none"
+            d="M15 27 l7.5 7.5 L37.5 19"
+          />
+        </svg>
+      </div>
+
+      <h3 className={styles.completeTitle}>Order complete!</h3>
+      <p className={styles.completeText}>
+        {customerName} picked up their order. Nicely done.
+      </p>
+      <p className={styles.completePayout}>
+        Payment is on its way to your account.
+      </p>
+    </div>
+  );
+}
+
 // ─── Order detail ─────────────────────────────────────────────────────────────
 
 function OrderDetail({
@@ -228,6 +301,10 @@ function OrderDetail({
   const [cancelConfirm, setCancelConfirm] = useState(false);
   const [mutating, setMutating] = useState(false);
   const [prefsOpen, setPrefsOpen] = useState(false);
+  // True only when this cook just verified the code in-session, so the
+  // celebration plays once on the action — not every time a completed order
+  // is reopened.
+  const [justFulfilled, setJustFulfilled] = useState(false);
   const canCancel = order.status === "pending" || order.status === "confirmed";
   const canAdvance = order.status === "pending" || order.status === "confirmed";
 
@@ -336,7 +413,10 @@ function OrderDetail({
           <VerifyCode
             orderId={order.id}
             initialAttempts={order.pickupCodeAttempts}
-            onVerify={() => onStatusChange(order.id, "fulfilled")}
+            onVerify={() => {
+              setJustFulfilled(true);
+              onStatusChange(order.id, "fulfilled");
+            }}
           />
           <div className={styles.revertBlock}>
             <span className={styles.revertPrompt}>Still preparing?</span>
@@ -403,9 +483,15 @@ function OrderDetail({
         </div>
       )}
 
-      {order.status === "fulfilled" && (
-        <div className={styles.statusNote}>Order completed.</div>
-      )}
+      {order.status === "fulfilled" &&
+        (justFulfilled ? (
+          <OrderComplete customerName={customerDisplay(order)} />
+        ) : (
+          <div className={styles.completedCalm}>
+            <CheckCircle2 size={16} aria-hidden="true" />
+            <span>Order complete</span>
+          </div>
+        ))}
 
       {order.status === "cancelled" && (
         <div className={styles.statusNote}>This order was cancelled.</div>

@@ -4,7 +4,14 @@ import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getCookId, unauthorized } from "@/app/api/business/_lib/cook-auth";
 import { db } from "@/db";
-import { cookProfiles, orderPayments, orders } from "@/db/schema";
+import {
+  authUser,
+  cookProfiles,
+  orderDishes,
+  orderPayments,
+  orders,
+} from "@/db/schema";
+import { sendOrderCompletedEmailToClient } from "@/lib/emails/order-events";
 import {
   capturePaymentIntent,
   createSubscriptionTransfer,
@@ -133,6 +140,44 @@ export async function POST(req: NextRequest, { params }: Params) {
         { status: 409 },
       );
     }
+
+    // Thank-you email to the customer — fire and forget, non-blocking.
+    db.select({
+      clientEmail: authUser.email,
+      clientFirstName: authUser.firstName,
+      totalPrice: orders.totalPrice,
+      currency: orders.currency,
+      pickupAt: orders.pickupAt,
+      cookName: cookProfiles.displayName,
+    })
+      .from(orders)
+      .innerJoin(authUser, eq(orders.clientId, authUser.id))
+      .innerJoin(cookProfiles, eq(orders.cookId, cookProfiles.id))
+      .where(eq(orders.id, orderId))
+      .limit(1)
+      .then(async ([row]) => {
+        if (!row) return;
+        const dishRows = await db
+          .select({
+            name: orderDishes.dishName,
+            quantity: orderDishes.quantity,
+          })
+          .from(orderDishes)
+          .where(eq(orderDishes.orderId, orderId));
+        return sendOrderCompletedEmailToClient(
+          { email: row.clientEmail, firstName: row.clientFirstName },
+          { name: row.cookName },
+          {
+            id: orderId,
+            listingTitle: dishRows.map((d) => d.name).join(", "),
+            quantity: dishRows.reduce((s, d) => s + d.quantity, 0),
+            totalPrice: row.totalPrice,
+            currency: row.currency,
+            pickupAt: row.pickupAt,
+          },
+        );
+      })
+      .catch((err) => console.error("[verify-code/email]", err));
 
     // Release payment to cook based on payment type
     const payments = await db

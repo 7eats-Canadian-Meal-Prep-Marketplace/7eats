@@ -632,6 +632,213 @@
   color: var(--grey-500);
 }
 
+/* Calm completed state — shown when reopening an already-finished order. */
+.completedCalm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--grey-200);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--grey-500);
+}
+
+.completedCalm svg {
+  color: #a0a0aa;
+  flex: none;
+}
+
+/* ─── Order complete celebration ─────────────────────────────────────────────── */
+.complete {
+  position: relative;
+  margin-top: 4px;
+  padding: 30px 16px 10px;
+  border-top: 1px solid var(--grey-200);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  overflow: hidden;
+}
+
+.completeSeal {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 16px;
+}
+
+.completeRing {
+  position: absolute;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--red);
+  opacity: 0;
+  transform: scale(0.6);
+  animation: sealRing 0.9s ease-out 0.12s both;
+}
+
+.completeCheck {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  transform: scale(0.5);
+  opacity: 0;
+  animation: sealPop 0.42s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.completeCheckCircle {
+  fill: var(--red);
+}
+
+.completeCheckMark {
+  stroke: var(--white);
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 40;
+  stroke-dashoffset: 40;
+  animation: sealDraw 0.4s ease-out 0.34s forwards;
+}
+
+.completeTitle {
+  margin: 0 0 6px;
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  opacity: 0;
+  animation: completeRise 0.4s ease-out 0.36s both;
+}
+
+.completeText {
+  max-width: 280px;
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #555560;
+  opacity: 0;
+  animation: completeRise 0.4s ease-out 0.44s both;
+}
+
+.completePayout {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--grey-500);
+  opacity: 0;
+  animation: completeRise 0.4s ease-out 0.52s both;
+}
+
+.confetti {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  pointer-events: none;
+}
+
+.confettiPiece {
+  position: absolute;
+  top: 6px;
+  width: 7px;
+  height: 11px;
+  border-radius: 2px;
+  opacity: 0;
+  transform: translateY(-12px) rotate(var(--rot, 0deg));
+  animation: confettiFall 1.15s cubic-bezier(0.2, 0.6, 0.3, 1) both;
+}
+
+@keyframes sealPop {
+  from {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes sealRing {
+  from {
+    transform: scale(0.6);
+    opacity: 0.3;
+  }
+  to {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+}
+
+@keyframes sealDraw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes completeRise {
+  from {
+    transform: translateY(8px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes confettiFall {
+  0% {
+    transform: translateY(-12px) rotate(var(--rot, 0deg));
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(190px) rotate(calc(var(--rot, 0deg) * 4));
+    opacity: 0;
+  }
+}
+
+/* Honour reduced-motion: show the final, settled state with no animation. */
+@media (prefers-reduced-motion: reduce) {
+  .completeRing {
+    animation: none;
+    opacity: 0;
+  }
+
+  .completeCheck {
+    animation: none;
+    transform: none;
+    opacity: 1;
+  }
+
+  .completeCheckMark {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+
+  .completeTitle,
+  .completeText,
+  .completePayout {
+    animation: none;
+    opacity: 1;
+  }
+
+  .confettiPiece {
+    animation: none;
+    display: none;
+  }
+}
+
 /* ─── Tablet ─────────────────────────────────────────────────────────────────── */
 @media (max-width: 1024px) and (min-width: 768px) {
   .listPanel {
