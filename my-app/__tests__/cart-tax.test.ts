@@ -1,7 +1,15 @@
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { calcTax } from "@/app/app/cart/_cart-tax";
 
 describe("calcTax", () => {
+  const prev = process.env.NEXT_PUBLIC_TAX_COLLECTION_ENABLED;
+  beforeAll(() => {
+    process.env.NEXT_PUBLIC_TAX_COLLECTION_ENABLED = "true";
+  });
+  afterAll(() => {
+    process.env.NEXT_PUBLIC_TAX_COLLECTION_ENABLED = prev;
+  });
+
   it("applies 5% GST in AB", () => {
     expect(calcTax(100, "AB")).toBeCloseTo(5, 2);
   });

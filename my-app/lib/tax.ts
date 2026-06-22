@@ -21,6 +21,21 @@ const TAX_RATES: Record<string, number> = {
 
 const DEFAULT_TAX_RATE = 0.05;
 
+/**
+ * Sales-tax collection master switch.
+ *
+ * 7eats is not yet registered for GST/HST, so we must not collect tax we have no
+ * number to remit. Collection is therefore OFF unless
+ * `NEXT_PUBLIC_TAX_COLLECTION_ENABLED=true` is set. Flip it once registered.
+ *
+ * It is `NEXT_PUBLIC_` on purpose: the client cart/checkout estimate and the
+ * server-authoritative charge both flow through {@link calcTax}, so a single
+ * env value keeps them in lockstep. Read at call time so tests can toggle it.
+ */
+export function isTaxCollectionEnabled(): boolean {
+  return process.env.NEXT_PUBLIC_TAX_COLLECTION_ENABLED === "true";
+}
+
 function normalizeProvince(province: string): string {
   return province.trim().toUpperCase().slice(0, 2);
 }
@@ -53,6 +68,7 @@ export function getTaxLabel(province: string): string {
  * Returns the precise unrounded amount; callers round to cents for money.
  */
 export function calcTax(taxableBase: number, province: string): number {
+  if (!isTaxCollectionEnabled()) return 0;
   const code = normalizeProvince(province);
   const rate = TAX_RATES[code] ?? DEFAULT_TAX_RATE;
   return taxableBase * rate;
