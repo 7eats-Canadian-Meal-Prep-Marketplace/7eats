@@ -8,6 +8,8 @@ import {
   formatOrderTimingDate,
   formatOrderTimingWindow,
 } from "@/lib/order-timing";
+import { formatClientOrderTiming } from "@/lib/order-timing-label";
+import { resolveOrderCookFields } from "@/lib/orders/cook-order-fields";
 import {
   createOrderBodySchema,
   placeClientOrder,
@@ -78,6 +80,9 @@ export async function GET(req: NextRequest) {
         pickupCode: orders.pickupCode,
         cookFirstName: authUser.firstName,
         cookLastName: authUser.lastName,
+        cookDisplayName: cookProfiles.displayName,
+        cookPhotoUrl: cookProfiles.photoUrl,
+        cookBannerUrl: cookProfiles.bannerUrl,
         fulfillmentMode: orders.fulfillmentMode,
       })
       .from(orders)
@@ -127,6 +132,16 @@ export async function GET(req: NextRequest) {
         fulfillmentWindowStart: fulfillmentWindowStartIso,
         fulfillmentWindowEnd: fulfillmentWindowEndIso,
       };
+      const fulfillmentMode =
+        r.fulfillmentMode === "delivery" || r.fulfillmentMode === "pickup"
+          ? r.fulfillmentMode
+          : null;
+      const clientTiming = formatClientOrderTiming({
+        pickupAt: pickupAtIso,
+        fulfillmentWindowStart: r.fulfillmentWindowStart,
+        fulfillmentWindowEnd: r.fulfillmentWindowEnd,
+        fulfillmentMode,
+      });
       return {
         id: r.id,
         status: r.status,
@@ -151,15 +166,12 @@ export async function GET(req: NextRequest) {
           lineTotal: d.lineTotal,
           sortOrder: d.sortOrder,
         })),
-        cookName:
-          [r.cookFirstName, r.cookLastName].filter(Boolean).join(" ") || null,
-        cookInitials:
-          [r.cookFirstName?.[0], r.cookLastName?.[0]]
-            .filter(Boolean)
-            .join("") || null,
+        ...resolveOrderCookFields(r),
         fulfillmentMode: r.fulfillmentMode,
         pickupDate: formatOrderTimingDate(timing),
         pickupWindow: formatOrderTimingWindow(timing),
+        timingSchedule: clientTiming.schedule,
+        timingHint: clientTiming.hint,
       };
     });
 

@@ -1,9 +1,9 @@
-import { and, count, desc, eq, gte, lte } from "drizzle-orm";
+import { and, count, desc, eq, gte, lte, sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getCookId, unauthorized } from "@/app/api/business/_lib/cook-auth";
 import { db } from "@/db";
-import { authUser, listings, orders } from "@/db/schema";
+import { authUser, listings, orderDishes, orders } from "@/db/schema";
 
 const querySchema = z.object({
   status: z
@@ -51,6 +51,14 @@ export async function GET(req: NextRequest) {
           status: orders.status,
           quantity: orders.quantity,
           unitPrice: orders.unitPrice,
+          // Total items across the (multi-dish) order. The deprecated
+          // order-level `quantity` is null for current orders, so derive the
+          // count from order_dishes for an accurate list summary.
+          itemCount: sql<number>`(
+            SELECT COALESCE(SUM(${orderDishes.quantity}), 0)::int
+            FROM ${orderDishes}
+            WHERE ${orderDishes.orderId} = ${orders.id}
+          )`,
           totalPrice: orders.totalPrice,
           pickupAt: orders.pickupAt,
           fulfillmentWindowStart: orders.fulfillmentWindowStart,

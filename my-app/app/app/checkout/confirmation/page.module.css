@@ -283,6 +283,33 @@
   box-shadow: 0 6px 20px rgba(214, 64, 69, 0.3);
 }
 
+.dangerBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 14px 24px;
+  background: var(--white);
+  color: var(--red);
+  font-size: 15px;
+  font-weight: 700;
+  border: 1.5px solid var(--red);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.dangerBtn:hover:not(:disabled) {
+  background: #fef2f2;
+}
+
+.dangerBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .secondaryBtn {
   display: flex;
   align-items: center;

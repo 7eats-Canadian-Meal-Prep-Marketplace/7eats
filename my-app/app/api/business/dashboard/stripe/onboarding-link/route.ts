@@ -45,17 +45,27 @@ export async function POST(req: NextRequest) {
     // the cook has onboarded and only needs an update link; otherwise onboard.
     const account = await stripe.v2.core.accounts.retrieve(
       cook.stripeAccountId,
-      { include: ["configuration.recipient"] },
+      { include: ["configuration.recipient", "configuration.merchant"] },
     );
     const onboarded =
       account.configuration?.recipient?.capabilities?.stripe_balance
         ?.stripe_transfers?.status === "active";
 
+    // The account_links use_case must list exactly the configurations applied to
+    // the account, otherwise Stripe rejects it with
+    // `configs_must_match_to_use_account_links`. An express-dashboard recipient
+    // account also has the `merchant` configuration applied, so derive the list
+    // from what's actually present rather than hardcoding `recipient`.
+    const configurations = (["recipient", "merchant"] as const).filter(
+      (key) => account.configuration?.[key] != null,
+    );
+    if (configurations.length === 0) configurations.push("recipient");
+
     const useCase = onboarded
       ? {
           type: "account_update" as const,
           account_update: {
-            configurations: ["recipient" as const],
+            configurations,
             refresh_url: returnUrl,
             return_url: returnUrl,
           },
@@ -63,7 +73,7 @@ export async function POST(req: NextRequest) {
       : {
           type: "account_onboarding" as const,
           account_onboarding: {
-            configurations: ["recipient" as const],
+            configurations,
             refresh_url: returnUrl,
             return_url: returnUrl,
           },

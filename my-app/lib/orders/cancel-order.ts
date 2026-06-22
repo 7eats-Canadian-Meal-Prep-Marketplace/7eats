@@ -7,45 +7,33 @@ import {
   orderPayments,
   orders,
 } from "@/db/schema";
-import { sendOrderCancelledByClientEmailToCook } from "@/lib/emails/order-events";
+import {
+  sendOrderCancelledByClientEmailToClient,
+  sendOrderCancelledByClientEmailToCook,
+} from "@/lib/emails/order-events";
 import {
   guestAccessTokensMatch,
   hashGuestAccessToken,
 } from "@/lib/guest-order-access";
-import { isRefundEligible } from "@/lib/order-pricing";
+import {
+  isClientOrderCancellable,
+  isClientRefundEligible,
+} from "@/lib/orders/client-cancel-policy";
 import {
   cancelPaymentIntent,
   capturePaymentIntent,
   refundPaymentIntent,
 } from "@/lib/stripe-payments";
 
-const CANCELLABLE_STATUSES = ["pending", "confirmed"];
-
 export type CancelOrderResult =
   | { ok: true; refunded: boolean }
   | { ok: false; status: number; error: string };
 
-function refundEligibleForOrder(order: {
-  pickupAt: Date | null;
-  cookLeadTime: string | null;
-  cancellationAllowed: boolean;
-  status: string;
-}): boolean {
-  if (!order.cancellationAllowed) return false;
-  if (!CANCELLABLE_STATUSES.includes(order.status)) return false;
-
-  const pickupAt = order.pickupAt;
-
-  if (!pickupAt && order.status === "pending") {
-    return true;
-  }
-
-  return isRefundEligible(
-    pickupAt instanceof Date ? pickupAt : pickupAt ? new Date(pickupAt) : null,
-    order.cookLeadTime as Parameters<typeof isRefundEligible>[1],
-    order.cancellationAllowed,
-  );
-}
+export {
+  getClientCancelPolicy,
+  isClientOrderCancellable,
+  isClientRefundEligible,
+} from "@/lib/orders/client-cancel-policy";
 
 export async function cancelClientOrder(
   orderId: string,
@@ -61,7 +49,12 @@ export async function cancelClientOrder(
       totalPrice: orders.totalPrice,
       currency: orders.currency,
       pickupAt: orders.pickupAt,
+      fulfillmentWindowStart: orders.fulfillmentWindowStart,
+      fulfillmentWindowEnd: orders.fulfillmentWindowEnd,
       cancellationAllowed: orders.cancellationAllowed,
+      fulfillmentMode: orders.fulfillmentMode,
+      confirmationCode: orders.confirmationCode,
+      isGuestCheckout: orders.isGuestCheckout,
       cookLeadTime: cookProfiles.leadTime,
     })
     .from(orders)
@@ -95,7 +88,12 @@ export async function cancelGuestOrderByToken(
       totalPrice: orders.totalPrice,
       currency: orders.currency,
       pickupAt: orders.pickupAt,
+      fulfillmentWindowStart: orders.fulfillmentWindowStart,
+      fulfillmentWindowEnd: orders.fulfillmentWindowEnd,
       cancellationAllowed: orders.cancellationAllowed,
+      fulfillmentMode: orders.fulfillmentMode,
+      confirmationCode: orders.confirmationCode,
+      isGuestCheckout: orders.isGuestCheckout,
       guestAccessTokenHash: orders.guestAccessTokenHash,
       cookLeadTime: cookProfiles.leadTime,
     })
@@ -111,7 +109,9 @@ export async function cancelGuestOrderByToken(
     return { ok: false, status: 404, error: "Order not found." };
   }
 
-  const result = await executeCancellation(order, order.clientId);
+  const result = await executeCancellation(order, order.clientId, {
+    guestAccessToken: token,
+  });
   return { ...result, orderId: order.id };
 }
 
@@ -124,12 +124,18 @@ async function executeCancellation(
     totalPrice: string;
     currency: string;
     pickupAt: Date | null;
+    fulfillmentWindowStart: Date | null;
+    fulfillmentWindowEnd: Date | null;
     cancellationAllowed: boolean;
+    fulfillmentMode: string | null;
+    confirmationCode: string | null;
+    isGuestCheckout: boolean;
     cookLeadTime: string | null;
   },
   cancelledBy: string,
+  options?: { guestAccessToken?: string },
 ): Promise<CancelOrderResult> {
-  if (!CANCELLABLE_STATUSES.includes(order.status)) {
+  if (!isClientOrderCancellable(order)) {
     return {
       ok: false,
       status: 400,
@@ -137,7 +143,18 @@ async function executeCancellation(
     };
   }
 
-  const refundEligible = refundEligibleForOrder(order);
+  const refundEligible = isClientRefundEligible({
+    status: order.status,
+    cancellationAllowed: order.cancellationAllowed,
+    pickupAt: order.pickupAt,
+    fulfillmentWindowStart: order.fulfillmentWindowStart,
+    cookLeadTime: order.cookLeadTime,
+    fulfillmentMode:
+      order.fulfillmentMode === "delivery" || order.fulfillmentMode === "pickup"
+        ? order.fulfillmentMode
+        : null,
+  });
+  let clientRefunded = false;
 
   const payments = await db
     .select({
@@ -161,6 +178,7 @@ async function executeCancellation(
           .update(orderPayments)
           .set({ status: "refunded", refundedAt: new Date() })
           .where(eq(orderPayments.id, payment.id));
+        clientRefunded = true;
       } else if (payment.status === "held" || payment.status === "released") {
         const refundId = await refundPaymentIntent({
           paymentIntentId: payment.stripePaymentIntentId,
@@ -174,6 +192,7 @@ async function executeCancellation(
             refundedAt: new Date(),
           })
           .where(eq(orderPayments.id, payment.id));
+        clientRefunded = true;
       }
     } else if (payment.status === "authorized") {
       await capturePaymentIntent(
@@ -183,15 +202,6 @@ async function executeCancellation(
       await db
         .update(orderPayments)
         .set({ status: "released", releasedAt: new Date() })
-        .where(eq(orderPayments.id, payment.id));
-    } else if (payment.status === "pending") {
-      await cancelPaymentIntent(
-        payment.stripePaymentIntentId,
-        `client-cancel-${order.id}`,
-      );
-      await db
-        .update(orderPayments)
-        .set({ status: "refunded", refundedAt: new Date() })
         .where(eq(orderPayments.id, payment.id));
     }
   }
@@ -205,50 +215,109 @@ async function executeCancellation(
     })
     .where(eq(orders.id, order.id));
 
-  db.select({
-    cookEmail: authUser.email,
-    cookFirstName: authUser.firstName,
-  })
+  try {
+    await notifyOfClientCancellation(order, clientRefunded, options);
+  } catch (err) {
+    console.error("[cancelClientOrder] email", err);
+  }
+
+  return { ok: true, refunded: clientRefunded };
+}
+
+async function notifyOfClientCancellation(
+  order: {
+    id: string;
+    clientId: string;
+    cookId: string;
+    totalPrice: string;
+    currency: string;
+    pickupAt: Date | null;
+    fulfillmentWindowStart: Date | null;
+    fulfillmentWindowEnd: Date | null;
+    fulfillmentMode: string | null;
+    confirmationCode: string | null;
+    isGuestCheckout: boolean;
+  },
+  refunded: boolean,
+  options?: { guestAccessToken?: string },
+): Promise<void> {
+  const [cookUser] = await db
+    .select({
+      cookEmail: authUser.email,
+      cookFirstName: authUser.firstName,
+      cookDisplayName: cookProfiles.displayName,
+    })
     .from(cookProfiles)
     .innerJoin(authUser, eq(cookProfiles.userId, authUser.id))
     .where(eq(cookProfiles.id, order.cookId))
-    .limit(1)
-    .then(async ([cookUser]) => {
-      if (!cookUser) return;
-      const [clientUser] = await db
-        .select({
-          firstName: authUser.firstName,
-          lastName: authUser.lastName,
-        })
-        .from(authUser)
-        .where(eq(authUser.id, order.clientId))
-        .limit(1);
-      const dishRows = await db
-        .select({
-          dishName: orderDishes.dishName,
-          quantity: orderDishes.quantity,
-        })
-        .from(orderDishes)
-        .where(eq(orderDishes.orderId, order.id));
-      const qty = dishRows.reduce((s, d) => s + d.quantity, 0);
-      const customerName =
-        [clientUser?.firstName, clientUser?.lastName]
-          .filter(Boolean)
-          .join(" ") || "A customer";
-      return sendOrderCancelledByClientEmailToCook(
-        { email: cookUser.cookEmail, firstName: cookUser.cookFirstName },
-        { name: customerName },
-        {
-          id: order.id,
-          listingTitle: dishRows.map((d) => d.dishName).join(", "),
-          quantity: qty,
-          totalPrice: order.totalPrice,
-          currency: order.currency,
-          pickupAt: order.pickupAt,
-        },
-      );
-    })
-    .catch((err) => console.error("[cancelClientOrder] email", err));
+    .limit(1);
 
-  return { ok: true, refunded: refundEligible };
+  if (!cookUser) return;
+
+  const [clientUser] = await db
+    .select({
+      email: authUser.email,
+      firstName: authUser.firstName,
+      lastName: authUser.lastName,
+    })
+    .from(authUser)
+    .where(eq(authUser.id, order.clientId))
+    .limit(1);
+
+  const dishRows = await db
+    .select({
+      dishName: orderDishes.dishName,
+      quantity: orderDishes.quantity,
+    })
+    .from(orderDishes)
+    .where(eq(orderDishes.orderId, order.id));
+
+  const qty = dishRows.reduce((s, d) => s + d.quantity, 0);
+  const customerName =
+    [clientUser?.firstName, clientUser?.lastName].filter(Boolean).join(" ") ||
+    "A customer";
+  const cookName = cookUser.cookDisplayName ?? "Your cook";
+  const fulfillmentMode =
+    order.fulfillmentMode === "delivery" || order.fulfillmentMode === "pickup"
+      ? order.fulfillmentMode
+      : null;
+
+  const orderEmail = {
+    id: order.id,
+    listingTitle: dishRows.map((d) => d.dishName).join(", "),
+    quantity: qty,
+    totalPrice: order.totalPrice,
+    currency: order.currency,
+    pickupAt: order.pickupAt,
+    fulfillmentMode,
+    fulfillmentWindowStart: order.fulfillmentWindowStart,
+    fulfillmentWindowEnd: order.fulfillmentWindowEnd,
+  };
+
+  await sendOrderCancelledByClientEmailToCook(
+    { email: cookUser.cookEmail, firstName: cookUser.cookFirstName },
+    { name: customerName },
+    orderEmail,
+    { refunded },
+  );
+
+  if (clientUser?.email) {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+    const receiptUrl =
+      options?.guestAccessToken && appUrl
+        ? `${appUrl}/app/checkout/guest-confirmation?token=${encodeURIComponent(options.guestAccessToken)}`
+        : null;
+
+    await sendOrderCancelledByClientEmailToClient(
+      { email: clientUser.email, firstName: clientUser.firstName },
+      { name: cookName },
+      orderEmail,
+      {
+        refunded,
+        confirmationCode: order.confirmationCode,
+        isGuestCheckout: order.isGuestCheckout,
+        receiptUrl,
+      },
+    );
+  }
 }

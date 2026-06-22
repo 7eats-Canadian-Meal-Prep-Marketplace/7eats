@@ -7,7 +7,7 @@ import {
   unauthorized,
 } from "@/app/api/business/_lib/cook-auth";
 import { db } from "@/db";
-import { listings, orderDishes, orders } from "@/db/schema";
+import { authUser, listings, orderDishes, orders } from "@/db/schema";
 
 export type Params = { params: Promise<{ orderId: string }> };
 
@@ -34,7 +34,10 @@ export async function GET(req: NextRequest, { params }: Params) {
           unitPrice: orders.unitPrice,
           totalPrice: orders.totalPrice,
           discountAmount: orders.discountAmount,
+          taxAmount: orders.taxAmount,
+          deliveryFeeSnapshot: orders.deliveryFeeSnapshot,
           currency: orders.currency,
+          fulfillmentMode: orders.fulfillmentMode,
           pickupAt: orders.pickupAt,
           fulfillmentWindowStart: orders.fulfillmentWindowStart,
           fulfillmentWindowEnd: orders.fulfillmentWindowEnd,
@@ -44,6 +47,9 @@ export async function GET(req: NextRequest, { params }: Params) {
           listingId: orders.listingId,
           listingTitle: listings.title,
           clientId: orders.clientId,
+          customerName: authUser.name,
+          customerFirstName: authUser.firstName,
+          customerLastName: authUser.lastName,
           pickupCodeExpiresAt: orders.pickupCodeExpiresAt,
           pickupCodeVerifiedAt: orders.pickupCodeVerifiedAt,
           pickupCodeAttempts: orders.pickupCodeAttempts,
@@ -54,6 +60,7 @@ export async function GET(req: NextRequest, { params }: Params) {
         })
         .from(orders)
         .leftJoin(listings, eq(orders.listingId, listings.id))
+        .leftJoin(authUser, eq(orders.clientId, authUser.id))
         .where(and(eq(orders.id, orderId), eq(orders.cookId, cookId)))
         .limit(1),
 
@@ -63,6 +70,9 @@ export async function GET(req: NextRequest, { params }: Params) {
           dishId: orderDishes.dishId,
           dishName: orderDishes.dishName,
           quantity: orderDishes.quantity,
+          priceSnapshot: orderDishes.priceSnapshot,
+          discountAmount: orderDishes.discountAmount,
+          lineTotal: orderDishes.lineTotal,
           sortOrder: orderDishes.sortOrder,
         })
         .from(orderDishes)

@@ -19,6 +19,9 @@ type DishSnapshot = {
   dishId: string;
   dishName: string;
   quantity: number;
+  priceSnapshot: string | null;
+  discountAmount: string | null;
+  lineTotal: string | null;
   sortOrder: number;
 };
 
@@ -28,10 +31,17 @@ type Order = {
   clientId: string | null;
   customerName: string | null;
   customerFirstName: string | null;
+  customerLastName: string | null;
   listingTitle: string | null;
-  quantity: number;
-  unitPrice: string;
+  // Deprecated order-level fields — null for current multi-dish orders.
+  quantity: number | null;
+  unitPrice: string | null;
+  // Derived in the list endpoint from order_dishes (total items in the order).
+  itemCount?: number;
   totalPrice: string;
+  taxAmount: string | null;
+  deliveryFeeSnapshot: string | null;
+  fulfillmentMode: string | null;
   pickupAt: string | null;
   fulfillmentWindowStart: string | null;
   fulfillmentWindowEnd: string | null;
@@ -76,6 +86,24 @@ function formatTime(
   if (d.toDateString() === yesterday.toDateString())
     return `Yesterday · ${time}`;
   return `${d.toLocaleDateString("en-CA", { weekday: "short", month: "short", day: "numeric" })} · ${time}`;
+}
+
+function money(value: string | number | null | undefined): string {
+  const n = typeof value === "string" ? Number.parseFloat(value) : (value ?? 0);
+  if (!Number.isFinite(n)) return "$0.00";
+  return `$${n.toFixed(2)}`;
+}
+
+function fulfillmentLabel(order: Pick<Order, "fulfillmentMode">): string {
+  return order.fulfillmentMode === "delivery" ? "Delivery" : "Pickup";
+}
+
+function dishesSubtotal(dishes: DishSnapshot[] | undefined): number {
+  if (!dishes) return 0;
+  return dishes.reduce(
+    (sum, d) => sum + Number.parseFloat(d.lineTotal ?? "0"),
+    0,
+  );
 }
 
 function customerDisplay(order: Order): string {
@@ -308,6 +336,16 @@ function OrderDetail({
   const canCancel = order.status === "pending" || order.status === "confirmed";
   const canAdvance = order.status === "pending" || order.status === "confirmed";
 
+  const hasDishes = !!order.dishes && order.dishes.length > 0;
+  const subtotal = dishesSubtotal(order.dishes);
+  const deliveryFee = Number.parseFloat(order.deliveryFeeSnapshot ?? "0");
+  const tax = Number.parseFloat(order.taxAmount ?? "0");
+  const totalItems =
+    order.dishes?.reduce((sum, d) => sum + d.quantity, 0) ??
+    order.itemCount ??
+    order.quantity ??
+    0;
+
   async function patchStatus(status: "confirmed" | "ready" | "cancelled") {
     setMutating(true);
     try {
@@ -342,20 +380,32 @@ function OrderDetail({
   return (
     <div className={styles.detail}>
       {onClose && (
-        <button type="button" className={styles.detailClose} onClick={onClose}>
-          <X size={16} />
+        <button
+          type="button"
+          className={styles.detailClose}
+          onClick={onClose}
+          aria-label="Close order details"
+        >
+          <X size={16} aria-hidden="true" />
         </button>
       )}
 
       <div className={styles.detailHeader}>
-        <h2 className={styles.detailTitle}>{order.listingTitle ?? "Order"}</h2>
-        <div className={styles.detailSubline}>
-          <span className={styles.detailCustomer}>
+        <div className={styles.detailHeaderTop}>
+          <h2 className={styles.detailTitle} title={customerDisplay(order)}>
             {customerDisplay(order)}
-          </span>
-          <span className={styles.detailDot}>·</span>
+          </h2>
           <StatusBadge status={order.status} />
         </div>
+        <p className={styles.detailSubMeta}>
+          {fulfillmentLabel(order)} order &middot; {totalItems} item
+          {totalItems === 1 ? "" : "s"}
+        </p>
+      </div>
+
+      <div className={styles.timeCard}>
+        <span className={styles.timeCardLabel}>{fulfillmentLabel(order)}</span>
+        <span className={styles.timeCardValue}>{formatTime(order)}</span>
       </div>
 
       <div className={styles.detailActions}>
@@ -369,42 +419,69 @@ function OrderDetail({
         </button>
       </div>
 
-      <div className={styles.metaBlock}>
-        <div className={styles.metaRow}>
-          <span className={styles.metaKey}>Pickup</span>
-          <span className={styles.metaVal}>{formatTime(order)}</span>
-        </div>
-        <div className={styles.metaRow}>
-          <span className={styles.metaKey}>Quantity</span>
-          <span className={styles.metaVal}>{order.quantity}</span>
-        </div>
-        <div className={styles.metaRow}>
-          <span className={styles.metaKey}>Unit price</span>
-          <span className={styles.metaVal}>${order.unitPrice}</span>
-        </div>
-        <div className={styles.metaRow}>
-          <span className={styles.metaKey}>Total</span>
-          <span className={`${styles.metaVal} ${styles.metaValBold}`}>
-            ${order.totalPrice}
-          </span>
-        </div>
-        {order.notes && (
-          <div className={styles.metaRow}>
-            <span className={styles.metaKey}>Note</span>
-            <span className={styles.metaVal}>{order.notes}</span>
+      <div className={styles.receipt}>
+        <p className={styles.receiptLabel}>Order summary</p>
+
+        {hasDishes ? (
+          <div className={styles.receiptItems}>
+            {order.dishes?.map((d) => {
+              const discount = Number.parseFloat(d.discountAmount ?? "0");
+              return (
+                <div key={d.id} className={styles.receiptRow}>
+                  <span className={styles.receiptQty}>{d.quantity}&times;</span>
+                  <div className={styles.receiptItemMain}>
+                    <span className={styles.receiptItemName}>{d.dishName}</span>
+                    <span className={styles.receiptItemUnit}>
+                      {money(d.priceSnapshot)} each
+                      {discount > 0 && (
+                        <span className={styles.receiptPromo}>
+                          {" "}
+                          &middot; &minus;{money(discount)} promo
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                  <span className={styles.receiptLineTotal}>
+                    {money(d.lineTotal)}
+                  </span>
+                </div>
+              );
+            })}
           </div>
-        )}
+        ) : null}
+
+        <div className={styles.receiptTotals}>
+          {hasDishes && (
+            <div className={styles.receiptTotalRow}>
+              <span>Subtotal</span>
+              <span>{money(subtotal)}</span>
+            </div>
+          )}
+          {deliveryFee > 0 && (
+            <div className={styles.receiptTotalRow}>
+              <span>Delivery</span>
+              <span>{money(deliveryFee)}</span>
+            </div>
+          )}
+          {tax > 0 && (
+            <div className={styles.receiptTotalRow}>
+              <span>Tax</span>
+              <span>{money(tax)}</span>
+            </div>
+          )}
+          <div
+            className={`${styles.receiptTotalRow} ${styles.receiptGrandTotal}`}
+          >
+            <span>Total</span>
+            <span>{money(order.totalPrice)}</span>
+          </div>
+        </div>
       </div>
 
-      {order.dishes && order.dishes.length > 0 && (
-        <div className={styles.dishSection}>
-          <p className={styles.dishSectionLabel}>What&apos;s included</p>
-          {order.dishes.map((d) => (
-            <div key={d.id} className={styles.dishRow}>
-              <span className={styles.dishName}>{d.dishName}</span>
-              <span className={styles.dishQtyBox}>{d.quantity}</span>
-            </div>
-          ))}
+      {order.notes && (
+        <div className={styles.notesBlock}>
+          <p className={styles.notesLabel}>Customer note</p>
+          <p className={styles.notesText}>{order.notes}</p>
         </div>
       )}
 
@@ -518,6 +595,7 @@ function OrderListRow({
   focused: boolean;
   onSelect: () => void;
 }) {
+  const itemCount = order.itemCount ?? order.quantity ?? 0;
   return (
     <button
       type="button"
@@ -526,15 +604,12 @@ function OrderListRow({
     >
       <div className={styles.listRowLeft}>
         <span className={styles.listRowCustomer}>{customerDisplay(order)}</span>
-        <span className={styles.listRowListing}>
-          {order.listingTitle ?? "Order"}
-        </span>
         <span className={styles.listRowMeta}>
           {formatTime(order)} &middot;{" "}
           <span className={styles.listRowQty}>
-            {order.quantity} item{order.quantity !== 1 ? "s" : ""}
+            {itemCount} item{itemCount === 1 ? "" : "s"}
           </span>{" "}
-          &middot; ${order.totalPrice}
+          &middot; {money(order.totalPrice)}
         </span>
       </div>
       <StatusBadge status={order.status} />
