@@ -2,6 +2,7 @@
 
 .formShell {
   width: 100%;
+  max-width: 480px;
   display: flex;
   flex-direction: column;
   align-items: center;

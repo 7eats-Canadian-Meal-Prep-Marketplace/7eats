@@ -7,7 +7,6 @@ import {
   CheckoutPaymentForm,
   type CheckoutPaymentHandle,
 } from "./_payment-form";
-import styles from "./page.module.css";
 
 const stripePromise = loadStripe(
   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "",
@@ -22,13 +21,9 @@ export type { CheckoutPaymentHandle };
 
 export const CheckoutPaymentSection = forwardRef<CheckoutPaymentHandle, Props>(
   function CheckoutPaymentSection({ clientSecret, onReadyChange }, ref) {
-    if (!clientSecret) {
-      return (
-        <p className={styles.paymentPendingHint}>
-          Continue below to load secure payment options for your order total.
-        </p>
-      );
-    }
+    // The parent only mounts this once a payment session exists; this guard is
+    // just defensive — render nothing rather than an empty-state placeholder.
+    if (!clientSecret) return null;
 
     return (
       <Elements

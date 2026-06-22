@@ -6,7 +6,6 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from "react";
 
@@ -160,14 +159,19 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     useState<DeliveryAddress | null>(null);
   const [notes, setNotesState] = useState<string | null>(null);
 
-  // Tracks whether we've hydrated from localStorage yet. The persist effect
-  // must not run until this is true, otherwise the empty initial state would
-  // overwrite a saved cart before hydration completes.
-  const hydrated = useRef(false);
+  // Tracks whether we've hydrated from localStorage yet. This is reactive STATE,
+  // not a ref: the persist effect below depends on it, so its first run on mount
+  // sees `hydrated === false` (the render-time value) and skips. A ref set inside
+  // the hydrate effect would already read `true` in the same commit pass, while
+  // the cart state is still empty — overwriting the saved cart with an empty one
+  // (and, under StrictMode's double-invoked effects, wiping it permanently).
+  const [hydrated, setHydrated] = useState(false);
 
   // Hydrate once on mount. Done in an effect (not a lazy useState initializer)
   // so the server-rendered and first client render stay in sync — avoiding a
-  // hydration mismatch — and the saved cart is applied immediately after.
+  // hydration mismatch — and the saved cart is applied immediately after. All
+  // the setState calls (including setHydrated) batch into one commit, so the
+  // persist effect only runs once the saved cart is actually in state.
   useEffect(() => {
     const saved = loadPersistedCart();
     if (saved) {
@@ -177,12 +181,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       setDeliveryAddressState(saved.deliveryAddress);
       setNotesState(saved.notes);
     }
-    hydrated.current = true;
+    setHydrated(true);
   }, []);
 
   // Persist whenever any cart field changes (after hydration).
   useEffect(() => {
-    if (!hydrated.current) return;
+    if (!hydrated) return;
     try {
       const payload: PersistedCart = {
         cook,
@@ -196,7 +200,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // Storage may be full or unavailable (private mode) — non-critical.
     }
-  }, [cook, items, fulfillmentMode, deliveryAddress, notes]);
+  }, [hydrated, cook, items, fulfillmentMode, deliveryAddress, notes]);
 
   const upsert = useCallback((meta: CookMeta, item: CartItem) => {
     setCook(meta);

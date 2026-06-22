@@ -244,20 +244,31 @@ export async function placeClientOrder(
     });
   }
 
-  const wantsDelivery =
-    fulfillmentMode === "delivery" &&
-    cook.delivery === "self" &&
-    customerLat != null &&
-    customerLng != null &&
-    cook.pickupLat != null &&
-    cook.pickupLng != null;
-  if (wantsDelivery) {
+  if (fulfillmentMode === "delivery") {
+    // Delivery must be genuinely fulfillable before we take payment: a
+    // self-delivery cook, both endpoints geocoded, and the customer inside the
+    // cook's delivery radius. The customer's address can change after the cart
+    // was built (or the cook's radius may be smaller than the 50 km discovery
+    // cap), so this is the authoritative gate — never trust the client.
+    if (
+      cook.delivery !== "self" ||
+      cook.pickupLat == null ||
+      cook.pickupLng == null ||
+      customerLat == null ||
+      customerLng == null
+    ) {
+      return {
+        ok: false,
+        status: 422,
+        error: "This kitchen does not deliver to that address.",
+      };
+    }
     try {
       const distKm = await getDrivingDistanceKm(
-        cook.pickupLat as number,
-        cook.pickupLng as number,
-        customerLat as number,
-        customerLng as number,
+        cook.pickupLat,
+        cook.pickupLng,
+        customerLat,
+        customerLng,
       );
       const feeResult = calcDeliveryFee(
         {
@@ -269,10 +280,22 @@ export async function placeClientOrder(
         distKm,
         subtotal,
       );
+      if (feeResult.isOutOfRange) {
+        return {
+          ok: false,
+          status: 422,
+          error: "This kitchen does not deliver to that address.",
+        };
+      }
       deliveryFeeSnapshot = feeResult.fee;
       deliveryDistanceKm = Math.round(distKm);
     } catch (e) {
       console.error("[placeClientOrder] delivery fee", e);
+      return {
+        ok: false,
+        status: 502,
+        error: "We couldn't verify delivery to that address. Please try again.",
+      };
     }
   }
 

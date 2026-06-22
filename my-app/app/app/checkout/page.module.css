@@ -434,6 +434,14 @@
   color: var(--red);
 }
 
+.deliveryOutOfRange {
+  margin: 12px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--red);
+}
+
 .submitBlock {
   display: flex;
   flex-direction: column;
@@ -906,13 +914,6 @@
 .loadingCards {
   font-size: 13.5px;
   color: var(--grey-500);
-  margin: 0;
-}
-
-.paymentPendingHint {
-  font-size: 13.5px;
-  color: var(--grey-500);
-  line-height: 1.55;
   margin: 0;
 }
 

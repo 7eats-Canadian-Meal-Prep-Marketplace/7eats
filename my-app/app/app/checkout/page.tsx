@@ -150,6 +150,7 @@ export default function CheckoutPage() {
   const [error, setError] = useState<string | null>(null);
   const [needsLogin, setNeedsLogin] = useState<{ email: string } | null>(null);
   const [deliveryFee, setDeliveryFee] = useState(0);
+  const [deliveryOutOfRange, setDeliveryOutOfRange] = useState(false);
   const [paymentReady, setPaymentReady] = useState(false);
   const [editingAddress, setEditingAddress] = useState(false);
   const [addressInput, setAddressInput] = useState("");
@@ -209,6 +210,7 @@ export default function CheckoutPage() {
       !displayAddress?.lng
     ) {
       setDeliveryFee(0);
+      setDeliveryOutOfRange(false);
       return;
     }
     let cancelled = false;
@@ -227,6 +229,7 @@ export default function CheckoutPage() {
         if (!res.ok) return;
         const data = await res.json();
         if (!cancelled) {
+          setDeliveryOutOfRange(Boolean(data.isOutOfRange));
           setDeliveryFee(
             data.isOutOfRange || data.isFree ? 0 : (data.fee ?? 0),
           );
@@ -381,6 +384,13 @@ export default function CheckoutPage() {
 
     if (isDelivery && !displayAddress) {
       setError("Add a delivery address to continue.");
+      return;
+    }
+
+    if (isDelivery && deliveryOutOfRange) {
+      setError(
+        `${cookName ?? "This kitchen"} doesn't deliver to this address. Choose a closer address or switch to pickup.`,
+      );
       return;
     }
 
@@ -752,6 +762,13 @@ export default function CheckoutPage() {
                   </button>
                 </div>
               )}
+              {deliveryOutOfRange && (
+                <p className={styles.deliveryOutOfRange} role="alert">
+                  {cookName ?? "This kitchen"} doesn&apos;t deliver to this
+                  address. Choose a closer address, or switch to pickup on the
+                  menu.
+                </p>
+              )}
             </section>
           )}
 
@@ -774,15 +791,19 @@ export default function CheckoutPage() {
             </section>
           )}
 
-          {/* Payment */}
-          <section className={styles.formSection}>
-            <h2 className={styles.formTitle}>Payment</h2>
-            <CheckoutPaymentSection
-              ref={paymentRef}
-              clientSecret={pendingPayment?.clientSecret ?? null}
-              onReadyChange={setPaymentReady}
-            />
-          </section>
+          {/* Payment — only appears once the order total is locked in and a
+              secure payment session exists (after "Continue to payment"), so
+              there's no empty placeholder sitting in the flow beforehand. */}
+          {pendingPayment && (
+            <section className={styles.formSection}>
+              <h2 className={styles.formTitle}>Payment</h2>
+              <CheckoutPaymentSection
+                ref={paymentRef}
+                clientSecret={pendingPayment.clientSecret}
+                onReadyChange={setPaymentReady}
+              />
+            </section>
+          )}
 
           {/* Cancellation — below payment */}
           <section className={styles.formSection}>
@@ -831,7 +852,8 @@ export default function CheckoutPage() {
                 disabled={
                   placing ||
                   (pendingPayment ? !paymentReady : false) ||
-                  !agreedPolicy
+                  !agreedPolicy ||
+                  (isDelivery && deliveryOutOfRange)
                 }
                 onClick={() => void placeOrder()}
               >

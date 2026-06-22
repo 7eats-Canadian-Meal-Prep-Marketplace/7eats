@@ -1158,6 +1158,10 @@ export default function SettingsPage() {
         </div>
 
         <nav className={styles.sideNav} aria-label="Settings sections">
+          <Link href="/business/dashboard" className={styles.navBack}>
+            <ArrowLeft size={15} aria-hidden="true" />
+            Dashboard
+          </Link>
           {SECTIONS.map((s) => (
             <button
               key={s.id}

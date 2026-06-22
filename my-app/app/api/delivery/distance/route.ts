@@ -64,6 +64,8 @@ export async function POST(req: NextRequest) {
         isFree: true,
         isOutOfRange: false,
         distanceKm: 0,
+        maxDeliveryKm: null,
+        selfDelivers: cook.delivery === "self",
       });
     }
 
@@ -85,7 +87,11 @@ export async function POST(req: NextRequest) {
       orderSubtotal,
     );
 
-    return NextResponse.json(result);
+    return NextResponse.json({
+      ...result,
+      maxDeliveryKm: cook.maxDeliveryKm,
+      selfDelivers: true,
+    });
   } catch (err) {
     console.error("[delivery/distance/POST]", err);
     return NextResponse.json(

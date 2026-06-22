@@ -32,6 +32,10 @@ import {
 } from "@/lib/hooks/use-guest-address";
 import type { NormalizedAddress } from "@/lib/types/address";
 import { AppProvider, useApp } from "./_app-context";
+import {
+  CartAddressGuardProvider,
+  useCartAddressGuard,
+} from "./_cart-address-guard";
 import { CartProvider, useCart } from "./_cart-context";
 import {
   ServiceAddressProvider,
@@ -516,6 +520,7 @@ function ShellInner({
   const { setProvince } = useApp();
   const guest = useGuestAddress();
   const { ready, currentAddress, setServerAddress } = useServiceAddress();
+  const { requestAddressChange } = useCartAddressGuard();
   const [showAddress, setShowAddress] = useState(false);
   const [showAddressDropdown, setShowAddressDropdown] = useState(false);
   const addressDropdownRef = useRef<HTMLDivElement>(null);
@@ -551,6 +556,11 @@ function ShellInner({
   const mustSetAddress = onGatePage && ready && currentAddress === null;
 
   async function handleAddAddress(a: ResolvedAddress) {
+    // Route the change through the cart guard: if there's an active delivery
+    // cart the kitchen can't reach at the new address, it confirms first.
+    const coords = { lat: a.lat, lng: a.lng };
+    const label = a.streetAddress;
+
     if (isLoggedIn) {
       const normalized: NormalizedAddress = {
         street: a.streetAddress,
@@ -584,29 +594,33 @@ function ShellInner({
         setShowAddress(false);
         return;
       }
-      setServerAddress(normalized);
-      setProvince(normalized.province);
-      try {
-        await fetch("/api/user/address", {
+      await requestAddressChange(coords, label, () => {
+        setServerAddress(normalized);
+        setProvince(normalized.province);
+        void fetch("/api/user/address", {
           method: "PUT",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ ...normalized, unit: null }),
+        }).catch(() => {
+          // Non-critical — address is already updated in local state
         });
-      } catch {
-        // Non-critical — address is already updated in local state
-      }
-    } else {
-      guest.addAddress({
-        street: a.streetAddress,
-        unit: "",
-        city: a.city,
-        province: a.province,
-        postal: a.postalCode,
-        lat: a.lat,
-        lng: a.lng,
-        placeId: a.placeId,
+        setShowAddress(false);
       });
-      setProvince(a.province);
+    } else {
+      await requestAddressChange(coords, label, () => {
+        guest.addAddress({
+          street: a.streetAddress,
+          unit: "",
+          city: a.city,
+          province: a.province,
+          postal: a.postalCode,
+          lat: a.lat,
+          lng: a.lng,
+          placeId: a.placeId,
+        });
+        setProvince(a.province);
+        setShowAddress(false);
+      });
     }
   }
 
@@ -692,8 +706,20 @@ function ShellInner({
                         type="button"
                         className={styles.addressOptionMain}
                         onClick={() => {
-                          if (!isLoggedIn) guest.selectAddress(opt.id);
                           setShowAddressDropdown(false);
+                          if (isLoggedIn || opt.active) return;
+                          const target = guest.addresses.find(
+                            (ad) => ad.id === opt.id,
+                          );
+                          if (!target) {
+                            guest.selectAddress(opt.id);
+                            return;
+                          }
+                          void requestAddressChange(
+                            { lat: target.lat, lng: target.lng },
+                            target.street.split(",")[0] || target.city,
+                            () => guest.selectAddress(opt.id),
+                          );
                         }}
                       >
                         <MapPin
@@ -838,14 +864,16 @@ export default function AppShell({
       <CartProvider>
         <GuestAddressProvider>
           <ServiceAddressProvider isLoggedIn={isLoggedIn}>
-            <ShellInner
-              isLoggedIn={isLoggedIn}
-              userInitials={userInitials}
-              userName={userName}
-              userEmail={userEmail}
-            >
-              {children}
-            </ShellInner>
+            <CartAddressGuardProvider>
+              <ShellInner
+                isLoggedIn={isLoggedIn}
+                userInitials={userInitials}
+                userName={userName}
+                userEmail={userEmail}
+              >
+                {children}
+              </ShellInner>
+            </CartAddressGuardProvider>
           </ServiceAddressProvider>
         </GuestAddressProvider>
       </CartProvider>

@@ -1,7 +1,8 @@
 /** Tunable parameters for the kitchen search ranking + matching. */
 
-/** Soft radius cap (km) for pickup search — keeps results locally relevant. */
-export const SEARCH_PICKUP_MAX_KM = 50;
+/** Radius cap (km) for pickup discovery — matches the max delivery radius a cook
+ * can configure, so browse/search surface the same reach for both modes. */
+export const SEARCH_PICKUP_MAX_KM = 100;
 
 /**
  * Minimum trigram word-similarity for a fuzzy (typo) match to qualify when the

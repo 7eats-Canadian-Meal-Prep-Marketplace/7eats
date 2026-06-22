@@ -3,9 +3,16 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("@/lib/hash", () => ({ hashIp: vi.fn(() => "hashed-ip") }));
 vi.mock("@/lib/rate-limit", () => ({ logAndCheckRateLimit: vi.fn() }));
 vi.mock("@/lib/auth", () => ({
-  auth: { api: { signUpEmail: vi.fn(), sendVerificationEmail: vi.fn() } },
+  auth: {
+    api: { signUpEmail: vi.fn(), sendVerificationEmail: vi.fn() },
+    // Better Auth internal context — used to hash a password when claiming a
+    // guest row without a session.
+    $context: Promise.resolve({
+      password: { hash: vi.fn(async () => "hashed-pw") },
+    }),
+  },
 }));
-vi.mock("drizzle-orm", () => ({ eq: vi.fn() }));
+vi.mock("drizzle-orm", () => ({ eq: vi.fn(), and: vi.fn() }));
 vi.mock("@/db", () => ({
   db: { insert: vi.fn(), select: vi.fn(), update: vi.fn() },
 }));
@@ -15,13 +22,16 @@ vi.mock("@/db/schema", () => ({
     role: "role",
     email: "email",
     emailVerified: "email_verified",
+    isGuestAccount: "is_guest_account",
   },
   authUserTable: {
     id: "id",
     role: "role",
     email: "email",
     emailVerified: "email_verified",
+    isGuestAccount: "is_guest_account",
   },
+  authAccount: { id: "id", userId: "user_id", providerId: "provider_id" },
   legalAcceptances: {},
 }));
 
@@ -31,7 +41,13 @@ import { auth } from "@/lib/auth";
 import { logAndCheckRateLimit } from "@/lib/rate-limit";
 
 // Wires db.select().from().where().limit() to return the given row (or []).
-function setExistingAccount(account: { emailVerified: boolean } | null) {
+function setExistingAccount(
+  account: {
+    id?: string;
+    emailVerified: boolean;
+    isGuestAccount?: boolean;
+  } | null,
+) {
   const limit = vi.fn().mockResolvedValue(account ? [account] : []);
   const where = vi.fn(() => ({ limit }));
   const from = vi.fn(() => ({ where }));
@@ -81,7 +97,15 @@ describe("POST /api/auth/sign-up", () => {
     vi.mocked(logAndCheckRateLimit).mockResolvedValue(true);
     // Default: no existing account for this email.
     setExistingAccount(null);
-    whereSpy = vi.fn().mockResolvedValue(undefined);
+    // `where()` is awaited directly by the user-row update, and also chained
+    // with `.returning()` by the credential update in the guest-claim path.
+    whereSpy = vi.fn(() => {
+      const result = Promise.resolve([{ id: "acc_1" }]) as Promise<unknown> & {
+        returning?: ReturnType<typeof vi.fn>;
+      };
+      result.returning = vi.fn().mockResolvedValue([{ id: "acc_1" }]);
+      return result;
+    });
     setSpy = vi.fn(() => ({ where: whereSpy }));
     vi.mocked(db.update).mockReturnValue({ set: setSpy } as never);
     vi.mocked(db.insert).mockReturnValue({
@@ -177,6 +201,50 @@ describe("POST /api/auth/sign-up", () => {
     expect(res.status).toBe(409);
     expect(vi.mocked(auth.api.signUpEmail)).not.toHaveBeenCalled();
     expect(vi.mocked(auth.api.sendVerificationEmail)).not.toHaveBeenCalled();
+  });
+
+  it("claims an existing guest account instead of rejecting the email", async () => {
+    // A prior guest checkout left a shadow row (isGuestAccount, emailVerified).
+    setExistingAccount({
+      id: "guest_1",
+      emailVerified: true,
+      isGuestAccount: true,
+    });
+
+    const res = await POST(makeRequest(validBody));
+    const body = await res.json();
+
+    // Not rejected — the guest row is upgraded and they go verify their email.
+    expect(res.status).toBe(200);
+    expect(body.redirect).toContain("/signup/check-email");
+
+    // No NEW Better Auth user is created; the existing row is claimed.
+    expect(vi.mocked(auth.api.signUpEmail)).not.toHaveBeenCalled();
+
+    // The chosen password (hashed via Better Auth) is written to the credential.
+    expect(setSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ password: "hashed-pw" }),
+    );
+
+    // The row is converted to a real, unverified client whose names are set
+    // from the signup form, and onboarding is reset so they still go through
+    // phone verification + preferences (guest checkout had stamped it complete).
+    expect(setSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        role: "client",
+        status: "active",
+        firstName: "Ada",
+        lastName: "Lovelace",
+        isGuestAccount: false,
+        emailVerified: false,
+        onboardingCompletedAt: null,
+      }),
+    );
+
+    // Verification email is sent so they prove ownership of the address.
+    expect(vi.mocked(auth.api.sendVerificationEmail)).toHaveBeenCalledWith({
+      body: { email: "ada@example.com", callbackURL: "/app-auth/onboarding" },
+    });
   });
 
   it("returns 500 when Better Auth signup fails for an unexpected reason", async () => {

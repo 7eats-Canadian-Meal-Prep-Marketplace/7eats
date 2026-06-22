@@ -77,7 +77,7 @@ describe("POST /api/delivery/distance", () => {
       const res = await POST(makePost(validBody()));
       expect(res.status).toBe(200);
       const body = await res.json();
-      expect(body).toEqual({
+      expect(body).toMatchObject({
         fee: 0,
         isFree: true,
         isOutOfRange: false,
@@ -102,7 +102,7 @@ describe("POST /api/delivery/distance", () => {
       const res = await POST(makePost(validBody()));
       expect(res.status).toBe(200);
       const body = await res.json();
-      expect(body).toEqual({
+      expect(body).toMatchObject({
         fee: 0,
         isFree: true,
         isOutOfRange: false,
@@ -127,7 +127,7 @@ describe("POST /api/delivery/distance", () => {
       const res = await POST(makePost(validBody()));
       expect(res.status).toBe(200);
       const body = await res.json();
-      expect(body).toEqual({
+      expect(body).toMatchObject({
         fee: 0,
         isFree: true,
         isOutOfRange: false,

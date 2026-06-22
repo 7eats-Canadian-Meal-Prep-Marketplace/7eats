@@ -17,6 +17,7 @@ import {
   LEAD_TIME_DAYS_MAP,
 } from "@/lib/refund-policy";
 import { buildCartItem, useCart } from "../../../_cart-context";
+import { useServiceAddress } from "../../../_service-address-context";
 import { Skeleton } from "../../../_skeleton";
 import styles from "./page.module.css";
 
@@ -196,6 +197,7 @@ export default function CookMenuPage() {
   const cookId = params.id;
   const router = useRouter();
   const cart = useCart();
+  const { currentAddress } = useServiceAddress();
 
   const [data, setData] = useState<MenuData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -238,8 +240,55 @@ export default function CookMenuPage() {
     return map;
   }, [cart.cookId, cart.items, cookId]);
 
+  const cookSelfDelivers = data?.cook.delivery === "self";
+
+  // Whether this cook can actually deliver to the user depends on the driving
+  // distance vs the cook's radius — which can be tighter than the 50km discovery
+  // cap. Recompute whenever the cook or the service address changes.
+  const [deliveryCheck, setDeliveryCheck] = useState<{
+    available: boolean;
+    distanceKm: number;
+    maxDeliveryKm: number | null;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!cookSelfDelivers || !currentAddress) {
+      setDeliveryCheck(null);
+      return;
+    }
+    let cancelled = false;
+    fetch("/api/delivery/distance", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        cookId,
+        customerLat: currentAddress.lat,
+        customerLng: currentAddress.lng,
+      }),
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (cancelled || !d) return;
+        setDeliveryCheck({
+          available: !d.isOutOfRange,
+          distanceKm: Math.round(d.distanceKm ?? 0),
+          maxDeliveryKm: d.maxDeliveryKm ?? null,
+        });
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [cookSelfDelivers, currentAddress, cookId]);
+
   const canPickup = data?.cook.offersPickup !== false;
-  const canDeliver = data?.cook.delivery === "self";
+  // Out of range only once we've confirmed it (don't disable optimistically
+  // while the check is in flight — checkout + server still gate placement).
+  const deliveryOutOfRange =
+    Boolean(cookSelfDelivers) &&
+    deliveryCheck != null &&
+    !deliveryCheck.available;
+  const canDeliver = Boolean(cookSelfDelivers) && !deliveryOutOfRange;
 
   const slots = useMemo(() => {
     if (!data) return [];
@@ -592,7 +641,7 @@ export default function CookMenuPage() {
                 </>
               )}
 
-              {canPickup && canDeliver && (
+              {canPickup && cookSelfDelivers && (
                 <fieldset className={styles.segmented} aria-label="Fulfillment">
                   <button
                     type="button"
@@ -605,10 +654,25 @@ export default function CookMenuPage() {
                     type="button"
                     className={`${styles.segment} ${cart.fulfillmentMode === "delivery" ? styles.segmentActive : ""}`}
                     onClick={() => cart.setFulfillment("delivery")}
+                    disabled={!canDeliver}
+                    aria-disabled={!canDeliver}
+                    title={
+                      canDeliver
+                        ? undefined
+                        : "Outside this kitchen's delivery area"
+                    }
                   >
                     Delivery
                   </button>
                 </fieldset>
+              )}
+
+              {deliveryOutOfRange && deliveryCheck?.maxDeliveryKm != null && (
+                <p className={styles.deliveryNote}>
+                  {canPickup
+                    ? `Pickup only. You're ${deliveryCheck.distanceKm} km away, outside this kitchen's ${deliveryCheck.maxDeliveryKm} km delivery range.`
+                    : `This kitchen delivers within ${deliveryCheck.maxDeliveryKm} km and can't reach your address (${deliveryCheck.distanceKm} km away).`}
+                </p>
               )}
 
               <p className={styles.policy}>

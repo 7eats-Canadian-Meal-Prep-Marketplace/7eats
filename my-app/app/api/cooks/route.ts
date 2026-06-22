@@ -3,9 +3,18 @@ import { type NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { authUser, cookProfiles, dishes } from "@/db/schema";
 import { loadCookCards } from "@/lib/cooks/load-cards";
-import { DEFAULT_MAX_DELIVERY_KM } from "@/lib/delivery-pricing";
+import {
+  DEFAULT_MAX_DELIVERY_KM,
+  DELIVERY_MAX_KM_MAX,
+} from "@/lib/delivery-pricing";
 import { SEARCH_PICKUP_MAX_KM } from "@/lib/search/config";
 import { boundingBox } from "@/lib/search/normalize";
+
+// A cook is reachable by pickup within the discovery cap, or by delivery within
+// their own (possibly larger) radius — so the candidate box must cover whichever
+// is wider, or a far-but-deliverable cook would be excluded before the exact
+// distance check and vanish from browse while still showing in delivery search.
+const REACH_BOX_KM = Math.max(SEARCH_PICKUP_MAX_KM, DELIVERY_MAX_KM_MAX);
 
 function parseCoord(value: string | null, min: number, max: number) {
   if (value == null) return null;
@@ -41,7 +50,7 @@ export async function GET(req: NextRequest) {
     // keeps the candidate scan index-friendly before the exact haversine check.
     const reachable = hasGeo
       ? (() => {
-          const box = boundingBox(lat, lng, SEARCH_PICKUP_MAX_KM);
+          const box = boundingBox(lat, lng, REACH_BOX_KM);
           return and(
             sql`${cookProfiles.pickupLat} IS NOT NULL`,
             sql`${cookProfiles.pickupLng} IS NOT NULL`,
