@@ -96,7 +96,10 @@ export async function loadCookCards(
     })
     .from(cookProfiles)
     .innerJoin(authUser, eq(cookProfiles.userId, authUser.id))
-    .leftJoin(reviews, eq(reviews.cookId, cookProfiles.id))
+    .leftJoin(
+      reviews,
+      and(eq(reviews.cookId, cookProfiles.id), eq(reviews.isVisible, true)),
+    )
     .where(inArray(cookProfiles.id, cookIds))
     .groupBy(
       cookProfiles.id,

@@ -822,6 +822,8 @@ export default function CheckoutPage() {
               <CheckoutPaymentSection
                 ref={paymentRef}
                 clientSecret={pendingPayment.clientSecret}
+                isLoggedIn={isLoggedIn}
+                userEmail={isLoggedIn ? userEmail : null}
                 onReadyChange={setPaymentReady}
               />
             </section>

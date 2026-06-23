@@ -24,6 +24,8 @@ export async function createCheckoutPaymentIntent(params: {
       currency: PLATFORM_CURRENCY,
       customer: params.stripeCustomerId,
       capture_method: "manual",
+      setup_future_usage: "off_session",
+      payment_method_types: ["card"],
       transfer_data: { destination: params.connectedAccountId },
       application_fee_amount: params.applicationFeeCents,
       metadata: { orderId: params.orderId },

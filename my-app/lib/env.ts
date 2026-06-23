@@ -26,6 +26,7 @@ const FEATURE: Record<string, string> = {
   TWILIO_ACCOUNT_SID: "phone OTP / SMS will not send",
   TWILIO_AUTH_TOKEN: "phone OTP / SMS will not send",
   TWILIO_VERIFY_SERVICE_SID: "phone OTP / SMS will not send",
+  TWILIO_MESSAGING_FROM_NUMBER: "order update texts will not send",
   MAPBOX_SECRET_TOKEN: "delivery distance / fee calculation will fail",
   R2_ACCOUNT_ID: "image uploads will fail",
   R2_ACCESS_KEY_ID: "image uploads will fail",

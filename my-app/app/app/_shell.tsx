@@ -30,6 +30,7 @@ import {
   useGuestAddress,
 } from "@/lib/hooks/use-guest-address";
 import type { NormalizedAddress } from "@/lib/types/address";
+import { profileInitials } from "@/lib/user-display";
 import { AppProvider, useApp } from "./_app-context";
 import {
   CartAddressGuardProvider,
@@ -396,13 +397,19 @@ const MENU_LINKS = [
 
 function ProfileMenu({
   initials,
+  imageUrl,
   name,
   email,
 }: {
   initials: string;
+  imageUrl: string | null;
   name: string;
   email: string;
 }) {
+  const displayInitials =
+    initials !== "?"
+      ? initials
+      : profileInitials(undefined, undefined, name, email);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -448,12 +455,34 @@ function ProfileMenu({
         aria-expanded={open}
         aria-label="Account menu"
       >
-        {initials}
+        {imageUrl ? (
+          // biome-ignore lint/performance/noImgElement: CDN avatar
+          <img
+            key={imageUrl}
+            src={imageUrl}
+            alt=""
+            className={styles.avatarBtnImg}
+          />
+        ) : (
+          <span key="initials">{displayInitials}</span>
+        )}
       </button>
       {open && (
         <div className={styles.menu} role="menu">
           <div className={styles.menuHead}>
-            <div className={styles.menuAvatar}>{initials}</div>
+            <div className={styles.menuAvatar}>
+              {imageUrl ? (
+                // biome-ignore lint/performance/noImgElement: CDN avatar
+                <img
+                  key={imageUrl}
+                  src={imageUrl}
+                  alt=""
+                  className={styles.menuAvatarImg}
+                />
+              ) : (
+                <span key="initials">{displayInitials}</span>
+              )}
+            </div>
             <div className={styles.menuIdentity}>
               <span className={styles.menuName}>{name || "Your account"}</span>
               <span className={styles.menuEmail}>{email}</span>
@@ -503,19 +532,14 @@ const BOTTOM_NAV = [
 function ShellInner({
   children,
   isLoggedIn,
-  userInitials,
-  userName,
-  userEmail,
 }: {
   children: React.ReactNode;
   isLoggedIn: boolean;
-  userInitials: string;
-  userName: string;
-  userEmail: string;
 }) {
   const pathname = usePathname();
   const { totalQuantity } = useCart();
-  const { setProvince } = useApp();
+  const { setProvince, userImage, userInitials, userName, userEmail } =
+    useApp();
   const guest = useGuestAddress();
   const { ready, currentAddress, setServerAddress } = useServiceAddress();
   const { requestAddressChange } = useCartAddressGuard();
@@ -777,6 +801,7 @@ function ShellInner({
               {isLoggedIn ? (
                 <ProfileMenu
                   initials={userInitials}
+                  imageUrl={userImage}
                   name={userName}
                   email={userEmail}
                 />
@@ -846,31 +871,28 @@ export default function AppShell({
   userInitials = "",
   userName = "",
   userEmail = "",
+  userImage = null,
 }: {
   children: React.ReactNode;
   isLoggedIn: boolean;
   userInitials?: string;
   userName?: string;
   userEmail?: string;
+  userImage?: string | null;
 }) {
   return (
     <AppProvider
       isLoggedIn={isLoggedIn}
       userName={userName}
       userEmail={userEmail}
+      userInitials={userInitials}
+      userImage={userImage}
     >
       <CartProvider>
         <GuestAddressProvider>
           <ServiceAddressProvider isLoggedIn={isLoggedIn}>
             <CartAddressGuardProvider>
-              <ShellInner
-                isLoggedIn={isLoggedIn}
-                userInitials={userInitials}
-                userName={userName}
-                userEmail={userEmail}
-              >
-                {children}
-              </ShellInner>
+              <ShellInner isLoggedIn={isLoggedIn}>{children}</ShellInner>
             </CartAddressGuardProvider>
           </ServiceAddressProvider>
         </GuestAddressProvider>

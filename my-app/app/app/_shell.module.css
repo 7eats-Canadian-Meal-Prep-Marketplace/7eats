@@ -651,9 +651,18 @@
   flex-shrink: 0;
   letter-spacing: 0.02em;
   border: 2px solid transparent;
+  overflow: hidden;
+  padding: 0;
   transition:
     opacity 0.12s,
     box-shadow 0.12s;
+}
+
+.avatarBtnImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .avatarBtn:hover {
@@ -707,6 +716,14 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  overflow: hidden;
+}
+
+.menuAvatarImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .menuIdentity {

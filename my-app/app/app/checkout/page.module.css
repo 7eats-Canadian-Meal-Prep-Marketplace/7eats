@@ -1109,6 +1109,13 @@
   border-color: var(--ink);
 }
 
+.paymentHint {
+  margin: 0 0 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--grey-700);
+}
+
 /* ─── Subscription consent ──────────────────────────────────────────────────── */
 .consentBox {
   display: flex;

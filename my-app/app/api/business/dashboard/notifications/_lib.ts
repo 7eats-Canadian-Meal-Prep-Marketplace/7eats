@@ -25,8 +25,7 @@ export type ReviewNotifRow = {
   id: string;
   rating: number;
   createdAt: Date;
-  listingId: string | null;
-  listingTitle: string | null;
+  orderSummary: string | null;
   customerFirstName: string | null;
   customerLastName: string | null;
 };
@@ -87,9 +86,9 @@ export function buildReviewNotif(
     id: `review:${row.id}`,
     kind: "review",
     title: "New review",
-    detail: detail(name, row.listingTitle),
+    detail: detail(name, row.orderSummary),
     timestamp: row.createdAt.toISOString(),
-    href: `/business/listings/${row.listingId ?? ""}`,
+    href: "/business/dashboard",
     isRead,
     rating: row.rating,
   };

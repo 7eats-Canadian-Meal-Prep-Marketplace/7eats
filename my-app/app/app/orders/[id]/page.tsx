@@ -15,6 +15,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { use, useEffect, useState } from "react";
+import { toast } from "sonner";
 import {
   type ClientOrderStatus,
   clientOrderTrackerSteps,
@@ -67,6 +68,11 @@ type ApiOrder = {
   cookBannerUrl: string | null;
   dishes: ApiDish[];
   cancelledAt: string | null;
+  review: {
+    id: string;
+    rating: number;
+    comment: string;
+  } | null;
 };
 
 function orderTitle(o: ApiOrder): string {
@@ -170,12 +176,14 @@ function ReviewModal({
   cookName,
   listingTitle,
   initial,
+  saving,
   onSave,
   onClose,
 }: {
   cookName: string;
   listingTitle: string;
   initial?: { rating: number; comment: string };
+  saving: boolean;
   onSave: (rating: number, comment: string) => void;
   onClose: () => void;
 }) {
@@ -242,20 +250,21 @@ function ReviewModal({
             type="button"
             className={styles.modalCancel}
             onClick={onClose}
+            disabled={saving}
           >
             Cancel
           </button>
           <button
             type="button"
             className={styles.modalSubmit}
+            disabled={saving}
             onClick={() => {
               if (rating > 0) {
                 onSave(rating, comment);
-                onClose();
               }
             }}
           >
-            {initial ? "Update review" : "Submit review"}
+            {saving ? "Saving…" : initial ? "Update review" : "Submit review"}
           </button>
         </div>
       </div>
@@ -277,10 +286,13 @@ export default function OrderDetailPage({
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [review, setReview] = useState<{
+    id: string;
     rating: number;
     comment: string;
   } | null>(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
+  const [reviewSaving, setReviewSaving] = useState(false);
+  const [reviewDeleting, setReviewDeleting] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
@@ -325,6 +337,7 @@ export default function OrderDetailPage({
       .then((json) => {
         if (json?.data) {
           setOrder(json.data);
+          setReview(json.data.review ?? null);
         }
       })
       .catch(() => {
@@ -332,6 +345,63 @@ export default function OrderDetailPage({
       })
       .finally(() => setLoading(false));
   }, [id, router]);
+
+  async function handleSaveReview(rating: number, comment: string) {
+    if (reviewSaving) return;
+    setReviewSaving(true);
+    try {
+      const isUpdate = review != null;
+      const res = await fetch(`/api/orders/${id}/reviews`, {
+        method: isUpdate ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rating, comment: comment || undefined }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        success?: boolean;
+        data?: { id: string; rating: number; comment: string | null };
+        error?: string;
+      };
+      if (!res.ok || !data.success || !data.data) {
+        toast.error(data.error ?? "Could not save your review.");
+        return;
+      }
+      setReview({
+        id: data.data.id,
+        rating: data.data.rating,
+        comment: data.data.comment ?? "",
+      });
+      setShowReviewModal(false);
+      toast.success(isUpdate ? "Review updated." : "Thanks for your review!");
+    } catch {
+      toast.error("Something went wrong. Please try again.");
+    } finally {
+      setReviewSaving(false);
+    }
+  }
+
+  async function handleDeleteReview() {
+    if (reviewDeleting || !review) return;
+    setReviewDeleting(true);
+    try {
+      const res = await fetch(`/api/orders/${id}/reviews`, {
+        method: "DELETE",
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        success?: boolean;
+        error?: string;
+      };
+      if (!res.ok || !data.success) {
+        toast.error(data.error ?? "Could not delete your review.");
+        return;
+      }
+      setReview(null);
+      toast.success("Review removed.");
+    } catch {
+      toast.error("Something went wrong. Please try again.");
+    } finally {
+      setReviewDeleting(false);
+    }
+  }
 
   if (loading) {
     return (
@@ -522,7 +592,9 @@ export default function OrderDetailPage({
                   <button
                     type="button"
                     className={styles.reviewDeleteBtn}
-                    onClick={() => setReview(null)}
+                    onClick={() => void handleDeleteReview()}
+                    disabled={reviewDeleting}
+                    aria-label="Delete review"
                   >
                     <Trash2 size={14} />
                   </button>
@@ -701,8 +773,11 @@ export default function OrderDetailPage({
           cookName={cookDisplayName}
           listingTitle={listingTitle}
           initial={review ?? undefined}
-          onSave={(rating, comment) => setReview({ rating, comment })}
-          onClose={() => setShowReviewModal(false)}
+          saving={reviewSaving}
+          onSave={(rating, comment) => void handleSaveReview(rating, comment)}
+          onClose={() => {
+            if (!reviewSaving) setShowReviewModal(false);
+          }}
         />
       )}
     </div>

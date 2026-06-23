@@ -82,6 +82,43 @@ export const EMPTY_CLIENT_PREFERENCES: ClientPreferences = {
   whyMealPrep: [],
 };
 
+export function normalizeClientPreferences(
+  raw: Partial<ClientPreferences> | null | undefined,
+): ClientPreferences {
+  return {
+    dietary: Array.isArray(raw?.dietary) ? raw.dietary.map(String) : [],
+    allergies: Array.isArray(raw?.allergies) ? raw.allergies.map(String) : [],
+    goals: Array.isArray(raw?.goals) ? raw.goals.map(String) : [],
+    whyMealPrep: Array.isArray(raw?.whyMealPrep)
+      ? raw.whyMealPrep.map(String)
+      : [],
+  };
+}
+
+function sortedValues(values: string[]): string[] {
+  return [...values].sort((a, b) => a.localeCompare(b));
+}
+
+export function clientPreferencesEqual(
+  a: ClientPreferences,
+  b: ClientPreferences,
+): boolean {
+  const keys: ClientPreferenceKey[] = [
+    "dietary",
+    "allergies",
+    "goals",
+    "whyMealPrep",
+  ];
+  return keys.every((key) => {
+    const left = sortedValues(a[key]);
+    const right = sortedValues(b[key]);
+    return (
+      left.length === right.length &&
+      left.every((value, i) => value === right[i])
+    );
+  });
+}
+
 const ONBOARDING_STORAGE_KEY = "onboarding";
 
 export type OnboardingStorage = {

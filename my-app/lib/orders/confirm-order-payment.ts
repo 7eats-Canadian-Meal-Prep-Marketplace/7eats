@@ -63,6 +63,9 @@ async function sendOrderConfirmationEmails(
       email: authUser.email,
       firstName: authUser.firstName,
       lastName: authUser.lastName,
+      phone: authUser.phone,
+      phoneVerified: authUser.phoneVerified,
+      notificationPreferences: authUser.notificationPreferences,
     })
     .from(authUser)
     .where(eq(authUser.id, orderRow.clientId))
@@ -132,7 +135,13 @@ async function sendOrderConfirmationEmails(
     ).catch((err) => console.error("[confirmOrderPayment] guest receipt", err));
   } else {
     sendOrderReceiptToClient(
-      { email: clientUser.email, firstName: clientUser.firstName },
+      {
+        email: clientUser.email,
+        firstName: clientUser.firstName,
+        phone: clientUser.phone,
+        phoneVerified: clientUser.phoneVerified,
+        notificationPreferences: clientUser.notificationPreferences,
+      },
       { name: cookRow.displayName ?? "your cook" },
       orderEmailPayload,
     ).catch((err) => console.error("[confirmOrderPayment] receipt", err));

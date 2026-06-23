@@ -122,7 +122,10 @@ export async function POST(req: Request) {
     throw err;
   }
 
-  const res = NextResponse.json({ success: true });
+  const res = NextResponse.json({
+    success: true,
+    data: { phone, phoneVerified: true },
+  });
   res.cookies.delete("pending_phone");
   return res;
 }

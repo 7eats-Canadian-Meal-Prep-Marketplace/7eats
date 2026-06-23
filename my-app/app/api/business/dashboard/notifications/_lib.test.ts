@@ -111,14 +111,13 @@ describe("buildOrderCancelledNotif", () => {
 });
 
 describe("buildReviewNotif", () => {
-  it("builds a review notification with rating and listing href", () => {
+  it("builds a review notification with rating and dashboard href", () => {
     const createdAt = new Date("2026-06-01T10:00:00Z");
     const row = {
       id: REVIEW_UUID,
       rating: 5,
       createdAt,
-      listingId: LISTING_UUID,
-      listingTitle: "Tikka Bowls",
+      orderSummary: "Tikka Bowls",
       customerFirstName: "Carol",
       customerLastName: "White",
     };
@@ -128,21 +127,21 @@ describe("buildReviewNotif", () => {
     expect(notif.title).toBe("New review");
     expect(notif.detail).toBe("Carol White · Tikka Bowls");
     expect(notif.rating).toBe(5);
-    expect(notif.href).toBe(`/business/listings/${LISTING_UUID}`);
+    expect(notif.href).toBe("/business/dashboard");
     expect(notif.timestamp).toBe(createdAt.toISOString());
   });
 
-  it("handles null listingId in href gracefully", () => {
+  it("handles null order summary in detail gracefully", () => {
     const row = {
       id: REVIEW_UUID,
       rating: 3,
       createdAt: new Date(),
-      listingId: null,
-      listingTitle: null,
+      orderSummary: null,
       customerFirstName: null,
       customerLastName: null,
     };
-    expect(buildReviewNotif(row, false).href).toBe("/business/listings/");
+    expect(buildReviewNotif(row, false).href).toBe("/business/dashboard");
+    expect(buildReviewNotif(row, false).detail).toBe("Customer");
   });
 });
 
