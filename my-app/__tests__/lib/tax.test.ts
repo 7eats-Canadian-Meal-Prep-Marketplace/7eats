@@ -1,7 +1,15 @@
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { calcTax, getTaxLabel } from "@/lib/tax";
 
-describe("calcTax", () => {
+describe("calcTax (collection enabled)", () => {
+  const prev = process.env.NEXT_PUBLIC_TAX_COLLECTION_ENABLED;
+  beforeAll(() => {
+    process.env.NEXT_PUBLIC_TAX_COLLECTION_ENABLED = "true";
+  });
+  afterAll(() => {
+    process.env.NEXT_PUBLIC_TAX_COLLECTION_ENABLED = prev;
+  });
+
   it("applies 5% GST in AB", () => {
     expect(calcTax(100, "AB")).toBeCloseTo(5, 2);
   });
@@ -22,6 +30,27 @@ describe("calcTax", () => {
   });
   it("normalizes lowercase province codes", () => {
     expect(calcTax(100, "on")).toBeCloseTo(13, 2);
+  });
+});
+
+describe("calcTax (collection disabled)", () => {
+  const prev = process.env.NEXT_PUBLIC_TAX_COLLECTION_ENABLED;
+  beforeAll(() => {
+    process.env.NEXT_PUBLIC_TAX_COLLECTION_ENABLED = "false";
+  });
+  afterAll(() => {
+    process.env.NEXT_PUBLIC_TAX_COLLECTION_ENABLED = prev;
+  });
+
+  it("returns 0 regardless of province when collection is off", () => {
+    expect(calcTax(100, "ON")).toBe(0);
+    expect(calcTax(100, "NS")).toBe(0);
+    expect(calcTax(100, "QC")).toBe(0);
+  });
+
+  it("treats an unset flag as disabled", () => {
+    delete process.env.NEXT_PUBLIC_TAX_COLLECTION_ENABLED;
+    expect(calcTax(100, "ON")).toBe(0);
   });
 });
 

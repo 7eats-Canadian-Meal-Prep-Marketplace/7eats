@@ -9,6 +9,7 @@ vi.mock("@/db", () => ({
 vi.mock("@/db/schema", () => ({
   cookProfiles: {},
   orders: {},
+  orderPayments: {},
 }));
 vi.mock("drizzle-orm", () => ({
   and: vi.fn(),
@@ -45,10 +46,11 @@ function cookChain() {
   return { from } as never;
 }
 
-/** orders aggregation chain: select().from().where() resolves to rows */
+/** orders aggregation chain: select().from().innerJoin().where() resolves to rows */
 function ordersChain(rows: unknown[]) {
   const where = vi.fn().mockResolvedValue(rows);
-  const from = vi.fn(() => ({ where }));
+  const innerJoin = vi.fn(() => ({ where }));
+  const from = vi.fn(() => ({ innerJoin }));
   return { from } as never;
 }
 
@@ -64,16 +66,17 @@ describe("GET /api/business/dashboard/earnings/history", () => {
     expect(res.status).toBe(401);
   });
 
-  it("buckets fulfilled-order revenue by fulfilledAt and totals it", async () => {
+  it("buckets fulfilled-order net payout by fulfilledAt and totals it", async () => {
     let call = 0;
     vi.mocked(db.select).mockImplementation(() => {
       call++;
       if (call === 1) return cookChain();
       // A just-fulfilled order lands in the most recent weekly bucket; a row
-      // with no fulfilledAt must be ignored entirely.
+      // with no fulfilledAt must be ignored entirely. Values are the cook's
+      // net payout (after the platform cut and tax), not the gross total.
       return ordersChain([
-        { fulfilledAt: new Date(), totalPrice: "40.00" },
-        { fulfilledAt: null, totalPrice: "99.00" },
+        { fulfilledAt: new Date(), cookPayoutAmount: "40.00" },
+        { fulfilledAt: null, cookPayoutAmount: "99.00" },
       ]);
     });
 

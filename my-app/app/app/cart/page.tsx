@@ -247,10 +247,12 @@ export default function CartPage() {
                   <span>Subtotal</span>
                   <span>${formatCartMoney(subtotal)}</span>
                 </div>
-                <div className={styles.summaryRow}>
-                  <span>{taxLabel}</span>
-                  <span>${formatCartMoney(tax)}</span>
-                </div>
+                {tax > 0 && (
+                  <div className={styles.summaryRow}>
+                    <span>{taxLabel}</span>
+                    <span>${formatCartMoney(tax)}</span>
+                  </div>
+                )}
               </div>
 
               {isDelivery && (

@@ -948,12 +948,14 @@ export default function CheckoutPage() {
                       : "Free (pickup)"}
                   </span>
                 </div>
-                <div className={styles.summaryRow}>
-                  <span className={styles.summaryRowLabel}>{taxLabel}</span>
-                  <span className={styles.summaryRowVal}>
-                    ${formatCartMoney(tax)}
-                  </span>
-                </div>
+                {tax > 0 && (
+                  <div className={styles.summaryRow}>
+                    <span className={styles.summaryRowLabel}>{taxLabel}</span>
+                    <span className={styles.summaryRowVal}>
+                      ${formatCartMoney(tax)}
+                    </span>
+                  </div>
+                )}
               </div>
 
               <div className={styles.summaryTotal}>

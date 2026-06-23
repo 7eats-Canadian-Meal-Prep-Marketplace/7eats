@@ -33,6 +33,71 @@
   margin: 0;
 }
 
+/* ─── Next payout card ─────────────────────────────────────────────────────── */
+.nextPayoutCard {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 18px 20px;
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-md);
+  background: linear-gradient(
+    180deg,
+    rgba(22, 163, 74, 0.05) 0%,
+    var(--white) 70%
+  );
+}
+
+.nextPayoutIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: var(--radius-sm);
+  background: rgba(22, 163, 74, 0.1);
+  color: #16a34a;
+}
+
+.nextPayoutBody {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.nextPayoutLabel {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--grey-500);
+}
+
+.nextPayoutAmount {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.03em;
+  font-feature-settings: "tnum";
+  line-height: 1.1;
+}
+
+.nextPayoutSub {
+  font-size: 13px;
+  font-weight: 500;
+  color: #555555;
+}
+
+.nextPayoutPending {
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #16a34a;
+  font-feature-settings: "tnum";
+}
+
 /* ─── Segmented control ────────────────────────────────────────────────────── */
 .segControl {
   display: flex;

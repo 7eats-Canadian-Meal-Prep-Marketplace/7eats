@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   computeLineTotal,
   earliestPickup,
@@ -9,7 +9,15 @@ import {
 } from "@/lib/order-pricing";
 import { computeOrderChargeBreakdown } from "@/lib/order-totals";
 
-describe("computeOrderChargeBreakdown", () => {
+describe("computeOrderChargeBreakdown (tax collection enabled)", () => {
+  const prev = process.env.NEXT_PUBLIC_TAX_COLLECTION_ENABLED;
+  beforeAll(() => {
+    process.env.NEXT_PUBLIC_TAX_COLLECTION_ENABLED = "true";
+  });
+  afterAll(() => {
+    process.env.NEXT_PUBLIC_TAX_COLLECTION_ENABLED = prev;
+  });
+
   it("includes Ontario HST in total and Stripe application fee", () => {
     const charges = computeOrderChargeBreakdown({
       subtotal: 100,
@@ -53,6 +61,34 @@ describe("computeOrderChargeBreakdown", () => {
     expect(charges.cookPayoutCents).toBe(
       charges.totalCents - charges.applicationFeeCents,
     );
+  });
+});
+
+describe("computeOrderChargeBreakdown (tax collection disabled)", () => {
+  const prev = process.env.NEXT_PUBLIC_TAX_COLLECTION_ENABLED;
+  beforeAll(() => {
+    process.env.NEXT_PUBLIC_TAX_COLLECTION_ENABLED = "false";
+  });
+  afterAll(() => {
+    process.env.NEXT_PUBLIC_TAX_COLLECTION_ENABLED = prev;
+  });
+
+  it("charges no tax: total = base, application fee = commission only", () => {
+    const charges = computeOrderChargeBreakdown({
+      subtotal: 100,
+      deliveryFee: 10,
+      taxProvince: "ON",
+      platformFeePct: 7.5,
+    });
+
+    expect(charges.taxAmount).toBe(0);
+    expect(charges.taxCents).toBe(0);
+    expect(charges.totalPrice).toBe(110);
+    // Application fee is now just the platform commission (no tax bundled in).
+    expect(charges.applicationFeeCents).toBe(825);
+    expect(charges.applicationFeeCents).toBe(charges.platformFeeCents);
+    // Cook keeps base minus commission.
+    expect(charges.cookPayoutCents).toBe(10175);
   });
 });
 

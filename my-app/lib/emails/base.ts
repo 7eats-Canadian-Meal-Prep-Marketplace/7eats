@@ -178,6 +178,92 @@ export function orderDetailsTable(
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0 4px;border:1px solid ${COLOR.grey200};border-radius:14px;overflow:hidden;background-color:${COLOR.white};">${cells}</table>`;
 }
 
+type OrderSummaryItem = {
+  name: string;
+  quantity: number;
+  lineTotal?: string | number | null;
+  discountAmount?: string | number | null;
+};
+
+/**
+ * Itemised order summary — the email counterpart of the on-site order summary
+ * card. Renders one row per dish (qty · name · line total) and, when
+ * `showTotals` is on, a subtotal / delivery / tax / total breakdown beneath a
+ * hairline divider. Table-based with inline styles so it renders everywhere.
+ */
+export function orderSummaryTable(opts: {
+  items: OrderSummaryItem[];
+  deliveryFee?: number;
+  tax?: number;
+  taxLabel?: string | null;
+  total?: string | number | null;
+  currency?: string | null;
+  showTotals?: boolean;
+}): string {
+  const showTotals = opts.showTotals !== false;
+  const currency = opts.currency ?? "CAD";
+  const money = (n: number): string => `$${n.toFixed(2)}`;
+
+  const itemRows = opts.items
+    .map((it) => {
+      const discount =
+        it.discountAmount != null && Number(it.discountAmount) > 0
+          ? ` <span style="color:${COLOR.grey500};">(&minus;${money(Number(it.discountAmount))})</span>`
+          : "";
+      const price =
+        it.lineTotal != null && it.lineTotal !== ""
+          ? money(Number(it.lineTotal))
+          : "";
+      return `<tr>
+<td style="padding:11px 4px 11px 18px;font-family:${FONT_STACK};font-size:13.5px;line-height:1.5;color:${COLOR.grey700};white-space:nowrap;vertical-align:top;">${it.quantity}&times;</td>
+<td style="padding:11px 10px;font-family:${FONT_STACK};font-size:13.5px;line-height:1.5;color:${COLOR.ink};vertical-align:top;">${escapeHtml(it.name)}${discount}</td>
+<td style="padding:11px 18px 11px 10px;font-family:${FONT_STACK};font-size:13.5px;line-height:1.5;color:${COLOR.ink};font-weight:600;text-align:right;white-space:nowrap;vertical-align:top;">${price}</td>
+</tr>`;
+    })
+    .join("");
+
+  let totalsRows = "";
+  if (showTotals) {
+    const subtotal = opts.items.reduce(
+      (sum, it) => sum + Number(it.lineTotal ?? 0),
+      0,
+    );
+    const deliveryFee = opts.deliveryFee ?? 0;
+    const tax = opts.tax ?? 0;
+
+    const lineRow = (
+      label: string,
+      value: string,
+      o: { strong?: boolean; border?: boolean } = {},
+    ): string => {
+      const border = o.border ? `border-top:1px solid ${COLOR.grey200};` : "";
+      const size = o.strong ? "15px" : "13.5px";
+      const labelColor = o.strong ? COLOR.ink : COLOR.grey700;
+      const labelWeight = o.strong ? "700" : "400";
+      const valueWeight = o.strong ? "700" : "600";
+      const common = `font-family:${FONT_STACK};font-size:${size};line-height:1.5;`;
+      return `<tr>
+<td style="${border}padding:11px 4px 11px 18px;"></td>
+<td style="${border}padding:11px 10px;${common}color:${labelColor};font-weight:${labelWeight};">${label}</td>
+<td style="${border}padding:11px 18px 11px 10px;${common}color:${COLOR.ink};font-weight:${valueWeight};text-align:right;white-space:nowrap;">${value}</td>
+</tr>`;
+    };
+
+    const totalText =
+      opts.total != null && opts.total !== ""
+        ? `${money(Number(opts.total))} ${currency}`
+        : "—";
+
+    totalsRows =
+      lineRow("Subtotal", money(subtotal), { border: true }) +
+      (deliveryFee > 0 ? lineRow("Delivery", money(deliveryFee)) : "") +
+      (tax > 0 ? lineRow(opts.taxLabel ?? "Tax", money(tax)) : "") +
+      lineRow("Total", totalText, { strong: true, border: true });
+  }
+
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0 4px;border:1px solid ${COLOR.grey200};border-radius:14px;overflow:hidden;background-color:${COLOR.white};">${itemRows}${totalsRows}</table>`;
+}
+
 export function paragraph(text: string): string {
   return `<p style="margin:0 0 16px;font-family:${FONT_STACK};font-size:15px;line-height:1.65;color:${COLOR.ink};">${text}</p>`;
 }

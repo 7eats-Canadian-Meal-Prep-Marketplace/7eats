@@ -293,6 +293,8 @@ export async function PATCH(req: NextRequest, { params }: Params) {
         clientNotificationPreferences: authUser.notificationPreferences,
         totalPrice: orders.totalPrice,
         currency: orders.currency,
+        deliveryFeeSnapshot: orders.deliveryFeeSnapshot,
+        taxAmount: orders.taxAmount,
         pickupAt: orders.pickupAt,
         fulfillmentMode: orders.fulfillmentMode,
         fulfillmentWindowStart: orders.fulfillmentWindowStart,
@@ -310,9 +312,15 @@ export async function PATCH(req: NextRequest, { params }: Params) {
             .select({
               name: orderDishes.dishName,
               quantity: orderDishes.quantity,
+              lineTotal: orderDishes.lineTotal,
+              discountAmount: orderDishes.discountAmount,
+              sortOrder: orderDishes.sortOrder,
             })
             .from(orderDishes)
             .where(eq(orderDishes.orderId, orderId));
+          const orderedDishes = [...dishRows].sort(
+            (a, b) => a.sortOrder - b.sortOrder,
+          );
           const client = {
             email: row.clientEmail as string,
             firstName: row.clientFirstName as string | null,
@@ -327,14 +335,22 @@ export async function PATCH(req: NextRequest, { params }: Params) {
               : null;
           const orderData = {
             id: orderId,
-            listingTitle: dishRows.map((d) => d.name).join(", "),
-            quantity: dishRows.reduce((s, d) => s + d.quantity, 0),
+            listingTitle: orderedDishes.map((d) => d.name).join(", "),
+            quantity: orderedDishes.reduce((s, d) => s + d.quantity, 0),
             totalPrice: row.totalPrice,
             currency: row.currency,
             pickupAt: row.pickupAt,
             fulfillmentMode,
             fulfillmentWindowStart: row.fulfillmentWindowStart,
             fulfillmentWindowEnd: row.fulfillmentWindowEnd,
+            items: orderedDishes.map((d) => ({
+              name: d.name,
+              quantity: d.quantity,
+              lineTotal: d.lineTotal,
+              discountAmount: d.discountAmount,
+            })),
+            deliveryFee: row.deliveryFeeSnapshot,
+            taxAmount: row.taxAmount,
           };
           if (newStatus === "confirmed") {
             if (previousStatus === "ready") {

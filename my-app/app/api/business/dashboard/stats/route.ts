@@ -2,7 +2,14 @@ import { and, count, eq, gte, inArray, lte, sql, sum } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { getCookId, unauthorized } from "@/app/api/business/_lib/cook-auth";
 import { db } from "@/db";
-import { dishes, orders, reviews } from "@/db/schema";
+import { dishes, orderPayments, orders, reviews } from "@/db/schema";
+
+// Cook earnings reflect the net payout (total − platform fee − tax) snapshotted
+// on order_payments, not the gross `orders.totalPrice` the customer paid.
+const fullPaymentJoin = and(
+  eq(orderPayments.orderId, orders.id),
+  eq(orderPayments.type, "full"),
+);
 
 export async function GET(req: NextRequest) {
   const cookId = await getCookId(req.headers);
@@ -35,10 +42,11 @@ export async function GET(req: NextRequest) {
         )
         .groupBy(orders.status),
 
-      // Earnings this ISO week (fulfilled orders, by fulfillment time)
+      // Net earnings this ISO week (fulfilled orders, by fulfillment time)
       db
-        .select({ total: sum(orders.totalPrice) })
+        .select({ total: sum(orderPayments.cookPayoutAmount) })
         .from(orders)
+        .innerJoin(orderPayments, fullPaymentJoin)
         .where(
           and(
             eq(orders.cookId, cookId),
@@ -51,10 +59,11 @@ export async function GET(req: NextRequest) {
           ),
         ),
 
-      // Earnings this calendar month (fulfilled orders, by fulfillment time)
+      // Net earnings this calendar month (fulfilled orders, by fulfillment time)
       db
-        .select({ total: sum(orders.totalPrice) })
+        .select({ total: sum(orderPayments.cookPayoutAmount) })
         .from(orders)
+        .innerJoin(orderPayments, fullPaymentJoin)
         .where(
           and(
             eq(orders.cookId, cookId),
@@ -67,16 +76,18 @@ export async function GET(req: NextRequest) {
           ),
         ),
 
-      // Earnings all time (fulfilled orders)
+      // Net earnings all time (fulfilled orders)
       db
-        .select({ total: sum(orders.totalPrice) })
+        .select({ total: sum(orderPayments.cookPayoutAmount) })
         .from(orders)
+        .innerJoin(orderPayments, fullPaymentJoin)
         .where(and(eq(orders.cookId, cookId), eq(orders.status, "fulfilled"))),
 
-      // Earnings pending (orders with status pending, confirmed, ready)
+      // Net earnings pending release (orders with status pending, confirmed, ready)
       db
-        .select({ total: sum(orders.totalPrice) })
+        .select({ total: sum(orderPayments.cookPayoutAmount) })
         .from(orders)
+        .innerJoin(orderPayments, fullPaymentJoin)
         .where(
           and(
             eq(orders.cookId, cookId),

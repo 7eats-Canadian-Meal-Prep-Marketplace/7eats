@@ -7,7 +7,13 @@ import {
   unauthorized,
 } from "@/app/api/business/_lib/cook-auth";
 import { db } from "@/db";
-import { authUser, listings, orderDishes, orders } from "@/db/schema";
+import {
+  authUser,
+  listings,
+  orderDishes,
+  orderPayments,
+  orders,
+} from "@/db/schema";
 
 export type Params = { params: Promise<{ orderId: string }> };
 
@@ -57,10 +63,22 @@ export async function GET(req: NextRequest, { params }: Params) {
           lateCancelFeeApplied: orders.lateCancelFeeApplied,
           createdAt: orders.createdAt,
           updatedAt: orders.updatedAt,
+          // Cook-facing money breakdown snapshotted at order time so the
+          // dashboard can show the platform cut and the net payout.
+          platformFeePct: orderPayments.platformFeePct,
+          platformFeeAmount: orderPayments.platformFeeAmount,
+          cookPayoutAmount: orderPayments.cookPayoutAmount,
         })
         .from(orders)
         .leftJoin(listings, eq(orders.listingId, listings.id))
         .leftJoin(authUser, eq(orders.clientId, authUser.id))
+        .leftJoin(
+          orderPayments,
+          and(
+            eq(orderPayments.orderId, orders.id),
+            eq(orderPayments.type, "full"),
+          ),
+        )
         .where(and(eq(orders.id, orderId), eq(orders.cookId, cookId)))
         .limit(1),
 
