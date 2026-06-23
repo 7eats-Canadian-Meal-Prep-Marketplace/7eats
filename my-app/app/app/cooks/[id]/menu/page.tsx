@@ -11,6 +11,7 @@ import {
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { openAddressEditor } from "@/lib/address-events";
 import { SPECIAL_REQUESTS_DISCLAIMER } from "@/lib/orders/special-requests-copy";
 import {
   cancelByDate,
@@ -198,7 +199,7 @@ export default function CookMenuPage() {
   const cookId = params.id;
   const router = useRouter();
   const cart = useCart();
-  const { currentAddress } = useServiceAddress();
+  const { ready, currentAddress } = useServiceAddress();
 
   const [data, setData] = useState<MenuData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -339,8 +340,24 @@ export default function CookMenuPage() {
     };
   }
 
+  function requireAddressForAdd(): boolean {
+    if (!ready || currentAddress) return false;
+    openAddressEditor();
+    return true;
+  }
+
   function changeQty(dish: Dish, nextQty: number) {
     if (!data) return;
+    const currentQty = qtyByDish[dish.id] ?? 0;
+    const isAdding = nextQty > currentQty;
+
+    if (!isAdding) {
+      cart.addItem(buildBase(dish, nextQty));
+      return;
+    }
+
+    if (requireAddressForAdd()) return;
+
     // Switching kitchens replaces the cart — confirm with a proper dialog first.
     if (cart.cookId && cart.cookId !== cookId && cart.items.length > 0) {
       setConflict({ dish, qty: nextQty });
@@ -351,6 +368,7 @@ export default function CookMenuPage() {
 
   function confirmSwitch() {
     if (!conflict) return;
+    if (requireAddressForAdd()) return;
     cart.clearAndAdd(buildBase(conflict.dish, conflict.qty));
     setConflict(null);
   }
