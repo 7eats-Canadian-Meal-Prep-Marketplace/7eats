@@ -66,7 +66,7 @@ function GuestCancelInner() {
       setStatus("done");
     } catch {
       setStatus("error");
-      setMessage("Network error — please try again.");
+      setMessage("Network error. Please try again.");
     }
   }
 

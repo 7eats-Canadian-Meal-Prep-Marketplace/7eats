@@ -39,6 +39,6 @@ describe("formatOrderTimingLabel", () => {
       fulfillmentWindowEnd: "2026-06-27T18:00:00.000Z",
       fulfillmentMode: "delivery",
     });
-    expect(label).toContain("exact time TBD");
+    expect(label).toContain("exact time confirmed later");
   });
 });

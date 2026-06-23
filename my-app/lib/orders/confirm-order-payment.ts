@@ -76,6 +76,7 @@ async function sendOrderConfirmationEmails(
       displayName: cookProfiles.displayName,
       cookEmail: authUser.email,
       cookFirstName: authUser.firstName,
+      emailNotificationsNewOrder: cookProfiles.emailNotificationsNewOrder,
     })
     .from(cookProfiles)
     .innerJoin(authUser, eq(cookProfiles.userId, authUser.id))
@@ -110,11 +111,13 @@ async function sendOrderConfirmationEmails(
     taxAmount: orderRow.taxAmount,
   };
 
-  sendOrderPlacedEmailToCook(
-    { email: cookRow.cookEmail, firstName: cookRow.cookFirstName },
-    { name: displayName },
-    orderEmailPayload,
-  ).catch((err) => console.error("[confirmOrderPayment] cook email", err));
+  if (cookRow.emailNotificationsNewOrder) {
+    sendOrderPlacedEmailToCook(
+      { email: cookRow.cookEmail, firstName: cookRow.cookFirstName },
+      { name: displayName },
+      orderEmailPayload,
+    ).catch((err) => console.error("[confirmOrderPayment] cook email", err));
+  }
 
   if (
     orderRow.isGuestCheckout &&

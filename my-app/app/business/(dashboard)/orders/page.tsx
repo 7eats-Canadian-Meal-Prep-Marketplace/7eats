@@ -217,7 +217,7 @@ function VerifyCode({
         setError(
           remaining <= 0
             ? "Code entry locked."
-            : `Incorrect — ${remaining} attempt${remaining === 1 ? "" : "s"} left`,
+            : `Incorrect. ${remaining} attempt${remaining === 1 ? "" : "s"} left`,
         );
         setCode("");
       }

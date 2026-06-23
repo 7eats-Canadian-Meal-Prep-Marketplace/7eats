@@ -3,10 +3,10 @@ import { and, eq, isNull } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db, dbPool } from "@/db";
 import { cookApplications, setupTokens } from "@/db/schema";
-import { hashToken, sendSetupEmail, verifyInternalKey } from "../_lib";
+import { hashToken, sendSetupEmail, verifyInternalRequest } from "../_lib";
 
 export async function POST(req: Request) {
-  if (!verifyInternalKey(req.headers.get("x-internal-key") ?? "")) {
+  if (!verifyInternalRequest(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

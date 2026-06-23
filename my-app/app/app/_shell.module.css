@@ -237,6 +237,7 @@
 }
 
 .suggestThumb {
+  position: relative;
   width: 34px;
   height: 34px;
   flex-shrink: 0;
@@ -245,7 +246,8 @@
   background: var(--grey-100);
 }
 
-.suggestThumb img {
+.suggestThumb img,
+.suggestThumbImg {
   width: 100%;
   height: 100%;
   object-fit: cover;

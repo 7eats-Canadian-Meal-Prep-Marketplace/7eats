@@ -985,11 +985,6 @@ function NotificationsSection() {
       label: "Reviews (email)",
       description: "Get notified by email when a customer leaves a review.",
     },
-    {
-      key: "smsNotificationsNewOrder" as const,
-      label: "New orders (SMS)",
-      description: "Get a text message when a customer places an order.",
-    },
   ];
 
   return (

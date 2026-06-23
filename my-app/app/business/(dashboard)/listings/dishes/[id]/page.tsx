@@ -445,7 +445,7 @@ function DetailsTab() {
             </span>
           </div>
           <p className={styles.cardDesc}>
-            Drag photos to reorder — the first is the cover diners see. Drop
+            Drag photos to reorder. The first is the cover diners see. Drop
             images here or use Add photo (up to {MAX_PHOTOS}).
           </p>
         </div>
@@ -455,7 +455,7 @@ function DetailsTab() {
             <ImageOff size={22} className={styles.emptyIcon} />
             <p className={styles.emptyText}>No photos yet</p>
             <p className={styles.emptySub}>
-              Add at least one photo before saving — it&rsquo;s the first thing
+              Add at least one photo before saving. It&rsquo;s the first thing
               diners notice.
             </p>
           </div>
@@ -728,7 +728,7 @@ function NutritionTab() {
             <UtensilsCrossed size={22} className={styles.emptyIcon} />
             <p className={styles.emptyText}>No ingredients yet</p>
             <p className={styles.emptySub}>
-              Add each ingredient one at a time — diners use this to avoid
+              Add each ingredient one at a time. Diners use this to avoid
               allergens.
             </p>
           </div>

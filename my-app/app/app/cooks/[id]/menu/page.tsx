@@ -8,6 +8,7 @@ import {
   Plus,
   X,
 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -472,11 +473,12 @@ export default function CookMenuPage() {
                           aria-label={`View ${dish.name}`}
                         >
                           {dish.photos[0] ? (
-                            // biome-ignore lint/performance/noImgElement: dish photo
-                            <img
+                            <Image
                               src={dish.photos[0].url}
                               alt={dish.name}
+                              fill
                               className={styles.dishPhotoImg}
+                              sizes="(max-width: 768px) 50vw, 280px"
                             />
                           ) : (
                             <div className={styles.dishPhotoPlaceholder} />
@@ -567,15 +569,25 @@ export default function CookMenuPage() {
             <section className={styles.cookCard}>
               <div className={styles.cookBanner}>
                 {cook.bannerUrl ? (
-                  // biome-ignore lint/performance/noImgElement: banner
-                  <img src={cook.bannerUrl} alt="" />
+                  <Image
+                    src={cook.bannerUrl}
+                    alt=""
+                    fill
+                    className={styles.cookBannerImg}
+                    sizes="400px"
+                  />
                 ) : (
                   <div className={styles.cookBannerFallback} />
                 )}
                 <div className={styles.cookAvatar}>
                   {cook.photoUrl ? (
-                    // biome-ignore lint/performance/noImgElement: avatar
-                    <img src={cook.photoUrl} alt="" />
+                    <Image
+                      src={cook.photoUrl}
+                      alt=""
+                      fill
+                      className={styles.cookAvatarImg}
+                      sizes="56px"
+                    />
                   ) : (
                     <span>{kitchen.charAt(0)}</span>
                   )}
@@ -936,8 +948,13 @@ function DishModal({
 
         <div className={styles.modalPhoto}>
           {dish.photos[0] ? (
-            // biome-ignore lint/performance/noImgElement: dish photo
-            <img src={dish.photos[0].url} alt={dish.name} />
+            <Image
+              src={dish.photos[0].url}
+              alt={dish.name}
+              fill
+              className={styles.modalPhotoImg}
+              sizes="(max-width: 768px) 100vw, 560px"
+            />
           ) : (
             <div className={styles.dishPhotoPlaceholder} />
           )}

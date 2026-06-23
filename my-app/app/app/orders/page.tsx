@@ -181,7 +181,8 @@ function OrdersContent() {
                       <h3 className={styles.orderTitle}>{orderTitle(order)}</h3>
                       <p className={styles.orderMeta}>
                         {fulfillmentPrefix}
-                        {order.timingSchedule && order.timingSchedule !== "TBD"
+                        {order.timingSchedule &&
+                        order.timingSchedule !== "Date to be confirmed"
                           ? ` · ${order.timingSchedule}`
                           : order.pickupDate
                             ? ` · ${order.pickupDate}`
@@ -196,7 +197,7 @@ function OrdersContent() {
                       <span className={styles.orderTotal}>
                         {order.totalPrice
                           ? `$${Number(order.totalPrice).toFixed(2)}`
-                          : "—"}
+                          : "N/A"}
                       </span>
                     </div>
                   </Link>
@@ -233,7 +234,8 @@ function OrdersContent() {
                       <h3 className={styles.orderTitle}>{orderTitle(order)}</h3>
                       <p className={styles.orderMeta}>
                         {fulfillmentPrefix}
-                        {order.timingSchedule && order.timingSchedule !== "TBD"
+                        {order.timingSchedule &&
+                        order.timingSchedule !== "Date to be confirmed"
                           ? ` · ${order.timingSchedule}`
                           : order.pickupDate
                             ? ` · ${order.pickupDate}`

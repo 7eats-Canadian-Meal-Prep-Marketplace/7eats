@@ -459,8 +459,8 @@ export default function CalendarPage() {
           <span>
             {missedCount} handoff{missedCount === 1 ? "" : "s"} went through
             without a verified code this week. Scanning the customer&apos;s code
-            at pickup or delivery confirms the right person collected the order
-            — skipping it leaves you exposed to fraud and chargeback disputes.
+            at pickup or delivery confirms the right person collected the order.
+            Skipping it leaves you exposed to fraud and chargeback disputes.
           </span>
         </div>
       )}

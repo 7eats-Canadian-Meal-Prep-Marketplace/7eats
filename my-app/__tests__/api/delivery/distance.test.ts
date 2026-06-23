@@ -12,6 +12,10 @@ vi.mock("drizzle-orm", () => ({
   eq: vi.fn(),
 }));
 
+vi.mock("@/lib/rate-limit", () => ({
+  logAndCheckRateLimit: vi.fn().mockResolvedValue(true),
+}));
+
 vi.mock("@/lib/mapbox-directions", () => ({
   getDrivingDistanceKm: vi.fn(),
 }));

@@ -1,7 +1,11 @@
+import { and, eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
+import { hashIp } from "@/lib/hash";
 import { confirmClientOrderPayment } from "@/lib/orders/confirm-order-payment";
+import { logAndCheckRateLimit } from "@/lib/rate-limit";
+import { getClientIp } from "@/lib/request-ip";
 
 export type Params = { params: Promise<{ orderId: string }> };
 
@@ -13,6 +17,18 @@ export async function POST(req: NextRequest, { params }: Params) {
   const { orderId } = await params;
   if (!z.string().uuid().safeParse(orderId).success) {
     return NextResponse.json({ error: "Invalid order ID." }, { status: 400 });
+  }
+
+  const ip = getClientIp(req);
+  const allowed = await logAndCheckRateLimit(
+    `confirm-payment:${orderId}:${hashIp(ip)}`,
+    { windowMinutes: 5, maxAttempts: 20 },
+  );
+  if (!allowed) {
+    return NextResponse.json(
+      { error: "Too many attempts. Please wait and try again." },
+      { status: 429 },
+    );
   }
 
   let body: unknown = {};

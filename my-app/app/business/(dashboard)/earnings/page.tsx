@@ -234,7 +234,7 @@ export default function EarningsPage() {
               </span>
               <span className={styles.nextPayoutSub}>
                 {availablePayout > 0
-                  ? "Available now — heading to your bank account."
+                  ? "Available now. Heading to your bank account."
                   : "No funds awaiting payout right now."}
               </span>
               {nextPayout.pending > 0 && (

@@ -39,7 +39,7 @@ export default async function LoginPage({
         </p>
       ) : null}
       {verified ? (
-        <p className={styles.notice}>Email confirmed — you can now sign in.</p>
+        <p className={styles.notice}>Email confirmed. You can now sign in.</p>
       ) : null}
       {verificationError ? (
         <p className={styles.errorNotice} role="alert">

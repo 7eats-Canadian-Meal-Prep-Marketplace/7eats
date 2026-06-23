@@ -147,7 +147,7 @@ export function PromotionsTab() {
       setConfirmOpen(false);
       load();
     } catch {
-      toast.error("Network error — please try again.");
+      toast.error("Network error. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -159,7 +159,7 @@ export function PromotionsTab() {
         <Info size={16} className={styles.calloutIcon} />
         <p className={styles.calloutText}>
           <strong>Promotions are permanent.</strong> Once added, a promotion
-          can&rsquo;t be edited or removed — it ends automatically at its end
+          can&rsquo;t be edited or removed. It ends automatically at its end
           date or redemption limit. Only one can be active per dish; a new one
           replaces the current active promotion.
         </p>
@@ -341,7 +341,7 @@ export function PromotionsTab() {
       <ConfirmDialog
         open={confirmOpen}
         title="Add this promotion?"
-        message="Promotions are permanent — once added it can't be edited or removed. It will end automatically at its end date or redemption limit."
+        message="Promotions are permanent. Once added, a promotion can't be edited or removed. It will end automatically at its end date or redemption limit."
         confirmLabel="Add promotion"
         busy={submitting}
         onConfirm={handleCreate}

@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 const homepageSchema = {
   "@context": "https://schema.org",
   "@type": ["WebPage", "ItemPage"],
-  name: "7eats — Canada's Meal Prep Marketplace",
+  name: "7eats | Canada's Meal Prep Marketplace",
   url: "https://www.7eats.ca",
   description:
     "7eats connects Toronto's home cooks and meal prep businesses with customers looking for fresh, local, made-to-order meals. Browse cooks, place orders, get paid.",

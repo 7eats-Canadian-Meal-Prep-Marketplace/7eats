@@ -4,7 +4,10 @@ import { z } from "zod";
 import { db } from "@/db";
 import { cookProfiles } from "@/db/schema";
 import { calcDeliveryFee } from "@/lib/delivery-fee";
+import { hashIp } from "@/lib/hash";
 import { getDrivingDistanceKm } from "@/lib/mapbox-directions";
+import { logAndCheckRateLimit } from "@/lib/rate-limit";
+import { getClientIp } from "@/lib/request-ip";
 
 const bodySchema = z.object({
   cookId: z.string().uuid(),
@@ -14,6 +17,21 @@ const bodySchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  const ip = getClientIp(req);
+  const allowed = await logAndCheckRateLimit(
+    `delivery-distance:${hashIp(ip)}`,
+    {
+      windowMinutes: 15,
+      maxAttempts: 60,
+    },
+  );
+  if (!allowed) {
+    return NextResponse.json(
+      { error: "Too many requests. Please try again later." },
+      { status: 429 },
+    );
+  }
+
   let body: unknown;
   try {
     body = await req.json();

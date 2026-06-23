@@ -15,7 +15,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: "how-much",
     question: "How much do I keep per order?",
     answer:
-      "We charge a small platform fee to cover payment processing and operations. Details will be shared before launch. The first 30 cooks to join keep every dollar they make for 90 days straight.",
+      "We charge a 7.5% platform fee per order to cover payment processing and operations. The first 30 cooks to join keep every dollar they make for 90 days straight.",
   },
   {
     id: "how-pickup",

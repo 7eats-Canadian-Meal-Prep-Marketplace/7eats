@@ -232,8 +232,13 @@ function HeaderSearchInner() {
                   >
                     <span className={styles.suggestThumb}>
                       {k.photoUrl ? (
-                        // biome-ignore lint/performance/noImgElement: tiny suggestion thumb
-                        <img src={k.photoUrl} alt="" />
+                        <Image
+                          src={k.photoUrl}
+                          alt=""
+                          fill
+                          className={styles.suggestThumbImg}
+                          sizes="40px"
+                        />
                       ) : null}
                     </span>
                     <span className={styles.suggestKitchenText}>

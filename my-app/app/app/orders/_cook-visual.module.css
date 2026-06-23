@@ -46,6 +46,7 @@
 }
 
 .heroBanner {
+  position: relative;
   height: 84px;
   background: var(--grey-100);
 }
@@ -72,6 +73,7 @@
 }
 
 .heroAvatar {
+  position: relative;
   width: 56px;
   height: 56px;
   border-radius: 50%;

@@ -1,3 +1,4 @@
+import Image from "next/image";
 import styles from "./_cook-visual.module.css";
 
 type CookVisualProps = {
@@ -7,7 +8,7 @@ type CookVisualProps = {
   dimmed?: boolean;
 };
 
-/** Thumbnail on order list rows — banner (or profile photo) with initials fallback. */
+/** Thumbnail on order list rows: banner (or profile photo) with initials fallback. */
 export function OrderCookCover({
   bannerUrl,
   photoUrl,
@@ -22,8 +23,13 @@ export function OrderCookCover({
       aria-hidden
     >
       {coverUrl ? (
-        // biome-ignore lint/performance/noImgElement: cook media from storage
-        <img src={coverUrl} alt="" className={styles.coverImg} />
+        <Image
+          src={coverUrl}
+          alt=""
+          fill
+          className={styles.coverImg}
+          sizes="72px"
+        />
       ) : (
         <div className={styles.coverFallback}>
           <span className={styles.coverInitials}>{initials ?? "?"}</span>
@@ -38,7 +44,7 @@ type OrderCookHeroProps = CookVisualProps & {
   title: string;
 };
 
-/** Header on order detail — banner + avatar like the cook menu card. */
+/** Header on order detail: banner + avatar like the cook menu card. */
 export function OrderCookHero({
   bannerUrl,
   photoUrl,
@@ -50,8 +56,13 @@ export function OrderCookHero({
     <div className={styles.hero}>
       <div className={styles.heroBanner}>
         {bannerUrl ? (
-          // biome-ignore lint/performance/noImgElement: cook banner from storage
-          <img src={bannerUrl} alt="" className={styles.heroBannerImg} />
+          <Image
+            src={bannerUrl}
+            alt=""
+            fill
+            className={styles.heroBannerImg}
+            sizes="(max-width: 768px) 100vw, 640px"
+          />
         ) : (
           <div className={styles.heroBannerFallback} />
         )}
@@ -59,15 +70,20 @@ export function OrderCookHero({
       <div className={styles.heroBody}>
         <div className={styles.heroAvatar}>
           {photoUrl ? (
-            // biome-ignore lint/performance/noImgElement: cook photo from storage
-            <img src={photoUrl} alt="" className={styles.heroAvatarImg} />
+            <Image
+              src={photoUrl}
+              alt={cookName}
+              fill
+              className={styles.heroAvatarImg}
+              sizes="64px"
+            />
           ) : (
             <span>{initials ?? "?"}</span>
           )}
         </div>
         <div className={styles.heroInfo}>
-          <div className={styles.heroCook}>{cookName}</div>
-          <h1 className={styles.heroTitle}>{title}</h1>
+          <p className={styles.heroCook}>{title}</p>
+          <h1 className={styles.heroTitle}>{cookName}</h1>
         </div>
       </div>
     </div>

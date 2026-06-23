@@ -1397,7 +1397,7 @@ export default function SettingsPage() {
                             : "Add and verify a phone number in Profile to receive texts."
                           : smsChannelOn
                             ? "Texts for tips and promotions when you have a verified phone."
-                            : "SMS is off — you will not receive text notifications."}
+                            : "SMS is off. You will not receive text notifications."}
                       </span>
                     </div>
                     <button
@@ -1433,7 +1433,7 @@ export default function SettingsPage() {
                           ? `Order updates will be emailed to ${profile?.email ?? "your account email"}.`
                           : emailChannelOn
                             ? "Emails for tips, receipts, and account notices."
-                            : "Email is off — you will not receive email notifications."}
+                            : "Email is off. You will not receive email notifications."}
                       </span>
                     </div>
                     <button

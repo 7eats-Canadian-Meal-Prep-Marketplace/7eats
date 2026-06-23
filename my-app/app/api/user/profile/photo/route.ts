@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { type NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { authUser, authUserTable } from "@/db/schema";
 import { auth } from "@/lib/auth";
@@ -12,7 +12,7 @@ import { sniffFileType } from "@/lib/upload-validation";
 
 const MAX_BYTES = 4 * 1024 * 1024;
 
-export async function DELETE(req: NextRequest) {
+export async function DELETE(req: Request) {
   const session = await auth.api.getSession({ headers: req.headers });
   if (!session || session.user.role !== "client") {
     return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
@@ -62,7 +62,7 @@ export async function DELETE(req: NextRequest) {
   }
 }
 
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
   const session = await auth.api.getSession({ headers: req.headers });
   if (!session || session.user.role !== "client") {
     return NextResponse.json({ error: "Not authenticated." }, { status: 401 });

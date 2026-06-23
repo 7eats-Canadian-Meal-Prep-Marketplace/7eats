@@ -69,7 +69,10 @@ export function formatClientOrderTiming(order: TimingOrder): ClientOrderTiming {
     };
   }
 
-  return { schedule: "TBD", hint: null };
+  return {
+    schedule: "Date to be confirmed",
+    hint: "We'll confirm your pickup or delivery window after payment.",
+  };
 }
 
 export function formatOrderTimingLabel(order: TimingOrder): string {
@@ -92,10 +95,10 @@ export function formatOrderTimingLabel(order: TimingOrder): string {
   if (windowSchedule) {
     const suffix =
       order.fulfillmentMode === "delivery"
-        ? " · exact time TBD"
-        : " · any time in this window";
+        ? " (exact time confirmed later)"
+        : " (any time in this window)";
     return `${windowSchedule}${suffix}`;
   }
 
-  return "TBD";
+  return "Date to be confirmed";
 }

@@ -50,7 +50,7 @@ function formatTiming(order: OrderEmailData): string {
 /** Omit TBD — cancelled orders don't need a vague timing line. */
 function knownTimingLabel(order: OrderEmailData): string | null {
   const timing = formatTiming(order);
-  return timing === "TBD" ? null : timing;
+  return timing === "TBD" || timing === "Date to be confirmed" ? null : timing;
 }
 
 function emailTimingRow(

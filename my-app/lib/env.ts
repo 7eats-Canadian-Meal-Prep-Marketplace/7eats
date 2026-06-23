@@ -18,6 +18,7 @@ const CRITICAL = [
   "STRIPE_CONNECT_WEBHOOK_SECRET",
   "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY",
   "NEXT_PUBLIC_APP_URL",
+  "MAPBOX_SECRET_TOKEN",
 ] as const;
 
 // Present-but-degradable: the related feature silently no-ops without these.
@@ -27,11 +28,14 @@ const FEATURE: Record<string, string> = {
   TWILIO_AUTH_TOKEN: "phone OTP / SMS will not send",
   TWILIO_VERIFY_SERVICE_SID: "phone OTP / SMS will not send",
   TWILIO_MESSAGING_FROM_NUMBER: "order update texts will not send",
-  MAPBOX_SECRET_TOKEN: "delivery distance / fee calculation will fail",
   R2_ACCOUNT_ID: "image uploads will fail",
   R2_ACCESS_KEY_ID: "image uploads will fail",
   R2_SECRET_ACCESS_KEY: "image uploads will fail",
   CRON_SECRET: "the payment reconciliation cron cannot be triggered",
+  INTERNAL_API_KEY:
+    "internal admin routes (issue-link) will reject all requests",
+  INTERNAL_API_ALLOWLIST:
+    "internal admin routes will reject all requests in production",
 };
 
 let validated = false;

@@ -626,7 +626,7 @@ export default function OrderDetailPage({
               <div>
                 <div className={styles.detailLabel}>Date & time</div>
                 <div className={styles.detailVal}>
-                  {order.timingSchedule ?? "TBD"}
+                  {order.timingSchedule ?? "Date to be confirmed"}
                 </div>
                 {order.timingHint && (
                   <p className={styles.detailHint}>{order.timingHint}</p>

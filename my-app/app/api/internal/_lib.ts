@@ -1,4 +1,4 @@
-import { createHash, timingSafeEqual } from "node:crypto";
+import { createHash } from "node:crypto";
 import { sendMail } from "@/lib/email";
 import {
   contactParagraph,
@@ -7,13 +7,7 @@ import {
   paragraph,
 } from "@/lib/emails/base";
 
-export function verifyInternalKey(provided: string): boolean {
-  const expected = process.env.INTERNAL_API_KEY ?? "";
-  if (!expected) return false;
-  const a = createHash("sha256").update(provided).digest();
-  const b = createHash("sha256").update(expected).digest();
-  return timingSafeEqual(a, b);
-}
+export { verifyInternalKey, verifyInternalRequest } from "@/lib/internal-api";
 
 export function hashToken(raw: string): string {
   return createHash("sha256").update(raw).digest("hex");
