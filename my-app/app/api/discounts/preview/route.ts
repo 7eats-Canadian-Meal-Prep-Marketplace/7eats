@@ -4,10 +4,8 @@ import { db } from "@/db";
 import { platformDiscounts } from "@/db/schema/discounts";
 import { orders } from "@/db/schema/orders";
 import { auth } from "@/lib/auth";
-import {
-  fetchActiveDiscounts,
-  orderCandidatesByValue,
-} from "@/lib/orders/platform-discount";
+import { orderCandidatesByValue } from "@/lib/orders/platform-discount";
+import { fetchActiveDiscounts } from "@/lib/orders/platform-discount-repo";
 
 export async function GET(req: NextRequest) {
   const session = await auth.api.getSession({ headers: req.headers });

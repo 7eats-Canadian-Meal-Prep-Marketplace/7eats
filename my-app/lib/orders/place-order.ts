@@ -20,11 +20,11 @@ import {
   cancelPaymentIntent,
   createCheckoutPaymentIntent,
 } from "@/lib/stripe-payments";
+import { orderCandidatesByValue } from "./platform-discount";
 import {
   fetchActiveDiscounts,
-  orderCandidatesByValue,
   resolvePlatformDiscount,
-} from "./platform-discount";
+} from "./platform-discount-repo";
 
 export const orderLineSchema = z.object({
   dishId: z.string().uuid(),
