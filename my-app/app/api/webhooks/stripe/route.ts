@@ -20,6 +20,7 @@ import {
   isStripeFullyConnected,
   readStripeConnectAccountStatus,
 } from "@/lib/stripe-connect";
+import { reverseCookSubsidyTransfer } from "@/lib/stripe-payments";
 
 export async function POST(req: NextRequest) {
   const rawBody = await req.arrayBuffer();
@@ -439,10 +440,37 @@ export async function POST(req: NextRequest) {
 
       case "charge.refunded": {
         const charge = event.data.object as Stripe.Charge;
+        // Look up the affected payment(s) first so we can reverse any
+        // platform-funded subsidy top-up before flipping the status.
+        const refundedPayments = await db
+          .select({
+            orderId: orderPayments.orderId,
+            type: orderPayments.type,
+            stripeTopupTransferId: orderPayments.stripeTopupTransferId,
+          })
+          .from(orderPayments)
+          .where(eq(orderPayments.stripeChargeId, charge.id));
         await db
           .update(orderPayments)
           .set({ status: "refunded", refundedAt: new Date() })
           .where(eq(orderPayments.stripeChargeId, charge.id));
+        // Claw back the subsidy top-up so the platform isn't out of pocket when
+        // a released full payment is refunded. Best-effort; null top-up (refund
+        // before capture) is skipped cleanly.
+        for (const p of refundedPayments) {
+          if (p.type !== "full" || !p.stripeTopupTransferId) continue;
+          try {
+            await reverseCookSubsidyTransfer({
+              transferId: p.stripeTopupTransferId,
+              idempotencyKey: `subsidy-reversal-${p.orderId}`,
+            });
+          } catch (err) {
+            console.error(
+              `[webhook/stripe] failed to reverse subsidy top-up for order ${p.orderId}`,
+              err,
+            );
+          }
+        }
         break;
       }
 

@@ -487,6 +487,10 @@ export async function placeClientOrder(
         platformFeePct: cook.platformFeePct,
         platformFeeAmount: String((charges.platformFeeCents / 100).toFixed(2)),
         cookPayoutAmount: String((charges.cookPayoutCents / 100).toFixed(2)),
+        platformSubsidyAmount:
+          charges.subsidyTopUpCents > 0
+            ? String((charges.subsidyTopUpCents / 100).toFixed(2))
+            : null,
         currency: "CAD",
         stripePaymentIntentId: piId,
       });
