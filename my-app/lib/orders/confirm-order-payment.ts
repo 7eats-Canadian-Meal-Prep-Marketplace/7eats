@@ -176,9 +176,16 @@ export async function markOrderPaymentAuthorized(
   const pi = await stripe.paymentIntents.retrieve(stripePaymentIntentId);
   if (pi.status !== "requires_capture") return { ok: false };
 
+  // Persist the authorization charge id so the charge.refunded webhook can match
+  // this order (and reverse any platform subsidy top-up) for out-of-band refunds.
+  const stripeChargeId =
+    typeof pi.latest_charge === "string"
+      ? pi.latest_charge
+      : (pi.latest_charge?.id ?? null);
+
   const updated = await db
     .update(orderPayments)
-    .set({ status: "authorized", authorizedAt: new Date() })
+    .set({ status: "authorized", authorizedAt: new Date(), stripeChargeId })
     .where(
       and(
         eq(orderPayments.id, payment.id),
