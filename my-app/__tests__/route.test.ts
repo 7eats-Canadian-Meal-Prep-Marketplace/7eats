@@ -40,6 +40,20 @@ describe("POST /api/waitlist", () => {
     expect(vi.mocked(addToWaitlist)).toHaveBeenCalledWith(
       "user@example.com",
       "hashed-ip",
+      undefined,
+    );
+  });
+
+  it("passes an optional city through to addToWaitlist", async () => {
+    const res = await POST(
+      makeRequest({ email: "user@example.com", city: "Toronto" }),
+    );
+
+    expect(res.status).toBe(200);
+    expect(vi.mocked(addToWaitlist)).toHaveBeenCalledWith(
+      "user@example.com",
+      "hashed-ip",
+      "Toronto",
     );
   });
 

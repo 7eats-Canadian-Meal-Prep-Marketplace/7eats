@@ -4,6 +4,10 @@ vi.mock("@/lib/auth", () => ({
   auth: { api: { resetPassword: vi.fn() } },
 }));
 
+vi.mock("@/lib/rate-limit", () => ({
+  logAndCheckRateLimit: vi.fn().mockResolvedValue(true),
+}));
+
 import { POST } from "@/app/api/auth/reset-password/route";
 import { auth } from "@/lib/auth";
 

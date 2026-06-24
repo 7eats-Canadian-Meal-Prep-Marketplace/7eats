@@ -24,6 +24,11 @@ type Props = {
 
 const STATUS_FETCH: RequestInit = { cache: "no-store" };
 
+/** Background poll cadence while waiting for Stripe onboarding to complete. */
+const POLL_INTERVAL_MS = 6000;
+/** Stop polling after ~5 min so an abandoned setup doesn't hit Stripe forever. */
+const POLL_MAX_ATTEMPTS = 50;
+
 export default function StripeConnectPanel({
   returnTo = "/business/settings",
   layout = "row",
@@ -83,26 +88,38 @@ export default function StripeConnectPanel({
     const refresh = () => {
       void loadStatus({ silent: true });
     };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
 
     window.addEventListener("focus", refresh);
     window.addEventListener("pageshow", refresh);
-    document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "visible") refresh();
-    });
+    document.addEventListener("visibilitychange", onVisibilityChange);
 
     return () => {
       window.removeEventListener("focus", refresh);
       window.removeEventListener("pageshow", refresh);
-      document.removeEventListener("visibilitychange", refresh);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, [loadStatus]);
 
+  // Poll while the cook has a started-but-incomplete Stripe account so the panel
+  // flips to "Connected" shortly after they finish onboarding. Bounded so a cook
+  // who never completes setup doesn't poll the live Stripe API forever.
   useEffect(() => {
     if (!status?.hasAccount || isConnected) return;
 
+    let attempts = 0;
     const interval = window.setInterval(() => {
+      // Don't burn Stripe API calls while the tab is backgrounded.
+      if (document.visibilityState !== "visible") return;
+      attempts += 1;
+      if (attempts > POLL_MAX_ATTEMPTS) {
+        window.clearInterval(interval);
+        return;
+      }
       void loadStatus({ silent: true });
-    }, 3000);
+    }, POLL_INTERVAL_MS);
 
     return () => window.clearInterval(interval);
   }, [status?.hasAccount, isConnected, loadStatus]);

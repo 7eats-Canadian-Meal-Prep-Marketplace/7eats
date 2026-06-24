@@ -14,20 +14,38 @@
   margin-bottom: 40px;
 }
 
+/* Mobile-only top back link. On desktop the back control lives in the sticky
+   right rail (.navBack) so it stays reachable on scroll without floating over
+   the content; the rail is hidden on mobile, so this takes over there. */
 .back {
-  display: inline-flex;
+  align-self: flex-start;
+  display: none;
   align-items: center;
   gap: 6px;
+  min-height: 36px;
+  margin-bottom: 18px;
+  touch-action: manipulation;
   font-size: 13.5px;
   font-weight: 500;
   color: var(--grey-700);
   text-decoration: none;
-  transition: color 0.12s;
   width: fit-content;
+  transition: color 0.12s;
 }
 
 .back:hover {
   color: var(--ink);
+}
+
+.back:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .back {
+    transition: none;
+  }
 }
 
 .title {
@@ -814,6 +832,25 @@
   flex-direction: column;
 }
 
+/* Sticky back control, sitting above the section nav in the right rail. */
+.navBack {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--grey-200);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--grey-700);
+  text-decoration: none;
+  transition: color 0.12s;
+}
+
+.navBack:hover {
+  color: var(--ink);
+}
+
 .navItem {
   display: block;
   width: 100%;
@@ -853,6 +890,11 @@
 
   .sideNav {
     display: none;
+  }
+
+  /* Rail is hidden on mobile — fall back to the top back link. */
+  .back {
+    display: inline-flex;
   }
 }
 

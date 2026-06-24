@@ -25,6 +25,7 @@ vi.mock("@/lib/stripe-payments", () => ({
 }));
 vi.mock("@/lib/emails/order-events", () => ({
   sendOrderConfirmedEmailToClient: vi.fn().mockResolvedValue(undefined),
+  sendOrderNotReadyEmailToClient: vi.fn().mockResolvedValue(undefined),
   sendOrderReadyEmailToClient: vi.fn().mockResolvedValue(undefined),
   sendOrderCancelledByCookEmailToClient: vi.fn().mockResolvedValue(undefined),
 }));
@@ -36,6 +37,7 @@ import { auth } from "@/lib/auth";
 import {
   sendOrderCancelledByCookEmailToClient,
   sendOrderConfirmedEmailToClient,
+  sendOrderNotReadyEmailToClient,
   sendOrderReadyEmailToClient,
 } from "@/lib/emails/order-events";
 import {
@@ -131,6 +133,17 @@ function allPaymentsChain(
   return { from } as never;
 }
 
+/** Returns a select chain for the ready-guard payment lookup (no limit). */
+function readyPaymentsChain(
+  payments: Array<{ type: string; status: string }> = [
+    { type: "full", status: "authorized" },
+  ],
+) {
+  const where = vi.fn().mockResolvedValue(payments);
+  const from = vi.fn(() => ({ where }));
+  return { from } as never;
+}
+
 /** Returns a select chain for the cookProfiles userId lookup on cancel. */
 function cookUserChain(userId: string | null = COOK_USER_ID) {
   const limit = vi.fn().mockResolvedValue(userId ? [{ userId }] : []);
@@ -180,14 +193,21 @@ function mockUpdate(row: object) {
 /**
  * Sequences db.select calls for a "ready" path:
  * 1. cook lookup
- * 2. order fetch (no payment queries needed)
+ * 2. order fetch
+ * 3. payment readiness guard lookup
  */
-function withOrderForReady(pickupAt?: Date) {
+function withOrderForReady(
+  pickupAt?: Date,
+  payments: Array<{ type: string; status: string }> = [
+    { type: "full", status: "authorized" },
+  ],
+) {
   let call = 0;
   vi.mocked(db.select).mockImplementation(() => {
     call++;
     if (call === 1) return mockCook(true);
     if (call === 2) return orderChain("confirmed", pickupAt);
+    if (call === 3) return readyPaymentsChain(payments);
     return emailLookupChain();
   });
 }
@@ -336,6 +356,14 @@ describe("PATCH /api/business/dashboard/orders/[orderId]/status", () => {
   });
 
   // ─── Ready: pickup code generation ────────────────────────────────────────
+
+  it("rejects ready (402) when the order's payment is still pending", async () => {
+    withOrderForReady(undefined, [{ type: "full", status: "pending" }]);
+    const { set } = mockUpdate({ id: ORDER_ID, status: "ready" });
+    const res = await PATCH(makePatch({ status: "ready" }), { params });
+    expect(res.status).toBe(402);
+    expect(set).not.toHaveBeenCalled(); // never marked ready, no pickup code
+  });
 
   it("generates a pickup code when transitioning to ready", async () => {
     withOrderForReady();
@@ -551,6 +579,23 @@ describe("PATCH /api/business/dashboard/orders/[orderId]/status", () => {
       expect.anything(),
       expect.stringMatching(/^\d{6}$/),
     );
+  });
+
+  it("sends the not-ready email when reverting from ready to confirmed", async () => {
+    let call = 0;
+    vi.mocked(db.select).mockImplementation(() => {
+      call++;
+      if (call === 1) return mockCook(true);
+      if (call === 2) return orderChain("ready");
+      return emailLookupChain();
+    });
+    mockUpdate({ id: ORDER_ID, status: "confirmed" });
+    const res = await PATCH(makePatch({ status: "confirmed" }), { params });
+    expect(res.status).toBe(200);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(sendOrderNotReadyEmailToClient).toHaveBeenCalled();
+    expect(sendOrderConfirmedEmailToClient).not.toHaveBeenCalled();
   });
 
   it("sends the cancelled-by-cook email to the client on cancel", async () => {

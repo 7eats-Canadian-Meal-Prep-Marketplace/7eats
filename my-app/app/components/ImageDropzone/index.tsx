@@ -143,7 +143,7 @@ export default function ImageDropzone({
       <div className={styles.meta}>
         {rejected ? (
           <p className={styles.errorMsg} role="alert">
-            Unsupported file — use a {allowedLabel} image.
+            Unsupported file. Use a {allowedLabel} image.
           </p>
         ) : (
           <>

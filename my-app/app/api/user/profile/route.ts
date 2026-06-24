@@ -5,6 +5,17 @@ import { db } from "@/db";
 import { authUser, authUserTable } from "@/db/schema";
 import { auth } from "@/lib/auth";
 
+const profileFields = {
+  name: authUser.name,
+  firstName: authUser.firstName,
+  lastName: authUser.lastName,
+  phone: authUser.phone,
+  phoneVerified: authUser.phoneVerified,
+  dateOfBirth: authUser.dateOfBirth,
+  email: authUser.email,
+  image: authUser.image,
+} as const;
+
 export async function GET(req: NextRequest) {
   const session = await auth.api.getSession({ headers: req.headers });
   if (!session) {
@@ -13,14 +24,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const [user] = await db
-      .select({
-        firstName: authUser.firstName,
-        lastName: authUser.lastName,
-        phone: authUser.phone,
-        neighborhood: authUser.neighborhood,
-        dateOfBirth: authUser.dateOfBirth,
-        email: authUser.email,
-      })
+      .select(profileFields)
       .from(authUser)
       .where(eq(authUser.id, session.user.id))
       .limit(1);
@@ -40,10 +44,9 @@ export async function GET(req: NextRequest) {
 }
 
 const updateProfileSchema = z.object({
-  firstName: z.string().min(1).max(100).optional(),
-  lastName: z.string().min(1).max(100).optional(),
-  phone: z.string().max(20).optional().nullable(),
-  neighborhood: z.string().max(100).optional().nullable(),
+  firstName: z.string().trim().min(1).max(100).optional(),
+  lastName: z.string().trim().min(1).max(100).optional(),
+  phone: z.string().trim().max(20).optional().nullable(),
 });
 
 export async function PATCH(req: NextRequest) {
@@ -70,10 +73,19 @@ export async function PATCH(req: NextRequest) {
     );
   }
 
-  const updates: Partial<typeof authUser.$inferInsert> = { ...parsed.data };
-  if (Object.hasOwn(updates, "phone")) {
+  const updates: Partial<typeof authUser.$inferInsert> = {};
+  if (parsed.data.firstName !== undefined) {
+    updates.firstName = parsed.data.firstName;
+  }
+  if (parsed.data.lastName !== undefined) {
+    updates.lastName = parsed.data.lastName;
+  }
+  if (parsed.data.phone !== undefined) {
+    const phone = parsed.data.phone?.trim() || null;
+    updates.phone = phone;
     updates.phoneVerified = false;
   }
+
   if (Object.keys(updates).length === 0) {
     return NextResponse.json(
       { error: "No fields provided to update." },
@@ -82,20 +94,33 @@ export async function PATCH(req: NextRequest) {
   }
 
   try {
+    const [current] = await db
+      .select({
+        firstName: authUser.firstName,
+        lastName: authUser.lastName,
+        email: authUser.email,
+      })
+      .from(authUser)
+      .where(eq(authUser.id, session.user.id))
+      .limit(1);
+
+    if (!current) {
+      return NextResponse.json({ error: "User not found." }, { status: 404 });
+    }
+
+    const firstName = updates.firstName ?? current.firstName;
+    const lastName = updates.lastName ?? current.lastName;
+    updates.name =
+      [firstName, lastName].filter(Boolean).join(" ").trim() || current.email;
+    updates.updatedAt = new Date();
+
     await db
       .update(authUserTable)
       .set(updates)
       .where(eq(authUser.id, session.user.id));
 
     const [updated] = await db
-      .select({
-        firstName: authUser.firstName,
-        lastName: authUser.lastName,
-        phone: authUser.phone,
-        neighborhood: authUser.neighborhood,
-        dateOfBirth: authUser.dateOfBirth,
-        email: authUser.email,
-      })
+      .select(profileFields)
       .from(authUser)
       .where(eq(authUser.id, session.user.id))
       .limit(1);

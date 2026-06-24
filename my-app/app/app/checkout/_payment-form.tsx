@@ -1,94 +1,141 @@
 "use client";
 
-import { CardElement, useElements, useStripe } from "@stripe/react-stripe-js";
-import { useState } from "react";
+import {
+  PaymentElement,
+  useElements,
+  useStripe,
+} from "@stripe/react-stripe-js";
+import { forwardRef, useEffect, useImperativeHandle, useState } from "react";
+import {
+  checkoutNewCardPaymentElementOptions,
+  checkoutPaymentElementOptions,
+} from "@/lib/stripe/browser";
+import {
+  formatStripeCardError,
+  stripeCardBillingConfirmParams,
+} from "@/lib/stripe/card-errors";
 import styles from "./page.module.css";
 
-type Props = {
-  onTokenized: (paymentMethodId: string) => Promise<void>;
-  loading: boolean;
+export type CheckoutPaymentHandle = {
+  confirmPayment: () => Promise<{ ok: boolean; error?: string }>;
 };
 
-/**
- * Renders a Stripe CardElement for new-card entry.
- * On submit it creates a PaymentMethod via Stripe.js (no raw card data is
- * ever sent to our server) and hands the resulting paymentMethodId back to
- * the parent via onTokenized.
- */
-export function NewCardForm({ onTokenized, loading }: Props) {
-  const stripe = useStripe();
-  const elements = useElements();
-  const [cardError, setCardError] = useState("");
-  const [cardComplete, setCardComplete] = useState(false);
+type Props = {
+  onReadyChange: (ready: boolean) => void;
+  /** Guest checkout vs logged-in "add new card". */
+  variant?: "guest" | "new-card";
+  userEmail?: string | null;
+};
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!stripe || !elements) return;
+export const CheckoutPaymentForm = forwardRef<CheckoutPaymentHandle, Props>(
+  function CheckoutPaymentForm(
+    { onReadyChange, variant = "guest", userEmail },
+    ref,
+  ) {
+    const stripe = useStripe();
+    const elements = useElements();
+    const [elementReady, setElementReady] = useState(false);
+    const [formComplete, setFormComplete] = useState(false);
+    const [postalCode, setPostalCode] = useState("");
 
-    const cardEl = elements.getElement(CardElement);
-    if (!cardEl) return;
+    const isNewCard = variant === "new-card";
+    const postalComplete = !isNewCard || postalCode.trim().length >= 3;
+    const paymentReady = Boolean(
+      stripe && elements && elementReady && formComplete && postalComplete,
+    );
 
-    setCardError("");
+    useEffect(() => {
+      onReadyChange(paymentReady);
+    }, [paymentReady, onReadyChange]);
 
-    const { paymentMethod, error } = await stripe.createPaymentMethod({
-      type: "card",
-      card: cardEl,
-    });
+    useImperativeHandle(
+      ref,
+      () => ({
+        async confirmPayment() {
+          if (!stripe || !elements) {
+            return { ok: false, error: "Payment form is still loading." };
+          }
 
-    if (error) {
-      setCardError(error.message ?? "Card error. Please try again.");
-      return;
-    }
+          if (isNewCard && !postalComplete) {
+            return { ok: false, error: "Enter the postal code for this card." };
+          }
 
-    await onTokenized(paymentMethod.id);
-  }
+          const billingParams = isNewCard
+            ? stripeCardBillingConfirmParams({
+                email: userEmail,
+                postalCode: postalCode.trim(),
+              })
+            : {};
 
-  return (
-    <form id="new-card-form" onSubmit={handleSubmit}>
+          const { error, paymentIntent } = await stripe.confirmPayment({
+            elements,
+            redirect: "if_required",
+            confirmParams: {
+              return_url: `${window.location.origin}/app/checkout`,
+              ...billingParams,
+            },
+          });
+
+          if (error) {
+            return {
+              ok: false,
+              error: formatStripeCardError(
+                error,
+                "Payment failed. Please try again.",
+              ),
+            };
+          }
+
+          if (paymentIntent?.status !== "requires_capture") {
+            return {
+              ok: false,
+              error: "Payment could not be authorized. Try another method.",
+            };
+          }
+
+          return { ok: true };
+        },
+      }),
+      [stripe, elements, isNewCard, postalComplete, postalCode, userEmail],
+    );
+
+    const elementOptions = isNewCard
+      ? checkoutNewCardPaymentElementOptions
+      : checkoutPaymentElementOptions;
+
+    return (
       <div className={styles.formGroup}>
-        <label className={styles.label} htmlFor="card-element">
-          Card details
-        </label>
-        <div className={styles.stripeCardWrapper}>
-          <CardElement
-            id="card-element"
-            options={{
-              style: {
-                base: {
-                  fontSize: "15px",
-                  color: "#1a1a1a",
-                  fontFamily: "inherit",
-                  "::placeholder": { color: "#aaa" },
-                },
-                invalid: { color: "#e53e3e" },
-              },
-              hidePostalCode: true,
-            }}
-            onChange={(e) => {
-              setCardComplete(e.complete);
-              if (e.error) {
-                setCardError(e.error.message ?? "");
-              } else {
-                setCardError("");
-              }
-            }}
-          />
-        </div>
-        {cardError && (
-          <p className={styles.fieldError} role="alert">
-            {cardError}
+        {variant === "guest" && (
+          <p className={styles.paymentHint}>
+            Enter your card details to pay for this order.
           </p>
         )}
+        <div className={styles.stripeCardWrapper}>
+          <PaymentElement
+            id="payment-element"
+            options={elementOptions}
+            onReady={() => setElementReady(true)}
+            onChange={(event) => setFormComplete(event.complete)}
+          />
+        </div>
+        {isNewCard && elementReady && (
+          <div className={styles.formGroup}>
+            <label className={styles.label} htmlFor="checkout-card-postal">
+              Postal code
+            </label>
+            <input
+              id="checkout-card-postal"
+              className={styles.input}
+              type="text"
+              autoComplete="postal-code"
+              placeholder="A1A 1A1"
+              value={postalCode}
+              maxLength={12}
+              onChange={(event) => setPostalCode(event.target.value)}
+            />
+          </div>
+        )}
       </div>
-
-      <button
-        type="submit"
-        className={styles.placeOrderBtn}
-        disabled={loading || !stripe || !cardComplete}
-        style={{ width: "100%", marginTop: "0.75rem" }}
-      >
-        {loading ? "Processing…" : "Place Order"}
-      </button>
-    </form>
-  );
-}
+    );
+  },
+);

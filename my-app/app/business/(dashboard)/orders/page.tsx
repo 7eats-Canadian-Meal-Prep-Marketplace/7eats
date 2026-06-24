@@ -1,7 +1,6 @@
 "use client";
 
-import { ClipboardList, MessageSquare, X } from "lucide-react";
-import Link from "next/link";
+import { CheckCircle2, ClipboardList, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { PreferenceSheet } from "../_components/PreferenceSheet";
 import styles from "./page.module.css";
@@ -20,6 +19,9 @@ type DishSnapshot = {
   dishId: string;
   dishName: string;
   quantity: number;
+  priceSnapshot: string | null;
+  discountAmount: string | null;
+  lineTotal: string | null;
   sortOrder: number;
 };
 
@@ -29,11 +31,25 @@ type Order = {
   clientId: string | null;
   customerName: string | null;
   customerFirstName: string | null;
+  customerLastName: string | null;
   listingTitle: string | null;
-  quantity: number;
-  unitPrice: string;
+  // Deprecated order-level fields — null for current multi-dish orders.
+  quantity: number | null;
+  unitPrice: string | null;
+  // Derived in the list endpoint from order_dishes (total items in the order).
+  itemCount?: number;
   totalPrice: string;
-  pickupAt: string;
+  taxAmount: string | null;
+  deliveryFeeSnapshot: string | null;
+  // Money breakdown from order_payments — only present on the order detail
+  // fetch, so the cook can see the platform cut and their net payout.
+  platformFeePct?: string | null;
+  platformFeeAmount?: string | null;
+  cookPayoutAmount?: string | null;
+  fulfillmentMode: string | null;
+  pickupAt: string | null;
+  fulfillmentWindowStart: string | null;
+  fulfillmentWindowEnd: string | null;
   notes: string | null;
   pickupCodeAttempts: number;
   createdAt: string;
@@ -42,22 +58,57 @@ type Order = {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function formatTime(iso: string): string {
+function formatClock(date: Date): string {
+  return date.toLocaleTimeString("en-CA", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function formatTime(
+  order: Pick<
+    Order,
+    "pickupAt" | "fulfillmentWindowStart" | "fulfillmentWindowEnd"
+  >,
+): string {
+  const iso = order.pickupAt ?? order.fulfillmentWindowStart;
+  if (!iso) return "Not scheduled";
   const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "Not scheduled";
+  const windowEnd = order.pickupAt ? null : order.fulfillmentWindowEnd;
+  const end = windowEnd ? new Date(windowEnd) : null;
   const now = new Date();
   const tomorrow = new Date(now);
   tomorrow.setDate(tomorrow.getDate() + 1);
   const yesterday = new Date(now);
   yesterday.setDate(yesterday.getDate() - 1);
-  const time = d.toLocaleTimeString("en-CA", {
-    hour: "numeric",
-    minute: "2-digit",
-  });
+  const time =
+    end && !Number.isNaN(end.getTime())
+      ? `${formatClock(d)}–${formatClock(end)}`
+      : formatClock(d);
   if (d.toDateString() === now.toDateString()) return `Today · ${time}`;
   if (d.toDateString() === tomorrow.toDateString()) return `Tomorrow · ${time}`;
   if (d.toDateString() === yesterday.toDateString())
     return `Yesterday · ${time}`;
   return `${d.toLocaleDateString("en-CA", { weekday: "short", month: "short", day: "numeric" })} · ${time}`;
+}
+
+function money(value: string | number | null | undefined): string {
+  const n = typeof value === "string" ? Number.parseFloat(value) : (value ?? 0);
+  if (!Number.isFinite(n)) return "$0.00";
+  return `$${n.toFixed(2)}`;
+}
+
+function fulfillmentLabel(order: Pick<Order, "fulfillmentMode">): string {
+  return order.fulfillmentMode === "delivery" ? "Delivery" : "Pickup";
+}
+
+function dishesSubtotal(dishes: DishSnapshot[] | undefined): number {
+  if (!dishes) return 0;
+  return dishes.reduce(
+    (sum, d) => sum + Number.parseFloat(d.lineTotal ?? "0"),
+    0,
+  );
 }
 
 function customerDisplay(order: Order): string {
@@ -101,6 +152,19 @@ function nextStatus(s: OrderStatus): "confirmed" | "ready" | null {
     confirmed: "ready",
   };
   return map[s] ?? null;
+}
+
+// ─── Spinner ──────────────────────────────────────────────────────────────────
+
+// Inline spinner for buttons mid-request. `label` doubles as the accessible
+// status text so screen readers announce that the action is processing.
+function Spinner({ label = "Processing" }: { label?: string }) {
+  return (
+    <span className={styles.btnLoading}>
+      <span className={styles.spinner} aria-hidden="true" />
+      <output className={styles.srOnly}>{label}</output>
+    </span>
+  );
 }
 
 // ─── Status badge ─────────────────────────────────────────────────────────────
@@ -153,7 +217,7 @@ function VerifyCode({
         setError(
           remaining <= 0
             ? "Code entry locked."
-            : `Incorrect — ${remaining} attempt${remaining === 1 ? "" : "s"} left`,
+            : `Incorrect. ${remaining} attempt${remaining === 1 ? "" : "s"} left`,
         );
         setCode("");
       }
@@ -188,12 +252,180 @@ function VerifyCode({
           className={styles.verifyBtn}
           disabled={code.length < 6 || submitting}
         >
-          {submitting ? "…" : "Verify"}
+          {submitting ? <Spinner label="Verifying" /> : "Verify"}
         </button>
       </div>
       {error && <p className={styles.verifyError}>{error}</p>}
     </form>
   );
+}
+
+// ─── Order complete celebration ───────────────────────────────────────────────
+
+// Deterministic confetti so the burst is identical every render (no hydration
+// or random-key churn). Brand palette only: red, deep red, gold, ink.
+const CONFETTI = [
+  { id: "c1", left: "8%", delay: "0ms", color: "#d64045", rot: "-18deg" },
+  { id: "c2", left: "18%", delay: "90ms", color: "#e0a92e", rot: "24deg" },
+  { id: "c3", left: "27%", delay: "40ms", color: "#0f0f0f", rot: "-8deg" },
+  { id: "c4", left: "37%", delay: "150ms", color: "#f4b8ba", rot: "30deg" },
+  { id: "c5", left: "46%", delay: "20ms", color: "#d64045", rot: "12deg" },
+  { id: "c6", left: "55%", delay: "120ms", color: "#e0a92e", rot: "-26deg" },
+  { id: "c7", left: "63%", delay: "60ms", color: "#b6353a", rot: "16deg" },
+  { id: "c8", left: "71%", delay: "180ms", color: "#0f0f0f", rot: "-14deg" },
+  { id: "c9", left: "80%", delay: "30ms", color: "#d64045", rot: "22deg" },
+  { id: "c10", left: "88%", delay: "140ms", color: "#e0a92e", rot: "-20deg" },
+  { id: "c11", left: "14%", delay: "210ms", color: "#f4b8ba", rot: "10deg" },
+  { id: "c12", left: "33%", delay: "240ms", color: "#d64045", rot: "-30deg" },
+  { id: "c13", left: "61%", delay: "260ms", color: "#b6353a", rot: "28deg" },
+  { id: "c14", left: "77%", delay: "200ms", color: "#0f0f0f", rot: "-12deg" },
+] as const;
+
+function OrderComplete({ customerName }: { customerName: string }) {
+  return (
+    <div className={styles.complete} aria-live="polite" aria-atomic="true">
+      <div className={styles.confetti} aria-hidden="true">
+        {CONFETTI.map((c) => (
+          <span
+            key={c.id}
+            className={styles.confettiPiece}
+            style={
+              {
+                left: c.left,
+                backgroundColor: c.color,
+                animationDelay: c.delay,
+                "--rot": c.rot,
+              } as React.CSSProperties
+            }
+          />
+        ))}
+      </div>
+
+      <div className={styles.completeSeal}>
+        <span className={styles.completeRing} aria-hidden="true" />
+        <svg
+          className={styles.completeCheck}
+          viewBox="0 0 52 52"
+          aria-hidden="true"
+        >
+          <circle
+            className={styles.completeCheckCircle}
+            cx="26"
+            cy="26"
+            r="25"
+          />
+          <path
+            className={styles.completeCheckMark}
+            fill="none"
+            d="M15 27 l7.5 7.5 L37.5 19"
+          />
+        </svg>
+      </div>
+
+      <h3 className={styles.completeTitle}>Order complete!</h3>
+      <p className={styles.completeText}>
+        {customerName} picked up their order. Nicely done.
+      </p>
+      <p className={styles.completePayout}>
+        Payment is on its way to your account.
+      </p>
+    </div>
+  );
+}
+
+// ─── Confirmation dialog ──────────────────────────────────────────────────────
+
+// Guards every cook action that changes an order's state so an accidental tap
+// never silently advances (or reverts) an order.
+function ConfirmDialog({
+  title,
+  message,
+  confirmLabel,
+  busy,
+  tone = "default",
+  onConfirm,
+  onClose,
+}: {
+  title: string;
+  message: string;
+  confirmLabel: string;
+  busy: boolean;
+  tone?: "default" | "danger";
+  onConfirm: () => void;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape" && !busy) onClose();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [busy, onClose]);
+
+  return (
+    <div className={styles.confirmRoot} role="presentation">
+      <button
+        type="button"
+        aria-label="Cancel"
+        className={styles.confirmOverlay}
+        onClick={() => !busy && onClose()}
+      />
+      <div
+        className={styles.confirmModal}
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="confirm-title"
+        aria-describedby="confirm-message"
+      >
+        <h3 id="confirm-title" className={styles.confirmTitle}>
+          {title}
+        </h3>
+        <p id="confirm-message" className={styles.confirmText}>
+          {message}
+        </p>
+        <div className={styles.confirmBtns}>
+          <button
+            type="button"
+            className={`${styles.confirmYes} ${tone === "danger" ? styles.confirmYesDanger : ""}`}
+            onClick={onConfirm}
+            disabled={busy}
+          >
+            {busy ? <Spinner label="Saving" /> : confirmLabel}
+          </button>
+          <button
+            type="button"
+            className={styles.confirmNo}
+            onClick={onClose}
+            disabled={busy}
+          >
+            Go back
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Copy for each state-changing action, keyed off the action and current status.
+function advanceDialogCopy(status: OrderStatus): {
+  title: string;
+  message: string;
+  confirmLabel: string;
+} {
+  if (status === "pending") {
+    return {
+      title: "Confirm this order?",
+      message:
+        "The customer will be notified that you've accepted their order. You won't be able to send it back to pending afterward.",
+      confirmLabel: "Yes, confirm order",
+    };
+  }
+  return {
+    title: "Mark order as ready?",
+    message:
+      "The customer will receive a pickup code and be notified their order is ready for pickup.",
+    confirmLabel: "Yes, mark ready",
+  };
 }
 
 // ─── Order detail ─────────────────────────────────────────────────────────────
@@ -208,10 +440,36 @@ function OrderDetail({
   onClose?: () => void;
 }) {
   const [cancelConfirm, setCancelConfirm] = useState(false);
+  // Pending state-changing action awaiting confirmation in the popup.
+  const [confirmAction, setConfirmAction] = useState<
+    "advance" | "revert" | null
+  >(null);
   const [mutating, setMutating] = useState(false);
   const [prefsOpen, setPrefsOpen] = useState(false);
+  // True only when this cook just verified the code in-session, so the
+  // celebration plays once on the action — not every time a completed order
+  // is reopened.
+  const [justFulfilled, setJustFulfilled] = useState(false);
   const canCancel = order.status === "pending" || order.status === "confirmed";
   const canAdvance = order.status === "pending" || order.status === "confirmed";
+
+  const hasDishes = !!order.dishes && order.dishes.length > 0;
+  const subtotal = dishesSubtotal(order.dishes);
+  const deliveryFee = Number.parseFloat(order.deliveryFeeSnapshot ?? "0");
+  const tax = Number.parseFloat(order.taxAmount ?? "0");
+  // Cook earnings: what's left after the platform cut and remitted tax.
+  // `cookPayoutAmount` is the authoritative snapshot (total − fee − tax).
+  const hasPayout = order.cookPayoutAmount != null;
+  const platformFee = Number.parseFloat(order.platformFeeAmount ?? "0");
+  const feePctLabel =
+    order.platformFeePct != null
+      ? `${Number.parseFloat(order.platformFeePct)}%`
+      : null;
+  const totalItems =
+    order.dishes?.reduce((sum, d) => sum + d.quantity, 0) ??
+    order.itemCount ??
+    order.quantity ??
+    0;
 
   async function patchStatus(status: "confirmed" | "ready" | "cancelled") {
     setMutating(true);
@@ -230,13 +488,15 @@ function OrderDetail({
     }
   }
 
-  async function handleRevert() {
-    await patchStatus("confirmed");
-  }
-
-  async function handleAdvance() {
-    const next = nextStatus(order.status);
-    if (next) await patchStatus(next);
+  // Runs the confirmed action, then dismisses the popup.
+  async function handleConfirmAction() {
+    if (confirmAction === "advance") {
+      const next = nextStatus(order.status);
+      if (next) await patchStatus(next);
+    } else if (confirmAction === "revert") {
+      await patchStatus("confirmed");
+    }
+    setConfirmAction(null);
   }
 
   async function handleCancel() {
@@ -247,27 +507,35 @@ function OrderDetail({
   return (
     <div className={styles.detail}>
       {onClose && (
-        <button type="button" className={styles.detailClose} onClick={onClose}>
-          <X size={16} />
+        <button
+          type="button"
+          className={styles.detailClose}
+          onClick={onClose}
+          aria-label="Close order details"
+        >
+          <X size={16} aria-hidden="true" />
         </button>
       )}
 
       <div className={styles.detailHeader}>
-        <h2 className={styles.detailTitle}>{order.listingTitle ?? "Order"}</h2>
-        <div className={styles.detailSubline}>
-          <span className={styles.detailCustomer}>
+        <div className={styles.detailHeaderTop}>
+          <h2 className={styles.detailTitle} title={customerDisplay(order)}>
             {customerDisplay(order)}
-          </span>
-          <span className={styles.detailDot}>·</span>
+          </h2>
           <StatusBadge status={order.status} />
         </div>
+        <p className={styles.detailSubMeta}>
+          {fulfillmentLabel(order)} order &middot; {totalItems} item
+          {totalItems === 1 ? "" : "s"}
+        </p>
+      </div>
+
+      <div className={styles.timeCard}>
+        <span className={styles.timeCardLabel}>{fulfillmentLabel(order)}</span>
+        <span className={styles.timeCardValue}>{formatTime(order)}</span>
       </div>
 
       <div className={styles.detailActions}>
-        <Link href="/business/inbox" className={styles.chatBtn}>
-          <MessageSquare size={15} />
-          Message customer
-        </Link>
         <button
           type="button"
           className={styles.prefsBtn}
@@ -278,42 +546,101 @@ function OrderDetail({
         </button>
       </div>
 
-      <div className={styles.metaBlock}>
-        <div className={styles.metaRow}>
-          <span className={styles.metaKey}>Pickup</span>
-          <span className={styles.metaVal}>{formatTime(order.pickupAt)}</span>
+      <div className={styles.receipt}>
+        <p className={styles.receiptLabel}>Order summary</p>
+
+        {hasDishes ? (
+          <div className={styles.receiptItems}>
+            {order.dishes?.map((d) => {
+              const discount = Number.parseFloat(d.discountAmount ?? "0");
+              return (
+                <div key={d.id} className={styles.receiptRow}>
+                  <span className={styles.receiptQty}>{d.quantity}&times;</span>
+                  <div className={styles.receiptItemMain}>
+                    <span className={styles.receiptItemName}>{d.dishName}</span>
+                    <span className={styles.receiptItemUnit}>
+                      {money(d.priceSnapshot)} each
+                      {discount > 0 && (
+                        <span className={styles.receiptPromo}>
+                          {" "}
+                          &middot; &minus;{money(discount)} promo
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                  <span className={styles.receiptLineTotal}>
+                    {money(d.lineTotal)}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
+
+        <div className={styles.receiptTotals}>
+          {hasDishes && (
+            <div className={styles.receiptTotalRow}>
+              <span>Subtotal</span>
+              <span>{money(subtotal)}</span>
+            </div>
+          )}
+          {deliveryFee > 0 && (
+            <div className={styles.receiptTotalRow}>
+              <span>Delivery</span>
+              <span>{money(deliveryFee)}</span>
+            </div>
+          )}
+          {tax > 0 && (
+            <div className={styles.receiptTotalRow}>
+              <span>Tax</span>
+              <span>{money(tax)}</span>
+            </div>
+          )}
+          <div
+            className={`${styles.receiptTotalRow} ${styles.receiptGrandTotal}`}
+          >
+            <span>Total</span>
+            <span>{money(order.totalPrice)}</span>
+          </div>
         </div>
-        <div className={styles.metaRow}>
-          <span className={styles.metaKey}>Quantity</span>
-          <span className={styles.metaVal}>{order.quantity}</span>
-        </div>
-        <div className={styles.metaRow}>
-          <span className={styles.metaKey}>Unit price</span>
-          <span className={styles.metaVal}>${order.unitPrice}</span>
-        </div>
-        <div className={styles.metaRow}>
-          <span className={styles.metaKey}>Total</span>
-          <span className={`${styles.metaVal} ${styles.metaValBold}`}>
-            ${order.totalPrice}
-          </span>
-        </div>
-        {order.notes && (
-          <div className={styles.metaRow}>
-            <span className={styles.metaKey}>Note</span>
-            <span className={styles.metaVal}>{order.notes}</span>
+
+        {hasPayout && (
+          <div className={styles.payout}>
+            <p className={styles.payoutLabel}>Your earnings</p>
+            <div className={styles.payoutRows}>
+              <div className={styles.payoutRow}>
+                <span>
+                  Platform fee{feePctLabel ? ` (${feePctLabel})` : ""}
+                </span>
+                <span className={styles.payoutDeduct}>
+                  &minus;{money(platformFee)}
+                </span>
+              </div>
+              {tax > 0 && (
+                <div className={styles.payoutRow}>
+                  <span>Tax (collected &amp; remitted)</span>
+                  <span className={styles.payoutDeduct}>
+                    &minus;{money(tax)}
+                  </span>
+                </div>
+              )}
+              <div className={`${styles.payoutRow} ${styles.payoutNet}`}>
+                <span>You earn</span>
+                <span>{money(order.cookPayoutAmount)}</span>
+              </div>
+            </div>
+            <p className={styles.payoutNote}>
+              Tax is collected from the customer and remitted on your behalf, so
+              it isn&apos;t part of your earnings.
+            </p>
           </div>
         )}
       </div>
 
-      {order.dishes && order.dishes.length > 0 && (
-        <div className={styles.dishSection}>
-          <p className={styles.dishSectionLabel}>What&apos;s included</p>
-          {order.dishes.map((d) => (
-            <div key={d.id} className={styles.dishRow}>
-              <span className={styles.dishName}>{d.dishName}</span>
-              <span className={styles.dishQtyBox}>{d.quantity}</span>
-            </div>
-          ))}
+      {order.notes && (
+        <div className={styles.notesBlock}>
+          <p className={styles.notesLabel}>Customer note</p>
+          <p className={styles.notesText}>{order.notes}</p>
         </div>
       )}
 
@@ -322,14 +649,17 @@ function OrderDetail({
           <VerifyCode
             orderId={order.id}
             initialAttempts={order.pickupCodeAttempts}
-            onVerify={() => onStatusChange(order.id, "fulfilled")}
+            onVerify={() => {
+              setJustFulfilled(true);
+              onStatusChange(order.id, "fulfilled");
+            }}
           />
           <div className={styles.revertBlock}>
             <span className={styles.revertPrompt}>Still preparing?</span>
             <button
               type="button"
               className={styles.revertBtn}
-              onClick={handleRevert}
+              onClick={() => setConfirmAction("revert")}
               disabled={mutating}
             >
               Mark as not ready
@@ -369,7 +699,7 @@ function OrderDetail({
                 <button
                   type="button"
                   className={styles.advanceBtn}
-                  onClick={handleAdvance}
+                  onClick={() => setConfirmAction("advance")}
                   disabled={mutating}
                 >
                   {ACTION_LABEL[order.status]}
@@ -389,13 +719,37 @@ function OrderDetail({
         </div>
       )}
 
-      {order.status === "fulfilled" && (
-        <div className={styles.statusNote}>Order completed.</div>
-      )}
+      {order.status === "fulfilled" &&
+        (justFulfilled ? (
+          <OrderComplete customerName={customerDisplay(order)} />
+        ) : (
+          <div className={styles.completedCalm}>
+            <CheckCircle2 size={16} aria-hidden="true" />
+            <span>Order complete</span>
+          </div>
+        ))}
 
       {order.status === "cancelled" && (
         <div className={styles.statusNote}>This order was cancelled.</div>
       )}
+
+      {confirmAction === "revert" ? (
+        <ConfirmDialog
+          title="Mark as not ready?"
+          message="We'll let the customer know their order isn't ready yet. Their current pickup code will stop working until you mark it ready again."
+          confirmLabel="Yes, not ready"
+          busy={mutating}
+          onConfirm={handleConfirmAction}
+          onClose={() => setConfirmAction(null)}
+        />
+      ) : confirmAction === "advance" ? (
+        <ConfirmDialog
+          {...advanceDialogCopy(order.status)}
+          busy={mutating}
+          onConfirm={handleConfirmAction}
+          onClose={() => setConfirmAction(null)}
+        />
+      ) : null}
 
       <PreferenceSheet
         clientId={order.clientId}
@@ -418,6 +772,7 @@ function OrderListRow({
   focused: boolean;
   onSelect: () => void;
 }) {
+  const itemCount = order.itemCount ?? order.quantity ?? 0;
   return (
     <button
       type="button"
@@ -426,15 +781,12 @@ function OrderListRow({
     >
       <div className={styles.listRowLeft}>
         <span className={styles.listRowCustomer}>{customerDisplay(order)}</span>
-        <span className={styles.listRowListing}>
-          {order.listingTitle ?? "Order"}
-        </span>
         <span className={styles.listRowMeta}>
-          {formatTime(order.pickupAt)} &middot;{" "}
+          {formatTime(order)} &middot;{" "}
           <span className={styles.listRowQty}>
-            {order.quantity} item{order.quantity !== 1 ? "s" : ""}
+            {itemCount} item{itemCount === 1 ? "" : "s"}
           </span>{" "}
-          &middot; ${order.totalPrice}
+          &middot; {money(order.totalPrice)}
         </span>
       </div>
       <StatusBadge status={order.status} />

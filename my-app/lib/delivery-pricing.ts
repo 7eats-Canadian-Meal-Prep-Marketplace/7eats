@@ -3,12 +3,15 @@ export const DELIVERY_RATE_MIN = 0.5;
 export const DELIVERY_RATE_MAX = 2;
 export const DELIVERY_RATE_STEP = 0.05;
 
-/** Max delivery distance a cook may offer (km). */
+/** Max delivery distance a cook may offer (km). The ceiling is intentionally
+ * generous — most home cooks set 10-30 km, but some are willing to go further,
+ * and this is only the upper bound of what they're allowed to configure. */
 export const DELIVERY_MAX_KM_MIN = 1;
-export const DELIVERY_MAX_KM_MAX = 15;
+export const DELIVERY_MAX_KM_MAX = 100;
 
-/** Sensible starting zone for home-cook self-delivery (km). */
-export const DEFAULT_MAX_DELIVERY_KM = 8;
+/** Sensible starting zone for home-cook self-delivery (km) — roughly a 30-40
+ * minute drive, which covers a metro area without promising cold-food hauls. */
+export const DEFAULT_MAX_DELIVERY_KM = 30;
 
 /** Upper bound for the optional "free delivery above subtotal" threshold (CAD). */
 export const FREE_DELIVERY_ABOVE_MAX = 9999.99;

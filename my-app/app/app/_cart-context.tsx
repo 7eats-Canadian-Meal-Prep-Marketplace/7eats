@@ -6,9 +6,9 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from "react";
+import { computeLineTotal } from "@/lib/order-pricing";
 
 /** A single dish line in the cart. */
 export type CartItem = {
@@ -37,6 +37,7 @@ export type DeliveryAddress = {
 type AddItemInput = {
   cookId: string;
   cookName: string;
+  cookProvince: string;
   minOrderQty: number;
   maxOrderQty: number | null;
   leadTime: string | null;
@@ -47,13 +48,14 @@ type AddItemInput = {
 type CartContextType = {
   cookId: string | null;
   cookName: string | null;
+  /** Cook pickup province for tax (place of supply). Defaults to ON when unset. */
+  cookProvince: string;
   minOrderQty: number;
   maxOrderQty: number | null;
   leadTime: string | null;
   cancellationAllowed: boolean;
   items: CartItem[];
   fulfillmentMode: "pickup" | "delivery";
-  pickupAt: string | null;
   deliveryAddress: DeliveryAddress | null;
   notes: string | null;
   /** Total number of items across all dishes. */
@@ -72,7 +74,6 @@ type CartContextType = {
   removeItem: (dishId: string) => void;
   clearCart: () => void;
   setFulfillment: (mode: "pickup" | "delivery") => void;
-  setPickupAt: (iso: string | null) => void;
   setDeliveryAddress: (addr: DeliveryAddress | null) => void;
   setNotes: (notes: string | null) => void;
 };
@@ -82,31 +83,46 @@ type CartContextType = {
  * (important for guests, who have no server-side cart). Bump the version
  * suffix if the stored shape changes in a breaking way.
  */
-const STORAGE_KEY = "7eats:cart:v1";
+const STORAGE_KEY = "7eats:cart:v2";
+
+/**
+ * How long a persisted cart stays valid. Long enough to survive a few days of
+ * "leave and come back", short enough that prices/availability can't go badly
+ * stale. After this, the cart is dropped on next load.
+ */
+const CART_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 type PersistedCart = {
   cook: CookMeta | null;
   items: CartItem[];
   fulfillmentMode: "pickup" | "delivery";
-  pickupAt: string | null;
   deliveryAddress: DeliveryAddress | null;
   notes: string | null;
+  /** Epoch ms of the last write — used to expire stale carts. */
+  savedAt?: number;
 };
 
-/** Read and validate the persisted cart. Returns null on any problem. */
+/** Read and validate the persisted cart. Returns null on any problem or if stale. */
 function loadPersistedCart(): PersistedCart | null {
   if (typeof window === "undefined") return null;
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw =
+      window.localStorage.getItem(STORAGE_KEY) ??
+      window.localStorage.getItem("7eats:cart:v1");
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Partial<PersistedCart>;
     if (!parsed || !Array.isArray(parsed.items)) return null;
+    // Drop carts older than the TTL (older entries without a timestamp are kept
+    // until their next write, which stamps them).
+    if (parsed.savedAt && Date.now() - parsed.savedAt > CART_TTL_MS) {
+      window.localStorage.removeItem(STORAGE_KEY);
+      return null;
+    }
     return {
       cook: parsed.cook ?? null,
       items: parsed.items,
       fulfillmentMode:
         parsed.fulfillmentMode === "delivery" ? "delivery" : "pickup",
-      pickupAt: parsed.pickupAt ?? null,
       deliveryAddress: parsed.deliveryAddress ?? null,
       notes: parsed.notes ?? null,
     };
@@ -127,6 +143,7 @@ export function useCart(): CartContextType {
 type CookMeta = {
   cookId: string;
   cookName: string;
+  cookProvince: string;
   minOrderQty: number;
   maxOrderQty: number | null;
   leadTime: string | null;
@@ -139,49 +156,52 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [fulfillmentMode, setFulfillmentMode] = useState<"pickup" | "delivery">(
     "pickup",
   );
-  const [pickupAt, setPickupAtState] = useState<string | null>(null);
   const [deliveryAddress, setDeliveryAddressState] =
     useState<DeliveryAddress | null>(null);
   const [notes, setNotesState] = useState<string | null>(null);
 
-  // Tracks whether we've hydrated from localStorage yet. The persist effect
-  // must not run until this is true, otherwise the empty initial state would
-  // overwrite a saved cart before hydration completes.
-  const hydrated = useRef(false);
+  // Tracks whether we've hydrated from localStorage yet. This is reactive STATE,
+  // not a ref: the persist effect below depends on it, so its first run on mount
+  // sees `hydrated === false` (the render-time value) and skips. A ref set inside
+  // the hydrate effect would already read `true` in the same commit pass, while
+  // the cart state is still empty — overwriting the saved cart with an empty one
+  // (and, under StrictMode's double-invoked effects, wiping it permanently).
+  const [hydrated, setHydrated] = useState(false);
 
   // Hydrate once on mount. Done in an effect (not a lazy useState initializer)
   // so the server-rendered and first client render stay in sync — avoiding a
-  // hydration mismatch — and the saved cart is applied immediately after.
+  // hydration mismatch — and the saved cart is applied immediately after. All
+  // the setState calls (including setHydrated) batch into one commit, so the
+  // persist effect only runs once the saved cart is actually in state.
   useEffect(() => {
     const saved = loadPersistedCart();
     if (saved) {
       setCook(saved.cook);
       setItems(saved.items);
       setFulfillmentMode(saved.fulfillmentMode);
-      setPickupAtState(saved.pickupAt);
       setDeliveryAddressState(saved.deliveryAddress);
       setNotesState(saved.notes);
     }
-    hydrated.current = true;
+    setHydrated(true);
   }, []);
 
   // Persist whenever any cart field changes (after hydration).
   useEffect(() => {
-    if (!hydrated.current) return;
+    if (!hydrated) return;
     try {
       const payload: PersistedCart = {
         cook,
         items,
         fulfillmentMode,
-        pickupAt,
         deliveryAddress,
         notes,
+        savedAt: Date.now(),
       };
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
     } catch {
       // Storage may be full or unavailable (private mode) — non-critical.
     }
-  }, [cook, items, fulfillmentMode, pickupAt, deliveryAddress, notes]);
+  }, [hydrated, cook, items, fulfillmentMode, deliveryAddress, notes]);
 
   const upsert = useCallback((meta: CookMeta, item: CartItem) => {
     setCook(meta);
@@ -196,10 +216,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       if (cook && cook.cookId !== input.cookId && items.length > 0) {
         return { conflict: true };
       }
+      if (cook && cook.cookId !== input.cookId) {
+        setNotesState(null);
+      }
       upsert(
         {
           cookId: input.cookId,
           cookName: input.cookName,
+          cookProvince: input.cookProvince,
           minOrderQty: input.minOrderQty,
           maxOrderQty: input.maxOrderQty,
           leadTime: input.leadTime,
@@ -215,10 +239,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const clearAndAdd = useCallback(
     (input: AddItemInput) => {
       setItems([]);
+      setNotesState(null);
       upsert(
         {
           cookId: input.cookId,
           cookName: input.cookName,
+          cookProvince: input.cookProvince,
           minOrderQty: input.minOrderQty,
           maxOrderQty: input.maxOrderQty,
           leadTime: input.leadTime,
@@ -238,7 +264,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setItems([]);
     setCook(null);
     setDeliveryAddressState(null);
-    setPickupAtState(null);
     setNotesState(null);
   }, []);
 
@@ -260,13 +285,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const value: CartContextType = {
     cookId: cook?.cookId ?? null,
     cookName: cook?.cookName ?? null,
+    cookProvince: cook?.cookProvince ?? "ON",
     minOrderQty,
     maxOrderQty,
     leadTime: cook?.leadTime ?? null,
     cancellationAllowed: cook?.cancellationAllowed ?? false,
     items,
     fulfillmentMode,
-    pickupAt,
     deliveryAddress,
     notes,
     totalQuantity,
@@ -278,7 +303,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     removeItem,
     clearCart,
     setFulfillment: setFulfillmentMode,
-    setPickupAt: setPickupAtState,
     setDeliveryAddress: setDeliveryAddressState,
     setNotes: setNotesState,
   };
@@ -296,16 +320,11 @@ export function buildCartItem(
     value: number;
   } | null,
 ): CartItem {
-  const gross = dish.price * quantity;
-  let discountAmount = 0;
-  if (promo) {
-    discountAmount =
-      promo.type === "percentage_off"
-        ? (gross * promo.value) / 100
-        : promo.value;
-    discountAmount = Math.min(discountAmount, gross);
-  }
-  discountAmount = Math.round(discountAmount * 100) / 100;
+  const { discountAmount, lineTotal } = computeLineTotal(
+    dish.price,
+    quantity,
+    promo,
+  );
   return {
     dishId: dish.id,
     name: dish.name,
@@ -313,6 +332,6 @@ export function buildCartItem(
     quantity,
     promotionId: promo?.id ?? null,
     discountAmount,
-    lineTotal: Math.round((gross - discountAmount) * 100) / 100,
+    lineTotal,
   };
 }

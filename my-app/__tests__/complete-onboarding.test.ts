@@ -1,9 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/auth", () => ({ auth: { api: { getSession: vi.fn() } } }));
-vi.mock("@/db", () => ({ db: { update: vi.fn(), insert: vi.fn() } }));
+vi.mock("@/db", () => ({
+  db: { update: vi.fn(), insert: vi.fn(), select: vi.fn() },
+}));
 vi.mock("@/db/schema", () => ({
-  authUser: { id: "id" },
+  authUser: {
+    id: "id",
+    role: "role",
+    phoneVerified: "phone_verified",
+    dateOfBirth: "date_of_birth",
+    onboardingCompletedAt: "onboarding_completed_at",
+  },
   authUserTable: { id: "id" },
   userPreferences: { userId: "user_id" },
 }));
@@ -18,7 +26,8 @@ const VALID_BODY = {
   dietary: ["Halal", "Vegan"],
   allergies: ["Peanuts"],
   goals: ["High protein"],
-  whyMealPrep: ["Save time cooking", "Eat healthier"],
+  whyMealPrep: ["Save time cooking"],
+  dateOfBirth: "2000-01-15",
 };
 
 function makeRequest(body: unknown) {
@@ -29,10 +38,24 @@ function makeRequest(body: unknown) {
   });
 }
 
-function mockSession(id: string | null) {
+function mockSession(id: string | null, role = "client") {
   vi.mocked(auth.api.getSession).mockResolvedValue(
-    id ? ({ user: { id } } as never) : null,
+    id ? ({ user: { id, role } } as never) : null,
   );
+}
+
+function mockUserRow(
+  row: {
+    role: string;
+    phoneVerified: boolean;
+    dateOfBirth: string | null;
+    onboardingCompletedAt: Date | null;
+  } | null,
+) {
+  const limit = vi.fn().mockResolvedValue(row ? [row] : []);
+  const where = vi.fn(() => ({ limit }));
+  const from = vi.fn(() => ({ where }));
+  vi.mocked(db.select).mockReturnValue({ from } as never);
 }
 
 function mockDbChain() {
@@ -47,6 +70,13 @@ function mockDbChain() {
   return { values, set, onConflictDoUpdate };
 }
 
+const READY_USER = {
+  role: "client",
+  phoneVerified: true,
+  dateOfBirth: "2000-01-15",
+  onboardingCompletedAt: null as Date | null,
+};
+
 beforeEach(() => vi.clearAllMocks());
 
 describe("POST /api/auth/complete-onboarding", () => {
@@ -56,14 +86,54 @@ describe("POST /api/auth/complete-onboarding", () => {
     expect(res.status).toBe(401);
   });
 
-  it("returns 400 when body is invalid", async () => {
+  it("returns 403 for non-client accounts", async () => {
+    mockSession(USER_ID, "cook");
+    mockUserRow({
+      role: "cook",
+      phoneVerified: true,
+      dateOfBirth: "2000-01-15",
+      onboardingCompletedAt: null,
+    });
+    const res = await POST(makeRequest(VALID_BODY));
+    expect(res.status).toBe(403);
+  });
+
+  it("returns 403 when phone is not verified on first completion", async () => {
     mockSession(USER_ID);
-    const res = await POST(makeRequest({ dietary: "not-an-array" }));
+    mockUserRow({
+      ...READY_USER,
+      phoneVerified: false,
+    });
+    const res = await POST(makeRequest(VALID_BODY));
+    expect(res.status).toBe(403);
+  });
+
+  it("returns 400 when date of birth is missing on first completion", async () => {
+    mockSession(USER_ID);
+    mockUserRow({
+      ...READY_USER,
+      dateOfBirth: null,
+    });
+    const { dateOfBirth: _, ...body } = VALID_BODY;
+    const res = await POST(makeRequest(body));
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 when date of birth fails the 16+ rule", async () => {
+    mockSession(USER_ID);
+    mockUserRow({
+      ...READY_USER,
+      dateOfBirth: null,
+    });
+    const res = await POST(
+      makeRequest({ ...VALID_BODY, dateOfBirth: "2020-01-15" }),
+    );
     expect(res.status).toBe(400);
   });
 
   it("upserts preferences and marks onboarding complete", async () => {
     mockSession(USER_ID);
+    mockUserRow(READY_USER);
     const { values, set, onConflictDoUpdate } = mockDbChain();
 
     const res = await POST(makeRequest(VALID_BODY));
@@ -84,16 +154,9 @@ describe("POST /api/auth/complete-onboarding", () => {
     );
   });
 
-  it("rejects whyMealPrep when sent as a string", async () => {
-    mockSession(USER_ID);
-    const res = await POST(
-      makeRequest({ ...VALID_BODY, whyMealPrep: "Save time cooking" }),
-    );
-    expect(res.status).toBe(400);
-  });
-
   it("sets an httpOnly 7eats-onboarded cookie on success", async () => {
     mockSession(USER_ID);
+    mockUserRow(READY_USER);
     mockDbChain();
 
     const res = await POST(makeRequest(VALID_BODY));
@@ -104,12 +167,38 @@ describe("POST /api/auth/complete-onboarding", () => {
     expect(cookie).toContain("HttpOnly");
   });
 
-  it("accepts empty arrays (all prefs optional)", async () => {
+  it("accepts empty preference arrays on first completion", async () => {
     mockSession(USER_ID);
+    mockUserRow(READY_USER);
     mockDbChain();
 
     const res = await POST(
-      makeRequest({ dietary: [], allergies: [], goals: [], whyMealPrep: [] }),
+      makeRequest({
+        dietary: [],
+        allergies: [],
+        goals: [],
+        whyMealPrep: [],
+        dateOfBirth: "2000-01-15",
+      }),
+    );
+    expect(res.status).toBe(200);
+  });
+
+  it("allows preference updates after onboarding is complete", async () => {
+    mockSession(USER_ID);
+    mockUserRow({
+      ...READY_USER,
+      onboardingCompletedAt: new Date("2024-01-01"),
+    });
+    mockDbChain();
+
+    const res = await POST(
+      makeRequest({
+        dietary: ["Vegan"],
+        allergies: [],
+        goals: [],
+        whyMealPrep: [],
+      }),
     );
     expect(res.status).toBe(200);
   });

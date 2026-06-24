@@ -10,6 +10,7 @@ import {
   mapDishStatusForDb,
   normalizeDishStatus,
 } from "@/lib/dish-status";
+import { rebuildCookSearchIndexSafe } from "@/lib/search/index-builder";
 
 const VALID_STATUSES = ["active", "inactive"] as const;
 
@@ -172,6 +173,9 @@ export async function POST(req: NextRequest) {
 
       return dish;
     });
+
+    // Keep the search index in sync with the cook's dish catalogue.
+    rebuildCookSearchIndexSafe(cookId);
 
     return NextResponse.json(
       {

@@ -43,54 +43,20 @@
   text-transform: uppercase;
 }
 
-/* ─── Hero card ──────────────────────────────────────────────────────────── */
-.heroCard {
+/* ─── Hero loading ─────────────────────────────────────────────────────────── */
+.heroSkeleton {
   border-radius: 12px;
-  padding: 24px 22px;
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  margin-bottom: 12px;
-  min-height: 120px;
   overflow: hidden;
+  border: 1px solid var(--grey-200);
+  margin-bottom: 12px;
 }
 
-.heroInitials {
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.2);
-  border: 2px solid rgba(255, 255, 255, 0.38);
+.heroSkeletonBody {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 20px;
-  font-weight: 900;
-  color: var(--white);
-  flex-shrink: 0;
-  letter-spacing: -0.02em;
-}
-
-.heroInfo {
-  flex: 1;
-  min-width: 0;
-}
-
-.heroCook {
-  font-size: 11px;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.68);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  margin-bottom: 5px;
-}
-
-.heroTitle {
-  font-size: 21px;
-  font-weight: 800;
-  color: var(--white);
-  letter-spacing: -0.03em;
-  line-height: 1.15;
+  align-items: flex-end;
+  gap: 14px;
+  padding: 0 18px 18px;
+  margin-top: -24px;
 }
 
 /* ─── Cancelled banner ───────────────────────────────────────────────────── */
@@ -98,10 +64,10 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  background: #fff5f5;
-  border: 1.5px solid #fca5a5;
-  border-left: 4px solid var(--red);
-  border-radius: var(--radius-sm);
+  background: var(--white);
+  border: 1px solid var(--grey-200);
+  border-left: 3px solid var(--red);
+  border-radius: 8px;
   padding: 14px 18px;
   margin-bottom: 12px;
 }
@@ -109,13 +75,13 @@
 .cancelledBannerTitle {
   font-size: 14.5px;
   font-weight: 700;
-  color: #b91c1c;
+  color: var(--red);
   letter-spacing: -0.01em;
 }
 
 .cancelledBannerDate {
   font-size: 12.5px;
-  color: #ef4444;
+  color: var(--grey-700);
   font-weight: 500;
 }
 
@@ -195,6 +161,227 @@
 
 .copyBtn:active {
   transform: scale(0.98);
+}
+
+/* ─── Cancel card ─────────────────────────────────────────────────────────── */
+.cancelCard {
+  border: 1px solid var(--grey-200);
+  border-left: 3px solid var(--red);
+  border-radius: 12px;
+  padding: 20px 22px;
+  margin-bottom: 12px;
+  background: var(--white);
+}
+
+.cancelTitle {
+  margin: 0 0 6px;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.02em;
+}
+
+.cancelSummary {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--ink);
+}
+
+.cancelDeadline {
+  margin: 0 0 12px;
+  padding: 12px 14px;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: var(--white);
+}
+
+.cancelDeadlineLabel {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--grey-500);
+}
+
+.cancelDeadlineValue {
+  display: block;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.35;
+  color: var(--red);
+  letter-spacing: -0.02em;
+}
+
+.cancelDesc {
+  margin: 0 0 16px;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--grey-700);
+}
+
+.cancelBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 12px 18px;
+  border: 1.5px solid #fca5a5;
+  border-radius: 8px;
+  background: var(--white);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--red);
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
+}
+
+.cancelBtn:hover {
+  background: #fef2f2;
+  border-color: #f87171;
+  color: #b91c1c;
+}
+
+/* ─── Cancel modal ────────────────────────────────────────────────────────── */
+.cancelModal {
+  background: var(--white);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 420px;
+  padding: 24px;
+  box-shadow: 0 20px 60px rgba(15, 15, 15, 0.2);
+  animation: slideUp 0.2s cubic-bezier(0.34, 1.2, 0.64, 1);
+}
+
+.cancelModalHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.cancelModalTitle {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+
+.cancelModalOrder {
+  margin: 0 0 16px;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--grey-700);
+}
+
+.cancelModalDeadline {
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border: 1px solid #fecaca;
+  border-left: 3px solid var(--red);
+  border-radius: 8px;
+  background: var(--white);
+}
+
+.cancelModalDeadlineLabel {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--grey-500);
+}
+
+.cancelModalDeadlineValue {
+  display: block;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.35;
+  color: var(--red);
+}
+
+.cancelModalPolicy {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.cancelModalReminder {
+  margin: 0 0 18px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--grey-600);
+}
+
+.cancelModalError {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #b91c1c;
+}
+
+.cancelModalActions {
+  display: flex;
+  gap: 10px;
+}
+
+.cancelModalKeep {
+  flex: 1;
+  padding: 12px;
+  border: 1.5px solid var(--grey-200);
+  border-radius: 8px;
+  background: var(--white);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--grey-700);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.cancelModalKeep:hover:not(:disabled) {
+  border-color: var(--grey-300);
+  background: var(--grey-100);
+}
+
+.cancelModalConfirm {
+  flex: 1.2;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  background: var(--red);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--white);
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+
+.cancelModalConfirm:hover:not(:disabled) {
+  background: var(--red-deep);
+}
+
+.cancelModalConfirm:disabled,
+.cancelModalKeep:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
 }
 
 /* ─── Section cards ───────────────────────────────────────────────────────── */
@@ -327,6 +514,14 @@
   color: var(--ink);
   letter-spacing: -0.01em;
   line-height: 1.35;
+}
+
+.detailHint {
+  margin: 6px 0 0;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--grey-700);
 }
 
 /* ─── Dish rows ───────────────────────────────────────────────────────────── */

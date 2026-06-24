@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
+import authStyles from "@/app/components/ClientAuthLayout/client-auth.module.css";
 import styles from "./LoginForm.module.css";
 
 // Shared by both audiences. The sign-in endpoint decides the redirect by role,
@@ -31,6 +32,8 @@ export default function LoginForm({
   // correct portal" link rendered under the error message.
   const [wrongPortal, setWrongPortal] = useState(false);
   const [isPending, startTransition] = useTransition();
+
+  const canSubmit = email.trim().length > 0 && password.length > 0;
 
   const forgotPasswordHref =
     audience === "client"
@@ -148,7 +151,8 @@ export default function LoginForm({
         <button
           type="submit"
           className={`btn btn-primary ${styles.submit}`}
-          disabled={isPending}
+          disabled={isPending || !canSubmit}
+          aria-disabled={!canSubmit}
         >
           {isPending ? "Signing in…" : "Sign in"}
         </button>
@@ -165,17 +169,8 @@ export default function LoginForm({
   // Standalone mode (used in business auth — includes logo + card wrapper)
   if (showLogo) {
     return (
-      <div
-        style={{
-          width: "100%",
-          maxWidth: 460,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 32,
-        }}
-      >
-        <Link href={logoHref} className={styles.logoLink}>
+      <div className={authStyles.formShell}>
+        <Link href={logoHref} className={authStyles.logoLink}>
           <Image
             src="/7eats-logo.svg"
             alt="7eats"
@@ -185,7 +180,7 @@ export default function LoginForm({
             priority
           />
         </Link>
-        <div className={styles.card}>{formContent}</div>
+        <div className={authStyles.formCard}>{formContent}</div>
       </div>
     );
   }

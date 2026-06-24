@@ -39,6 +39,25 @@ describe("addToWaitlist", () => {
     });
   });
 
+  it("includes the trimmed city when provided", async () => {
+    await addToWaitlist("user@example.com", "abc123", "  Toronto  ");
+
+    expect(mockValues).toHaveBeenCalledWith({
+      email: "user@example.com",
+      ipHash: "abc123",
+      city: "Toronto",
+    });
+  });
+
+  it("omits city when not provided or blank", async () => {
+    await addToWaitlist("user@example.com", "abc123", "   ");
+
+    expect(mockValues).toHaveBeenCalledWith({
+      email: "user@example.com",
+      ipHash: "abc123",
+    });
+  });
+
   it("uses onConflictDoNothing so duplicate emails are silently ignored", async () => {
     await addToWaitlist("user@example.com", "abc123");
     expect(mockOnConflictDoNothing).toHaveBeenCalledWith({

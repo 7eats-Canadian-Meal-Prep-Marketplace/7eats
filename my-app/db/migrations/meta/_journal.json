@@ -50,6 +50,48 @@
       "when": 1782500000000,
       "tag": "0006_drop_max_capacity",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1782600000000,
+      "tag": "0007_cook_search_index",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1782700000000,
+      "tag": "0008_guest_order_access",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1782800000000,
+      "tag": "0009_order_tax",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1782900000000,
+      "tag": "0010_order_fulfillment_window",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1783000000000,
+      "tag": "0011_phone_role_unique",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1783100000000,
+      "tag": "0012_waitlist_city",
+      "breakpoints": true
     }
   ]
 }

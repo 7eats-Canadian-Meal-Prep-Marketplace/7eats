@@ -276,30 +276,42 @@ export default function CalendarPage() {
       const avail = availRes.ok ? (await availRes.json()).data : null;
       const ordersData = ordersRes.ok ? (await ordersRes.json()).data : [];
 
-      const calendarOrders: CalendarOrder[] = (ordersData ?? []).map(
-        (o: {
+      const calendarOrders: CalendarOrder[] = (
+        (ordersData ?? []) as Array<{
           id: string;
-          pickupAt: string;
+          status: string;
+          pickupAt: string | null;
+          fulfillmentWindowStart: string | null;
           fulfillmentMode: "pickup" | "delivery" | null;
           customerName: string | null;
           customerFirstName: string | null;
           listingTitle: string | null;
           quantity: number;
           pickupCodeVerifiedAt: string | null;
-        }) => ({
-          id: o.id,
-          datetime: o.pickupAt,
-          kind: (o.fulfillmentMode === "delivery"
-            ? "delivery"
-            : "pickup") as Fulfillment,
-          customerName:
-            o.customerName ??
-            (o.customerFirstName ? o.customerFirstName : "Customer"),
-          listingTitle: o.listingTitle ?? "Order",
-          quantity: o.quantity,
-          pickupCodeVerifiedAt: o.pickupCodeVerifiedAt,
-        }),
-      );
+        }>
+      )
+        // A cancelled order has no handoff — keep it off the schedule.
+        .filter((o) => o.status !== "cancelled")
+        .map((o) => {
+          // Pickup orders never carry a `pickupAt`; both modes always have the
+          // scheduled window captured at placement, so prefer that for the day.
+          const datetime = o.pickupAt ?? o.fulfillmentWindowStart;
+          if (!datetime) return null;
+          return {
+            id: o.id,
+            datetime,
+            kind: (o.fulfillmentMode === "delivery"
+              ? "delivery"
+              : "pickup") as Fulfillment,
+            customerName:
+              o.customerName ??
+              (o.customerFirstName ? o.customerFirstName : "Customer"),
+            listingTitle: o.listingTitle ?? "Order",
+            quantity: o.quantity,
+            pickupCodeVerifiedAt: o.pickupCodeVerifiedAt,
+          };
+        })
+        .filter((o): o is CalendarOrder => o !== null);
 
       const built = buildWeekFromData(
         ws,
@@ -447,8 +459,8 @@ export default function CalendarPage() {
           <span>
             {missedCount} handoff{missedCount === 1 ? "" : "s"} went through
             without a verified code this week. Scanning the customer&apos;s code
-            at pickup or delivery confirms the right person collected the order
-            — skipping it leaves you exposed to fraud and chargeback disputes.
+            at pickup or delivery confirms the right person collected the order.
+            Skipping it leaves you exposed to fraud and chargeback disputes.
           </span>
         </div>
       )}

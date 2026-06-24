@@ -32,6 +32,15 @@ describe("waitlistSchema", () => {
         .success,
     ).toBe(false);
   });
+
+  it("accepts an optional city", () => {
+    const parsed = waitlistSchema.safeParse({
+      email: "user@example.com",
+      city: "Toronto",
+    });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) expect(parsed.data.city).toBe("Toronto");
+  });
 });
 
 describe("guardRequest", () => {

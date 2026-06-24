@@ -1,16 +1,30 @@
 "use client";
 
-import { Minus, Plus, Star } from "lucide-react";
+import {
+  CalendarClock,
+  MapPin,
+  Minus,
+  NotebookPen,
+  Plus,
+  X,
+} from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { LEAD_TIME_DAYS_MAP, refundPolicyText } from "@/lib/refund-policy";
+import { openAddressEditor } from "@/lib/address-events";
+import { SPECIAL_REQUESTS_DISCLAIMER } from "@/lib/orders/special-requests-copy";
+import {
+  cancelByDate,
+  formatLeadTime,
+  LEAD_TIME_DAYS_MAP,
+} from "@/lib/refund-policy";
 import { buildCartItem, useCart } from "../../../_cart-context";
+import { useServiceAddress } from "../../../_service-address-context";
 import { Skeleton } from "../../../_skeleton";
 import styles from "./page.module.css";
 
-// Pickup-slot generation ------------------------------------------------------
-// getDay() is 0=Sunday..6=Saturday; windows store lowercase day names.
+// ── Pickup-slot generation ───────────────────────────────────────────────────
 const DAY_NAMES = [
   "sunday",
   "monday",
@@ -20,29 +34,30 @@ const DAY_NAMES = [
   "friday",
   "saturday",
 ] as const;
+const DAY_SHORT: Record<string, string> = {
+  sunday: "Sun",
+  monday: "Mon",
+  tuesday: "Tue",
+  wednesday: "Wed",
+  thursday: "Thu",
+  friday: "Fri",
+  saturday: "Sat",
+};
 const SLOT_INTERVAL_MIN = 30;
 const PICKUP_DAYS_AHEAD = 14;
 
-type PickupWindow = { dayOfWeek: string; fromTime: string; toTime: string };
+type Window = { dayOfWeek: string; fromTime: string; toTime: string };
 
-/**
- * Expand a cook's weekly pickup windows into concrete, selectable slots over the
- * next two weeks. Lead time is counted in whole calendar days: a 3-day-lead cook
- * ordered from on Monday is pickable from Thursday, so this-week days that fall
- * inside the lead window are skipped and roll to the following week.
- */
-function generatePickupSlots(
-  windows: PickupWindow[],
+function generateSlots(
+  windows: Window[],
   leadTime: string | null,
   now: Date,
 ): { iso: string; label: string }[] {
   if (windows.length === 0) return [];
   const leadDays = leadTime ? (LEAD_TIME_DAYS_MAP[leadTime] ?? 0) : 0;
   const byDay = new Map(windows.map((w) => [w.dayOfWeek, w]));
-
   const slots: { iso: string; label: string }[] = [];
   for (let d = 0; d < PICKUP_DAYS_AHEAD; d++) {
-    // Need at least `leadDays` calendar days of notice for this pickup day.
     if (d < leadDays) continue;
     const day = new Date(now.getFullYear(), now.getMonth(), now.getDate() + d);
     const win = byDay.get(DAY_NAMES[day.getDay()]);
@@ -58,30 +73,73 @@ function generatePickupSlots(
       t < end;
       t = new Date(t.getTime() + SLOT_INTERVAL_MIN * 60_000)
     ) {
-      // Never offer a time already in the past (matters only for same-day).
       if (t <= now) continue;
-      slots.push({
-        iso: t.toISOString(),
-        label: t.toLocaleString("en-CA", {
-          weekday: "short",
-          month: "short",
-          day: "numeric",
-          hour: "numeric",
-          minute: "2-digit",
-        }),
-      });
+      slots.push({ iso: t.toISOString(), label: "" });
     }
   }
   return slots;
 }
 
+function fmtDay(d: Date): string {
+  return d.toLocaleDateString("en-CA", {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function fmtDateTime(d: Date): string {
+  return d.toLocaleString("en-CA", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function fmtTime(hhmm: string): string {
+  const [h, m] = hhmm.split(":").map(Number);
+  const period = h >= 12 ? "pm" : "am";
+  const hour = h % 12 === 0 ? 12 : h % 12;
+  return m === 0
+    ? `${hour}${period}`
+    : `${hour}:${String(m).padStart(2, "0")}${period}`;
+}
+
+/** Compact, ordered window summary, e.g. "Tue, Thu, Sat · 11am–2pm". */
+function summarizeWindows(windows: Window[]): string {
+  if (windows.length === 0) return "";
+  const ordered = [...windows].sort(
+    (a, b) =>
+      DAY_NAMES.indexOf(a.dayOfWeek as (typeof DAY_NAMES)[number]) -
+      DAY_NAMES.indexOf(b.dayOfWeek as (typeof DAY_NAMES)[number]),
+  );
+  const days = ordered.map((w) => DAY_SHORT[w.dayOfWeek] ?? w.dayOfWeek);
+  const uniform = ordered.every(
+    (w) => w.fromTime === ordered[0].fromTime && w.toTime === ordered[0].toTime,
+  );
+  const range = uniform
+    ? `${fmtTime(ordered[0].fromTime)}–${fmtTime(ordered[0].toTime)}`
+    : "varies by day";
+  return `${days.join(", ")} · ${range}`;
+}
+
+// ── Types ────────────────────────────────────────────────────────────────────
 type Promotion = {
   id: string;
   type: "percentage_off" | "fixed_off";
   value: string;
-  validUntil: string | null;
-  maxUses: number | null;
-  usesCount: number;
+};
+
+type Nutrition = {
+  calories: number | null;
+  proteinG: string | null;
+  carbsG: string | null;
+  fatG: string | null;
+  fiberG: string | null;
+  sugarG: string | null;
+  sodiumMg: string | null;
 };
 
 type Dish = {
@@ -89,8 +147,13 @@ type Dish = {
   name: string;
   description: string | null;
   price: string;
+  cuisine: string | null;
+  servingSize: string | null;
+  dietary: string[];
   photos: { url: string; sortOrder: number }[];
   tags: { slug: string; label: string }[];
+  ingredients: { name: string; isAllergen: boolean }[];
+  nutrition: Nutrition | null;
   promotion: Promotion | null;
 };
 
@@ -98,7 +161,9 @@ type MenuData = {
   cook: {
     id: string;
     displayName: string | null;
+    cookName: string | null;
     photoUrl: string | null;
+    bannerUrl: string | null;
     bio: string | null;
     minOrderQty: number;
     maxOrderQty: number | null;
@@ -106,28 +171,46 @@ type MenuData = {
     offersPickup: boolean;
     delivery: "none" | "self" | null;
     cancellationAllowed: boolean;
+    acceptsSpecialRequests: boolean;
     pickupCity: string | null;
-    pickupWindows: { dayOfWeek: string; fromTime: string; toTime: string }[];
-    deliveryWindows: { dayOfWeek: string; fromTime: string; toTime: string }[];
+    pickupProvince: string | null;
+    pickupWindows: Window[];
+    deliveryWindows: Window[];
   };
   dishes: Dish[];
 };
 
-function promoLabel(promo: Promotion): string {
-  return promo.type === "percentage_off"
-    ? `${Number(promo.value)}% off`
-    : `$${Number(promo.value)} off`;
+// ── Price helpers ────────────────────────────────────────────────────────────
+function promoLabel(p: Promotion): string {
+  return p.type === "percentage_off"
+    ? `${Number(p.value)}% off`
+    : `$${Number(p.value)} off`;
 }
 
+function discounted(price: number, p: Promotion | null): number {
+  if (!p) return price;
+  const v = Number(p.value);
+  const next = p.type === "percentage_off" ? price * (1 - v / 100) : price - v;
+  return Math.max(0, Math.round(next * 100) / 100);
+}
+
+// ── Page ─────────────────────────────────────────────────────────────────────
 export default function CookMenuPage() {
   const params = useParams<{ id: string }>();
   const cookId = params.id;
   const router = useRouter();
   const cart = useCart();
+  const { ready, currentAddress } = useServiceAddress();
 
   const [data, setData] = useState<MenuData | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [openDish, setOpenDish] = useState<Dish | null>(null);
+  const [noteOpen, setNoteOpen] = useState(false);
+  // A pending add from this cook while the cart still holds another cook's order.
+  const [conflict, setConflict] = useState<{ dish: Dish; qty: number } | null>(
+    null,
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -152,7 +235,6 @@ export default function CookMenuPage() {
     };
   }, [cookId]);
 
-  // Map current cart quantities by dishId (only when this cook's cart is active).
   const qtyByDish = useMemo(() => {
     const map: Record<string, number> = {};
     if (cart.cookId === cookId) {
@@ -161,19 +243,66 @@ export default function CookMenuPage() {
     return map;
   }, [cart.cookId, cart.items, cookId]);
 
-  // Concrete slots from the cook's weekly windows (lead time applied).
-  const fulfillmentSlots = useMemo(() => {
+  const cookSelfDelivers = data?.cook.delivery === "self";
+
+  // Whether this cook can actually deliver to the user depends on the driving
+  // distance vs the cook's radius — which can be tighter than the 50km discovery
+  // cap. Recompute whenever the cook or the service address changes.
+  const [deliveryCheck, setDeliveryCheck] = useState<{
+    available: boolean;
+    distanceKm: number;
+    maxDeliveryKm: number | null;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!cookSelfDelivers || !currentAddress) {
+      setDeliveryCheck(null);
+      return;
+    }
+    let cancelled = false;
+    fetch("/api/delivery/distance", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        cookId,
+        customerLat: currentAddress.lat,
+        customerLng: currentAddress.lng,
+      }),
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (cancelled || !d) return;
+        setDeliveryCheck({
+          available: !d.isOutOfRange,
+          distanceKm: Math.round(d.distanceKm ?? 0),
+          maxDeliveryKm: d.maxDeliveryKm ?? null,
+        });
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [cookSelfDelivers, currentAddress, cookId]);
+
+  const canPickup = data?.cook.offersPickup !== false;
+  // Out of range only once we've confirmed it (don't disable optimistically
+  // while the check is in flight — checkout + server still gate placement).
+  const deliveryOutOfRange =
+    Boolean(cookSelfDelivers) &&
+    deliveryCheck != null &&
+    !deliveryCheck.available;
+  const canDeliver = Boolean(cookSelfDelivers) && !deliveryOutOfRange;
+
+  const slots = useMemo(() => {
     if (!data) return [];
     const windows =
       cart.fulfillmentMode === "delivery"
         ? data.cook.deliveryWindows
         : data.cook.pickupWindows;
-    return generatePickupSlots(windows, data.cook.leadTime, new Date());
+    return generateSlots(windows, data.cook.leadTime, new Date());
   }, [data, cart.fulfillmentMode]);
 
-  const canPickup = data?.cook.offersPickup !== false;
-  const canDeliver = data?.cook.delivery === "self";
-
+  // Default the fulfillment mode to whatever the cook actually offers.
   useEffect(() => {
     if (!data) return;
     if (canPickup && !canDeliver && cart.fulfillmentMode !== "pickup") {
@@ -187,16 +316,7 @@ export default function CookMenuPage() {
     }
   }, [data, canPickup, canDeliver, cart.fulfillmentMode, cart.setFulfillment]);
 
-  useEffect(() => {
-    if (
-      cart.pickupAt &&
-      !fulfillmentSlots.some((s) => s.iso === cart.pickupAt)
-    ) {
-      cart.setPickupAt(null);
-    }
-  }, [cart.pickupAt, cart.setPickupAt, fulfillmentSlots]);
-
-  function changeQty(dish: Dish, nextQty: number) {
+  function buildBase(dish: Dish, nextQty: number) {
     const promo = dish.promotion
       ? {
           id: dish.promotion.id,
@@ -209,81 +329,52 @@ export default function CookMenuPage() {
       Math.max(0, nextQty),
       promo,
     );
-    if (!data) return;
+    return {
+      cookId,
+      cookName: data?.cook.displayName ?? "Cook",
+      cookProvince: data?.cook.pickupProvince ?? "ON",
+      minOrderQty: data?.cook.minOrderQty ?? 1,
+      maxOrderQty: data?.cook.maxOrderQty ?? null,
+      leadTime: data?.cook.leadTime ?? null,
+      cancellationAllowed: data?.cook.cancellationAllowed ?? false,
+      item,
+    };
+  }
 
-    if (cart.cookId && cart.cookId !== cookId && cart.items.length > 0) {
-      const ok = window.confirm(
-        `Your cart has items from ${cart.cookName}. Start a new order from ${data.cook.displayName}?`,
-      );
-      if (!ok) return;
-      cart.clearAndAdd({
-        cookId,
-        cookName: data.cook.displayName ?? "Cook",
-        minOrderQty: data.cook.minOrderQty,
-        maxOrderQty: data.cook.maxOrderQty,
-        leadTime: data.cook.leadTime,
-        cancellationAllowed: data.cook.cancellationAllowed,
-        item,
-      });
+  function requireAddressForAdd(): boolean {
+    if (!ready || currentAddress) return false;
+    openAddressEditor();
+    return true;
+  }
+
+  function changeQty(dish: Dish, nextQty: number) {
+    if (!data) return;
+    const currentQty = qtyByDish[dish.id] ?? 0;
+    const isAdding = nextQty > currentQty;
+
+    if (!isAdding) {
+      cart.addItem(buildBase(dish, nextQty));
       return;
     }
-    cart.addItem({
-      cookId,
-      cookName: data.cook.displayName ?? "Cook",
-      minOrderQty: data.cook.minOrderQty,
-      maxOrderQty: data.cook.maxOrderQty,
-      leadTime: data.cook.leadTime,
-      cancellationAllowed: data.cook.cancellationAllowed,
-      item,
-    });
+
+    if (requireAddressForAdd()) return;
+
+    // Switching kitchens replaces the cart — confirm with a proper dialog first.
+    if (cart.cookId && cart.cookId !== cookId && cart.items.length > 0) {
+      setConflict({ dish, qty: nextQty });
+      return;
+    }
+    cart.addItem(buildBase(dish, nextQty));
   }
 
-  if (loading) {
-    return (
-      <div className={styles.page}>
-        <div className={styles.layout}>
-          <main className={styles.menuCol}>
-            <header className={styles.cookHeader}>
-              <Skeleton circle width={56} height={56} />
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 8,
-                  flex: 1,
-                }}
-              >
-                <Skeleton width="50%" height={20} radius={6} />
-                <Skeleton width="30%" height={13} radius={6} />
-              </div>
-            </header>
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              {[0, 1, 2, 3].map((i) => (
-                <div
-                  key={i}
-                  style={{ display: "flex", gap: 12, alignItems: "center" }}
-                >
-                  <Skeleton width={72} height={72} radius={12} />
-                  <div
-                    style={{
-                      flex: 1,
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 8,
-                    }}
-                  >
-                    <Skeleton width="60%" height={16} radius={6} />
-                    <Skeleton width="85%" height={12} radius={6} />
-                    <Skeleton width={56} height={14} radius={6} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </main>
-        </div>
-      </div>
-    );
+  function confirmSwitch() {
+    if (!conflict) return;
+    if (requireAddressForAdd()) return;
+    cart.clearAndAdd(buildBase(conflict.dish, conflict.qty));
+    setConflict(null);
   }
+
+  if (loading) return <MenuSkeleton />;
   if (notFound || !data) {
     return (
       <div className={styles.state}>
@@ -296,106 +387,175 @@ export default function CookMenuPage() {
   }
 
   const { cook, dishes } = data;
+  const kitchen = cook.displayName?.trim() || "Kitchen";
+  const person = cook.cookName?.trim() ?? "";
+  const showPerson =
+    person !== "" && person.toLowerCase() !== kitchen.toLowerCase();
   const activeForThisCook = cart.cookId === cookId;
-  const total = activeForThisCook ? cart.subtotal : 0;
   const totalQty = activeForThisCook ? cart.totalQuantity : 0;
+  const subtotal = activeForThisCook ? cart.subtotal : 0;
   const meetsMin = totalQty >= cook.minOrderQty;
+  const remaining = cook.minOrderQty - totalQty;
+  const noSlots = slots.length === 0;
+  const isDelivery = cart.fulfillmentMode === "delivery";
+  const windowSummary = summarizeWindows(
+    isDelivery ? cook.deliveryWindows : cook.pickupWindows,
+  );
+  const cutoff = cancelByDate(slots[0]?.iso ?? null, cook.leadTime);
+
+  // "Order by X to pick up on Y" — derived from the next open slot and lead time.
+  const leadBanner = (() => {
+    if (slots.length === 0) return null;
+    const fulfill = new Date(slots[0].iso);
+    const leadDays = cook.leadTime
+      ? (LEAD_TIME_DAYS_MAP[cook.leadTime] ?? 0)
+      : 0;
+    const orderBy = new Date(fulfill);
+    orderBy.setDate(orderBy.getDate() - leadDays);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const orderByMidnight = new Date(orderBy);
+    orderByMidnight.setHours(0, 0, 0, 0);
+    const verb = isDelivery ? "get delivery" : "pick up";
+    return {
+      soon: orderByMidnight <= today,
+      orderBy: fmtDay(orderBy),
+      fulfill: fmtDay(fulfill),
+      verb,
+    };
+  })();
 
   return (
     <div className={styles.page}>
       <div className={styles.layout}>
-        {/* Left: dishes */}
+        {/* Left — the menu */}
         <main className={styles.menuCol}>
-          <header className={styles.cookHeader}>
-            <div className={styles.cookAvatar}>
-              {cook.photoUrl ? (
-                // biome-ignore lint/performance/noImgElement: avatar
-                <img
-                  src={cook.photoUrl}
-                  alt=""
-                  className={styles.cookAvatarImg}
-                />
-              ) : (
-                <span>{(cook.displayName ?? "C").charAt(0)}</span>
-              )}
-            </div>
-            <div>
-              <h1 className={styles.cookName}>{cook.displayName}</h1>
-              {cook.pickupCity && (
-                <p className={styles.cookMeta}>{cook.pickupCity}</p>
-              )}
-              <Link
-                href={`/app/cooks/${cookId}`}
-                className={styles.profileLink}
-              >
-                View profile
-              </Link>
-            </div>
+          <header className={styles.menuHead}>
+            <p className={styles.menuEyebrow}>Menu</p>
+            <h1 className={styles.menuTitle}>{kitchen}</h1>
           </header>
 
+          {leadBanner && (
+            <div className={styles.leadBanner}>
+              <CalendarClock size={16} className={styles.leadIcon} />
+              <p>
+                {leadBanner.soon ? (
+                  <>
+                    Order today to {leadBanner.verb} on{" "}
+                    <strong>{leadBanner.fulfill}</strong>.
+                  </>
+                ) : (
+                  <>
+                    Order by <strong>{leadBanner.orderBy}</strong> to{" "}
+                    {leadBanner.verb} on <strong>{leadBanner.fulfill}</strong>.
+                  </>
+                )}
+              </p>
+            </div>
+          )}
+
           {dishes.length === 0 ? (
-            <p className={styles.state}>No dishes available yet.</p>
+            <p className={styles.empty}>No dishes available yet.</p>
           ) : (
-            <ul className={styles.dishList}>
+            <ul className={styles.dishGrid}>
               {dishes.map((dish) => {
                 const qty = qtyByDish[dish.id] ?? 0;
+                const price = Number(dish.price);
+                const final = discounted(price, dish.promotion);
                 return (
-                  <li key={dish.id} className={styles.dishCard}>
-                    <div className={styles.dishPhoto}>
-                      {dish.photos[0] ? (
-                        // biome-ignore lint/performance/noImgElement: dish photo
-                        <img
-                          src={dish.photos[0].url}
-                          alt={dish.name}
-                          className={styles.dishPhotoImg}
-                        />
-                      ) : (
-                        <div className={styles.dishPhotoPlaceholder} />
-                      )}
-                      {dish.promotion && (
-                        <span className={styles.promoBadge}>
-                          {promoLabel(dish.promotion)}
-                        </span>
-                      )}
-                    </div>
-                    <div className={styles.dishBody}>
-                      <h3 className={styles.dishName}>{dish.name}</h3>
-                      {dish.description && (
-                        <p className={styles.dishDesc}>{dish.description}</p>
-                      )}
-                      <div className={styles.dishTags}>
-                        {dish.tags.map((t) => (
-                          <span key={t.slug} className={styles.tag}>
-                            {t.label}
+                  <li key={dish.id}>
+                    <article className={styles.dishCard}>
+                      <div className={styles.dishMedia}>
+                        <button
+                          type="button"
+                          className={styles.dishPhotoBtn}
+                          onClick={() => setOpenDish(dish)}
+                          aria-label={`View ${dish.name}`}
+                        >
+                          {dish.photos[0] ? (
+                            <Image
+                              src={dish.photos[0].url}
+                              alt={dish.name}
+                              fill
+                              className={styles.dishPhotoImg}
+                              sizes="(max-width: 768px) 50vw, 280px"
+                            />
+                          ) : (
+                            <div className={styles.dishPhotoPlaceholder} />
+                          )}
+                        </button>
+                        {dish.promotion && (
+                          <span className={styles.promoBadge}>
+                            {promoLabel(dish.promotion)}
                           </span>
-                        ))}
-                      </div>
-                      <div className={styles.dishFooter}>
-                        <span className={styles.dishPrice}>
-                          ${Number(dish.price).toFixed(2)}
-                        </span>
-                        <div className={styles.stepper}>
-                          <button
-                            type="button"
-                            className={styles.stepBtn}
-                            onClick={() => changeQty(dish, qty - 1)}
-                            disabled={qty === 0}
-                            aria-label={`Remove one ${dish.name}`}
-                          >
-                            <Minus size={16} />
-                          </button>
-                          <span className={styles.stepQty}>{qty}</span>
-                          <button
-                            type="button"
-                            className={styles.stepBtn}
-                            onClick={() => changeQty(dish, qty + 1)}
-                            aria-label={`Add one ${dish.name}`}
-                          >
-                            <Plus size={16} />
-                          </button>
+                        )}
+                        <div className={styles.dishControl}>
+                          {qty > 0 ? (
+                            <fieldset
+                              className={styles.stepper}
+                              aria-label={`Quantity for ${dish.name}`}
+                            >
+                              <button
+                                type="button"
+                                className={styles.stepBtn}
+                                onClick={() => changeQty(dish, qty - 1)}
+                                aria-label={`Remove one ${dish.name}`}
+                              >
+                                <Minus size={15} strokeWidth={2.5} />
+                              </button>
+                              <span className={styles.stepQty}>{qty}</span>
+                              <button
+                                type="button"
+                                className={styles.stepBtn}
+                                onClick={() => changeQty(dish, qty + 1)}
+                                aria-label={`Add one ${dish.name}`}
+                              >
+                                <Plus size={15} strokeWidth={2.5} />
+                              </button>
+                            </fieldset>
+                          ) : (
+                            <button
+                              type="button"
+                              className={styles.addCircle}
+                              onClick={() => changeQty(dish, 1)}
+                              aria-label={`Add ${dish.name}`}
+                            >
+                              <Plus size={18} strokeWidth={2.5} />
+                            </button>
+                          )}
                         </div>
                       </div>
-                    </div>
+
+                      <button
+                        type="button"
+                        className={styles.dishInfoBtn}
+                        onClick={() => setOpenDish(dish)}
+                      >
+                        <div className={styles.dishTop}>
+                          <h3 className={styles.dishName}>{dish.name}</h3>
+                          <span className={styles.dishPrice}>
+                            {dish.promotion && (
+                              <span className={styles.priceWas}>
+                                ${price.toFixed(2)}
+                              </span>
+                            )}
+                            ${final.toFixed(2)}
+                          </span>
+                        </div>
+                        <p className={styles.dishDesc}>
+                          {dish.description ?? ""}
+                        </p>
+                        {dish.dietary.length > 0 && (
+                          <div className={styles.pills}>
+                            {dish.dietary.slice(0, 3).map((d) => (
+                              <span key={d} className={styles.pill}>
+                                {d}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </button>
+                    </article>
                   </li>
                 );
               })}
@@ -403,141 +563,640 @@ export default function CookMenuPage() {
           )}
         </main>
 
-        {/* Right: order summary */}
-        <aside className={styles.summaryCol}>
-          <div className={styles.summary}>
-            <h2 className={styles.summaryTitle}>Your order</h2>
-            {totalQty === 0 ? (
-              <p className={styles.summaryEmpty}>
-                Add dishes to start your order.
-              </p>
-            ) : (
-              <>
-                <ul className={styles.summaryItems}>
-                  {cart.items.map((i) => (
-                    <li key={i.dishId} className={styles.summaryItem}>
-                      <span>
-                        {i.quantity}× {i.name}
-                      </span>
-                      <span>${i.lineTotal.toFixed(2)}</span>
-                    </li>
-                  ))}
-                </ul>
-                <div className={styles.summaryTotal}>
-                  <span>Subtotal</span>
-                  <span>${total.toFixed(2)}</span>
+        {/* Right — sticky cook + bill */}
+        <aside className={styles.rail}>
+          <div className={styles.railInner}>
+            <section className={styles.cookCard}>
+              <div className={styles.cookBanner}>
+                {cook.bannerUrl ? (
+                  <Image
+                    src={cook.bannerUrl}
+                    alt=""
+                    fill
+                    className={styles.cookBannerImg}
+                    sizes="400px"
+                  />
+                ) : (
+                  <div className={styles.cookBannerFallback} />
+                )}
+                <div className={styles.cookAvatar}>
+                  {cook.photoUrl ? (
+                    <Image
+                      src={cook.photoUrl}
+                      alt=""
+                      fill
+                      className={styles.cookAvatarImg}
+                      sizes="56px"
+                    />
+                  ) : (
+                    <span>{kitchen.charAt(0)}</span>
+                  )}
                 </div>
-              </>
-            )}
+              </div>
 
-            <div className={styles.policy}>
-              <p>
-                <Star size={12} /> Min order: {cook.minOrderQty} item
-                {cook.minOrderQty === 1 ? "" : "s"}
-                {cook.maxOrderQty ? ` · Max: ${cook.maxOrderQty}` : ""}
-              </p>
-              <p>
-                {refundPolicyText(
-                  cook.cancellationAllowed,
-                  cart.pickupAt,
-                  cook.leadTime,
+              <div className={styles.cookInfo}>
+                <h2 className={styles.cookName}>{kitchen}</h2>
+                {showPerson && <p className={styles.cookBy}>by {person}</p>}
+                <div className={styles.cookMetaRow}>
+                  {cook.pickupCity && (
+                    <span className={styles.cookCity}>
+                      <MapPin size={12} /> {cook.pickupCity}
+                    </span>
+                  )}
+                  <Link
+                    href={`/app/cooks/${cookId}`}
+                    className={styles.profileLink}
+                  >
+                    View profile
+                  </Link>
+                </div>
+
+                <dl className={styles.cookFacts}>
+                  <div className={styles.fact}>
+                    <dt>Min order</dt>
+                    <dd>
+                      {cook.minOrderQty}{" "}
+                      {cook.minOrderQty === 1 ? "plate" : "plates"}
+                    </dd>
+                  </div>
+                  <div className={styles.fact}>
+                    <dt>Max order</dt>
+                    <dd>
+                      {cook.maxOrderQty
+                        ? `${cook.maxOrderQty} plates`
+                        : "No limit"}
+                    </dd>
+                  </div>
+                  {cook.leadTime && (
+                    <div className={styles.fact}>
+                      <dt>Order ahead</dt>
+                      <dd>{formatLeadTime(cook.leadTime)}</dd>
+                    </div>
+                  )}
+                  {windowSummary && (
+                    <div className={styles.fact}>
+                      <dt>{isDelivery ? "Delivery" : "Pickup"}</dt>
+                      <dd>{windowSummary}</dd>
+                    </div>
+                  )}
+                </dl>
+              </div>
+            </section>
+
+            <section className={styles.bill}>
+              <h2 className={styles.billTitle}>Your order</h2>
+
+              {totalQty === 0 ? (
+                <p className={styles.billEmpty}>
+                  Tap a dish to start your order.
+                </p>
+              ) : (
+                <>
+                  <ul className={styles.billItems}>
+                    {cart.items.map((i) => (
+                      <li key={i.dishId} className={styles.billItem}>
+                        <span className={styles.billQty}>{i.quantity}</span>
+                        <span className={styles.billItemName}>{i.name}</span>
+                        <span className={styles.billItemPrice}>
+                          ${i.lineTotal.toFixed(2)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className={styles.billRow}>
+                    <span>Subtotal</span>
+                    <span className={styles.billSubtotal}>
+                      ${subtotal.toFixed(2)}
+                    </span>
+                  </div>
+                </>
+              )}
+
+              {canPickup && cookSelfDelivers && (
+                <fieldset className={styles.segmented} aria-label="Fulfillment">
+                  <button
+                    type="button"
+                    className={`${styles.segment} ${cart.fulfillmentMode === "pickup" ? styles.segmentActive : ""}`}
+                    onClick={() => cart.setFulfillment("pickup")}
+                  >
+                    Pickup
+                  </button>
+                  <button
+                    type="button"
+                    className={`${styles.segment} ${cart.fulfillmentMode === "delivery" ? styles.segmentActive : ""}`}
+                    onClick={() => cart.setFulfillment("delivery")}
+                    disabled={!canDeliver}
+                    aria-disabled={!canDeliver}
+                    title={
+                      canDeliver
+                        ? undefined
+                        : "Outside this kitchen's delivery area"
+                    }
+                  >
+                    Delivery
+                  </button>
+                </fieldset>
+              )}
+
+              {deliveryOutOfRange && deliveryCheck?.maxDeliveryKm != null && (
+                <p className={styles.deliveryNote}>
+                  {canPickup
+                    ? `Pickup only. You're ${deliveryCheck.distanceKm} km away, outside this kitchen's ${deliveryCheck.maxDeliveryKm} km delivery range.`
+                    : `This kitchen delivers within ${deliveryCheck.maxDeliveryKm} km and can't reach your address (${deliveryCheck.distanceKm} km away).`}
+                </p>
+              )}
+
+              <p className={styles.policy}>
+                {!cook.cancellationAllowed ? (
+                  <>
+                    All sales are final. No cancellations or{" "}
+                    <strong>refunds</strong>.
+                  </>
+                ) : cutoff ? (
+                  <>
+                    Cancel for a <strong>full refund</strong> until{" "}
+                    <strong>{fmtDateTime(cutoff)}</strong>. After that, the sale
+                    is final.
+                  </>
+                ) : (
+                  <>
+                    Cancel for a <strong>full refund</strong> up until this
+                    kitchen&apos;s lead time before{" "}
+                    {isDelivery ? "delivery" : "pickup"}.
+                  </>
                 )}
               </p>
-            </div>
 
-            <fieldset className={styles.fulfillment}>
-              <legend className={styles.summaryLabel}>Fulfillment</legend>
-              {canPickup && (
-                <label className={styles.radioRow}>
-                  <input
-                    type="radio"
-                    name="fulfillment"
-                    checked={cart.fulfillmentMode === "pickup"}
-                    onChange={() => cart.setFulfillment("pickup")}
-                  />
-                  Pickup
-                </label>
+              {totalQty > 0 && !meetsMin && (
+                <p className={styles.minNotice}>
+                  Add {remaining} more to reach the {cook.minOrderQty}-plate
+                  minimum.
+                </p>
               )}
-              {canDeliver && (
-                <label className={styles.radioRow}>
-                  <input
-                    type="radio"
-                    name="fulfillment"
-                    checked={cart.fulfillmentMode === "delivery"}
-                    onChange={() => cart.setFulfillment("delivery")}
-                  />
-                  Delivery
-                </label>
+              {noSlots && (
+                <p className={styles.minNotice}>
+                  This kitchen has no {cart.fulfillmentMode} times open right
+                  now.
+                </p>
               )}
-            </fieldset>
 
-            <label className={styles.summaryLabel} htmlFor="pickup-at">
-              {cart.fulfillmentMode === "delivery"
-                ? "Delivery time"
-                : "Pickup time"}
-            </label>
-            {fulfillmentSlots.length === 0 ? (
-              <p className={styles.minNotice}>
-                {cart.fulfillmentMode === "delivery"
-                  ? "This cook has no delivery times available right now."
-                  : "This cook has no pickup times available right now."}
-              </p>
-            ) : (
-              <select
-                id="pickup-at"
-                className={styles.input}
-                value={
-                  cart.pickupAt &&
-                  fulfillmentSlots.some((s) => s.iso === cart.pickupAt)
-                    ? cart.pickupAt
-                    : ""
-                }
-                onChange={(e) =>
-                  cart.setPickupAt(e.target.value ? e.target.value : null)
-                }
+              {activeForThisCook && (totalQty > 0 || cart.notes) && (
+                <div className={styles.note}>
+                  {cart.notes ? (
+                    <>
+                      <div className={styles.noteHead}>
+                        <span className={styles.noteLabel}>
+                          <NotebookPen size={13} /> Note for the cook
+                        </span>
+                        <button
+                          type="button"
+                          className={styles.noteEdit}
+                          onClick={() => setNoteOpen(true)}
+                        >
+                          Modify
+                        </button>
+                      </div>
+                      <p className={styles.noteText}>{cart.notes}</p>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      className={styles.noteAdd}
+                      onClick={() => setNoteOpen(true)}
+                    >
+                      <NotebookPen size={15} />
+                      Add a note for the cook
+                    </button>
+                  )}
+                  {!cook.acceptsSpecialRequests && (
+                    <p className={styles.noteDisclaimer}>
+                      {SPECIAL_REQUESTS_DISCLAIMER}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              <button
+                type="button"
+                className={styles.checkoutBtn}
+                disabled={!meetsMin || noSlots || totalQty === 0}
+                onClick={() => router.push("/app/checkout")}
               >
-                <option value="">
-                  {cart.fulfillmentMode === "delivery"
-                    ? "Choose a delivery time…"
-                    : "Choose a pickup time…"}
-                </option>
-                {fulfillmentSlots.map((slot) => (
-                  <option key={slot.iso} value={slot.iso}>
-                    {slot.label}
-                  </option>
-                ))}
-              </select>
-            )}
+                {noSlots
+                  ? "Unavailable right now"
+                  : totalQty === 0
+                    ? "Add dishes to continue"
+                    : !meetsMin
+                      ? `Minimum ${cook.minOrderQty} plates`
+                      : "Go to checkout"}
+              </button>
+            </section>
+          </div>
+        </aside>
+      </div>
 
-            {!meetsMin && totalQty > 0 && (
-              <p className={styles.minNotice}>
-                Add {cook.minOrderQty - totalQty} more to meet the minimum.
+      {openDish && (
+        <DishModal
+          dish={openDish}
+          qty={qtyByDish[openDish.id] ?? 0}
+          onChangeQty={(n) => changeQty(openDish, n)}
+          onClose={() => setOpenDish(null)}
+        />
+      )}
+
+      {noteOpen && activeForThisCook && (totalQty > 0 || cart.notes) && (
+        <NoteModal
+          initial={cart.notes ?? ""}
+          acceptsSpecialRequests={cook.acceptsSpecialRequests}
+          onSave={(text) => cart.setNotes(text.trim() ? text.trim() : null)}
+          onClose={() => setNoteOpen(false)}
+        />
+      )}
+
+      {conflict && (
+        <SwitchCartDialog
+          fromCook={cart.cookName ?? "another kitchen"}
+          toCook={cook.displayName ?? "this kitchen"}
+          onCancel={() => setConflict(null)}
+          onConfirm={confirmSwitch}
+        />
+      )}
+    </div>
+  );
+}
+
+// ── Switch-kitchen confirmation ───────────────────────────────────────────────
+function SwitchCartDialog({
+  fromCook,
+  toCook,
+  onCancel,
+  onConfirm,
+}: {
+  fromCook: string;
+  toCook: string;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onCancel();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onCancel]);
+
+  return (
+    <div className={styles.modalOverlay}>
+      <button
+        type="button"
+        className={styles.modalBackdrop}
+        aria-label="Keep current cart"
+        onClick={onCancel}
+      />
+      <div
+        className={styles.confirmModal}
+        role="alertdialog"
+        aria-modal="true"
+        aria-label="Start a new order"
+      >
+        <div className={styles.confirmHead}>
+          <h2 className={styles.confirmTitle}>Start a new order?</h2>
+          <button
+            type="button"
+            className={styles.confirmClose}
+            onClick={onCancel}
+            aria-label="Keep current cart"
+          >
+            <X size={18} strokeWidth={2.5} />
+          </button>
+        </div>
+        <p className={styles.confirmText}>
+          Ordering from <strong>{toCook}</strong> will clear your cart from{" "}
+          <strong>{fromCook}</strong>.
+        </p>
+        <button
+          type="button"
+          className={styles.confirmDanger}
+          onClick={onConfirm}
+        >
+          Start new order
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Dish detail modal ────────────────────────────────────────────────────────
+function DishModal({
+  dish,
+  qty,
+  onChangeQty,
+  onClose,
+}: {
+  dish: Dish;
+  qty: number;
+  onChangeQty: (n: number) => void;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  const price = Number(dish.price);
+  const final = discounted(price, dish.promotion);
+  const allergens = dish.ingredients.filter((i) => i.isAllergen);
+
+  const n = dish.nutrition;
+  const nutrition = n
+    ? ([
+        ["Calories", n.calories != null ? `${n.calories}` : null],
+        ["Protein", n.proteinG != null ? `${Number(n.proteinG)}g` : null],
+        ["Carbs", n.carbsG != null ? `${Number(n.carbsG)}g` : null],
+        ["Fat", n.fatG != null ? `${Number(n.fatG)}g` : null],
+        ["Fiber", n.fiberG != null ? `${Number(n.fiberG)}g` : null],
+        ["Sugar", n.sugarG != null ? `${Number(n.sugarG)}g` : null],
+        ["Sodium", n.sodiumMg != null ? `${Number(n.sodiumMg)}mg` : null],
+      ].filter(([, v]) => v !== null) as [string, string][])
+    : [];
+
+  return (
+    <div className={styles.modalOverlay}>
+      <button
+        type="button"
+        className={styles.modalBackdrop}
+        aria-label="Close dish details"
+        onClick={onClose}
+      />
+      <div
+        className={styles.modal}
+        role="dialog"
+        aria-modal="true"
+        aria-label={dish.name}
+      >
+        <button
+          type="button"
+          className={styles.modalClose}
+          onClick={onClose}
+          aria-label="Close"
+        >
+          <X size={18} strokeWidth={2.5} />
+        </button>
+
+        <div className={styles.modalPhoto}>
+          {dish.photos[0] ? (
+            <Image
+              src={dish.photos[0].url}
+              alt={dish.name}
+              fill
+              className={styles.modalPhotoImg}
+              sizes="(max-width: 768px) 100vw, 560px"
+            />
+          ) : (
+            <div className={styles.dishPhotoPlaceholder} />
+          )}
+          {dish.promotion && (
+            <span className={styles.promoBadge}>
+              {promoLabel(dish.promotion)}
+            </span>
+          )}
+        </div>
+
+        <div className={styles.modalBody}>
+          <div className={styles.modalHead}>
+            <h2 className={styles.modalName}>{dish.name}</h2>
+            <span className={styles.modalPrice}>
+              {dish.promotion && (
+                <span className={styles.priceWas}>${price.toFixed(2)}</span>
+              )}
+              ${final.toFixed(2)}
+            </span>
+          </div>
+
+          {(dish.cuisine || dish.servingSize) && (
+            <p className={styles.modalMeta}>
+              {[dish.cuisine, dish.servingSize].filter(Boolean).join(" · ")}
+            </p>
+          )}
+
+          {dish.description && (
+            <p className={styles.modalDesc}>{dish.description}</p>
+          )}
+
+          {dish.dietary.length > 0 && (
+            <div className={styles.pills}>
+              {dish.dietary.map((d) => (
+                <span key={d} className={styles.pill}>
+                  {d}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {dish.ingredients.length > 0 && (
+            <section className={styles.modalSection}>
+              <h3 className={styles.modalSectionTitle}>Ingredients</h3>
+              <p className={styles.ingredients}>
+                {dish.ingredients.map((i) => i.name).join(", ")}
               </p>
-            )}
+            </section>
+          )}
 
+          {allergens.length > 0 && (
+            <section className={styles.modalSection}>
+              <h3 className={styles.modalSectionTitle}>May contain</h3>
+              <div className={styles.allergenList}>
+                {allergens.map((a) => (
+                  <span key={a.name} className={styles.allergenPill}>
+                    {a.name}
+                  </span>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {nutrition.length > 0 && (
+            <section className={styles.modalSection}>
+              <h3 className={styles.modalSectionTitle}>
+                Nutrition
+                {dish.servingSize ? ` · per ${dish.servingSize}` : ""}
+              </h3>
+              <div className={styles.nutritionStrip}>
+                {nutrition.map(([label, value]) => (
+                  <div key={label} className={styles.nutritionItem}>
+                    <span className={styles.nutritionValue}>{value}</span>
+                    <span className={styles.nutritionLabel}>{label}</span>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+        </div>
+
+        <div className={styles.modalFoot}>
+          {qty > 0 ? (
+            <div className={styles.modalFootRow}>
+              <fieldset className={styles.stepperLg} aria-label="Quantity">
+                <button
+                  type="button"
+                  className={styles.stepBtnLg}
+                  onClick={() => onChangeQty(qty - 1)}
+                  aria-label="Remove one"
+                >
+                  <Minus size={16} strokeWidth={2.5} />
+                </button>
+                <span className={styles.stepQtyLg}>{qty}</span>
+                <button
+                  type="button"
+                  className={styles.stepBtnLg}
+                  onClick={() => onChangeQty(qty + 1)}
+                  aria-label="Add one"
+                >
+                  <Plus size={16} strokeWidth={2.5} />
+                </button>
+              </fieldset>
+              <span className={styles.modalFootTotal}>
+                ${(final * qty).toFixed(2)}
+              </span>
+            </div>
+          ) : (
             <button
               type="button"
-              className={styles.checkoutBtn}
-              disabled={
-                !meetsMin ||
-                !cart.pickupAt ||
-                fulfillmentSlots.length === 0 ||
-                !fulfillmentSlots.some((s) => s.iso === cart.pickupAt)
-              }
-              onClick={() => router.push("/app/checkout")}
+              className={styles.modalAddBtn}
+              onClick={() => onChangeQty(1)}
             >
-              {fulfillmentSlots.length === 0
-                ? cart.fulfillmentMode === "delivery"
-                  ? "No delivery times available"
-                  : "No pickup times available"
-                : !cart.pickupAt
-                  ? cart.fulfillmentMode === "delivery"
-                    ? "Choose a delivery time"
-                    : "Choose a pickup time"
-                  : !meetsMin
-                    ? `Minimum ${cook.minOrderQty} items`
-                    : "Go to checkout"}
+              <span>Add to order</span>
+              <span>${final.toFixed(2)}</span>
             </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Note modal ───────────────────────────────────────────────────────────────
+const NOTE_MAX = 500;
+
+function NoteModal({
+  initial,
+  acceptsSpecialRequests,
+  onSave,
+  onClose,
+}: {
+  initial: string;
+  acceptsSpecialRequests: boolean;
+  onSave: (text: string) => void;
+  onClose: () => void;
+}) {
+  const [text, setText] = useState(initial);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div className={styles.modalOverlay}>
+      <button
+        type="button"
+        className={styles.modalBackdrop}
+        aria-label="Close"
+        onClick={onClose}
+      />
+      <div
+        className={styles.noteModal}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Note for the cook"
+      >
+        <div className={styles.noteModalHead}>
+          <h2 className={styles.noteModalTitle}>Note for the cook</h2>
+          <button
+            type="button"
+            className={styles.noteClose}
+            onClick={onClose}
+            aria-label="Close"
+          >
+            <X size={18} strokeWidth={2.5} />
+          </button>
+        </div>
+        <p className={styles.noteModalSub}>
+          {acceptsSpecialRequests
+            ? "Allergies, spice level, dietary questions. Anything the cook should know. They'll confirm with you if needed."
+            : SPECIAL_REQUESTS_DISCLAIMER}
+        </p>
+        <textarea
+          className={styles.noteTextarea}
+          value={text}
+          maxLength={NOTE_MAX}
+          onChange={(e) => setText(e.target.value)}
+          placeholder={
+            acceptsSpecialRequests
+              ? "e.g. No peanuts, mild spice, swap rice for salad…"
+              : "e.g. Peanut allergy, gluten-free, lactose intolerant…"
+          }
+        />
+        <div className={styles.noteModalFoot}>
+          <span className={styles.noteCount}>
+            {text.length}/{NOTE_MAX}
+          </span>
+          <div className={styles.noteActions}>
+            <button
+              type="button"
+              className={styles.noteCancel}
+              onClick={onClose}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className={styles.noteSave}
+              onClick={() => {
+                onSave(text);
+                onClose();
+              }}
+            >
+              Save note
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Loading skeleton ─────────────────────────────────────────────────────────
+function MenuSkeleton() {
+  return (
+    <div className={styles.page}>
+      <div className={styles.layout}>
+        <main className={styles.menuCol}>
+          <div className={styles.menuHead}>
+            <Skeleton width={120} height={28} radius={6} />
+          </div>
+          <ul className={styles.dishGrid}>
+            {[0, 1, 2, 3].map((i) => (
+              <li key={i} className={styles.dishCard}>
+                <Skeleton height={150} radius={0} />
+                <div style={{ padding: 14, display: "grid", gap: 8 }}>
+                  <Skeleton width="70%" height={16} radius={6} />
+                  <Skeleton width="90%" height={12} radius={6} />
+                </div>
+              </li>
+            ))}
+          </ul>
+        </main>
+        <aside className={styles.rail}>
+          <div className={styles.railInner}>
+            <Skeleton height={180} radius={14} />
+            <Skeleton height={200} radius={14} />
           </div>
         </aside>
       </div>

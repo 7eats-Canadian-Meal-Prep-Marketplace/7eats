@@ -1,9 +1,9 @@
-import { and, count, desc, eq, gte, lte } from "drizzle-orm";
+import { and, count, desc, eq, gte, lte, sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getCookId, unauthorized } from "@/app/api/business/_lib/cook-auth";
 import { db } from "@/db";
-import { authUser, listings, orders } from "@/db/schema";
+import { authUser, listings, orderDishes, orders } from "@/db/schema";
 
 const querySchema = z.object({
   status: z
@@ -35,8 +35,14 @@ export async function GET(req: NextRequest) {
   const conditions = [eq(orders.cookId, cookId)];
   if (status) conditions.push(eq(orders.status, status));
   if (listingId) conditions.push(eq(orders.listingId, listingId));
-  if (dateFrom) conditions.push(gte(orders.pickupAt, new Date(dateFrom)));
-  if (dateTo) conditions.push(lte(orders.pickupAt, new Date(dateTo)));
+  // Date range filters the *scheduled* day. `pickupAt` is only ever set for
+  // delivery once a cook pins an exact minute and is always null for pickup
+  // orders, so filtering on it alone hides every pickup order (and confirmed
+  // orders that lack a pinned time) from the calendar. Fall back to the
+  // fulfillment window, which is captured for both modes at placement.
+  const scheduledAt = sql`COALESCE(${orders.fulfillmentWindowStart}, ${orders.pickupAt})`;
+  if (dateFrom) conditions.push(gte(scheduledAt, new Date(dateFrom)));
+  if (dateTo) conditions.push(lte(scheduledAt, new Date(dateTo)));
 
   const where = and(...conditions);
 
@@ -51,8 +57,18 @@ export async function GET(req: NextRequest) {
           status: orders.status,
           quantity: orders.quantity,
           unitPrice: orders.unitPrice,
+          // Total items across the (multi-dish) order. The deprecated
+          // order-level `quantity` is null for current orders, so derive the
+          // count from order_dishes for an accurate list summary.
+          itemCount: sql<number>`(
+            SELECT COALESCE(SUM(${orderDishes.quantity}), 0)::int
+            FROM ${orderDishes}
+            WHERE ${orderDishes.orderId} = ${orders.id}
+          )`,
           totalPrice: orders.totalPrice,
           pickupAt: orders.pickupAt,
+          fulfillmentWindowStart: orders.fulfillmentWindowStart,
+          fulfillmentWindowEnd: orders.fulfillmentWindowEnd,
           fulfillmentMode: orders.fulfillmentMode,
           fulfilledAt: orders.fulfilledAt,
           cancelledAt: orders.cancelledAt,

@@ -31,10 +31,6 @@ const SECTIONS: {
   { key: "whyMealPrep", label: "Why they meal prep" },
 ];
 
-function firstName(name: string): string {
-  return name.split(" ")[0] || name;
-}
-
 export function PreferenceSheet({
   clientId,
   clientName,
@@ -126,7 +122,7 @@ export function PreferenceSheet({
           {state.status === "ready" &&
             (!state.prefs.hasPreferences ? (
               <p className={styles.muted}>
-                {firstName(clientName)} hasn&apos;t shared any preferences yet.
+                They haven&apos;t shared any preferences yet.
               </p>
             ) : (
               SECTIONS.map(({ key, label }) => {

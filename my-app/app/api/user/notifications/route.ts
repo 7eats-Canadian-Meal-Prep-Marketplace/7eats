@@ -4,16 +4,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { authUser, authUserTable } from "@/db/schema";
 import { auth } from "@/lib/auth";
-
-const defaultPrefs = {
-  notifs: {
-    new_listing: true,
-    order_updates: true,
-    messages: true,
-    marketing: false,
-  },
-  channels: { sms: true, email: true },
-};
+import { normalizeClientNotificationPrefs } from "@/lib/client-notification-preferences";
 
 export async function GET(req: NextRequest) {
   const session = await auth.api.getSession({ headers: req.headers });
@@ -32,10 +23,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "User not found." }, { status: 404 });
     }
 
-    return NextResponse.json({
-      success: true,
-      data: user.notificationPreferences ?? defaultPrefs,
-    });
+    const data = normalizeClientNotificationPrefs(user.notificationPreferences);
+
+    return NextResponse.json({ success: true, data });
   } catch (err) {
     console.error("[user/notifications/GET]", err);
     return NextResponse.json(
@@ -48,9 +38,7 @@ export async function GET(req: NextRequest) {
 const updateNotificationsSchema = z.object({
   notifs: z
     .object({
-      new_listing: z.boolean().optional(),
       order_updates: z.boolean().optional(),
-      messages: z.boolean().optional(),
       marketing: z.boolean().optional(),
     })
     .optional(),
@@ -97,30 +85,21 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "User not found." }, { status: 404 });
     }
 
-    const current = user.notificationPreferences ?? defaultPrefs;
+    const current = normalizeClientNotificationPrefs(
+      user.notificationPreferences,
+    );
 
-    const mergedNotifs = {
-      ...current.notifs,
-      ...(parsed.data.notifs ?? {}),
-    };
+    const mergedPrefs = normalizeClientNotificationPrefs({
+      notifs: { ...current.notifs, ...(parsed.data.notifs ?? {}) },
+      channels: { ...current.channels, ...(parsed.data.channels ?? {}) },
+    });
 
-    const mergedChannels = {
-      ...current.channels,
-      ...(parsed.data.channels ?? {}),
-    };
-
-    // At least one channel must remain enabled
-    if (!mergedChannels.sms && !mergedChannels.email) {
+    if (!mergedPrefs.channels.sms && !mergedPrefs.channels.email) {
       return NextResponse.json(
         { error: "At least one notification channel must be enabled." },
         { status: 400 },
       );
     }
-
-    const mergedPrefs = {
-      notifs: mergedNotifs,
-      channels: mergedChannels,
-    };
 
     await db
       .update(authUserTable)

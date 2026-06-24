@@ -8,9 +8,38 @@ export interface PaymentIntentResult {
   clientSecret: string | null;
 }
 
+export async function createCheckoutPaymentIntent(params: {
+  totalAmountCents: number;
+  /** Platform commission + tax remittance (destination charge split). */
+  applicationFeeCents: number;
+  stripeCustomerId: string;
+  connectedAccountId: string;
+  idempotencyKey: string;
+  orderId: string;
+}): Promise<PaymentIntentResult> {
+  const stripe = getStripe();
+  const pi = await stripe.paymentIntents.create(
+    {
+      amount: params.totalAmountCents,
+      currency: PLATFORM_CURRENCY,
+      customer: params.stripeCustomerId,
+      capture_method: "manual",
+      setup_future_usage: "off_session",
+      payment_method_types: ["card"],
+      transfer_data: { destination: params.connectedAccountId },
+      application_fee_amount: params.applicationFeeCents,
+      metadata: { orderId: params.orderId },
+    },
+    { idempotencyKey: params.idempotencyKey },
+  );
+  return { piId: pi.id, status: pi.status, clientSecret: pi.client_secret };
+}
+
+/** @deprecated Use createCheckoutPaymentIntent + client-side confirmPayment. */
 export async function createFullPaymentIntent(params: {
   totalAmountCents: number;
-  platformFeeCents: number;
+  /** Platform commission + tax remittance (destination charge split). */
+  applicationFeeCents: number;
   stripeCustomerId: string;
   paymentMethodId: string;
   connectedAccountId: string;
@@ -26,7 +55,7 @@ export async function createFullPaymentIntent(params: {
       capture_method: "manual",
       confirm: true,
       transfer_data: { destination: params.connectedAccountId },
-      application_fee_amount: params.platformFeeCents,
+      application_fee_amount: params.applicationFeeCents,
     },
     { idempotencyKey: params.idempotencyKey },
   );

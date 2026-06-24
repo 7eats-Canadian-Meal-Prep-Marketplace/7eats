@@ -89,6 +89,10 @@ export function refundPolicyText(
   }
   const cutoff = cancelByDate(pickupAtIso, leadTime);
   if (!cutoff) {
+    const leadLabel = formatLeadTime(leadTime);
+    if (leadLabel) {
+      return `You can cancel for a full refund up until ${leadLabel} before your scheduled ${pickupAtIso ? "pickup or delivery" : "fulfillment"}.`;
+    }
     return "You can cancel for a full refund up until this cook's lead time before pickup.";
   }
   return `You can cancel for a full refund until ${formatDateTime(cutoff)}. After that, the sale is final.`;

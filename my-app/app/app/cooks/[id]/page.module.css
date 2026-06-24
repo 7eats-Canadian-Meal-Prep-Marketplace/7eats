@@ -1,137 +1,164 @@
-/* ─── Page ───────────────────────────────────────────────────────────────────── */
+/* ── Page ─────────────────────────────────────────────────────── */
 .page {
-  background: var(--white);
-  min-height: 100%;
-  padding-bottom: 80px;
-}
-
-/* ─── Breadcrumb ─────────────────────────────────────────────────────────────── */
-.breadcrumb {
-  max-width: 740px;
+  max-width: 720px;
   margin: 0 auto;
-  padding: 18px var(--pad-x) 0;
+  padding: 20px 20px 72px;
+  font-family: var(--font);
 }
 
-.backLink {
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--grey-700);
+  padding: 6px 0;
+  margin-bottom: 12px;
+}
+
+.back:hover {
+  color: var(--ink);
+}
+
+/* ── Hero ─────────────────────────────────────────────────────── */
+.hero {
+  background: var(--white);
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.cover {
+  position: relative;
+  height: 132px;
+  background: var(--grey-100);
+}
+
+.coverImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.coverFallback {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(115deg, var(--ink) 0%, var(--grey-900) 100%);
+}
+
+.heroBody {
+  padding: 0 22px 22px;
+}
+
+.avatar {
+  position: relative;
+  width: 84px;
+  height: 84px;
+  margin-top: -42px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--ink);
+  color: var(--white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30px;
+  font-weight: 700;
+  border: 3px solid var(--white);
+}
+
+.avatar img,
+.avatarImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.heroRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.heroId {
+  min-width: 0;
+}
+
+.name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: clamp(22px, 3vw, 26px);
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+  color: var(--ink);
+}
+
+.verified {
+  color: var(--red);
+  flex-shrink: 0;
+  position: relative;
+  top: 1px;
+}
+
+.heroSub {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin-top: 3px;
+}
+
+.kitchen {
+  font-size: 14.5px;
+  font-weight: 500;
+  color: var(--grey-700);
+}
+
+.socialLink {
   display: inline-flex;
   align-items: center;
   gap: 5px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--grey-700);
-  text-decoration: none;
-  background: none;
-  border: none;
-  padding: 0;
-  font-family: inherit;
-  cursor: pointer;
-  transition: color 0.12s;
-}
-
-.backLink:hover {
-  color: var(--ink);
-}
-
-/* ─── Header ─────────────────────────────────────────────────────────────────── */
-.headerCard {
-  max-width: 740px;
-  margin: 0 auto;
-  padding: 24px var(--pad-x) 28px;
-  border-bottom: 1px solid var(--grey-200);
-  width: 100%;
-  box-sizing: border-box;
-}
-
-/* Top row: avatar · name · follow */
-.headerTop {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  margin-bottom: 20px;
-}
-
-.avatarWrap {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  overflow: hidden;
-  flex-shrink: 0;
-  border: 2px solid var(--grey-200);
-  box-shadow: 0 2px 8px rgba(15, 15, 15, 0.1);
-}
-
-.avatarImg {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.nameBlock {
-  display: flex;
-  align-items: flex-start;
-  gap: 7px;
-  flex: 1;
-  min-width: 0;
-}
-
-.nameStack {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.kitchenName {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--grey-600);
-  letter-spacing: -0.01em;
-  line-height: 1.3;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.name {
-  font-size: 22px;
-  font-weight: 800;
-  color: var(--ink);
-  letter-spacing: -0.03em;
-  line-height: 1.1;
-}
-
-.verifiedIcon {
   color: var(--red);
-  flex-shrink: 0;
-  stroke-width: 2.25;
 }
 
-/* Follow button */
+.socialLink:hover {
+  color: var(--red-deep);
+}
+
+/* ── Follow ───────────────────────────────────────────────────── */
 .followBtn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 9px 18px;
-  border: 1.5px solid var(--grey-300);
+  flex-shrink: 0;
+  padding: 8px 16px;
+  background: transparent;
+  border: 1px solid var(--grey-300);
   border-radius: var(--radius-pill);
-  background: var(--white);
-  color: var(--ink);
+  font-family: var(--font);
   font-size: 13px;
   font-weight: 600;
-  font-family: inherit;
+  color: var(--ink);
   cursor: pointer;
-  flex-shrink: 0;
   transition:
-    border-color 0.15s,
-    background 0.15s,
-    color 0.15s;
+    border-color 0.12s,
+    background 0.12s,
+    color 0.12s;
 }
 
 .followBtn:hover {
   border-color: var(--ink);
-  background: var(--grey-100);
 }
 
 .followBtnActive {
@@ -140,486 +167,190 @@
   color: var(--white);
 }
 
-/* Cuisine + experience — full width subtitle */
-.cuisineLine {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--ink);
-  letter-spacing: -0.01em;
-  margin-bottom: 10px;
-  width: 100%;
+/* ── Tag groups (cuisine / specialties / dietary) ─────────────── */
+.tagGroups {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
 }
 
-/* Rating row — full width, prominent */
+.tagGroup {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.tagLabel {
+  flex-shrink: 0;
+  width: 76px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--grey-500);
+  padding-top: 4px;
+}
+
+.pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pill {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--grey-700);
+  background: var(--white);
+  border: 1px solid var(--grey-300);
+  border-radius: var(--radius-pill);
+  padding: 4px 11px;
+}
+
+/* ── Rating row ───────────────────────────────────────────────── */
 .ratingRow {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-bottom: 20px;
   flex-wrap: wrap;
-  width: 100%;
+  gap: 6px;
+  margin-top: 13px;
+  font-size: 13.5px;
 }
 
 .ratingStar {
   color: var(--red);
-  flex-shrink: 0;
 }
 
-.ratingBig {
-  font-size: 18px;
-  font-weight: 800;
-  color: var(--red);
-  letter-spacing: -0.025em;
+.ratingVal {
+  font-weight: 700;
+  color: var(--ink);
 }
 
-.ratingCount {
-  font-size: 14px;
-  font-weight: 500;
-  color: #3f3f46;
+.reviewLink {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--grey-700);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  padding: 0;
 }
 
-.ratingDot {
-  color: #d4d4d8;
-  font-size: 14px;
-}
-
-.ratingLocIcon {
-  color: #52525b;
-  flex-shrink: 0;
+.reviewLink:hover {
+  color: var(--ink);
 }
 
 .ratingLoc {
-  font-size: 14px;
-  font-weight: 500;
-  color: #3f3f46;
-}
-
-/* Stat strip — 3 equal columns, full width */
-.statsStrip {
-  display: flex;
-  align-items: stretch;
-  width: 100%;
-  border: 1px solid var(--grey-200);
-  border-radius: 8px;
-  overflow: hidden;
-  margin-bottom: 16px;
-}
-
-.statItem {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 14px 12px;
-  gap: 3px;
-  border-right: 1px solid var(--grey-200);
-}
-
-.statItem:last-child {
-  border-right: none;
-}
-
-.statNum {
-  font-size: 18px;
-  font-weight: 800;
-  color: var(--red);
-  letter-spacing: -0.03em;
-  line-height: 1;
-}
-
-.statLabel {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--ink);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-.statSep {
-  display: none;
-}
-
-/* Schedule — full-width day grid */
-.availabilityBlock {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  width: 100%;
-  margin-bottom: 16px;
-  padding: 14px;
-  border: 1px solid var(--grey-200);
-  border-radius: 8px;
-}
-
-.availRow {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  width: 100%;
-}
-
-.availLabel {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: #52525b;
-}
-
-.dayChips {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 6px;
-  width: 100%;
-}
-
-.dayChip {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 0;
-  width: 100%;
-  padding: 8px 4px;
-  border-radius: 6px;
-  font-size: 11.5px;
-  font-weight: 700;
-  letter-spacing: 0.01em;
-  text-align: center;
-}
-
-.dayChipOn {
-  background: var(--red);
-  border: 1.5px solid var(--red);
-  color: var(--white);
-}
-
-.dayChipOff {
-  background: var(--white);
-  border: 1.5px solid var(--grey-300);
-  color: #71717a;
-}
-
-/* ─── Body ───────────────────────────────────────────────────────────────────── */
-.body {
-  max-width: 740px;
-  margin: 0 auto;
-  padding: 24px var(--pad-x);
-}
-
-/* ─── Badges — removed from profile (dietary tags live on listings) ─────────── */
-
-/* ─── Section ────────────────────────────────────────────────────────────────── */
-.section {
-  margin-bottom: 36px;
-}
-
-.sectionTitle {
-  font-size: 18px;
-  font-weight: 800;
-  color: var(--ink);
-  letter-spacing: -0.02em;
-  margin-bottom: 16px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.listingCount {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: var(--red);
-  color: var(--white);
-  font-size: 11px;
-  font-weight: 800;
-}
-
-.sectionRating {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 14px;
-  font-weight: 800;
-  color: var(--red);
-  letter-spacing: -0.02em;
+  color: var(--grey-700);
+  margin-left: auto;
 }
 
-.sectionRating svg {
-  color: var(--red);
+/* ── Meta line (meals made · member since) ────────────────────── */
+.metaLine {
+  font-size: 13px;
+  color: var(--grey-500);
+  margin-top: 16px;
 }
 
-/* ─── Bio ────────────────────────────────────────────────────────────────────── */
-.bio {
-  font-size: 15px;
-  color: #3f3f46;
-  line-height: 1.7;
-  margin-bottom: 12px;
-  width: 100%;
+/* ── Sections ─────────────────────────────────────────────────── */
+.section {
+  margin-top: 28px;
 }
 
-.leadTimeWrap {
-  width: 100%;
-}
-
-.leadTimeBadge {
+.sectionTitle {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 6px;
-  width: 100%;
-  padding: 12px 16px;
-  background: var(--ink);
-  border-radius: var(--radius-sm);
+  gap: 10px;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  margin-bottom: 12px;
+}
+
+.sectionMeta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--white);
-  box-sizing: border-box;
+  color: var(--grey-700);
 }
 
-/* ─── Listing cards ──────────────────────────────────────────────────────────── */
-.noListings {
-  font-size: 14px;
-  color: #52525b;
+.sectionMeta svg {
+  color: var(--red);
 }
 
-.listingList {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  background: #f9fafb;
-  border-radius: 16px;
-  padding: 16px;
+.bio {
+  font-size: 14.5px;
+  line-height: 1.65;
+  color: var(--grey-900);
+  white-space: pre-wrap;
 }
 
-.listingCard {
-  display: flex;
-  flex-direction: row;
+/* ── Availability facts ───────────────────────────────────────── */
+.facts {
+  display: grid;
+  gap: 11px;
+  border: 1px solid var(--grey-200);
   border-radius: 12px;
-  overflow: hidden;
-  text-decoration: none;
-  background: var(--white);
-  box-shadow:
-    0 2px 12px rgba(0, 0, 0, 0.05),
-    0 1px 3px rgba(0, 0, 0, 0.03);
-  transition:
-    transform 0.28s cubic-bezier(0.34, 1.3, 0.64, 1),
-    box-shadow 0.28s ease;
+  padding: 16px 18px;
 }
 
-.listingCard:hover {
-  transform: translateY(-3px);
-  box-shadow:
-    0 14px 36px rgba(0, 0, 0, 0.1),
-    0 4px 10px rgba(0, 0, 0, 0.05);
-}
-
-/* ─── Left image — fixed width ──────────────────────────────────────────────── */
-.listingCover {
-  width: 200px;
-  height: 140px;
-  flex-shrink: 0;
-  overflow: hidden;
-  background: var(--grey-100);
-}
-
-.listingCoverImg {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-  transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-}
-
-.listingCard:hover .listingCoverImg {
-  transform: scale(1.06);
-}
-
-/* ─── Right content column ──────────────────────────────────────────────────── */
-.listingMain {
-  flex: 1;
-  min-width: 0;
-  padding: 16px 20px;
+.fact {
   display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 6px;
-}
-
-/* Row 1: title + price */
-.listingHeader {
-  display: flex;
-  align-items: flex-start;
+  align-items: baseline;
   justify-content: space-between;
   gap: 16px;
 }
 
-.listingTitle {
-  font-size: 17px;
-  font-weight: 700;
-  color: #111111;
-  letter-spacing: -0.025em;
-  line-height: 1.3;
-  margin: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.listingPrice {
-  font-size: 16px;
-  font-weight: 800;
-  color: #000000;
-  letter-spacing: -0.02em;
-  flex-shrink: 0;
-  white-space: nowrap;
-}
-
-/* Row 2: description */
-.listingSummary {
-  font-size: 13.5px;
-  color: #4b5563;
-  line-height: 1.5;
-  margin: 0;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-/* Row 3: tags left, spots right */
-.listingFooter {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-top: auto;
-  flex-wrap: wrap;
-}
-
-.listingMeta {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  gap: 6px;
-  align-items: center;
-}
-
-/* dietary / niche tags — dark outlined */
-.listingMetaLabel {
-  display: inline-flex;
-  padding: 4px 10px;
-  background: transparent;
-  border: 1.5px solid #1a1a1a;
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 700;
-  color: #1a1a1a;
-  white-space: nowrap;
-  letter-spacing: 0.01em;
-}
-
-/* deal pill — white bg, red outlined */
-.listingMetaDeal {
-  display: inline-flex;
-  padding: 4px 10px;
-  background: var(--white);
-  border: 1.5px solid var(--red);
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--red);
-  white-space: nowrap;
-  letter-spacing: 0.01em;
-}
-
-.listingSpots {
-  font-size: 12px;
+.fact dt {
+  font-size: 13px;
   font-weight: 500;
-  color: #9ca3af;
-  white-space: nowrap;
+  color: var(--grey-700);
   flex-shrink: 0;
 }
 
-.listingSpotsLow {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--red);
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.listingSpotsOut {
-  font-size: 12px;
+.fact dd {
+  font-size: 13.5px;
   font-weight: 600;
-  color: #9ca3af;
-  text-decoration: line-through;
-  white-space: nowrap;
-  flex-shrink: 0;
+  color: var(--ink);
+  text-align: right;
 }
 
-/* ─── Narrow screens: stack image above content ─────────────────────────────── */
-@media (max-width: 480px) {
-  .listingCard {
-    flex-direction: column;
-  }
-
-  .listingCover {
-    width: 100%;
-    height: 160px;
-  }
-
-  .listingMain {
-    padding: 14px 16px;
-  }
-
-  .listingTitle {
-    font-size: 15px;
-    white-space: normal;
-  }
-
-  .listingFooter {
-    flex-wrap: wrap;
-    gap: 8px;
-  }
+/* ── View-menu CTA (in hero) ──────────────────────────────────── */
+.orderBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 48px;
+  margin-top: 20px;
+  background: var(--red);
+  color: var(--white);
+  border-radius: var(--radius-pill);
+  font-size: 14.5px;
+  font-weight: 700;
+  transition: background 0.12s;
 }
 
-/* ─── Mobile responsive ──────────────────────────────────────────────────────── */
-@media (max-width: 768px) {
-  .headerCard {
-    padding: 20px 16px 24px;
-  }
-
-  .body {
-    padding: 20px 16px;
-  }
-
-  /* Day chips: 4 columns on narrow phones instead of 7 cramped */
-  .dayChips {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
+.orderBtn:hover {
+  background: var(--red-deep);
 }
 
-@media (max-width: 380px) {
-  .dayChips {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 4px;
-  }
-
-  .dayChip {
-    font-size: 10px;
-    padding: 7px 2px;
-  }
-
-  .name {
-    font-size: 18px;
-  }
+/* ── Reviews ──────────────────────────────────────────────────── */
+.reviewsEmpty {
+  font-size: 14px;
+  color: var(--grey-500);
+  padding: 8px 0;
 }
 
-/* ─── Reviews — single column stack ─────────────────────────────────────────── */
 .reviewList {
   display: flex;
   flex-direction: column;
@@ -628,54 +359,52 @@
 
 .reviewCard {
   border: 1px solid var(--grey-200);
-  border-radius: 8px;
-  padding: 18px 20px;
-  box-shadow: var(--shadow-md);
+  border-radius: 12px;
+  padding: 16px;
 }
 
 .reviewTop {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 10px;
 }
 
 .reviewerAvatar {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  background: var(--white);
-  border: 1px solid var(--grey-200);
-  color: var(--ink);
-  font-size: 11px;
-  font-weight: 800;
+  background: var(--grey-100);
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--grey-700);
   flex-shrink: 0;
 }
 
 .reviewerInfo {
-  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  min-width: 0;
 }
 
 .reviewerName {
-  font-size: 13.5px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--ink);
 }
 
 .reviewDate {
   font-size: 12px;
-  color: #71717a;
+  color: var(--grey-500);
 }
 
 .stars {
   display: flex;
-  gap: 2px;
+  gap: 1px;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .starFilled {
@@ -683,23 +412,19 @@
 }
 
 .starEmpty {
-  color: var(--grey-200);
+  color: var(--grey-300);
 }
 
 .reviewComment {
-  font-size: 14px;
-  color: #3f3f46;
-  line-height: 1.65;
-  margin-bottom: 10px;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--grey-900);
+  margin-top: 11px;
 }
 
 .reviewDish {
   display: inline-block;
-  padding: 3px 10px;
-  background: var(--white);
-  border: 1px solid var(--grey-200);
-  border-radius: var(--radius-pill);
+  margin-top: 10px;
   font-size: 12px;
-  color: #3f3f46;
-  font-weight: 600;
+  color: var(--grey-500);
 }

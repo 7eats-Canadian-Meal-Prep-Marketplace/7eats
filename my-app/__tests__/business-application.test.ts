@@ -8,6 +8,9 @@ vi.mock("@/db/schema", () => ({
 vi.mock("@/lib/cookie", () => ({
   generateSignedValue: vi.fn(() => "signed-cookie-value"),
 }));
+vi.mock("@/lib/rate-limit", () => ({
+  logAndCheckRateLimit: vi.fn().mockResolvedValue(true),
+}));
 vi.mock("resend", () => ({
   Resend: vi.fn().mockImplementation(() => ({
     emails: { send: vi.fn().mockResolvedValue({}) },

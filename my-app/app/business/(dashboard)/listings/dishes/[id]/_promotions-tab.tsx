@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Plus } from "lucide-react";
+import { Info, Plus } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -147,7 +147,7 @@ export function PromotionsTab() {
       setConfirmOpen(false);
       load();
     } catch {
-      toast.error("Network error — please try again.");
+      toast.error("Network error. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -155,21 +155,20 @@ export function PromotionsTab() {
 
   return (
     <div className={styles.promoTab}>
-      <div className={styles.disclaimer}>
-        <AlertTriangle size={16} className={styles.disclaimerIcon} />
-        <div>
-          <p className={styles.disclaimerTitle}>Promotions are permanent</p>
-          <p className={styles.disclaimerText}>
-            Once you add a promotion it can&rsquo;t be edited or removed. It
-            ends automatically when it reaches its end date or redemption limit.
-            Only one promotion can be active per dish — adding a new one
-            replaces the current active promotion.
-          </p>
-        </div>
+      <div className={styles.callout}>
+        <Info size={16} className={styles.calloutIcon} />
+        <p className={styles.calloutText}>
+          <strong>Promotions are permanent.</strong> Once added, a promotion
+          can&rsquo;t be edited or removed. It ends automatically at its end
+          date or redemption limit. Only one can be active per dish; a new one
+          replaces the current active promotion.
+        </p>
       </div>
 
-      <section className={styles.section}>
-        <h3 className={styles.sectionTitle}>Add a promotion</h3>
+      <div className={styles.card}>
+        <div className={styles.cardHead}>
+          <h3 className={styles.cardTitle}>Add a promotion</h3>
+        </div>
 
         <div className={styles.formGroup}>
           <span className={styles.formLabel}>Discount type</span>
@@ -203,8 +202,10 @@ export function PromotionsTab() {
           </label>
           <input
             id="promo-value"
+            name="promo-value"
             type="text"
             inputMode="decimal"
+            autoComplete="off"
             className={styles.formInput}
             value={value}
             placeholder={type === "percentage_off" ? "e.g. 15" : "e.g. 5.00"}
@@ -237,6 +238,7 @@ export function PromotionsTab() {
           {limitKind === "date" ? (
             <input
               type="date"
+              name="promo-valid-until"
               className={styles.formInput}
               value={validUntil}
               min={todayInputValue()}
@@ -245,7 +247,9 @@ export function PromotionsTab() {
           ) : (
             <input
               type="text"
+              name="promo-max-uses"
               inputMode="numeric"
+              autoComplete="off"
               className={styles.formInput}
               value={maxUses}
               placeholder="e.g. 50"
@@ -254,7 +258,7 @@ export function PromotionsTab() {
           )}
         </div>
 
-        <div className={styles.formActions}>
+        <div className={styles.cardActions}>
           <button
             type="button"
             className={styles.cancelBtn}
@@ -269,18 +273,31 @@ export function PromotionsTab() {
             onClick={() => setConfirmOpen(true)}
             disabled={!canSubmit}
           >
-            <Plus size={16} />
-            Add promotion
+            {submitting ? (
+              <span className={styles.spinner} aria-hidden="true" />
+            ) : (
+              <Plus size={16} />
+            )}
+            {submitting ? "Adding…" : "Add promotion"}
           </button>
         </div>
-      </section>
+      </div>
 
-      <section className={styles.section}>
-        <h3 className={styles.sectionTitle}>Promotions</h3>
+      <div className={styles.card}>
+        <div className={styles.cardHead}>
+          <h3 className={styles.cardTitle}>Promotions</h3>
+        </div>
         {loading ? (
-          <p className={styles.emptyNote}>Loading…</p>
+          <p className={styles.loadingNote}>Loading…</p>
         ) : promos.length === 0 ? (
-          <p className={styles.emptyNote}>No promotions yet.</p>
+          <div className={styles.emptyState}>
+            <Info size={22} className={styles.emptyIcon} />
+            <p className={styles.emptyText}>No promotions yet</p>
+            <p className={styles.emptySub}>
+              Add a percentage or fixed discount above to draw diners to this
+              dish.
+            </p>
+          </div>
         ) : (
           <ul className={styles.promoList}>
             {promos.map((p) => {
@@ -289,7 +306,9 @@ export function PromotionsTab() {
                 <li
                   key={p.id}
                   className={`${styles.promoCard} ${
-                    status.live ? "" : styles.promoCardInactive
+                    status.live
+                      ? styles.promoCardActive
+                      : styles.promoCardInactive
                   }`}
                 >
                   <div className={styles.promoMain}>
@@ -298,7 +317,11 @@ export function PromotionsTab() {
                       <span className={styles.promoLimit}>{promoLimit(p)}</span>
                     )}
                   </div>
-                  <span className={styles.promoBadge}>
+                  <span
+                    className={`${styles.promoBadge} ${
+                      status.live ? styles.promoBadgeActive : ""
+                    }`}
+                  >
                     <span
                       className={`${styles.promoDot} ${
                         status.live
@@ -313,12 +336,12 @@ export function PromotionsTab() {
             })}
           </ul>
         )}
-      </section>
+      </div>
 
       <ConfirmDialog
         open={confirmOpen}
         title="Add this promotion?"
-        message="Promotions are permanent — once added it can't be edited or removed. It will end automatically at its end date or redemption limit."
+        message="Promotions are permanent. Once added, a promotion can't be edited or removed. It will end automatically at its end date or redemption limit."
         confirmLabel="Add promotion"
         busy={submitting}
         onConfirm={handleCreate}

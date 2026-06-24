@@ -18,8 +18,12 @@ export async function GET(req: NextRequest) {
       .select({
         id: cookProfiles.id,
         displayName: cookProfiles.displayName,
+        photoUrl: cookProfiles.photoUrl,
+        bannerUrl: cookProfiles.bannerUrl,
         firstName: authUser.firstName,
+        lastName: authUser.lastName,
         neighborhood: authUser.neighborhood,
+        pickupCity: cookProfiles.pickupCity,
         setupComplete: cookProfiles.setupComplete,
         followedAt: followedCooks.createdAt,
       })
@@ -28,18 +32,28 @@ export async function GET(req: NextRequest) {
       .innerJoin(authUser, eq(cookProfiles.userId, authUser.id))
       .where(eq(followedCooks.userId, session.user.id));
 
-    const data = rows.map((r) => ({
-      id: r.id,
-      name: r.displayName,
-      firstName: r.firstName ?? null,
-      neighborhood: r.neighborhood ?? null,
-      rating: null,
-      isVerified: r.setupComplete,
-      followedAt:
-        r.followedAt instanceof Date
-          ? r.followedAt.toISOString()
-          : String(r.followedAt),
-    }));
+    const data = rows.map((r) => {
+      const person =
+        [r.firstName, r.lastName].filter(Boolean).join(" ") || "Cook";
+      const name = r.displayName?.trim() || person;
+      return {
+        id: r.id,
+        name,
+        displayName: r.displayName,
+        firstName: r.firstName ?? null,
+        lastName: r.lastName ?? null,
+        photoUrl: r.photoUrl ?? null,
+        bannerUrl: r.bannerUrl ?? null,
+        neighborhood: r.neighborhood ?? null,
+        pickupCity: r.pickupCity ?? null,
+        rating: null,
+        isVerified: r.setupComplete,
+        followedAt:
+          r.followedAt instanceof Date
+            ? r.followedAt.toISOString()
+            : String(r.followedAt),
+      };
+    });
 
     return NextResponse.json({ success: true, data });
   } catch (err) {

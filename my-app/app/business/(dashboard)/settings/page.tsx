@@ -985,11 +985,6 @@ function NotificationsSection() {
       label: "Reviews (email)",
       description: "Get notified by email when a customer leaves a review.",
     },
-    {
-      key: "smsNotificationsNewOrder" as const,
-      label: "New orders (SMS)",
-      description: "Get a text message when a customer places an order.",
-    },
   ];
 
   return (
@@ -1111,11 +1106,11 @@ export default function SettingsPage() {
 
   return (
     <div className={styles.page}>
+      <Link href="/business/dashboard" className={styles.back}>
+        <ArrowLeft size={16} aria-hidden="true" />
+        Dashboard
+      </Link>
       <div className={styles.header}>
-        <Link href="/business/dashboard" className={styles.back}>
-          <ArrowLeft size={16} />
-          Dashboard
-        </Link>
         <h1 className={styles.title}>Settings</h1>
       </div>
 
@@ -1158,6 +1153,10 @@ export default function SettingsPage() {
         </div>
 
         <nav className={styles.sideNav} aria-label="Settings sections">
+          <Link href="/business/dashboard" className={styles.navBack}>
+            <ArrowLeft size={15} aria-hidden="true" />
+            Dashboard
+          </Link>
           {SECTIONS.map((s) => (
             <button
               key={s.id}

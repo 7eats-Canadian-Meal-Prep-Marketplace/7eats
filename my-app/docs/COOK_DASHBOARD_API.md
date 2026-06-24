@@ -58,7 +58,15 @@ Returns up to 100 in-progress orders (status `pending`, `confirmed`, or `ready`)
 
 ### `GET /api/business/dashboard/orders/[orderId]`
 
-Returns full detail for a single order including the dishes snapshot.
+Returns full detail for a single order including the dishes snapshot. The
+`platformFeePct`, `platformFeeAmount`, and `cookPayoutAmount` fields are the
+cook-facing money breakdown joined from `order_payments` (type `full`), so the
+dashboard can show the platform cut and the net payout. They are `null` for any
+legacy order without a payment row.
+
+`cookPayoutAmount` is the authoritative net: `totalPrice − platformFeeAmount − taxAmount`
+(tax is collected from the customer and remitted on the platform's behalf, so it
+is not part of the cook's earnings).
 
 **Response**
 ```json
@@ -71,6 +79,8 @@ Returns full detail for a single order including the dishes snapshot.
     "unitPrice": "15.00",
     "totalPrice": "15.00",
     "discountAmount": null,
+    "taxAmount": "1.95",
+    "deliveryFeeSnapshot": null,
     "currency": "CAD",
     "pickupAt": "...",
     "fulfilledAt": null,
@@ -86,6 +96,9 @@ Returns full detail for a single order including the dishes snapshot.
     "lateCancelFeeApplied": null,
     "createdAt": "...",
     "updatedAt": "...",
+    "platformFeePct": "7.50",
+    "platformFeeAmount": "1.13",
+    "cookPayoutAmount": "13.92",
     "dishes": [
       { "id": "...", "dishId": "...", "dishName": "Dal Makhani", "quantity": 1, "sortOrder": 0 }
     ]
@@ -193,6 +206,11 @@ Quick summary across all time periods for the dashboard overview card.
 ### `GET /api/business/dashboard/stats`
 
 Dashboard overview: order counts, earnings across periods, active listings, and rating stats.
+
+`earnings.*` values are the cook's **net payout** (`order_payments.cookPayoutAmount`,
+i.e. total − platform fee − tax), matching the Earnings tab — not the gross the
+customer paid. `earnings.pending` is the net payout for orders not yet released
+(status `pending`, `confirmed`, or `ready`).
 
 **Response**
 ```json

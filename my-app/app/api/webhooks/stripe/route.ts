@@ -14,7 +14,12 @@ import {
   orders,
   stripeWebhookEvents,
 } from "@/db/schema";
+import { markOrderPaymentAuthorized } from "@/lib/orders/confirm-order-payment";
 import { getStripe } from "@/lib/stripe";
+import {
+  isStripeFullyConnected,
+  readStripeConnectAccountStatus,
+} from "@/lib/stripe-connect";
 
 export async function POST(req: NextRequest) {
   const rawBody = await req.arrayBuffer();
@@ -402,6 +407,14 @@ export async function POST(req: NextRequest) {
         break;
       }
 
+      case "payment_intent.amount_capturable_updated": {
+        const pi = event.data.object as Stripe.PaymentIntent;
+        if (pi.status === "requires_capture") {
+          await markOrderPaymentAuthorized(pi.id, { sendEmails: true });
+        }
+        break;
+      }
+
       case "payment_intent.payment_failed": {
         const pi = event.data.object as Stripe.PaymentIntent;
         await db
@@ -433,8 +446,28 @@ export async function POST(req: NextRequest) {
         break;
       }
 
-      case "account.updated":
+      case "account.updated": {
+        const stripeAccountId = (event.data.object as { id?: string }).id;
+        if (!stripeAccountId) break;
+
+        const [cook] = await db
+          .select({ id: cookProfiles.id })
+          .from(cookProfiles)
+          .where(eq(cookProfiles.stripeAccountId, stripeAccountId))
+          .limit(1);
+        if (!cook) break;
+
+        const account = await stripe.v2.core.accounts.retrieve(
+          stripeAccountId,
+          { include: ["configuration.recipient", "requirements"] },
+        );
+        const status = readStripeConnectAccountStatus(account);
+        await db
+          .update(cookProfiles)
+          .set({ setupComplete: isStripeFullyConnected(status) })
+          .where(eq(cookProfiles.id, cook.id));
         break;
+      }
 
       default:
         break;

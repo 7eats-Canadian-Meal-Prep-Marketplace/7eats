@@ -22,6 +22,12 @@ vi.mock("@/lib/cookie", () => ({
   generateSignedPhone: vi.fn(() => "signed-phone-value"),
   verifySignedPhone: vi.fn(),
 }));
+vi.mock("@/lib/phone-availability", () => ({
+  isPhoneTakenForRole: vi.fn(),
+  isUniqueViolation: vi.fn(() => false),
+  phoneTakenMessage: (role: string) =>
+    `This phone number is already in use by another ${role} account.`,
+}));
 vi.mock("@/lib/rate-limit", () => ({
   logAndCheckRateLimit: vi.fn(),
 }));
@@ -47,6 +53,10 @@ import { POST as verifyOtp } from "@/app/api/setup/verify-otp/route";
 import { db } from "@/db";
 import { auth } from "@/lib/auth";
 import { generateSignedPhone, verifySignedPhone } from "@/lib/cookie";
+import {
+  isPhoneTakenForRole,
+  isUniqueViolation,
+} from "@/lib/phone-availability";
 import { logAndCheckRateLimit } from "@/lib/rate-limit";
 
 const USER_ID = "user-uuid";
@@ -142,6 +152,8 @@ describe("POST /api/setup/verify-otp", () => {
 
   beforeEach(() => {
     vi.mocked(logAndCheckRateLimit).mockResolvedValue(true);
+    vi.mocked(isPhoneTakenForRole).mockResolvedValue(false);
+    vi.mocked(isUniqueViolation).mockReturnValue(false);
   });
 
   it("returns 401 when unauthenticated", async () => {
@@ -196,6 +208,24 @@ describe("POST /api/setup/verify-otp", () => {
     verificationChecksCreate.mockRejectedValue(new Error("twilio down"));
     const res = await verifyOtp(makeRequest({ code: "123456" }));
     expect(res.status).toBe(500);
+  });
+
+  it("returns 409 when the phone is already verified on another cook account", async () => {
+    mockSession(USER_ID);
+    mockCookie("signed");
+    vi.mocked(verifySignedPhone).mockReturnValue("+15551234567");
+    verificationChecksCreate.mockResolvedValue({ status: "approved" });
+    vi.mocked(isPhoneTakenForRole).mockResolvedValue(true);
+
+    const res = await verifyOtp(makeRequest({ code: "123456" }));
+
+    expect(res.status).toBe(409);
+    expect(vi.mocked(isPhoneTakenForRole)).toHaveBeenCalledWith(
+      "+15551234567",
+      "cook",
+      USER_ID,
+    );
+    expect(db.update).not.toHaveBeenCalled();
   });
 
   it("marks the phone verified and redirects on an approved code", async () => {

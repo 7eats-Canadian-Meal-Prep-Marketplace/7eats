@@ -84,6 +84,7 @@ export async function GET(req: NextRequest) {
         .limit(1),
 
       // Order-level totals (the real money, including any delivery fee).
+      // Bucketed by fulfillment time — `pickupAt` is null for pickup orders.
       db
         .select({ id: orders.id, totalPrice: orders.totalPrice })
         .from(orders)
@@ -91,8 +92,8 @@ export async function GET(req: NextRequest) {
           and(
             eq(orders.cookId, cookId),
             eq(orders.status, "fulfilled"),
-            gte(orders.pickupAt, startDate),
-            lte(orders.pickupAt, endDate),
+            gte(orders.fulfilledAt, startDate),
+            lte(orders.fulfilledAt, endDate),
           ),
         ),
 
@@ -108,8 +109,8 @@ export async function GET(req: NextRequest) {
           and(
             eq(orders.cookId, cookId),
             eq(orders.status, "fulfilled"),
-            gte(orders.pickupAt, startDate),
-            lte(orders.pickupAt, endDate),
+            gte(orders.fulfilledAt, startDate),
+            lte(orders.fulfilledAt, endDate),
           ),
         ),
     ]);

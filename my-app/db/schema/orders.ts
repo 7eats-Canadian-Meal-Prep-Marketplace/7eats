@@ -59,7 +59,16 @@ export const orders = pgTable(
       scale: 2,
     }),
     deliveryDistanceKm: integer("delivery_distance_km"),
+    /** HST/GST collected on subtotal + delivery; place of supply = cook province. */
+    taxAmount: numeric("tax_amount", { precision: 10, scale: 2 }),
+    taxProvince: varchar("tax_province", { length: 2 }),
     fulfillmentMode: varchar("fulfillment_mode", { length: 20 }),
+    // Snapshot of the pinned fulfillment day + that day's time range, captured
+    // at placement (so a later cook windows change can't rewrite this order).
+    // The exact minute stays in `pickupAt` (filled later when a cook confirms a
+    // delivery time); pickup never needs one.
+    fulfillmentWindowStart: timestamp("fulfillment_window_start"),
+    fulfillmentWindowEnd: timestamp("fulfillment_window_end"),
     fulfilledAt: timestamp("fulfilled_at"),
     cancelledAt: timestamp("cancelled_at"),
     cancelledBy: text("cancelled_by").references(() => authUser.id, {
@@ -91,6 +100,11 @@ export const orders = pgTable(
     depositType: lateCancelFeeTypeEnum("deposit_type"),
     depositValue: numeric("deposit_value", { precision: 10, scale: 2 }),
     depositAmount: numeric("deposit_amount", { precision: 10, scale: 2 }),
+    /** Human-readable code e-mailed to guest checkouts, e.g. 7E-A3B9C2 */
+    confirmationCode: varchar("confirmation_code", { length: 16 }),
+    /** SHA-256 of the secret token embedded in guest e-mail links */
+    guestAccessTokenHash: text("guest_access_token_hash"),
+    isGuestCheckout: boolean("is_guest_checkout").notNull().default(false),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at")
       .notNull()
@@ -106,6 +120,10 @@ export const orders = pgTable(
       sql`${t.discountAmount} IS NULL OR ${t.discountAmount} >= 0`,
     ),
     check("orders_total_price_non_negative", sql`${t.totalPrice} >= 0`),
+    check(
+      "orders_tax_amount_non_negative",
+      sql`${t.taxAmount} IS NULL OR ${t.taxAmount} >= 0`,
+    ),
     check(
       "orders_pickup_code_attempts_non_negative",
       sql`${t.pickupCodeAttempts} >= 0`,

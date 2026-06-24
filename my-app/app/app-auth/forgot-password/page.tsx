@@ -3,7 +3,7 @@ import { ClientAuthLayout } from "@/app/components/ClientAuthLayout";
 import ForgotPasswordForm from "@/app/components/ForgotPasswordForm";
 
 export const metadata: Metadata = {
-  title: "Forgot password — 7eats",
+  title: "Forgot password - 7eats",
 };
 
 export default async function ForgotPasswordPage({

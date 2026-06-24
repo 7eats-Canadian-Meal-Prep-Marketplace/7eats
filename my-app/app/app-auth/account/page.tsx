@@ -10,7 +10,7 @@ import SignOutButton from "./SignOutButton";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Your account — 7eats",
+  title: "Your account - 7eats",
   description: "Your 7eats account.",
 };
 

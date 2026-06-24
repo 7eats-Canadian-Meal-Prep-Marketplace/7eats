@@ -5,7 +5,6 @@ import {
   Calendar,
   ClipboardList,
   HelpCircle,
-  Inbox,
   LayoutDashboard,
   Menu,
   ShoppingBag,
@@ -47,7 +46,6 @@ const NAV_ITEMS = [
   { href: "/business/listings", label: "Meals", Icon: Store },
   { href: "/business/earnings", label: "Earnings", Icon: TrendingUp },
   { href: "/business/calendar", label: "Calendar", Icon: Calendar },
-  { href: "/business/inbox", label: "Inbox", Icon: Inbox },
 ];
 
 interface PendingStep {
@@ -257,14 +255,6 @@ export default function DashboardShell({
                 </div>
               )}
             </div>
-            <Link
-              href="/business/inbox"
-              className={styles.iconBtn}
-              aria-label="Inbox"
-            >
-              <Inbox size={20} />
-            </Link>
-
             <div className={styles.profileWrap} ref={profileRef}>
               <button
                 type="button"
@@ -364,6 +354,11 @@ export default function DashboardShell({
                 </span>
                 <span className={styles.bannerSub}>
                   Complete the remaining steps to go live on 7eats.
+                </span>
+                <span className={styles.bannerNote}>
+                  Until then, your kitchen and dishes stay hidden from
+                  customers. You can keep adding them now and they’ll appear the
+                  moment setup is complete.
                 </span>
               </div>
               <ul className={styles.bannerSteps}>

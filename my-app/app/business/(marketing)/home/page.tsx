@@ -69,7 +69,7 @@ export default function BusinessHomePage() {
         // biome-ignore lint/security/noDangerouslySetInnerHtml: JSON-LD structured data, not user input
         dangerouslySetInnerHTML={{ __html: JSON.stringify(cookPlatformSchema) }}
       />
-      {/* HERO — full-bleed video background, content left-aligned */}
+      {/* HERO — full-bleed video background, content centered */}
       <section className={styles.hero}>
         <div className={styles.heroBg}>
           <video className={styles.heroVideo} autoPlay muted loop playsInline>

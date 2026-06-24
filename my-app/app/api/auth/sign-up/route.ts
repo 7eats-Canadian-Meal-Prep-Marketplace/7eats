@@ -1,11 +1,17 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/db";
-import { authUser, authUserTable, legalAcceptances } from "@/db/schema";
+import {
+  authAccount,
+  authUser,
+  authUserTable,
+  legalAcceptances,
+} from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { hashIp } from "@/lib/hash";
 import { CLIENT_SIGNUP_DOCS, LEGAL_VERSION } from "@/lib/legal";
+import { validatePassword } from "@/lib/password";
 import { logAndCheckRateLimit } from "@/lib/rate-limit";
 
 // Self-serve account creation for clients (consumers). Cooks never reach this
@@ -43,6 +49,11 @@ export async function POST(req: Request) {
   const { firstName, lastName, password } = parsed.data;
   const email = parsed.data.email.toLowerCase();
 
+  const pwError = validatePassword(password);
+  if (pwError) {
+    return NextResponse.json({ error: pwError }, { status: 400 });
+  }
+
   const ip =
     req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
     req.headers.get("x-real-ip") ??
@@ -60,14 +71,20 @@ export async function POST(req: Request) {
   }
 
   // Check for an existing account with this email before hitting Better Auth,
-  // so we can handle the unverified-duplicate case gracefully.
+  // so we can handle the unverified-duplicate and guest-checkout cases
+  // gracefully.
   const [existing] = await db
-    .select({ emailVerified: authUser.emailVerified })
+    .select({
+      id: authUser.id,
+      emailVerified: authUser.emailVerified,
+      isGuestAccount: authUser.isGuestAccount,
+    })
     .from(authUser)
     .where(eq(authUser.email, email))
     .limit(1);
 
-  if (existing) {
+  // A real (non-guest) account already owns this email.
+  if (existing && !existing.isGuestAccount) {
     if (!existing.emailVerified) {
       // Account exists but was never verified — resend the link and guide them
       // back to check-email rather than showing a confusing "already exists" error.
@@ -89,36 +106,88 @@ export async function POST(req: Request) {
     );
   }
 
-  // Create the credential + user row. autoSignIn is disabled globally, so this
-  // does NOT start a session — the client must confirm their email first.
-  const signUpRes = await auth.api.signUpEmail({
-    body: { email, password, name: `${firstName} ${lastName}` },
-    headers: req.headers,
-    asResponse: true,
-  });
+  let userId: string;
 
-  if (!signUpRes.ok) {
-    console.error("[sign-up] signup failed:", signUpRes.status);
-    return NextResponse.json(
-      { error: "Could not create account. Please try again." },
-      { status: 500 },
-    );
+  if (existing?.isGuestAccount) {
+    // Guest checkout silently created a shadow user row (random password,
+    // flagged isGuestAccount) so the order could attach to a customer. That must
+    // NEVER block the person from registering for real with the same email.
+    // Instead we *claim* the row: set their chosen password on the existing
+    // credential using Better Auth's own hasher (so it verifies on sign-in),
+    // then fall through to the shared conversion tail. Their past guest orders
+    // stay linked to the now-real account.
+    try {
+      const ctx = await auth.$context;
+      const hashed = await ctx.password.hash(password);
+      const updated = await db
+        .update(authAccount)
+        .set({ password: hashed, updatedAt: new Date() })
+        .where(
+          and(
+            eq(authAccount.userId, existing.id),
+            eq(authAccount.providerId, "credential"),
+          ),
+        )
+        .returning({ id: authAccount.id });
+      if (updated.length === 0) {
+        throw new Error("guest account has no credential to claim");
+      }
+    } catch (err) {
+      console.error("[sign-up] guest account claim failed:", err);
+      return NextResponse.json(
+        { error: "Could not create account. Please try again." },
+        { status: 500 },
+      );
+    }
+    userId = existing.id;
+  } else {
+    // Create the credential + user row. autoSignIn is disabled globally, so this
+    // does NOT start a session — the client must confirm their email first.
+    const signUpRes = await auth.api.signUpEmail({
+      body: { email, password, name: `${firstName} ${lastName}` },
+      headers: req.headers,
+      asResponse: true,
+    });
+
+    if (!signUpRes.ok) {
+      console.error("[sign-up] signup failed:", signUpRes.status);
+      return NextResponse.json(
+        { error: "Could not create account. Please try again." },
+        { status: 500 },
+      );
+    }
+
+    const payload = (await signUpRes.json()) as { user?: { id: string } };
+    const newUserId = payload?.user?.id;
+    if (!newUserId) {
+      return NextResponse.json(
+        { error: "Something went wrong. Please try again." },
+        { status: 500 },
+      );
+    }
+    userId = newUserId;
   }
 
-  const payload = (await signUpRes.json()) as { user?: { id: string } };
-  const userId = payload?.user?.id;
-  if (!userId) {
-    return NextResponse.json(
-      { error: "Something went wrong. Please try again." },
-      { status: 500 },
-    );
-  }
-
-  // Promote the fresh row from the default `cook` to `client` and attach the
-  // profile fields.
+  // Shared conversion tail for both a brand-new signup and a claimed guest row:
+  // promote to a `client` (Better Auth defaults new users to `cook`), attach the
+  // profile fields, drop the guest flag, and force email verification — a guest
+  // never proved ownership of the address, so they must confirm it now.
+  //
+  // `onboardingCompletedAt` is reset to null so a claimed guest is still routed
+  // through the real onboarding flow (phone verification + date of birth +
+  // preferences). Guest checkout had stamped it to attach the order, which would
+  // otherwise make proxy.ts skip onboarding entirely. No-op for a brand-new row.
   await db
     .update(authUserTable)
-    .set({ role: "client", status: "active", firstName, lastName })
+    .set({
+      role: "client",
+      status: "active",
+      firstName,
+      lastName,
+      isGuestAccount: false,
+      emailVerified: false,
+      onboardingCompletedAt: null,
+    })
     .where(eq(authUser.id, userId));
 
   // Record the clickwrap acceptance as an audit trail. Best-effort: a failure

@@ -1,12 +1,25 @@
 import { sendMail } from "@/lib/email";
 import {
+  deliverOrderClientUpdate,
+  type OrderNotifyClient,
+} from "@/lib/order-client-notifications";
+import { formatOrderTimingLabel } from "@/lib/order-timing-label";
+import {
   contactParagraph,
   contactTextLine,
   htmlEmail,
   orderDetailsTable,
+  orderSummaryTable,
   paragraph,
   pickupCodeBlock,
 } from "./base";
+
+type OrderEmailItem = {
+  name: string;
+  quantity: number;
+  lineTotal?: string | null;
+  discountAmount?: string | null;
+};
 
 type OrderEmailData = {
   id: string;
@@ -15,29 +28,104 @@ type OrderEmailData = {
   totalPrice: string;
   currency: string;
   pickupAt: Date | string | null;
+  fulfillmentMode?: "pickup" | "delivery" | null;
+  fulfillmentWindowStart?: Date | string | null;
+  fulfillmentWindowEnd?: Date | string | null;
+  // Per-dish breakdown for the itemised summary. When absent, client emails
+  // fall back to the flat `listingTitle` + `totalPrice` rows.
+  items?: OrderEmailItem[];
+  deliveryFee?: string | number | null;
+  taxAmount?: string | number | null;
+  taxLabel?: string | null;
 };
 
-function formatPickup(pickupAt: Date | string | null): string {
-  if (!pickupAt) return "TBD";
+function fulfillmentLabel(mode: OrderEmailData["fulfillmentMode"]): string {
+  return mode === "delivery" ? "Delivery" : "Pickup";
+}
 
-  const date = new Date(pickupAt);
-  if (Number.isNaN(date.getTime())) return "TBD";
+function formatTiming(order: OrderEmailData): string {
+  return formatOrderTimingLabel(order);
+}
 
-  const day = date.toLocaleDateString("en-CA", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
-  const time = date.toLocaleTimeString("en-CA", {
-    hour: "numeric",
-    minute: "2-digit",
-  });
-  return `${day} at ${time}`;
+/** Omit TBD — cancelled orders don't need a vague timing line. */
+function knownTimingLabel(order: OrderEmailData): string | null {
+  const timing = formatTiming(order);
+  return timing === "TBD" || timing === "Date to be confirmed" ? null : timing;
+}
+
+function emailTimingRow(
+  order: OrderEmailData,
+): { label: string; value: string } | null {
+  const timing = knownTimingLabel(order);
+  if (!timing) return null;
+  return { label: fulfillmentLabel(order.fulfillmentMode), value: timing };
+}
+
+function cancellationScheduleClause(order: OrderEmailData): string {
+  const timing = knownTimingLabel(order);
+  return timing ? ` scheduled for ${timing}` : "";
 }
 
 function formatMoney(total: string, currency: string): string {
   return `$${total} ${currency}`;
+}
+
+function hasItemizedSummary(
+  order: OrderEmailData,
+): order is OrderEmailData & { items: OrderEmailItem[] } {
+  return Array.isArray(order.items) && order.items.length > 0;
+}
+
+/**
+ * Itemised order summary for client emails. Renders the rich per-dish table
+ * when line items are available, otherwise falls back to the flat
+ * Items + Total rows so older callers keep working.
+ */
+function orderSummaryHtml(order: OrderEmailData): string {
+  if (hasItemizedSummary(order)) {
+    return orderSummaryTable({
+      items: order.items,
+      deliveryFee: order.deliveryFee != null ? Number(order.deliveryFee) : 0,
+      tax: order.taxAmount != null ? Number(order.taxAmount) : 0,
+      taxLabel: order.taxLabel,
+      total: order.totalPrice,
+      currency: order.currency,
+    });
+  }
+  return orderDetailsTable([
+    { label: "Items", value: order.listingTitle },
+    { label: "Total", value: formatMoney(order.totalPrice, order.currency) },
+  ]);
+}
+
+function orderSummaryText(order: OrderEmailData): string[] {
+  if (!hasItemizedSummary(order)) {
+    return [
+      `Items: ${order.listingTitle}`,
+      `Total: ${formatMoney(order.totalPrice, order.currency)}`,
+    ];
+  }
+  const itemLines = order.items.map((it) => {
+    const price =
+      it.lineTotal != null && it.lineTotal !== ""
+        ? `  $${Number(it.lineTotal).toFixed(2)}`
+        : "";
+    return `  ${it.quantity}× ${it.name}${price}`;
+  });
+  const subtotal = order.items.reduce(
+    (sum, it) => sum + Number(it.lineTotal ?? 0),
+    0,
+  );
+  const deliveryFee = order.deliveryFee != null ? Number(order.deliveryFee) : 0;
+  const tax = order.taxAmount != null ? Number(order.taxAmount) : 0;
+  return [
+    "Items:",
+    ...itemLines,
+    `Subtotal: $${subtotal.toFixed(2)}`,
+    ...(deliveryFee > 0 ? [`Delivery: $${deliveryFee.toFixed(2)}`] : []),
+    ...(tax > 0 ? [`${order.taxLabel ?? "Tax"}: $${tax.toFixed(2)}`] : []),
+    `Total: ${formatMoney(order.totalPrice, order.currency)}`,
+  ];
 }
 
 function greeting(firstName: string | null): string {
@@ -48,13 +136,31 @@ function textWithContact(lines: string[]): string {
   return [...lines, "", contactTextLine()].join("\n");
 }
 
+export type OrderClientRecipient = {
+  email: string;
+  firstName: string | null;
+  phone?: string | null;
+  phoneVerified?: boolean;
+  notificationPreferences?: unknown;
+};
+
+function orderClientRecipient(client: OrderClientRecipient): OrderNotifyClient {
+  return {
+    email: client.email,
+    firstName: client.firstName,
+    phone: client.phone ?? null,
+    phoneVerified: client.phoneVerified ?? false,
+    notificationPreferences: client.notificationPreferences,
+  };
+}
+
 export async function sendOrderPlacedEmailToCook(
   cook: { email: string; firstName: string | null },
   customer: { name: string },
   order: OrderEmailData,
 ): Promise<void> {
   try {
-    const pickup = formatPickup(order.pickupAt);
+    const timing = formatTiming(order);
     const subject = `New order from ${customer.name}: ${order.listingTitle}`;
     const html = htmlEmail({
       title: subject,
@@ -69,7 +175,7 @@ export async function sendOrderPlacedEmailToCook(
             label: "Total",
             value: formatMoney(order.totalPrice, order.currency),
           },
-          { label: "Pickup", value: pickup },
+          { label: fulfillmentLabel(order.fulfillmentMode), value: timing },
         ]) +
         paragraph(
           "Review it in your dashboard and confirm when you're ready.",
@@ -86,7 +192,8 @@ export async function sendOrderPlacedEmailToCook(
       `Order: ${order.listingTitle}`,
       `Quantity: ${order.quantity}`,
       `Total: ${formatMoney(order.totalPrice, order.currency)}`,
-      `Pickup: ${pickup}`,
+      `Fulfillment: ${fulfillmentLabel(order.fulfillmentMode)}`,
+      `Timing: ${timing}`,
       "",
       "Review it in your dashboard and confirm when you're ready.",
       `${process.env.NEXT_PUBLIC_APP_URL}/business/orders`,
@@ -98,182 +205,378 @@ export async function sendOrderPlacedEmailToCook(
 }
 
 export async function sendOrderReceiptToClient(
-  client: { email: string; firstName: string | null },
+  client: OrderClientRecipient,
   cook: { name: string },
   order: OrderEmailData,
 ): Promise<void> {
+  await deliverOrderClientUpdate(
+    orderClientRecipient(client),
+    async () => {
+      try {
+        const timing = formatTiming(order);
+        const subject = `Your 7eats order with ${cook.name} is confirmed`;
+        const html = htmlEmail({
+          title: subject,
+          preheader: `We received your order from ${cook.name}.`,
+          bodyHtml:
+            paragraph(greeting(client.firstName)) +
+            paragraph(
+              `Thanks for your order with <strong>${cook.name}</strong>.`,
+            ) +
+            orderSummaryHtml(order) +
+            orderDetailsTable([
+              {
+                label: "Fulfillment",
+                value: fulfillmentLabel(order.fulfillmentMode),
+              },
+              { label: "Timing", value: timing },
+            ]) +
+            paragraph(
+              "You can track its status and pickup code any time from your orders.",
+            ) +
+            contactParagraph(),
+          ctaLabel: "View your order",
+          ctaUrl: `${process.env.NEXT_PUBLIC_APP_URL}/app/orders/${order.id}`,
+        });
+        const text = textWithContact([
+          greeting(client.firstName),
+          "",
+          `Thanks for your order with ${cook.name}.`,
+          "",
+          ...orderSummaryText(order),
+          "",
+          `Fulfillment: ${fulfillmentLabel(order.fulfillmentMode)}`,
+          `Timing: ${timing}`,
+          "",
+          "Track it any time from your orders:",
+          `${process.env.NEXT_PUBLIC_APP_URL}/app/orders/${order.id}`,
+        ]);
+        await sendMail({ to: client.email, subject, text, html });
+      } catch (err) {
+        console.error("[email/order-receipt-client]", err);
+      }
+    },
+    `7eats: Order confirmed with ${cook.name}. Track it in the app.`,
+  );
+}
+
+export async function sendGuestOrderReceiptToClient(
+  client: { email: string; firstName: string | null },
+  cook: { name: string },
+  order: OrderEmailData & { cancellationAllowed?: boolean },
+  guest: { confirmationCode: string; accessToken: string },
+): Promise<void> {
   try {
-    const pickup = formatPickup(order.pickupAt);
-    const subject = `Your 7eats order with ${cook.name} is confirmed`;
+    const timing = formatTiming(order);
+    const receiptUrl = `${process.env.NEXT_PUBLIC_APP_URL}/app/checkout/guest-confirmation?token=${encodeURIComponent(guest.accessToken)}`;
+    const cancelUrl = `${process.env.NEXT_PUBLIC_APP_URL}/app/guest/order/cancel?token=${encodeURIComponent(guest.accessToken)}`;
+    const subject = `Order confirmed - ${guest.confirmationCode}`;
+    const cancelNote = order.cancellationAllowed
+      ? paragraph(
+          `<a href="${cancelUrl}" style="color:#0f0f0f;font-weight:700;">Cancel this order</a> (while it is still pending).`,
+        )
+      : paragraph(
+          "This cook does not accept cancellations - all sales are final.",
+        );
+
     const html = htmlEmail({
       title: subject,
-      preheader: `We received your order from ${cook.name}.`,
+      preheader: `Your order with ${cook.name} is confirmed. Code: ${guest.confirmationCode}`,
       bodyHtml:
         paragraph(greeting(client.firstName)) +
         paragraph(`Thanks for your order with <strong>${cook.name}</strong>.`) +
+        orderSummaryHtml(order) +
         orderDetailsTable([
-          { label: "Items", value: order.listingTitle },
+          { label: "Confirmation code", value: guest.confirmationCode },
           {
-            label: "Total",
-            value: formatMoney(order.totalPrice, order.currency),
+            label: "Fulfillment",
+            value: fulfillmentLabel(order.fulfillmentMode),
           },
-          { label: "Pickup", value: pickup },
+          { label: "Timing", value: timing },
         ]) +
         paragraph(
-          "You can track its status and pickup code any time from your orders.",
+          "Save your confirmation code if you need to contact support.",
         ) +
+        cancelNote +
         contactParagraph(),
-      ctaLabel: "View your order",
-      ctaUrl: `${process.env.NEXT_PUBLIC_APP_URL}/app/orders/${order.id}`,
+      ctaLabel: "View receipt",
+      ctaUrl: receiptUrl,
     });
+
     const text = textWithContact([
       greeting(client.firstName),
       "",
       `Thanks for your order with ${cook.name}.`,
       "",
-      `Items: ${order.listingTitle}`,
-      `Total: ${formatMoney(order.totalPrice, order.currency)}`,
-      `Pickup: ${pickup}`,
+      ...orderSummaryText(order),
       "",
-      "Track it any time from your orders:",
-      `${process.env.NEXT_PUBLIC_APP_URL}/app/orders/${order.id}`,
+      `Confirmation code: ${guest.confirmationCode}`,
+      `Fulfillment: ${fulfillmentLabel(order.fulfillmentMode)}`,
+      `Timing: ${timing}`,
+      "",
+      "Save your confirmation code if you need to contact support.",
+      "",
+      `View receipt: ${receiptUrl}`,
+      ...(order.cancellationAllowed ? ["", `Cancel order: ${cancelUrl}`] : []),
     ]);
-    await sendMail({ to: client.email, subject, text, html });
+    await sendMail({
+      to: client.email,
+      subject,
+      text,
+      html,
+    });
   } catch (err) {
-    console.error("[email/order-receipt-client]", err);
+    console.error("[email/guest-order-receipt]", err);
   }
 }
 
 export async function sendOrderConfirmedEmailToClient(
-  client: { email: string; firstName: string | null },
+  client: OrderClientRecipient,
   cook: { name: string },
   order: OrderEmailData,
 ): Promise<void> {
-  try {
-    const pickup = formatPickup(order.pickupAt);
-    const subject = "Your order is confirmed";
-    const html = htmlEmail({
-      title: subject,
-      preheader: `${cook.name} confirmed your order.`,
-      bodyHtml:
-        paragraph(greeting(client.firstName)) +
-        paragraph(`${cook.name} confirmed your order. See you at pickup.`) +
-        orderDetailsTable([
-          { label: "Order", value: order.listingTitle },
-          { label: "Quantity", value: String(order.quantity) },
-          {
-            label: "Total",
-            value: formatMoney(order.totalPrice, order.currency),
-          },
-          { label: "Pickup", value: pickup },
-        ]) +
-        paragraph(
+  await deliverOrderClientUpdate(
+    orderClientRecipient(client),
+    async () => {
+      try {
+        const timing = formatTiming(order);
+        const subject = "Your order is confirmed";
+        const html = htmlEmail({
+          title: subject,
+          preheader: `${cook.name} confirmed your order.`,
+          bodyHtml:
+            paragraph(greeting(client.firstName)) +
+            paragraph(`${cook.name} confirmed your order. See you at pickup.`) +
+            orderSummaryHtml(order) +
+            orderDetailsTable([
+              { label: fulfillmentLabel(order.fulfillmentMode), value: timing },
+            ]) +
+            paragraph(
+              "You'll get another email with your pickup code once the order is ready.",
+            ) +
+            contactParagraph(),
+        });
+        const text = textWithContact([
+          greeting(client.firstName),
+          "",
+          `${cook.name} confirmed your order. See you at pickup.`,
+          "",
+          ...orderSummaryText(order),
+          "",
+          `${fulfillmentLabel(order.fulfillmentMode)}: ${timing}`,
+          "",
           "You'll get another email with your pickup code once the order is ready.",
-        ) +
-        contactParagraph(),
-    });
-    const text = textWithContact([
-      greeting(client.firstName),
-      "",
-      `${cook.name} confirmed your order. See you at pickup.`,
-      "",
-      `Order: ${order.listingTitle}`,
-      `Quantity: ${order.quantity}`,
-      `Total: ${formatMoney(order.totalPrice, order.currency)}`,
-      `Pickup: ${pickup}`,
-      "",
-      "You'll get another email with your pickup code once the order is ready.",
-    ]);
-    await sendMail({ to: client.email, subject, text, html });
-  } catch (err) {
-    console.error("[email/order-confirmed-client]", err);
-  }
+        ]);
+        await sendMail({ to: client.email, subject, text, html });
+      } catch (err) {
+        console.error("[email/order-confirmed-client]", err);
+      }
+    },
+    `7eats: ${cook.name} confirmed your order. We'll notify you when it's ready.`,
+  );
+}
+
+export async function sendOrderNotReadyEmailToClient(
+  client: OrderClientRecipient,
+  cook: { name: string },
+  order: OrderEmailData,
+): Promise<void> {
+  await deliverOrderClientUpdate(
+    orderClientRecipient(client),
+    async () => {
+      try {
+        const timingRow = emailTimingRow(order);
+        const codeNoun =
+          order.fulfillmentMode === "delivery"
+            ? "delivery code"
+            : "pickup code";
+        const subject = `Your order from ${cook.name} is taking a little longer`;
+        const html = htmlEmail({
+          title: subject,
+          preheader: `${cook.name} is still preparing your order.`,
+          bodyHtml:
+            paragraph(greeting(client.firstName)) +
+            paragraph(
+              `Quick heads up. Your order from <strong>${cook.name}</strong> is taking a little longer than expected. They're still hard at work on it and will have it ready as soon as they can.`,
+            ) +
+            orderDetailsTable([
+              { label: "Order", value: order.listingTitle },
+              ...(timingRow ? [timingRow] : []),
+            ]) +
+            paragraph(
+              `No need to do anything. We'll email you a fresh ${codeNoun} the moment it's ready. Thanks for your patience!`,
+            ) +
+            contactParagraph(),
+        });
+        const text = textWithContact([
+          greeting(client.firstName),
+          "",
+          `Quick heads up. Your order from ${cook.name} is taking a little longer than expected. They're still hard at work on it and will have it ready as soon as they can.`,
+          "",
+          `Order: ${order.listingTitle}`,
+          ...(timingRow ? [`${timingRow.label}: ${timingRow.value}`, ""] : []),
+          `No need to do anything. We'll email you a fresh ${codeNoun} the moment it's ready. Thanks for your patience!`,
+        ]);
+        await sendMail({ to: client.email, subject, text, html });
+      } catch (err) {
+        console.error("[email/order-not-ready-client]", err);
+      }
+    },
+    `7eats: Your order from ${cook.name} is taking a little longer. We'll notify you when it's ready.`,
+  );
 }
 
 export async function sendOrderReadyEmailToClient(
-  client: { email: string; firstName: string | null },
+  client: OrderClientRecipient,
   cook: { name: string },
   order: OrderEmailData,
   pickupCode: string,
 ): Promise<void> {
-  try {
-    const pickup = formatPickup(order.pickupAt);
-    const subject = `Your order is ready, pickup code ${pickupCode}`;
-    const html = htmlEmail({
-      title: subject,
-      preheader: `Your order from ${cook.name} is ready for pickup.`,
-      bodyHtml:
-        paragraph(greeting(client.firstName)) +
-        paragraph(
+  const isDelivery = order.fulfillmentMode === "delivery";
+  const codeLabel = isDelivery ? "Delivery code" : "Pickup code";
+  await deliverOrderClientUpdate(
+    orderClientRecipient(client),
+    async () => {
+      try {
+        const timingRow = emailTimingRow(order);
+        const subject = `Your order is ready, ${isDelivery ? "delivery" : "pickup"} code ${pickupCode}`;
+        const html = htmlEmail({
+          title: subject,
+          preheader: `Your order from ${cook.name} is ready.`,
+          bodyHtml:
+            paragraph(greeting(client.firstName)) +
+            paragraph(
+              `Your order from <strong>${cook.name}</strong> is ready. Show this code when you arrive:`,
+            ) +
+            pickupCodeBlock(pickupCode, codeLabel) +
+            orderDetailsTable([
+              { label: "Order", value: order.listingTitle },
+              ...(timingRow ? [timingRow] : []),
+            ]) +
+            paragraph("This code expires 24 hours after it was issued.") +
+            contactParagraph(),
+        });
+        const text = textWithContact([
+          greeting(client.firstName),
+          "",
           `Your order from ${cook.name} is ready. Show this code when you arrive:`,
-        ) +
-        pickupCodeBlock(pickupCode) +
-        orderDetailsTable([
-          { label: "Order", value: order.listingTitle },
-          { label: "Pickup", value: pickup },
-        ]) +
-        paragraph("This code expires 24 hours after it was issued.") +
-        contactParagraph(),
-    });
-    const text = textWithContact([
-      greeting(client.firstName),
-      "",
-      `Your order from ${cook.name} is ready. Show this code when you arrive:`,
-      "",
-      pickupCode,
-      "",
-      `Order: ${order.listingTitle}`,
-      `Pickup: ${pickup}`,
-      "",
-      "This code expires 24 hours after it was issued.",
-    ]);
-    await sendMail({ to: client.email, subject, text, html });
-  } catch (err) {
-    console.error("[email/order-ready-client]", err);
-  }
+          "",
+          pickupCode,
+          "",
+          `Order: ${order.listingTitle}`,
+          ...(timingRow ? [`${timingRow.label}: ${timingRow.value}`, ""] : []),
+          "This code expires 24 hours after it was issued.",
+        ]);
+        await sendMail({ to: client.email, subject, text, html });
+      } catch (err) {
+        console.error("[email/order-ready-client]", err);
+      }
+    },
+    `7eats: Your order from ${cook.name} is ready. ${codeLabel}: ${pickupCode}`,
+  );
 }
 
-export async function sendOrderCancelledByCookEmailToClient(
-  client: { email: string; firstName: string | null },
+export async function sendOrderCompletedEmailToClient(
+  client: OrderClientRecipient,
   cook: { name: string },
   order: OrderEmailData,
 ): Promise<void> {
-  try {
-    const pickup = formatPickup(order.pickupAt);
-    const subject = `Your ${order.listingTitle} order has been cancelled`;
-    const html = htmlEmail({
-      title: subject,
-      preheader: `${cook.name} cancelled your ${order.listingTitle} order.`,
-      bodyHtml:
-        paragraph(greeting(client.firstName)) +
-        paragraph(
-          `${cook.name} has cancelled your order for ${order.listingTitle} on ${pickup}.`,
-        ) +
-        paragraph(
-          "If you were charged, you'll receive a full refund within 3–5 business days.",
-        ) +
-        contactParagraph(),
-    });
-    const text = textWithContact([
-      greeting(client.firstName),
-      "",
-      `${cook.name} has cancelled your order for ${order.listingTitle} on ${pickup}.`,
-      "",
-      "If you were charged, you'll receive a full refund within 3–5 business days.",
-    ]);
-    await sendMail({ to: client.email, subject, text, html });
-  } catch (err) {
-    console.error("[email/order-cancelled-cook]", err);
-  }
+  const orderUrl = `${process.env.NEXT_PUBLIC_APP_URL}/app/orders/${order.id}`;
+  await deliverOrderClientUpdate(
+    orderClientRecipient(client),
+    async () => {
+      try {
+        const subject = `Thanks for your order with ${cook.name}`;
+        const html = htmlEmail({
+          title: "Enjoy your order!",
+          preheader: `Your order from ${cook.name} is all yours.`,
+          bodyHtml:
+            paragraph(greeting(client.firstName)) +
+            paragraph(
+              `Your order from <strong>${cook.name}</strong> is all yours — we hope every bite is wonderful. Thanks for supporting a home cook in your neighbourhood.`,
+            ) +
+            orderSummaryHtml(order) +
+            paragraph(
+              `Enjoyed it? A quick review helps ${cook.name} reach more neighbours.`,
+            ) +
+            contactParagraph(),
+          ctaLabel: "Leave a review",
+          ctaUrl: orderUrl,
+        });
+        const text = textWithContact([
+          greeting(client.firstName),
+          "",
+          `Your order from ${cook.name} is all yours — we hope every bite is wonderful. Thanks for supporting a home cook in your neighbourhood.`,
+          "",
+          ...orderSummaryText(order),
+          "",
+          `Enjoyed it? Leave a quick review to help ${cook.name} reach more neighbours:`,
+          orderUrl,
+        ]);
+        await sendMail({ to: client.email, subject, text, html });
+      } catch (err) {
+        console.error("[email/order-completed-client]", err);
+      }
+    },
+    `7eats: Thanks for your order with ${cook.name}!`,
+  );
+}
+
+export async function sendOrderCancelledByCookEmailToClient(
+  client: OrderClientRecipient,
+  cook: { name: string },
+  order: OrderEmailData,
+): Promise<void> {
+  await deliverOrderClientUpdate(
+    orderClientRecipient(client),
+    async () => {
+      try {
+        const timing = formatTiming(order);
+        const subject = `Your ${order.listingTitle} order has been cancelled`;
+        const html = htmlEmail({
+          title: subject,
+          preheader: `${cook.name} cancelled your ${order.listingTitle} order.`,
+          bodyHtml:
+            paragraph(greeting(client.firstName)) +
+            paragraph(
+              `${cook.name} has cancelled your order for ${order.listingTitle} (${timing}).`,
+            ) +
+            paragraph(
+              "If you were charged, you'll receive a full refund within 3-5 business days.",
+            ) +
+            contactParagraph(),
+        });
+        const text = textWithContact([
+          greeting(client.firstName),
+          "",
+          `${cook.name} has cancelled your order for ${order.listingTitle} (${timing}).`,
+          "",
+          "If you were charged, you'll receive a full refund within 3-5 business days.",
+        ]);
+        await sendMail({ to: client.email, subject, text, html });
+      } catch (err) {
+        console.error("[email/order-cancelled-cook]", err);
+      }
+    },
+    `7eats: ${cook.name} cancelled your order for ${order.listingTitle}.`,
+  );
+}
+
+function refundOutcomeLine(refunded: boolean): string {
+  return refunded
+    ? "The customer's payment was refunded in full."
+    : "No refund was issued per your cancellation policy.";
 }
 
 export async function sendOrderCancelledByClientEmailToCook(
   cook: { email: string; firstName: string | null },
   customer: { name: string },
   order: OrderEmailData,
+  options: { refunded: boolean },
 ): Promise<void> {
   try {
-    const pickup = formatPickup(order.pickupAt);
+    const refundLine = refundOutcomeLine(options.refunded);
+    const scheduleClause = cancellationScheduleClause(order);
     const subject = `Order cancelled by ${customer.name}`;
     const html = htmlEmail({
       title: subject,
@@ -281,17 +584,110 @@ export async function sendOrderCancelledByClientEmailToCook(
       bodyHtml:
         paragraph(greeting(cook.firstName)) +
         paragraph(
-          `${customer.name} cancelled their order for ${order.quantity}× ${order.listingTitle} scheduled for ${pickup}.`,
+          `${customer.name} cancelled their order for ${order.quantity}× ${order.listingTitle}${scheduleClause}.`,
         ) +
+        paragraph(refundLine) +
         contactParagraph(),
+      ctaLabel: "View orders",
+      ctaUrl: `${process.env.NEXT_PUBLIC_APP_URL}/business/orders`,
     });
     const text = textWithContact([
       greeting(cook.firstName),
       "",
-      `${customer.name} cancelled their order for ${order.quantity}× ${order.listingTitle} scheduled for ${pickup}.`,
+      `${customer.name} cancelled their order for ${order.quantity}× ${order.listingTitle}${scheduleClause}.`,
+      "",
+      refundLine,
+      "",
+      `${process.env.NEXT_PUBLIC_APP_URL}/business/orders`,
     ]);
     await sendMail({ to: cook.email, subject, text, html });
   } catch (err) {
-    console.error("[email/order-cancelled-client]", err);
+    console.error("[email/order-cancelled-client-cook]", err);
   }
+}
+
+export async function sendOrderCancelledByClientEmailToClient(
+  client: OrderClientRecipient,
+  cook: { name: string },
+  order: OrderEmailData,
+  options: {
+    refunded: boolean;
+    confirmationCode?: string | null;
+    isGuestCheckout?: boolean;
+    receiptUrl?: string | null;
+  },
+): Promise<void> {
+  await deliverOrderClientUpdate(
+    orderClientRecipient(client),
+    async () => {
+      try {
+        const timing = knownTimingLabel(order);
+        const refundParagraph = options.refunded
+          ? paragraph(
+              "Your payment has been released. If a charge already appeared on your card, it should drop off within a few business days.",
+            )
+          : paragraph(
+              "Based on the cook's cancellation policy, no refund was issued for this order.",
+            );
+        const ordersUrl = `${process.env.NEXT_PUBLIC_APP_URL}/app/orders`;
+        const ctaUrl =
+          options.receiptUrl ?? (options.isGuestCheckout ? null : ordersUrl);
+        const ctaLabel = options.receiptUrl
+          ? "View receipt"
+          : options.isGuestCheckout
+            ? undefined
+            : "View your orders";
+        const subject = `Your order with ${cook.name} has been cancelled`;
+        const html = htmlEmail({
+          title: subject,
+          preheader: `Your ${order.listingTitle} order was cancelled.`,
+          bodyHtml:
+            paragraph(greeting(client.firstName)) +
+            paragraph(
+              `Your order with <strong>${cook.name}</strong> has been cancelled.`,
+            ) +
+            orderSummaryHtml(order) +
+            orderDetailsTable([
+              ...(options.confirmationCode
+                ? [
+                    {
+                      label: "Confirmation code",
+                      value: options.confirmationCode,
+                    },
+                  ]
+                : []),
+              {
+                label: "Fulfillment",
+                value: fulfillmentLabel(order.fulfillmentMode),
+              },
+              ...(timing ? [{ label: "Timing", value: timing }] : []),
+            ]) +
+            refundParagraph +
+            contactParagraph(),
+          ...(ctaUrl && ctaLabel ? { ctaLabel, ctaUrl } : {}),
+        });
+        const text = textWithContact([
+          greeting(client.firstName),
+          "",
+          `Your order with ${cook.name} has been cancelled.`,
+          "",
+          ...(options.confirmationCode
+            ? [`Confirmation code: ${options.confirmationCode}`, ""]
+            : []),
+          ...orderSummaryText(order),
+          "",
+          `Fulfillment: ${fulfillmentLabel(order.fulfillmentMode)}`,
+          ...(timing ? [`Timing: ${timing}`, ""] : []),
+          options.refunded
+            ? "Your payment has been released. If a charge already appeared on your card, it should drop off within a few business days."
+            : "Based on the cook's cancellation policy, no refund was issued for this order.",
+          ...(ctaUrl ? ["", `${ctaLabel}:`, ctaUrl] : []),
+        ]);
+        await sendMail({ to: client.email, subject, text, html });
+      } catch (err) {
+        console.error("[email/order-cancelled-client-client]", err);
+      }
+    },
+    `7eats: Your order with ${cook.name} has been cancelled.`,
+  );
 }

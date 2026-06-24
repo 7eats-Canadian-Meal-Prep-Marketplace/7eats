@@ -12,6 +12,8 @@ import {
 } from "@/lib/emails/base";
 import { hashIp } from "@/lib/hash";
 import { COOK_APPLICATION_DOCS, LEGAL_VERSION } from "@/lib/legal";
+import { logAndCheckRateLimit } from "@/lib/rate-limit";
+import { getClientIp } from "@/lib/request-ip";
 
 const schema = z.object({
   kitchenName: z.string().min(1),
@@ -62,6 +64,18 @@ const schema = z.object({
 });
 
 export async function POST(req: Request) {
+  const ip = getClientIp(req);
+  const allowed = await logAndCheckRateLimit(`cook-application:${hashIp(ip)}`, {
+    windowMinutes: 60,
+    maxAttempts: 3,
+  });
+  if (!allowed) {
+    return NextResponse.json(
+      { error: "Too many applications from this network. Try again later." },
+      { status: 429 },
+    );
+  }
+
   const body = await req.json();
 
   const parsed = schema.safeParse({
@@ -79,11 +93,6 @@ export async function POST(req: Request) {
   }
 
   const v = parsed.data;
-
-  const ip =
-    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    req.headers.get("x-real-ip") ??
-    "unknown";
 
   try {
     const [application] = await db

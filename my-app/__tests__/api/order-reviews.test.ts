@@ -14,6 +14,14 @@ vi.mock("@/db/schema", () => ({
   rateLimitLog: {},
 }));
 
+vi.mock("@/lib/rate-limit", () => ({
+  logAndCheckRateLimit: vi.fn().mockResolvedValue(true),
+}));
+
+vi.mock("@/lib/reviews/notify-cook-new-review", () => ({
+  notifyCookNewReview: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock("drizzle-orm", () => ({
   eq: vi.fn(),
   and: vi.fn(),
@@ -29,6 +37,7 @@ import {
 } from "@/app/api/orders/[orderId]/reviews/route";
 import { db } from "@/db";
 import { auth } from "@/lib/auth";
+import { notifyCookNewReview } from "@/lib/reviews/notify-cook-new-review";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -62,13 +71,6 @@ function mockSession(
 function limitChain(rows: unknown[]) {
   const limit = vi.fn().mockResolvedValue(rows);
   const where = vi.fn(() => ({ limit }));
-  const from = vi.fn(() => ({ where }));
-  return { from } as never;
-}
-
-/** Rate-limit count: db.select().from().where() resolves directly (no limit). */
-function rateLimitChain() {
-  const where = vi.fn().mockResolvedValue([{ count: 0 }]);
   const from = vi.fn(() => ({ where }));
   return { from } as never;
 }
@@ -127,12 +129,9 @@ const ctx = { params: Promise.resolve({ orderId: ORDER_ID }) };
 describe("POST /api/orders/[orderId]/reviews", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Rate-limit log insert (also serves as a default for the review insert).
     vi.mocked(db.insert).mockReturnValue({
       values: vi.fn().mockResolvedValue([]),
     } as never);
-    // Default select satisfies the rate-limit count check.
-    vi.mocked(db.select).mockImplementation(() => rateLimitChain());
   });
 
   it("returns 401 when no session", async () => {
@@ -181,11 +180,7 @@ describe("POST /api/orders/[orderId]/reviews", () => {
 
   it("returns 404 when order not found or does not belong to user", async () => {
     mockSession(USER_ID);
-    let call = 0;
-    vi.mocked(db.select).mockImplementation(() => {
-      call++;
-      return call === 1 ? rateLimitChain() : limitChain([]);
-    });
+    vi.mocked(db.select).mockImplementation(() => limitChain([]));
 
     const res = await postReview(
       makeReq(`http://localhost/api/orders/${ORDER_ID}/reviews`, "POST", {
@@ -198,11 +193,7 @@ describe("POST /api/orders/[orderId]/reviews", () => {
 
   it("returns 400 when order is not fulfilled", async () => {
     mockSession(USER_ID);
-    let call = 0;
-    vi.mocked(db.select).mockImplementation(() => {
-      call++;
-      return call === 1 ? rateLimitChain() : limitChain([PENDING_ORDER]);
-    });
+    vi.mocked(db.select).mockImplementation(() => limitChain([PENDING_ORDER]));
 
     const res = await postReview(
       makeReq(`http://localhost/api/orders/${ORDER_ID}/reviews`, "POST", {
@@ -220,9 +211,8 @@ describe("POST /api/orders/[orderId]/reviews", () => {
     let call = 0;
     vi.mocked(db.select).mockImplementation(() => {
       call++;
-      if (call === 1) return rateLimitChain(); // rate-limit
-      if (call === 2) return limitChain([FULFILLED_ORDER]);
-      return limitChain([{ id: REVIEW_ID }]); // existing review
+      if (call === 1) return limitChain([FULFILLED_ORDER]);
+      return limitChain([{ id: REVIEW_ID }]);
     });
 
     const res = await postReview(
@@ -239,9 +229,8 @@ describe("POST /api/orders/[orderId]/reviews", () => {
     let call = 0;
     vi.mocked(db.select).mockImplementation(() => {
       call++;
-      if (call === 1) return rateLimitChain(); // rate-limit
-      if (call === 2) return limitChain([FULFILLED_ORDER]);
-      return limitChain([]); // no existing review
+      if (call === 1) return limitChain([FULFILLED_ORDER]);
+      return limitChain([]);
     });
     mockInsertReturning(MOCK_REVIEW);
 
@@ -256,6 +245,7 @@ describe("POST /api/orders/[orderId]/reviews", () => {
     const body = await res.json();
     expect(body.success).toBe(true);
     expect(body.data.rating).toBe(5);
+    expect(notifyCookNewReview).toHaveBeenCalledWith(REVIEW_ID);
   });
 });
 

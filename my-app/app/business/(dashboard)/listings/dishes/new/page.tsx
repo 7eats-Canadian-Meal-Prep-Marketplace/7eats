@@ -316,7 +316,7 @@ export default function NewDishPage() {
       mealToastSuccess("Meal created");
       router.push("/business/listings");
     } catch {
-      mealToastError("Network error — please try again.");
+      mealToastError("Network error. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -539,7 +539,7 @@ export default function NewDishPage() {
                 Ingredients <span className={styles.required}>*</span>
               </h3>
               <p className={styles.sectionHint}>
-                Add at least one ingredient. Names only — no amounts.
+                Add at least one ingredient. Names only, no amounts.
               </p>
 
               {ingredients.length > 0 && (

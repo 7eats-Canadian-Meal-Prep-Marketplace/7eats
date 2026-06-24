@@ -31,6 +31,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
   }
 
+  if (session.user.role !== "client") {
+    return NextResponse.json(
+      { error: "Only client accounts can verify a phone here." },
+      { status: 403 },
+    );
+  }
+
   const { phone } = await req.json();
   const e164 = toE164(phone ?? "");
   if (!e164) {

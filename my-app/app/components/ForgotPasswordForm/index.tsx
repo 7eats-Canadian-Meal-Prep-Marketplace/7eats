@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState, useTransition } from "react";
+import authStyles from "@/app/components/ClientAuthLayout/client-auth.module.css";
 import styles from "./ForgotPasswordForm.module.css";
 
 type Stage = "email" | "sent";
@@ -24,6 +25,8 @@ export default function ForgotPasswordForm({
       : "",
   );
   const [isPending, startTransition] = useTransition();
+
+  const canSubmit = email.trim().length > 0;
 
   const logoHref = audience === "client" ? "/app/browse" : "/business/home";
   const loginHref =
@@ -80,7 +83,8 @@ export default function ForgotPasswordForm({
             <button
               type="submit"
               className={`btn btn-primary ${styles.submit}`}
-              disabled={isPending}
+              disabled={isPending || !canSubmit}
+              aria-disabled={!canSubmit}
             >
               {isPending ? "Sending…" : "Send reset link"}
             </button>
@@ -109,17 +113,8 @@ export default function ForgotPasswordForm({
 
   if (showLogo) {
     return (
-      <div
-        style={{
-          width: "100%",
-          maxWidth: 460,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 32,
-        }}
-      >
-        <Link href={logoHref} className={styles.logoLink}>
+      <div className={authStyles.formShell}>
+        <Link href={logoHref} className={authStyles.logoLink}>
           <Image
             src="/7eats-logo.svg"
             alt="7eats"
@@ -129,7 +124,7 @@ export default function ForgotPasswordForm({
             priority
           />
         </Link>
-        <div className={styles.card}>{formContent}</div>
+        <div className={authStyles.formCard}>{formContent}</div>
       </div>
     );
   }

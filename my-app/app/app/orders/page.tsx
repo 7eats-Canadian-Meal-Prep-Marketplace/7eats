@@ -4,15 +4,15 @@ import { Package } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
+import {
+  type ClientOrderStatus,
+  clientOrderStatusLabel,
+} from "@/lib/client-order-status";
 import { Skeleton } from "../_skeleton";
+import { OrderCookCover } from "./_cook-visual";
 import styles from "./page.module.css";
 
-type OrderStatus =
-  | "pending"
-  | "confirmed"
-  | "ready"
-  | "fulfilled"
-  | "cancelled";
+type OrderStatus = ClientOrderStatus;
 
 type ApiOrder = {
   id: string;
@@ -21,9 +21,13 @@ type ApiOrder = {
   totalPrice: string | null;
   pickupDate: string | null;
   pickupWindow: string | null;
+  timingSchedule: string;
+  timingHint: string | null;
   fulfillmentMode: "pickup" | "delivery" | null;
   cookName: string | null;
   cookInitials: string | null;
+  cookPhotoUrl: string | null;
+  cookBannerUrl: string | null;
 };
 
 function orderTitle(o: ApiOrder): string {
@@ -37,26 +41,18 @@ function orderTitle(o: ApiOrder): string {
 }
 
 function statusInfo(order: ApiOrder): { label: string; color: string } {
+  const label = clientOrderStatusLabel(order.status, order.fulfillmentMode);
   switch (order.status) {
     case "pending":
-      return { label: "Pending", color: styles.statusPending };
+      return { label, color: styles.statusPending };
     case "confirmed":
-      return { label: "Preparing", color: styles.statusConfirmed };
+      return { label, color: styles.statusConfirmed };
     case "ready":
-      return {
-        label:
-          order.fulfillmentMode === "delivery"
-            ? "Out for delivery"
-            : "Ready for pickup",
-        color: styles.statusReady,
-      };
+      return { label, color: styles.statusReady };
     case "fulfilled":
-      return {
-        label: order.fulfillmentMode === "delivery" ? "Delivered" : "Picked up",
-        color: styles.statusFulfilled,
-      };
+      return { label, color: styles.statusFulfilled };
     case "cancelled":
-      return { label: "Cancelled", color: styles.statusCancelled };
+      return { label, color: styles.statusCancelled };
   }
 }
 
@@ -64,6 +60,7 @@ function OrdersContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const success = searchParams.get("success");
+  const cancelled = searchParams.get("cancelled");
 
   const [orders, setOrders] = useState<ApiOrder[]>([]);
   const [loading, setLoading] = useState(true);
@@ -140,14 +137,21 @@ function OrdersContent() {
 
   return (
     <div className={styles.page}>
-      {success && (
-        <div className={styles.successBanner}>
-          Your order has been placed. Your cook will confirm pickup details
-          shortly.
-        </div>
-      )}
-
       <div className={styles.inner}>
+        {success && (
+          <div className={styles.successBanner}>
+            Your order has been placed. Your cook will confirm pickup details
+            shortly.
+          </div>
+        )}
+        {cancelled && (
+          <div className={styles.successBanner}>
+            {cancelled === "refunded"
+              ? "Order cancelled. Your refund is on its way."
+              : "Order cancelled."}
+          </div>
+        )}
+
         <h1 className={styles.heading}>Your orders</h1>
 
         {active.length > 0 && (
@@ -164,17 +168,11 @@ function OrdersContent() {
                     href={`/app/orders/${order.id}`}
                     className={styles.orderCard}
                   >
-                    <div
-                      className={styles.orderCover}
-                      style={{
-                        background:
-                          "linear-gradient(135deg, #3a3a3a 0%, #1a1a1a 100%)",
-                      }}
-                    >
-                      <span className={styles.orderCoverInitials}>
-                        {order.cookInitials ?? "?"}
-                      </span>
-                    </div>
+                    <OrderCookCover
+                      bannerUrl={order.cookBannerUrl}
+                      photoUrl={order.cookPhotoUrl}
+                      initials={order.cookInitials}
+                    />
 
                     <div className={styles.orderCenter}>
                       <span className={styles.cookName}>
@@ -183,8 +181,12 @@ function OrdersContent() {
                       <h3 className={styles.orderTitle}>{orderTitle(order)}</h3>
                       <p className={styles.orderMeta}>
                         {fulfillmentPrefix}
-                        {order.pickupDate ? ` · ${order.pickupDate}` : ""}
-                        {order.pickupWindow ? ` · ${order.pickupWindow}` : ""}
+                        {order.timingSchedule &&
+                        order.timingSchedule !== "Date to be confirmed"
+                          ? ` · ${order.timingSchedule}`
+                          : order.pickupDate
+                            ? ` · ${order.pickupDate}`
+                            : ""}
                       </p>
                     </div>
 
@@ -195,7 +197,7 @@ function OrdersContent() {
                       <span className={styles.orderTotal}>
                         {order.totalPrice
                           ? `$${Number(order.totalPrice).toFixed(2)}`
-                          : "—"}
+                          : "N/A"}
                       </span>
                     </div>
                   </Link>
@@ -217,20 +219,13 @@ function OrdersContent() {
                   <Link
                     key={order.id}
                     href={`/app/orders/${order.id}`}
-                    className={`${styles.orderCard} ${styles.orderCardPast}`}
+                    className={styles.orderCard}
                   >
-                    <div
-                      className={styles.orderCover}
-                      style={{
-                        background:
-                          "linear-gradient(135deg, #3a3a3a 0%, #1a1a1a 100%)",
-                        opacity: 0.6,
-                      }}
-                    >
-                      <span className={styles.orderCoverInitials}>
-                        {order.cookInitials ?? "?"}
-                      </span>
-                    </div>
+                    <OrderCookCover
+                      bannerUrl={order.cookBannerUrl}
+                      photoUrl={order.cookPhotoUrl}
+                      initials={order.cookInitials}
+                    />
 
                     <div className={styles.orderCenter}>
                       <span className={styles.cookName}>
@@ -239,7 +234,12 @@ function OrdersContent() {
                       <h3 className={styles.orderTitle}>{orderTitle(order)}</h3>
                       <p className={styles.orderMeta}>
                         {fulfillmentPrefix}
-                        {order.pickupDate ? ` · ${order.pickupDate}` : ""}
+                        {order.timingSchedule &&
+                        order.timingSchedule !== "Date to be confirmed"
+                          ? ` · ${order.timingSchedule}`
+                          : order.pickupDate
+                            ? ` · ${order.pickupDate}`
+                            : ""}
                       </p>
                     </div>
 

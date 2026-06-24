@@ -12,6 +12,12 @@ vi.mock("@/db/schema", () => ({
 }));
 vi.mock("drizzle-orm", () => ({ eq: vi.fn() }));
 vi.mock("@/lib/cookie", () => ({ verifySignedPhone: vi.fn() }));
+vi.mock("@/lib/phone-availability", () => ({
+  isPhoneTakenForRole: vi.fn(),
+  isUniqueViolation: vi.fn(() => false),
+  phoneTakenMessage: (role: string) =>
+    `This phone number is already in use by another ${role} account.`,
+}));
 vi.mock("@/lib/rate-limit", () => ({ logAndCheckRateLimit: vi.fn() }));
 vi.mock("next/headers", () => ({ cookies: vi.fn() }));
 vi.mock("twilio", () => ({
@@ -31,13 +37,17 @@ import { POST } from "@/app/api/auth/client/verify-otp/route";
 import { db } from "@/db";
 import { auth } from "@/lib/auth";
 import { verifySignedPhone } from "@/lib/cookie";
+import {
+  isPhoneTakenForRole,
+  isUniqueViolation,
+} from "@/lib/phone-availability";
 import { logAndCheckRateLimit } from "@/lib/rate-limit";
 
 const USER_ID = "user-uuid";
 
 function mockSession(id: string | null) {
   vi.mocked(auth.api.getSession).mockResolvedValue(
-    id ? ({ user: { id } } as never) : null,
+    id ? ({ user: { id, role: "client" } } as never) : null,
   );
 }
 
@@ -68,6 +78,8 @@ beforeEach(() => {
   vi.stubEnv("TWILIO_AUTH_TOKEN", "token_test");
   vi.stubEnv("TWILIO_VERIFY_SERVICE_SID", "VA_test");
   vi.mocked(logAndCheckRateLimit).mockResolvedValue(true);
+  vi.mocked(isPhoneTakenForRole).mockResolvedValue(false);
+  vi.mocked(isUniqueViolation).mockReturnValue(false);
 });
 
 afterEach(() => vi.unstubAllEnvs());
@@ -124,6 +136,39 @@ describe("POST /api/auth/client/verify-otp", () => {
     verificationChecksCreate.mockRejectedValue(new Error("twilio down"));
     const res = await POST(makeRequest({ code: "123456" }));
     expect(res.status).toBe(500);
+  });
+
+  it("returns 409 when the phone is already verified on another client account", async () => {
+    mockSession(USER_ID);
+    mockCookie("signed");
+    vi.mocked(verifySignedPhone).mockReturnValue("+14165550123");
+    verificationChecksCreate.mockResolvedValue({ status: "approved" });
+    vi.mocked(isPhoneTakenForRole).mockResolvedValue(true);
+
+    const res = await POST(makeRequest({ code: "123456" }));
+
+    expect(res.status).toBe(409);
+    expect(vi.mocked(isPhoneTakenForRole)).toHaveBeenCalledWith(
+      "+14165550123",
+      "client",
+      USER_ID,
+    );
+    expect(db.update).not.toHaveBeenCalled();
+  });
+
+  it("returns 409 when the unique index rejects the write (race)", async () => {
+    mockSession(USER_ID);
+    mockCookie("signed");
+    vi.mocked(verifySignedPhone).mockReturnValue("+14165550123");
+    verificationChecksCreate.mockResolvedValue({ status: "approved" });
+    vi.mocked(isUniqueViolation).mockReturnValue(true);
+    const where = vi.fn().mockRejectedValue({ code: "23505" });
+    const set = vi.fn(() => ({ where }));
+    vi.mocked(db.update).mockReturnValue({ set } as never);
+
+    const res = await POST(makeRequest({ code: "123456" }));
+
+    expect(res.status).toBe(409);
   });
 
   it("saves phone+phoneVerified, clears cookie, returns success on approved code", async () => {

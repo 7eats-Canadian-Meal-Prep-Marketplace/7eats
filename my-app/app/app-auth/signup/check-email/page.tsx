@@ -5,7 +5,7 @@ import styles from "./page.module.css";
 import ResendButton from "./ResendButton";
 
 export const metadata: Metadata = {
-  title: "Confirm your email — 7eats",
+  title: "Confirm your email - 7eats",
 };
 
 export default async function CheckEmailPage({

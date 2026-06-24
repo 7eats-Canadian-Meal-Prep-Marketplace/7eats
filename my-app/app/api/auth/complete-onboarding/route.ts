@@ -4,6 +4,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { authUser, authUserTable, userPreferences } from "@/db/schema";
 import { auth } from "@/lib/auth";
+import { validateDateOfBirth16 } from "@/lib/onboarding-validation";
 
 const schema = z.object({
   dietary: z.array(z.string()),
@@ -13,10 +14,36 @@ const schema = z.object({
   dateOfBirth: z.string().date().optional(),
 });
 
+function issueOnboardedCookie(res: NextResponse) {
+  const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
+  res.headers.append(
+    "Set-Cookie",
+    `7eats-onboarded=1; Path=/; HttpOnly; SameSite=Lax; Max-Age=31536000${secure}`,
+  );
+}
+
 export async function POST(req: Request) {
   const session = await auth.api.getSession({ headers: req.headers });
   if (!session) {
     return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
+  }
+
+  const [user] = await db
+    .select({
+      role: authUser.role,
+      phoneVerified: authUser.phoneVerified,
+      dateOfBirth: authUser.dateOfBirth,
+      onboardingCompletedAt: authUser.onboardingCompletedAt,
+    })
+    .from(authUser)
+    .where(eq(authUser.id, session.user.id))
+    .limit(1);
+
+  if (!user || user.role !== "client") {
+    return NextResponse.json(
+      { error: "Only client accounts can complete onboarding." },
+      { status: 403 },
+    );
   }
 
   let body: unknown;
@@ -36,6 +63,29 @@ export async function POST(req: Request) {
 
   const { dietary, allergies, goals, whyMealPrep, dateOfBirth } = parsed.data;
   const userId = session.user.id;
+  const isFirstCompletion = user.onboardingCompletedAt == null;
+
+  if (isFirstCompletion) {
+    if (!user.phoneVerified) {
+      return NextResponse.json(
+        { error: "Verify your phone number before finishing onboarding." },
+        { status: 403 },
+      );
+    }
+
+    const resolvedDob = dateOfBirth ?? user.dateOfBirth ?? null;
+    if (!resolvedDob) {
+      return NextResponse.json(
+        { error: "Date of birth is required." },
+        { status: 400 },
+      );
+    }
+
+    const ageError = validateDateOfBirth16(resolvedDob);
+    if (ageError) {
+      return NextResponse.json({ error: ageError }, { status: 400 });
+    }
+  }
 
   await db
     .insert(userPreferences)
@@ -45,19 +95,20 @@ export async function POST(req: Request) {
       set: { dietary, allergies, goals, whyMealPrep, updatedAt: new Date() },
     });
 
-  await db
-    .update(authUserTable)
-    .set({
-      onboardingCompletedAt: new Date(),
-      ...(dateOfBirth ? { dateOfBirth } : {}),
-    })
-    .where(eq(authUser.id, userId));
+  if (isFirstCompletion) {
+    const resolvedDob = dateOfBirth ?? user.dateOfBirth;
+    await db
+      .update(authUserTable)
+      .set({
+        onboardingCompletedAt: new Date(),
+        ...(resolvedDob && !user.dateOfBirth
+          ? { dateOfBirth: resolvedDob }
+          : {}),
+      })
+      .where(eq(authUserTable.id, userId));
+  }
 
-  const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
   const res = NextResponse.json({ success: true });
-  res.headers.append(
-    "Set-Cookie",
-    `7eats-onboarded=1; Path=/; HttpOnly; SameSite=Lax; Max-Age=31536000${secure}`,
-  );
+  issueOnboardedCookie(res);
   return res;
 }

@@ -19,10 +19,10 @@ const CLIENT_PUBLIC_EXACT = new Set([
   "/app/cart",
   "/app/checkout",
 ]);
-const CLIENT_PUBLIC_PREFIXES = ["/app/cooks/", "/app/checkout/"];
+const CLIENT_PUBLIC_PREFIXES = ["/app/cooks/", "/app/checkout/", "/app/guest/"];
 
 /** Consumer routes that require a verified client account. */
-const CLIENT_PROTECTED_EXACT = new Set(["/app/inbox", "/app/settings"]);
+const CLIENT_PROTECTED_EXACT = new Set(["/app/settings", "/app/saved"]);
 const CLIENT_PROTECTED_PREFIXES = ["/app/orders"];
 
 function isClientPublicRoute(pathname: string): boolean {
@@ -45,9 +45,20 @@ function isOnboarded(req: NextRequest): boolean {
   return req.cookies.get(ONBOARDED_COOKIE)?.value === "1";
 }
 
+/** Cookie or session timestamp — avoids re-onboarding when cookie was cleared. */
+async function isClientOnboarded(req: NextRequest): Promise<boolean> {
+  if (isOnboarded(req)) return true;
+  if (!hasSession(req)) return false;
+  const session = await getSession(req);
+  if (session?.user.role !== "client") return false;
+  const completed = session.user.onboardingCompletedAt;
+  return completed != null && completed !== "";
+}
+
 /** Client onboarding gate — cooks/admins browsing the marketplace are treated as guests. */
 async function shouldRedirectToClientOnboarding(req: NextRequest) {
-  if (!hasSession(req) || isOnboarded(req)) return false;
+  if (!hasSession(req)) return false;
+  if (await isClientOnboarded(req)) return false;
   const session = await getSession(req);
   return session?.user.role === "client";
 }
@@ -177,9 +188,15 @@ export async function proxy(req: NextRequest) {
   if (pathname === "/app/listings" || pathname.startsWith("/app/listings/")) {
     return NextResponse.redirect(new URL("/app/browse", req.url));
   }
-  // Saved listings are retired for launch.
-  if (pathname === "/app/saved") {
+  // Messaging is disabled for launch — inbox is not accessible.
+  if (pathname === "/app/inbox" || pathname.startsWith("/app/inbox/")) {
     return NextResponse.redirect(new URL("/app/browse", req.url));
+  }
+  if (
+    pathname === "/business/inbox" ||
+    pathname.startsWith("/business/inbox/")
+  ) {
+    return NextResponse.redirect(new URL("/business/dashboard", req.url));
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -196,7 +213,7 @@ export async function proxy(req: NextRequest) {
       return NextResponse.redirect(new URL("/app/browse", req.url));
     }
     // Already completed onboarding — skip it
-    if (isOnboarded(req)) {
+    if (await isClientOnboarded(req)) {
       return NextResponse.redirect(new URL("/app/browse", req.url));
     }
     return NextResponse.next();
@@ -209,6 +226,11 @@ export async function proxy(req: NextRequest) {
     if (session) {
       const role = session.user.role;
       if (role === "client") {
+        if (!(await isClientOnboarded(req))) {
+          return NextResponse.redirect(
+            new URL("/app-auth/onboarding", req.url),
+          );
+        }
         const next = req.nextUrl.searchParams.get("next");
         const dest =
           next?.startsWith("/app/") && !next.startsWith("//")
@@ -216,16 +238,11 @@ export async function proxy(req: NextRequest) {
             : "/app/browse";
         return NextResponse.redirect(new URL(dest, req.url));
       }
-      // Cook/admin can create a separate client account — let them through signup.
-      if (pathname === "/app-auth/signup") {
-        return NextResponse.next();
-      }
-      // Cook/admin may need to switch accounts for a protected consumer route.
-      const next = req.nextUrl.searchParams.get("next");
-      if (next?.startsWith("/app/")) {
-        return NextResponse.next();
-      }
-      return NextResponse.redirect(new URL("/app/browse", req.url));
+      // Cook/admin: allow access to the client login and signup pages so they
+      // can switch to (or create) a separate customer account. Better Auth uses
+      // a single session cookie, so signing in as a client overwrites the cook
+      // session — effectively logging them out of the cook account.
+      return NextResponse.next();
     }
     return NextResponse.next();
   }
@@ -238,6 +255,9 @@ export async function proxy(req: NextRequest) {
     }
     if (session?.user.role !== "client") {
       return NextResponse.redirect(new URL("/app/browse", req.url));
+    }
+    if (!(await isClientOnboarded(req))) {
+      return NextResponse.redirect(new URL("/app-auth/onboarding", req.url));
     }
     return NextResponse.next();
   }
@@ -258,7 +278,7 @@ export async function proxy(req: NextRequest) {
     if (!session || !isClientUser(session)) {
       return redirectToClientLogin(req, pathname);
     }
-    if (!isOnboarded(req)) {
+    if (!(await isClientOnboarded(req))) {
       return NextResponse.redirect(new URL("/app-auth/onboarding", req.url));
     }
     return NextResponse.next();
@@ -357,10 +377,11 @@ export async function proxy(req: NextRequest) {
   ) {
     const { session, deny } = await requireCookSession(req);
     if (deny) return deny;
+    if (!session?.user?.id) return NextResponse.next();
 
     const blocked = await enforceCookSetupProgress(
       req,
-      session!.user.id,
+      session.user.id,
       pathname,
     );
     if (blocked) return blocked;

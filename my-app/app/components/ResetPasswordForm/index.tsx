@@ -4,8 +4,9 @@ import { Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useState, useTransition } from "react";
+import authStyles from "@/app/components/ClientAuthLayout/client-auth.module.css";
 import PasswordChecklist from "@/app/components/PasswordChecklist";
-import { validatePassword } from "@/lib/password";
+import { isPasswordValid, validatePassword } from "@/lib/password";
 import styles from "./ResetPasswordForm.module.css";
 
 export default function ResetPasswordForm({
@@ -23,6 +24,8 @@ export default function ResetPasswordForm({
   const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState("");
   const [isPending, startTransition] = useTransition();
+
+  const formValid = isPasswordValid(password) && password === confirm;
 
   const logoHref = audience === "client" ? "/app/browse" : "/business/home";
   const loginHref =
@@ -78,6 +81,7 @@ export default function ResetPasswordForm({
                 setPassword(e.target.value);
                 setError("");
               }}
+              placeholder="Create a strong password"
               required
             />
             <button
@@ -106,6 +110,7 @@ export default function ResetPasswordForm({
                 setConfirm(e.target.value);
                 setError("");
               }}
+              placeholder="Re-enter your password"
               required
             />
             <button
@@ -126,7 +131,8 @@ export default function ResetPasswordForm({
         <button
           type="submit"
           className={`btn btn-primary ${styles.submit}`}
-          disabled={isPending}
+          disabled={isPending || !formValid}
+          aria-disabled={!formValid}
         >
           {isPending ? "Saving…" : "Set new password"}
         </button>
@@ -142,17 +148,8 @@ export default function ResetPasswordForm({
 
   if (showLogo) {
     return (
-      <div
-        style={{
-          width: "100%",
-          maxWidth: 460,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 32,
-        }}
-      >
-        <Link href={logoHref} className={styles.logoLink}>
+      <div className={authStyles.formShell}>
+        <Link href={logoHref} className={authStyles.logoLink}>
           <Image
             src="/7eats-logo.svg"
             alt="7eats"
@@ -162,7 +159,7 @@ export default function ResetPasswordForm({
             priority
           />
         </Link>
-        <div className={styles.card}>{formContent}</div>
+        <div className={authStyles.formCard}>{formContent}</div>
       </div>
     );
   }

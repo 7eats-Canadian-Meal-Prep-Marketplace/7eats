@@ -1,12 +1,19 @@
 "use client";
 
-import { TrendingUp } from "lucide-react";
+import { Landmark, TrendingUp } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import styles from "./page.module.css";
 
 type Period = "week" | "month";
 
 type EarningPoint = { label: string; value: number };
+
+type NextPayout = {
+  hasAccount: boolean;
+  available: number;
+  pending: number;
+  currency: string;
+};
 
 type PayoutStatus = "pending" | "in_transit" | "paid" | "failed" | "cancelled";
 
@@ -28,6 +35,16 @@ function formatMoney(value: number): string {
     style: "currency",
     currency: "CAD",
     maximumFractionDigits: 0,
+  });
+}
+
+// Payout amounts are real money in flight — show the cents.
+function formatMoneyExact(value: number): string {
+  return value.toLocaleString("en-CA", {
+    style: "currency",
+    currency: "CAD",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   });
 }
 
@@ -92,6 +109,8 @@ export default function EarningsPage() {
   const [period, setPeriod] = useState<Period>("week");
   const [series, setSeries] = useState<EarningPoint[]>([]);
   const [seriesTotal, setSeriesTotal] = useState(0);
+  const [nextPayout, setNextPayout] = useState<NextPayout | null>(null);
+  const [loadingNextPayout, setLoadingNextPayout] = useState(true);
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [payoutsMeta, setPayoutsMeta] = useState({
     total: 0,
@@ -143,6 +162,19 @@ export default function EarningsPage() {
     }
   }, []);
 
+  const loadNextPayout = useCallback(async () => {
+    setLoadingNextPayout(true);
+    try {
+      const res = await fetch("/api/business/dashboard/earnings/next-payout");
+      if (res.ok) {
+        const json = await res.json();
+        setNextPayout(json.data ?? null);
+      }
+    } finally {
+      setLoadingNextPayout(false);
+    }
+  }, []);
+
   useEffect(() => {
     loadChart(period);
   }, [period, loadChart]);
@@ -151,10 +183,18 @@ export default function EarningsPage() {
     loadPayouts(1);
   }, [loadPayouts]);
 
+  useEffect(() => {
+    loadNextPayout();
+  }, [loadNextPayout]);
+
   const max = series.length > 0 ? Math.max(...series.map((p) => p.value)) : 0;
   const { ceiling, ticks } = computeChart(max || 1);
 
   const remaining = payoutsMeta.total - payouts.length;
+
+  // A connected-account balance can go negative after refunds/chargebacks; you
+  // can't pay out a negative, so the headline floors at zero.
+  const availablePayout = Math.max(0, nextPayout?.available ?? 0);
 
   function handleShowMore() {
     loadPayouts(payoutsMeta.page + 1);
@@ -167,6 +207,44 @@ export default function EarningsPage() {
         <p className={styles.tagline}>
           Track your revenue and payouts at a glance.
         </p>
+      </div>
+
+      <div className={styles.nextPayoutCard}>
+        <div className={styles.nextPayoutIcon} aria-hidden="true">
+          <Landmark size={20} />
+        </div>
+        <div className={styles.nextPayoutBody}>
+          <span className={styles.nextPayoutLabel}>Next payout</span>
+          {loadingNextPayout ? (
+            <>
+              <span className={styles.nextPayoutAmount}>—</span>
+              <span className={styles.nextPayoutSub}>Loading…</span>
+            </>
+          ) : !nextPayout?.hasAccount ? (
+            <>
+              <span className={styles.nextPayoutAmount}>—</span>
+              <span className={styles.nextPayoutSub}>
+                Connect your payout account to see funds on the way.
+              </span>
+            </>
+          ) : (
+            <>
+              <span className={styles.nextPayoutAmount}>
+                {formatMoneyExact(availablePayout)}
+              </span>
+              <span className={styles.nextPayoutSub}>
+                {availablePayout > 0
+                  ? "Available now. Heading to your bank account."
+                  : "No funds awaiting payout right now."}
+              </span>
+              {nextPayout.pending > 0 && (
+                <span className={styles.nextPayoutPending}>
+                  + {formatMoneyExact(nextPayout.pending)} still settling
+                </span>
+              )}
+            </>
+          )}
+        </div>
       </div>
 
       <div className={styles.revenueRow}>

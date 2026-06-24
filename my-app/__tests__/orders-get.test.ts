@@ -66,6 +66,8 @@ const MOCK_ORDER = {
   totalPrice: "30.00",
   currency: "CAD",
   pickupAt: new Date("2026-06-10T12:00:00.000Z"),
+  fulfillmentWindowStart: null,
+  fulfillmentWindowEnd: null,
   notes: null,
   createdAt: new Date("2026-06-02T09:00:00.000Z"),
   pickupCode: null,
@@ -190,6 +192,31 @@ describe("GET /api/orders", () => {
     expect(order.dishes[0].priceSnapshot).toBe("15.00");
     expect(order.dishes[0].lineTotal).toBe("30.00");
     expect(body.meta).toEqual({ total: 1, limit: 20, offset: 0 });
+  });
+
+  it("uses the snapshotted fulfillment window when pickupAt is not exact yet", async () => {
+    const pendingOrder = {
+      ...MOCK_ORDER,
+      pickupAt: null,
+      fulfillmentWindowStart: new Date(2026, 5, 19, 11, 0, 0),
+      fulfillmentWindowEnd: new Date(2026, 5, 19, 14, 0, 0),
+    };
+
+    let call = 0;
+    vi.mocked(db.select).mockImplementation(() => {
+      call++;
+      if (call === 1) return buildCountChain(1);
+      if (call === 2) return buildDataChain([pendingOrder]);
+      return buildWhereResolveChain([MOCK_DISH]);
+    });
+
+    const res = await GET(makeRequest("http://localhost/api/orders"));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    const order = body.data[0];
+    expect(order.pickupAt).toBeNull();
+    expect(order.pickupDate).toBe("Fri, Jun 19");
+    expect(order.pickupWindow).toBe("11 am – 2 pm");
   });
 
   it("clamps limit to 100 when ?limit=9999", async () => {

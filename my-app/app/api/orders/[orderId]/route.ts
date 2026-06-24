@@ -6,39 +6,21 @@ import {
   authUser,
   cookProfiles,
   orderDishes,
-  orderPayments,
   orders,
+  reviews,
 } from "@/db/schema";
 import { auth } from "@/lib/auth";
-import { sendOrderCancelledByClientEmailToCook } from "@/lib/emails/order-events";
-import { isRefundEligible } from "@/lib/order-pricing";
 import {
-  cancelPaymentIntent,
-  capturePaymentIntent,
-  refundPaymentIntent,
-} from "@/lib/stripe-payments";
-
-function formatPickupDate(isoString: string): string {
-  const d = new Date(isoString);
-  return d.toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  });
-}
-
-function formatPickupWindow(isoString: string, windowHours = 2): string {
-  const d = new Date(isoString);
-  const start = d
-    .toLocaleTimeString("en-US", { hour: "numeric", hour12: true })
-    .toLowerCase()
-    .replace(":00", "");
-  const end = new Date(d.getTime() + windowHours * 3600000)
-    .toLocaleTimeString("en-US", { hour: "numeric", hour12: true })
-    .toLowerCase()
-    .replace(":00", "");
-  return `${start} – ${end}`;
-}
+  formatOrderTimingDate,
+  formatOrderTimingWindow,
+} from "@/lib/order-timing";
+import { formatClientOrderTiming } from "@/lib/order-timing-label";
+import {
+  cancelClientOrder,
+  getClientCancelPolicy,
+} from "@/lib/orders/cancel-order";
+import { resolveOrderCookFields } from "@/lib/orders/cook-order-fields";
+import { getTaxLabel } from "@/lib/tax";
 
 export type Params = { params: Promise<{ orderId: string }> };
 
@@ -64,8 +46,12 @@ export async function GET(req: NextRequest, { params }: Params) {
         id: orders.id,
         status: orders.status,
         totalPrice: orders.totalPrice,
+        taxAmount: orders.taxAmount,
+        taxProvince: orders.taxProvince,
         currency: orders.currency,
         pickupAt: orders.pickupAt,
+        fulfillmentWindowStart: orders.fulfillmentWindowStart,
+        fulfillmentWindowEnd: orders.fulfillmentWindowEnd,
         notes: orders.notes,
         createdAt: orders.createdAt,
         pickupCode: orders.pickupCode,
@@ -76,6 +62,9 @@ export async function GET(req: NextRequest, { params }: Params) {
         cancelledAt: orders.cancelledAt,
         cookFirstName: authUser.firstName,
         cookLastName: authUser.lastName,
+        cookDisplayName: cookProfiles.displayName,
+        cookPhotoUrl: cookProfiles.photoUrl,
+        cookBannerUrl: cookProfiles.bannerUrl,
         cookNeighborhood: authUser.neighborhood,
         cookPickupAddress: cookProfiles.pickupAddress,
         cookLeadTime: cookProfiles.leadTime,
@@ -103,15 +92,43 @@ export async function GET(req: NextRequest, { params }: Params) {
       .from(orderDishes)
       .where(eq(orderDishes.orderId, orderId));
 
+    const [reviewRow] = await db
+      .select({
+        id: reviews.id,
+        rating: reviews.rating,
+        comment: reviews.comment,
+      })
+      .from(reviews)
+      .where(eq(reviews.orderId, orderId))
+      .limit(1);
+
     const pickupAtIso =
       row.pickupAt instanceof Date ? row.pickupAt.toISOString() : row.pickupAt;
+    const fulfillmentWindowStartIso =
+      row.fulfillmentWindowStart instanceof Date
+        ? row.fulfillmentWindowStart.toISOString()
+        : row.fulfillmentWindowStart;
+    const fulfillmentWindowEndIso =
+      row.fulfillmentWindowEnd instanceof Date
+        ? row.fulfillmentWindowEnd.toISOString()
+        : row.fulfillmentWindowEnd;
+    const timing = {
+      pickupAt: pickupAtIso,
+      fulfillmentWindowStart: fulfillmentWindowStartIso,
+      fulfillmentWindowEnd: fulfillmentWindowEndIso,
+    };
+    const fulfillmentMode =
+      row.fulfillmentMode === "delivery" || row.fulfillmentMode === "pickup"
+        ? row.fulfillmentMode
+        : null;
+    const clientTiming = formatClientOrderTiming({
+      pickupAt: pickupAtIso,
+      fulfillmentWindowStart: row.fulfillmentWindowStart,
+      fulfillmentWindowEnd: row.fulfillmentWindowEnd,
+      fulfillmentMode,
+    });
 
-    const cookName =
-      [row.cookFirstName, row.cookLastName].filter(Boolean).join(" ") || null;
-    const cookInitials =
-      [row.cookFirstName?.[0], row.cookLastName?.[0]]
-        .filter(Boolean)
-        .join("") || null;
+    const cookFields = resolveOrderCookFields(row);
 
     let pickupAddress: string | null = null;
     if (row.fulfillmentMode === "delivery") {
@@ -131,35 +148,50 @@ export async function GET(req: NextRequest, { params }: Params) {
       pickupAddress = row.cookPickupAddress ?? row.cookNeighborhood ?? null;
     }
 
-    const refundEligible = isRefundEligible(
-      row.pickupAt instanceof Date ? row.pickupAt : null,
-      row.cookLeadTime,
-      row.cancellationAllowed,
-    );
-    const cancellable =
-      ["pending", "confirmed"].includes(row.status) && row.pickupAt != null;
+    const cancelPolicy = getClientCancelPolicy({
+      status: row.status,
+      cancellationAllowed: row.cancellationAllowed,
+      pickupAt: row.pickupAt instanceof Date ? row.pickupAt : null,
+      fulfillmentWindowStart: row.fulfillmentWindowStart,
+      cookLeadTime: row.cookLeadTime,
+      fulfillmentMode:
+        row.fulfillmentMode === "delivery" || row.fulfillmentMode === "pickup"
+          ? row.fulfillmentMode
+          : null,
+    });
 
     const data = {
       id: row.id,
       status: row.status,
       totalPrice: row.totalPrice,
+      taxAmount: row.taxAmount,
+      taxProvince: row.taxProvince,
+      taxLabel: row.taxProvince ? getTaxLabel(row.taxProvince) : null,
       currency: row.currency,
       pickupAt: pickupAtIso,
+      fulfillmentWindowStart: fulfillmentWindowStartIso,
+      fulfillmentWindowEnd: fulfillmentWindowEndIso,
       notes: row.notes ?? null,
       createdAt:
         row.createdAt instanceof Date
           ? row.createdAt.toISOString()
           : row.createdAt,
       pickupCode: row.status === "ready" ? (row.pickupCode ?? null) : null,
-      cookName,
-      cookInitials,
+      ...cookFields,
       fulfillmentMode: row.fulfillmentMode,
       deliveryFeeSnapshot: row.deliveryFeeSnapshot,
       cancellationAllowed: row.cancellationAllowed,
-      cancellable,
-      refundEligible,
-      pickupDate: pickupAtIso ? formatPickupDate(pickupAtIso) : null,
-      pickupWindow: pickupAtIso ? formatPickupWindow(pickupAtIso) : null,
+      cancellable: cancelPolicy.cancellable,
+      refundEligible: cancelPolicy.refundEligible,
+      refundDeadline: cancelPolicy.refundDeadline,
+      refundDeadlineLabel: cancelPolicy.refundDeadlineLabel,
+      cancelSummary: cancelPolicy.summary,
+      cancelDetail: cancelPolicy.detail,
+      cancelModalReminder: cancelPolicy.modalReminder,
+      timingSchedule: clientTiming.schedule,
+      timingHint: clientTiming.hint,
+      pickupDate: formatOrderTimingDate(timing),
+      pickupWindow: formatOrderTimingWindow(timing),
       pickupAddress,
       cancelledAt:
         row.cancelledAt instanceof Date
@@ -170,6 +202,13 @@ export async function GET(req: NextRequest, { params }: Params) {
           ? (row.deliveryAddress as object | null)
           : null,
       dishes: dishRows.sort((a, b) => a.sortOrder - b.sortOrder),
+      review: reviewRow
+        ? {
+            id: reviewRow.id,
+            rating: reviewRow.rating,
+            comment: reviewRow.comment ?? "",
+          }
+        : null,
     };
 
     return NextResponse.json({ success: true, data });
@@ -182,11 +221,6 @@ export async function GET(req: NextRequest, { params }: Params) {
   }
 }
 
-const CANCELLABLE_STATUSES = ["pending", "confirmed"];
-
-// Client cancellation. Full refund only when the cook allows cancellation AND
-// the order has a pickup time AND we are still before (pickupAt - leadTime).
-// Otherwise the order is cancelled with no refund (payment captured to the cook).
 export async function DELETE(req: NextRequest, { params }: Params) {
   const session = await auth.api.getSession({ headers: req.headers });
   if (!session) {
@@ -199,138 +233,18 @@ export async function DELETE(req: NextRequest, { params }: Params) {
   }
 
   try {
-    const [order] = await db
-      .select({
-        id: orders.id,
-        clientId: orders.clientId,
-        cookId: orders.cookId,
-        status: orders.status,
-        totalPrice: orders.totalPrice,
-        currency: orders.currency,
-        pickupAt: orders.pickupAt,
-        cancellationAllowed: orders.cancellationAllowed,
-        cookLeadTime: cookProfiles.leadTime,
-      })
-      .from(orders)
-      .leftJoin(cookProfiles, eq(orders.cookId, cookProfiles.id))
-      .where(and(eq(orders.id, orderId), eq(orders.clientId, session.user.id)))
-      .limit(1);
-
-    if (!order) {
-      return NextResponse.json({ error: "Order not found." }, { status: 404 });
-    }
-    if (!CANCELLABLE_STATUSES.includes(order.status)) {
+    const result = await cancelClientOrder(
+      orderId,
+      session.user.id,
+      session.user.id,
+    );
+    if (!result.ok) {
       return NextResponse.json(
-        { error: "Order cannot be cancelled at this stage." },
-        { status: 400 },
+        { error: result.error },
+        { status: result.status },
       );
     }
-
-    const refundEligible = isRefundEligible(
-      order.pickupAt instanceof Date ? order.pickupAt : null,
-      order.cookLeadTime,
-      order.cancellationAllowed,
-    );
-
-    const payments = await db
-      .select({
-        id: orderPayments.id,
-        status: orderPayments.status,
-        stripePaymentIntentId: orderPayments.stripePaymentIntentId,
-      })
-      .from(orderPayments)
-      .where(eq(orderPayments.orderId, orderId));
-
-    for (const payment of payments) {
-      if (!payment.stripePaymentIntentId) continue;
-
-      if (refundEligible) {
-        // Authorized holds are cancelled; captured funds are refunded.
-        if (payment.status === "authorized") {
-          await cancelPaymentIntent(
-            payment.stripePaymentIntentId,
-            `client-cancel-${orderId}`,
-          );
-          await db
-            .update(orderPayments)
-            .set({ status: "refunded", refundedAt: new Date() })
-            .where(eq(orderPayments.id, payment.id));
-        } else if (payment.status === "held" || payment.status === "released") {
-          const refundId = await refundPaymentIntent({
-            paymentIntentId: payment.stripePaymentIntentId,
-            idempotencyKey: `client-cancel-refund-${orderId}`,
-          });
-          await db
-            .update(orderPayments)
-            .set({
-              status: "refunded",
-              stripeRefundId: refundId,
-              refundedAt: new Date(),
-            })
-            .where(eq(orderPayments.id, payment.id));
-        }
-      } else if (payment.status === "authorized") {
-        // No refund — capture the authorized payment to the cook.
-        await capturePaymentIntent(
-          payment.stripePaymentIntentId,
-          `client-cancel-capture-${orderId}`,
-        );
-        await db
-          .update(orderPayments)
-          .set({ status: "released", releasedAt: new Date() })
-          .where(eq(orderPayments.id, payment.id));
-      }
-    }
-
-    await db
-      .update(orders)
-      .set({
-        status: "cancelled",
-        cancelledAt: new Date(),
-        cancelledBy: session.user.id,
-      })
-      .where(and(eq(orders.id, orderId), eq(orders.clientId, session.user.id)));
-
-    // Notify the cook (fire-and-forget) with the dish names.
-    db.select({
-      cookEmail: authUser.email,
-      cookFirstName: authUser.firstName,
-    })
-      .from(cookProfiles)
-      .innerJoin(authUser, eq(cookProfiles.userId, authUser.id))
-      .where(eq(cookProfiles.id, order.cookId))
-      .limit(1)
-      .then(async ([row]) => {
-        if (!row) return;
-        const dishRows = await db
-          .select({
-            name: orderDishes.dishName,
-            quantity: orderDishes.quantity,
-          })
-          .from(orderDishes)
-          .where(eq(orderDishes.orderId, orderId));
-        const customerName =
-          session.user.name ||
-          [session.user.firstName, session.user.lastName]
-            .filter(Boolean)
-            .join(" ") ||
-          "A customer";
-        return sendOrderCancelledByClientEmailToCook(
-          { email: row.cookEmail, firstName: row.cookFirstName },
-          { name: customerName },
-          {
-            id: order.id,
-            listingTitle: dishRows.map((d) => d.name).join(", "),
-            quantity: dishRows.reduce((s, d) => s + d.quantity, 0),
-            totalPrice: order.totalPrice,
-            currency: order.currency,
-            pickupAt: order.pickupAt,
-          },
-        );
-      })
-      .catch((err) => console.error("[orders/DELETE] email", err));
-
-    return NextResponse.json({ success: true, refunded: refundEligible });
+    return NextResponse.json({ success: true, refunded: result.refunded });
   } catch (err) {
     console.error("[orders/DELETE]", err);
     return NextResponse.json(

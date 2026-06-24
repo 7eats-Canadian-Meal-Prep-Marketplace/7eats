@@ -4,7 +4,7 @@ import { ClientAuthLayout } from "@/app/components/ClientAuthLayout";
 import ResetPasswordForm from "@/app/components/ResetPasswordForm";
 
 export const metadata: Metadata = {
-  title: "Reset password — 7eats",
+  title: "Reset password - 7eats",
 };
 
 export default async function ResetPasswordPage({

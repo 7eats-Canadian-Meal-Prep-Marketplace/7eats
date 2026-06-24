@@ -1,109 +1,134 @@
 "use client";
 
-import { Search, Star } from "lucide-react";
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
-import { kitchenDisplayName } from "@/lib/cook-display";
+import { parseCookSort, sortCooks } from "@/lib/cook-sort";
+import { useApp } from "../_app-context";
+import {
+  type BrowseCookCard,
+  CookGrid,
+  normalizeBrowseCook,
+} from "../_cook-card";
+import { SearchSortDropdown } from "../_search-sort";
+import { useServiceAddress } from "../_service-address-context";
 import { Skeleton } from "../_skeleton";
-import styles from "../browse/page.module.css";
-
-type CookCard = {
-  id: string;
-  displayName: string | null;
-  cookName: string | null;
-  photoUrl: string | null;
-  bannerUrl: string | null;
-  bio: string | null;
-  tags: { slug: string; label: string }[];
-  pickupCity: string | null;
-  rating: number | null;
-  reviewCount: number;
-  representativeDishPhoto: string | null;
-  distanceKm: number | null;
-};
-
-function initials(name: string | null): string {
-  if (!name) return "C";
-  return name
-    .split(" ")
-    .map((w) => w.charAt(0))
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-}
+import { BrowseEmpty } from "../browse/_browse-empty";
+import browseStyles from "../browse/page.module.css";
+import searchStyles from "./page.module.css";
 
 function SearchContent() {
   const searchParams = useSearchParams();
+  const qParam = searchParams.get("q") ?? "";
   const cuisineParam = searchParams.get("cuisine") ?? "";
+  const allParam = searchParams.get("all") === "1";
+  const sortParam = searchParams.get("sort");
+  const sortKey = parseCookSort(sortParam);
 
-  const [cooks, setCooks] = useState<CookCard[]>([]);
-  const [query, setQuery] = useState(cuisineParam);
+  const [cooks, setCooks] = useState<BrowseCookCard[]>([]);
   const [loading, setLoading] = useState(true);
+  const { ready, currentAddress, coordsKey } = useServiceAddress();
+  const { fulfillment: fulfillmentMode } = useApp();
+
+  // The effective query: explicit search text, else a cuisine chip. A typed
+  // keyword always wins, so an active cuisine never stacks onto it.
+  const effectiveQuery = useMemo(() => {
+    const q = qParam.trim();
+    if (q) return q;
+    const cuisine = cuisineParam.trim();
+    if (cuisine && cuisine.toLowerCase() !== "all") return cuisine;
+    return "";
+  }, [qParam, cuisineParam]);
+
+  // "Search all" (no query) lists every reachable kitchen via /api/cooks; a
+  // query/cuisine ranks matches via /api/search; neither shows the prompt.
+  const mode: "all" | "query" | "none" = effectiveQuery
+    ? "query"
+    : allParam
+      ? "all"
+      : "none";
 
   useEffect(() => {
-    fetch("/api/cooks", { cache: "no-store" })
+    if (!ready) return;
+    if (!currentAddress || !coordsKey || mode === "none") {
+      setCooks([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    const controller = new AbortController();
+    const url =
+      mode === "all"
+        ? `/api/cooks?${new URLSearchParams({
+            lat: String(currentAddress.lat),
+            lng: String(currentAddress.lng),
+          }).toString()}`
+        : `/api/search?${new URLSearchParams({
+            q: effectiveQuery,
+            lat: String(currentAddress.lat),
+            lng: String(currentAddress.lng),
+            mode: fulfillmentMode,
+          }).toString()}`;
+    fetch(url, {
+      cache: "no-store",
+      signal: controller.signal,
+    })
       .then((r) => r.json())
-      .then((json) => setCooks(Array.isArray(json.data) ? json.data : []))
-      .catch(() => setCooks([]))
-      .finally(() => setLoading(false));
-  }, []);
+      .then((json) => {
+        const rows = Array.isArray(json.data) ? json.data : [];
+        setCooks(
+          rows.map((r: Record<string, unknown>) => normalizeBrowseCook(r)),
+        );
+      })
+      .catch((err) => {
+        if (err?.name !== "AbortError") setCooks([]);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
+  }, [coordsKey, currentAddress, ready, effectiveQuery, mode, fulfillmentMode]);
 
   const results = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return cooks;
-    return cooks.filter((c) => {
-      const hay = [
-        c.displayName ?? "",
-        c.cookName ?? "",
-        c.pickupCity ?? "",
-        c.bio ?? "",
-        ...c.tags.map((t) => t.label),
-      ]
-        .join(" ")
-        .toLowerCase();
-      return hay.includes(q);
-    });
-  }, [cooks, query]);
+    // Default order is the server's relevance ranking. Only re-order when the
+    // user explicitly picks a sort from the dropdown.
+    if (!sortParam) return cooks;
+    return sortCooks(cooks, sortKey, fulfillmentMode);
+  }, [cooks, sortParam, sortKey, fulfillmentMode]);
+
+  const filterLabel = useMemo(() => {
+    const q = qParam.trim();
+    if (q) return `matching “${q}”`;
+    const cuisine = cuisineParam.trim();
+    if (cuisine && cuisine.toLowerCase() !== "all") return cuisine;
+    if (mode === "all") return "All meal prep services";
+    return "";
+  }, [qParam, cuisineParam, mode]);
+
+  const hasFilter = filterLabel.length > 0;
 
   return (
-    <div className={styles.page}>
-      <div className={styles.filterBar}>
-        <div className={styles.filterInner}>
-          <label
-            className={styles.chipScroller}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              width: "100%",
-            }}
-          >
-            <Search size={18} aria-hidden />
-            <input
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search kitchens, cuisines, cities…"
-              style={{
-                flex: 1,
-                border: "none",
-                outline: "none",
-                font: "inherit",
-                background: "transparent",
-              }}
-            />
-          </label>
-        </div>
-      </div>
+    <div className={browseStyles.page}>
+      <div className={browseStyles.content}>
+        {hasFilter && !loading && (
+          <p className={browseStyles.searchSummary}>{filterLabel}</p>
+        )}
 
-      <div className={styles.content}>
+        {!loading && results.length > 0 && (
+          <div className={searchStyles.resultsBar}>
+            <p className={searchStyles.resultCount}>
+              {results.length} meal prep service
+              {results.length === 1 ? "" : "s"}
+            </p>
+            <SearchSortDropdown />
+          </div>
+        )}
+
         {loading ? (
-          <section className={styles.section}>
-            <div className={styles.grid}>
+          <section className={browseStyles.section}>
+            <div className={browseStyles.grid}>
               {[0, 1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className={styles.card} aria-hidden="true">
-                  <div className={styles.cardCover}>
+                <div key={i} className={browseStyles.card} aria-hidden="true">
+                  <div className={browseStyles.cardCover}>
                     <Skeleton
                       style={{ position: "absolute", inset: 0 }}
                       radius={0}
@@ -122,71 +147,29 @@ function SearchContent() {
               ))}
             </div>
           </section>
-        ) : results.length === 0 ? (
-          <div className={styles.emptyState}>
-            <p className={styles.emptyTitle}>No kitchens found</p>
-            <p className={styles.emptyDesc}>Try a different search.</p>
+        ) : mode === "none" ? (
+          <div className={browseStyles.emptyState}>
+            <p className={browseStyles.emptyTitle}>Search for a craving</p>
+            <p className={browseStyles.emptyDesc}>
+              Try a dish, cuisine, or meal prep service in the bar above.
+            </p>
           </div>
-        ) : (
-          <section className={styles.section}>
-            <div className={styles.grid}>
-              {results.map((cook) => (
-                <Link
-                  key={cook.id}
-                  href={`/app/cooks/${cook.id}/menu`}
-                  className={styles.card}
-                >
-                  <div className={styles.cardCover}>
-                    {cook.bannerUrl || cook.representativeDishPhoto ? (
-                      // biome-ignore lint/performance/noImgElement: cover
-                      <img
-                        src={
-                          cook.bannerUrl ??
-                          cook.representativeDishPhoto ??
-                          undefined
-                        }
-                        alt=""
-                        className={styles.cardImage}
-                      />
-                    ) : (
-                      <div className={styles.cardCoverPlaceholder} />
-                    )}
-                    <div className={styles.cardAvatar}>
-                      {cook.photoUrl ? (
-                        // biome-ignore lint/performance/noImgElement: avatar
-                        <img
-                          src={cook.photoUrl}
-                          alt=""
-                          className={styles.cookAvatarImg}
-                        />
-                      ) : (
-                        initials(cook.displayName)
-                      )}
-                    </div>
-                  </div>
-                  <div className={styles.cardBody}>
-                    <h3 className={styles.cardTitle}>
-                      {kitchenDisplayName(cook)}
-                    </h3>
-                    <p className={styles.metaLine}>{cook.pickupCity ?? ""}</p>
-                    {cook.tags.length > 0 && (
-                      <p className={styles.metaLine}>
-                        {cook.tags
-                          .slice(0, 3)
-                          .map((t) => t.label)
-                          .join(" · ")}
-                      </p>
-                    )}
-                    {cook.rating != null && (
-                      <p className={styles.metaLine}>
-                        <Star size={12} fill="currentColor" /> {cook.rating} (
-                        {cook.reviewCount})
-                      </p>
-                    )}
-                  </div>
-                </Link>
-              ))}
+        ) : results.length === 0 ? (
+          mode === "all" ? (
+            <BrowseEmpty address={currentAddress} />
+          ) : (
+            <div className={browseStyles.emptyState}>
+              <p className={browseStyles.emptyTitle}>
+                No meal prep services found
+              </p>
+              <p className={browseStyles.emptyDesc}>
+                Nothing nearby matches “{effectiveQuery}”. Try another search.
+              </p>
             </div>
+          )
+        ) : (
+          <section className={browseStyles.section}>
+            <CookGrid cooks={results} fulfillmentMode={fulfillmentMode} />
           </section>
         )}
       </div>
