@@ -47,7 +47,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const parsed = waitlistSchema.safeParse(body);
     if (!parsed.success) return fail("Invalid request.", 400);
 
-    const isNew = await addToWaitlist(parsed.data.email, ipHash);
+    const isNew = await addToWaitlist(
+      parsed.data.email,
+      ipHash,
+      parsed.data.city,
+    );
 
     if (!isNew) return fail("You're already on the list.", 409);
 

@@ -721,6 +721,81 @@
   box-shadow: 0 6px 18px rgba(214, 64, 69, 0.28);
 }
 
+/* ─── Out-of-area waitlist CTA ───────────────────────────────────────────────── */
+.waitlistForm {
+  margin-top: 18px;
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  max-width: 380px;
+}
+
+.waitlistInput {
+  flex: 1;
+  min-width: 0;
+  padding: 12px 16px;
+  border: 1.5px solid var(--grey-300);
+  border-radius: var(--radius-pill);
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--ink);
+  background: var(--white);
+}
+
+.waitlistInput:focus {
+  outline: none;
+  border-color: var(--ink);
+}
+
+.waitlistBtn {
+  flex-shrink: 0;
+  padding: 12px 22px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--ink);
+  color: var(--white);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    transform 0.15s,
+    background 0.15s;
+}
+
+.waitlistBtn:hover:not(:disabled) {
+  background: var(--red);
+  transform: translateY(-1px);
+}
+
+.waitlistBtn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.waitlistDone {
+  margin-top: 18px;
+  max-width: 380px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.changeAddressLink {
+  margin-top: 14px;
+  padding: 4px;
+  border: none;
+  background: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--grey-500);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.changeAddressLink:hover {
+  color: var(--ink);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .radarRing {
     animation: none;

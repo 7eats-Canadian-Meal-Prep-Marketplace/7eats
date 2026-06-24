@@ -85,6 +85,13 @@
       "when": 1783000000000,
       "tag": "0011_phone_role_unique",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1783100000000,
+      "tag": "0012_waitlist_city",
+      "breakpoints": true
     }
   ]
 }
