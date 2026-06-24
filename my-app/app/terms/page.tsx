@@ -117,7 +117,7 @@ const SECTIONS = [
           </li>
           <li>
             If there is a problem with an order, contact 7eats as soon as
-            possible at <a href="mailto:contact@7eats.ca">contact@7eats.ca</a>.
+            possible at <a href="mailto:team@7eats.ca">team@7eats.ca</a>.
           </li>
         </ul>
       </>
@@ -296,7 +296,7 @@ const SECTIONS = [
         </p>
         <p>
           Questions about these terms can be sent to{" "}
-          <a href="mailto:contact@7eats.ca">contact@7eats.ca</a>.
+          <a href="mailto:team@7eats.ca">team@7eats.ca</a>.
         </p>
       </>
     ),

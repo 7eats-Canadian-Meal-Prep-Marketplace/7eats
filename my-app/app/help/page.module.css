@@ -1,0 +1,302 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: #ffffff;
+  color: #0f0f0f;
+}
+
+.main {
+  flex: 1;
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: clamp(56px, 9vw, 104px) 24px 72px;
+}
+
+/* ─── Hero ───────────────────────────────────────────────────────────────────── */
+.eyebrow {
+  margin: 0 0 18px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #6b6b6b;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(34px, 6.5vw, 56px);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1.02;
+}
+
+.lede {
+  margin: 18px 0 0;
+  max-width: 46ch;
+  font-size: clamp(16px, 2.2vw, 18px);
+  line-height: 1.55;
+  color: #4a4a4a;
+}
+
+/* ─── Contact cards (signature) ──────────────────────────────────────────────── */
+.contact {
+  margin-top: 44px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.cardPrimary,
+.cardSecondary {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 26px 26px 24px;
+  border-radius: 18px;
+  text-decoration: none;
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    background 0.18s ease;
+}
+
+.cardPrimary {
+  background: #0f0f0f;
+  color: #ffffff;
+  box-shadow: 0 10px 30px rgba(15, 15, 15, 0.18);
+}
+
+.cardSecondary {
+  background: #ffffff;
+  color: #0f0f0f;
+  border: 1.5px solid #e2e2e2;
+}
+
+.cardPrimary:hover,
+.cardSecondary:hover {
+  transform: translateY(-3px);
+}
+
+.cardSecondary:hover {
+  border-color: #0f0f0f;
+}
+
+.cardIcon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  margin-bottom: 18px;
+  border-radius: 50%;
+}
+
+.cardPrimary .cardIcon {
+  background: #ffffff;
+  color: #0f0f0f;
+}
+
+.cardSecondary .cardIcon {
+  background: #0f0f0f;
+  color: #ffffff;
+}
+
+.cardLabel {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+.cardValue {
+  margin-top: 6px;
+  font-size: clamp(19px, 3vw, 23px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  word-break: break-word;
+}
+
+.cardNote {
+  margin-top: 12px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  opacity: 0.66;
+}
+
+/* ─── FAQ ────────────────────────────────────────────────────────────────────── */
+.faqSection {
+  margin-top: 56px;
+}
+
+.sectionTitle {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #6b6b6b;
+}
+
+.faqList {
+  border-top: 1px solid #ececec;
+}
+
+.faqItem {
+  border-bottom: 1px solid #ececec;
+}
+
+.faqQuestion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 20px 2px;
+  cursor: pointer;
+  list-style: none;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: #0f0f0f;
+}
+
+.faqQuestion::-webkit-details-marker {
+  display: none;
+}
+
+/* Plus that becomes a minus when open. */
+.faqMarker {
+  position: relative;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+}
+
+.faqMarker::before,
+.faqMarker::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  background: #0f0f0f;
+}
+
+.faqMarker::before {
+  width: 16px;
+  height: 2px;
+}
+
+.faqMarker::after {
+  width: 2px;
+  height: 16px;
+  transition: transform 0.2s ease;
+}
+
+.faqItem[open] .faqMarker::after {
+  transform: rotate(90deg);
+}
+
+.faqAnswer {
+  margin: 0;
+  padding: 0 38px 22px 2px;
+  max-width: 64ch;
+  font-size: 15.5px;
+  line-height: 1.62;
+  color: #474747;
+}
+
+/* ─── Closing ────────────────────────────────────────────────────────────────── */
+.closing {
+  margin-top: 60px;
+  padding: 40px 28px;
+  text-align: center;
+}
+
+.closingTitle {
+  margin: 0;
+  font-size: clamp(22px, 3.4vw, 27px);
+  font-weight: 800;
+  letter-spacing: -0.025em;
+}
+
+.closingText {
+  margin: 10px auto 0;
+  max-width: 40ch;
+  font-size: 15.5px;
+  line-height: 1.55;
+  color: #4a4a4a;
+}
+
+.closingActions {
+  margin-top: 22px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+
+.closingPrimary,
+.closingSecondary {
+  padding: 12px 24px;
+  border-radius: 999px;
+  font-size: 14.5px;
+  font-weight: 700;
+  text-decoration: none;
+  transition:
+    transform 0.15s ease,
+    background 0.15s ease;
+}
+
+.closingPrimary {
+  background: #0f0f0f;
+  color: #ffffff;
+}
+
+.closingSecondary {
+  background: #ffffff;
+  color: #0f0f0f;
+  border: 1.5px solid #d8d8d8;
+}
+
+.closingPrimary:hover,
+.closingSecondary:hover {
+  transform: translateY(-2px);
+}
+
+.closingSecondary:hover {
+  border-color: #0f0f0f;
+}
+
+/* ─── Focus + motion ─────────────────────────────────────────────────────────── */
+.cardPrimary:focus-visible,
+.cardSecondary:focus-visible,
+.faqQuestion:focus-visible,
+.closingPrimary:focus-visible,
+.closingSecondary:focus-visible {
+  outline: 2.5px solid #0f0f0f;
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+@media (max-width: 560px) {
+  .contact {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cardPrimary,
+  .cardSecondary,
+  .faqMarker::after,
+  .closingPrimary,
+  .closingSecondary {
+    transition: none;
+  }
+  .cardPrimary:hover,
+  .cardSecondary:hover,
+  .closingPrimary:hover,
+  .closingSecondary:hover {
+    transform: none;
+  }
+}

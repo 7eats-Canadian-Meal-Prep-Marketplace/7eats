@@ -68,7 +68,7 @@ const SECTIONS = [
           </div>
           <div className="policy-contact-row">
             <span className="policy-contact-label">Email</span>
-            <a href="mailto:contact@7eats.ca">contact@7eats.ca</a>
+            <a href="mailto:team@7eats.ca">team@7eats.ca</a>
           </div>
         </div>
       </>
@@ -502,7 +502,7 @@ const SECTIONS = [
         </ul>
         <p>
           To make a request, email{" "}
-          <a href="mailto:contact@7eats.ca">contact@7eats.ca</a>. We may need to
+          <a href="mailto:team@7eats.ca">team@7eats.ca</a>. We may need to
           verify your identity before responding. We aim to respond within 30
           days unless more time is reasonably required.
         </p>

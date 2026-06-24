@@ -303,7 +303,7 @@ const SECTIONS = [
       <>
         <p>
           Questions about these Cook Terms or your cook account can be sent to{" "}
-          <a href="mailto:contact@7eats.ca">contact@7eats.ca</a>.
+          <a href="mailto:team@7eats.ca">team@7eats.ca</a>.
         </p>
       </>
     ),

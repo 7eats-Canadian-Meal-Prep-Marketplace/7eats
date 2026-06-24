@@ -49,8 +49,8 @@ export default function ExpiredPage() {
             <p className={styles.cardBody}>
               Email us and we'll send a fresh one.
             </p>
-            <a href="mailto:contact@7eats.ca" className={styles.emailLink}>
-              contact@7eats.ca
+            <a href="mailto:team@7eats.ca" className={styles.emailLink}>
+              team@7eats.ca
             </a>
           </div>
 

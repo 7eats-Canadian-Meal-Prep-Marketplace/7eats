@@ -1026,8 +1026,8 @@ function DangerSection() {
           <div className={styles.dangerDesc}>
             To permanently remove your kitchen and all associated data, contact
             support at{" "}
-            <a href="mailto:contact@7eats.ca" className={styles.inlineLink}>
-              contact@7eats.ca
+            <a href="mailto:team@7eats.ca" className={styles.inlineLink}>
+              team@7eats.ca
             </a>
             . We will verify your identity before deleting anything.
           </div>

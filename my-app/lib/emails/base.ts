@@ -32,7 +32,7 @@ const COLOR = {
   white: "#ffffff",
 } as const;
 
-export const CONTACT_EMAIL = "contact@7eats.ca";
+export const CONTACT_EMAIL = "team@7eats.ca";
 export const NOREPLY_FROM = "noreply@7eats.ca";
 
 // The brand wordmark, served as a PNG (email clients don't render SVG). Built
