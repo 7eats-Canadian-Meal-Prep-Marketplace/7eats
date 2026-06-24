@@ -20,6 +20,11 @@ import {
   cancelPaymentIntent,
   createCheckoutPaymentIntent,
 } from "@/lib/stripe-payments";
+import {
+  fetchActiveDiscounts,
+  orderCandidatesByValue,
+  resolvePlatformDiscount,
+} from "./platform-discount";
 
 export const orderLineSchema = z.object({
   dishId: z.string().uuid(),
@@ -340,47 +345,38 @@ export async function placeClientOrder(
   );
 
   const platformFeePct = Number.parseFloat(cook.platformFeePct);
-  const charges = computeOrderChargeBreakdown({
-    subtotal,
-    deliveryFee: deliveryFeeSnapshot,
-    taxProvince: cook.pickupProvince,
-    platformFeePct,
-  });
 
-  let piId: string | null = null;
-  let clientSecret: string | null = null;
-  try {
-    const pi = await createCheckoutPaymentIntent({
-      totalAmountCents: charges.totalCents,
-      applicationFeeCents: charges.applicationFeeCents,
-      stripeCustomerId: client.stripeCustomerId,
-      connectedAccountId: cook.stripeAccountId as string,
-      idempotencyKey: `full-${orderId}`,
-      orderId,
-    });
-    if (!pi.clientSecret) {
-      await cancelPaymentIntent(pi.piId, `cancel-${orderId}`).catch(() => {});
-      return {
-        ok: false,
-        status: 502,
-        error: "Payment could not be initialized.",
-      };
-    }
-    piId = pi.piId;
-    clientSecret = pi.clientSecret;
-  } catch (stripeErr) {
-    console.error("[placeClientOrder] stripe", stripeErr);
-    return {
-      ok: false,
-      status: 502,
-      error: "Payment could not be authorized.",
-    };
-  }
+  // Rank platform-discount candidates by dollar value (pure; the per-user
+  // entitlement check happens under an advisory lock inside the transaction).
+  const activeDiscounts = await fetchActiveDiscounts();
+  const discountCandidates = orderCandidatesByValue(activeDiscounts, subtotal);
 
   const isGuestCheckout = Boolean(guestMeta);
 
+  // Resolved inside the transaction so the PaymentIntent amount, the order's
+  // discount snapshot, and the per-user count are one atomic, locked decision.
+  let piId: string | null = null;
+  let clientSecret = "";
+
   try {
     await dbPool.transaction(async (tx) => {
+      // Acquire the per-(discount,user) advisory lock and pick the best
+      // candidate the user is still entitled to. Held until commit so a
+      // concurrent placement for the same user cannot double-redeem.
+      const resolved = await resolvePlatformDiscount(
+        tx,
+        client.id,
+        discountCandidates,
+      );
+      const platformDiscount = resolved?.amount ?? 0;
+      const charges = computeOrderChargeBreakdown({
+        subtotal,
+        deliveryFee: deliveryFeeSnapshot,
+        taxProvince: cook.pickupProvince,
+        platformFeePct,
+        platformDiscount,
+      });
+
       for (const c of computed) {
         if (!c.promotionId) continue;
         const [row] = await tx
@@ -409,12 +405,43 @@ export async function placeClientOrder(
         }
       }
 
+      // Create the PaymentIntent now that the discount is locked in: its amount
+      // and application fee must reflect the discounted total. Created inside
+      // the transaction so a tx rollback (below) cancels it via the catch.
+      try {
+        const pi = await createCheckoutPaymentIntent({
+          totalAmountCents: charges.totalCents,
+          applicationFeeCents: charges.applicationFeeCents,
+          stripeCustomerId: client.stripeCustomerId,
+          connectedAccountId: cook.stripeAccountId as string,
+          idempotencyKey: `full-${orderId}`,
+          orderId,
+        });
+        if (!pi.clientSecret) {
+          await cancelPaymentIntent(pi.piId, `cancel-${orderId}`).catch(
+            () => {},
+          );
+          throw new Error("PI_NO_CLIENT_SECRET");
+        }
+        piId = pi.piId;
+        clientSecret = pi.clientSecret;
+      } catch (stripeErr) {
+        if ((stripeErr as Error).message === "PI_NO_CLIENT_SECRET") {
+          throw stripeErr;
+        }
+        console.error("[placeClientOrder] stripe", stripeErr);
+        throw new Error("PI_CREATE_FAILED");
+      }
+
       await tx.insert(orders).values({
         id: orderId as `${string}-${string}-${string}-${string}-${string}`,
         clientId: client.id,
         cookId,
         status: "pending",
         cancellationAllowed: cook.cancellationAllowed,
+        platformDiscountId: resolved?.discountId ?? null,
+        platformDiscountAmount:
+          platformDiscount > 0 ? String(platformDiscount.toFixed(2)) : null,
         totalPrice: String(charges.totalPrice.toFixed(2)),
         currency: "CAD",
         taxAmount: String(charges.taxAmount.toFixed(2)),
@@ -485,13 +512,27 @@ export async function placeClientOrder(
         dishId: (txErr as { dishId?: string }).dishId,
       };
     }
+    if ((txErr as Error).message === "PI_NO_CLIENT_SECRET") {
+      return {
+        ok: false,
+        status: 502,
+        error: "Payment could not be initialized.",
+      };
+    }
+    if ((txErr as Error).message === "PI_CREATE_FAILED") {
+      return {
+        ok: false,
+        status: 502,
+        error: "Payment could not be authorized.",
+      };
+    }
     throw txErr;
   }
 
   return {
     ok: true,
     orderId,
-    clientSecret: clientSecret as string,
+    clientSecret,
     guest: guestMeta?.accessToken
       ? {
           confirmationCode: guestMeta.confirmationCode,
