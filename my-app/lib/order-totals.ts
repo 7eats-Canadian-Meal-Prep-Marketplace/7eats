@@ -13,7 +13,19 @@ export type OrderChargeBreakdown = {
   taxCents: number;
   /** Stripe application_fee_amount: commission + tax (tax is not transferred to cook). */
   applicationFeeCents: number;
+  /**
+   * The cook's FULL payout — pre-discount base minus the platform commission.
+   * Always paid in full regardless of any platform discount.
+   */
   cookPayoutCents: number;
+  /**
+   * Extra amount the platform must transfer to the cook FROM ITS OWN BALANCE so
+   * the cook is paid in full when the discount exceeds the platform fee. The
+   * destination charge only covers the cook up to what the customer paid; this
+   * top-up is the shortfall = max(0, discount − fee − tax). 0 when the fee alone
+   * covers the discount. Settled at capture via a separate Stripe transfer.
+   */
+  subsidyTopUpCents: number;
 };
 
 /**
@@ -23,9 +35,12 @@ export type OrderChargeBreakdown = {
  * - Platform fee: percentage of pre-tax subtotal + delivery only.
  * - application_fee_amount: platform fee + tax so HST/GST stays on the platform.
  *
- * Platform discount (record-only v1): reduces the customer's total but NOT the
- * cook payout or the platform-fee base. The platform absorbs the discount out of
- * its own application fee, floored at 0.
+ * Platform discount (full subsidy): reduces the customer's total but NEVER the
+ * cook payout. The platform funds the discount first out of its own application
+ * fee (floored at 0); any remainder when the discount exceeds the fee is paid to
+ * the cook as a separate platform-funded top-up transfer (`subsidyTopUpCents`),
+ * so the cook is always made whole and the platform's net on the order goes
+ * negative.
  */
 export function computeOrderChargeBreakdown(params: {
   subtotal: number;
@@ -54,12 +69,21 @@ export function computeOrderChargeBreakdown(params: {
   );
   const taxCents = Math.round(taxAmount * 100);
   const discountCents = Math.round(platformDiscount * 100);
-  // Platform absorbs the discount out of its own fee; never negative.
+  // The platform funds the discount first out of its own fee (floored at 0).
   const applicationFeeCents = Math.max(
     0,
     platformFeeCents + taxCents - discountCents,
   );
-  const cookPayoutCents = totalCents - applicationFeeCents;
+  // Cook is always paid in full: pre-discount base minus the platform commission.
+  // (Identical to `totalCents - applicationFeeCents` whenever the discount is
+  // fully absorbed by the fee; for larger discounts the gap is the top-up below.)
+  const cookPayoutCents = preDiscountBaseCents - platformFeeCents;
+  // When the discount exceeds the fee (+tax), the destination charge can't cover
+  // the cook fully — the platform tops up the remainder from its own balance.
+  const subsidyTopUpCents = Math.max(
+    0,
+    discountCents - platformFeeCents - taxCents,
+  );
 
   return {
     taxableBase,
@@ -71,5 +95,6 @@ export function computeOrderChargeBreakdown(params: {
     taxCents,
     applicationFeeCents,
     cookPayoutCents,
+    subsidyTopUpCents,
   };
 }
