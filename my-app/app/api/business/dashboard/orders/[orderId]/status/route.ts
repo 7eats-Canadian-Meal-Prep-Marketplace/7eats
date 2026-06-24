@@ -18,6 +18,7 @@ import {
   sendOrderReadyEmailToClient,
 } from "@/lib/emails/order-events";
 import { findUncollectiblePayment } from "@/lib/orders/fulfillment-readiness";
+import { settleCookSubsidy } from "@/lib/orders/settle-subsidy";
 import {
   cancelPaymentIntent,
   capturePaymentIntent,
@@ -152,6 +153,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
         .where(eq(orderPayments.orderId, orderId));
 
       const isClientNoShow = reason === "client_no_show";
+      let fullPaymentReleased = false;
 
       for (const payment of allPayments) {
         if (!payment.stripePaymentIntentId) continue;
@@ -167,6 +169,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
               .update(orderPayments)
               .set({ status: "released", releasedAt: new Date() })
               .where(eq(orderPayments.id, payment.id));
+            if (payment.type === "full") fullPaymentReleased = true;
           }
           // deposit row is already released at confirmation — skip
           continue;
@@ -215,6 +218,12 @@ export async function PATCH(req: NextRequest, { params }: Params) {
             })
             .where(eq(orderPayments.id, payment.id));
         }
+      }
+
+      // On a client no-show the full payment is captured+released to the cook,
+      // so pay any platform-funded discount top-up too (best-effort, idempotent).
+      if (fullPaymentReleased) {
+        await settleCookSubsidy(orderId);
       }
     }
 

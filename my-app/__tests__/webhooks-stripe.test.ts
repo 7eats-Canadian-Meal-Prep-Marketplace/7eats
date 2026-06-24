@@ -464,6 +464,12 @@ describe("one-time payment event handlers", () => {
   });
 
   it("charge.refunded sets status to refunded", async () => {
+    // The handler now looks up affected payment rows (to reverse any subsidy
+    // top-up) before flipping status — resolve that lookup to no rows.
+    const where = vi.fn().mockResolvedValue([]);
+    const from = vi.fn(() => ({ where }));
+    vi.mocked(db.select).mockReturnValue({ from } as never);
+
     const res = await POST(
       makeRequest({
         type: "charge.refunded",

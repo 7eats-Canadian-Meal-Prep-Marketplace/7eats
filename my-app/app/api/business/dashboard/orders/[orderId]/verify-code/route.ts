@@ -13,6 +13,7 @@ import {
 } from "@/db/schema";
 import { sendOrderCompletedEmailToClient } from "@/lib/emails/order-events";
 import { findUncollectiblePayment } from "@/lib/orders/fulfillment-readiness";
+import { settleCookSubsidy } from "@/lib/orders/settle-subsidy";
 import {
   capturePaymentIntent,
   createSubscriptionTransfer,
@@ -225,6 +226,8 @@ export async function POST(req: NextRequest, { params }: Params) {
     // Release payment to cook based on payment type. Every non-deposit payment
     // here is guaranteed collectible (guarded above); deposit rows were already
     // released at confirmation, and `released` rows are idempotent no-ops.
+    let fullPaymentReleased = false;
+
     for (const payment of payments) {
       if (payment.type === "deposit") continue; // deposit released at confirmation — skip
 
@@ -245,6 +248,7 @@ export async function POST(req: NextRequest, { params }: Params) {
               eq(orderPayments.status, "authorized"),
             ),
           );
+        if (payment.type === "full") fullPaymentReleased = true;
       } else if (payment.status === "held") {
         // Subscription payment: funds captured on platform, manually transfer cook's share
         if (payment.cookPayoutAmount && cookRow?.stripeAccountId) {
@@ -271,6 +275,13 @@ export async function POST(req: NextRequest, { params }: Params) {
             );
         }
       }
+    }
+
+    // Pay the platform-funded discount top-up once the full payment is released.
+    // Best-effort + idempotent — never blocks the completed order on a subsidy
+    // transfer failure.
+    if (fullPaymentReleased) {
+      await settleCookSubsidy(orderId);
     }
 
     return NextResponse.json({
