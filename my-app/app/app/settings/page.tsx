@@ -26,6 +26,7 @@ import {
 } from "@/lib/phone";
 import { profileDisplayName, profileInitials } from "@/lib/user-display";
 import { useApp } from "../_app-context";
+import { Skeleton } from "../_skeleton";
 import { AddCardModal } from "./_add-card-modal";
 import styles from "./page.module.css";
 
@@ -687,7 +688,9 @@ export default function SettingsPage() {
               <div className={styles.cardTitle}>Profile photo</div>
               <div className={styles.cardBody}>
                 {profileLoading ? (
-                  <p className={styles.profileInfoEmpty}>Loading…</p>
+                  <div aria-busy="true">
+                    <Skeleton circle width={96} height={96} />
+                  </div>
                 ) : (
                   <>
                     <ImageDropzone
@@ -763,12 +766,7 @@ export default function SettingsPage() {
                     (label) => (
                       <div key={label} className={styles.profileInfoRow}>
                         <span className={styles.profileInfoLabel}>{label}</span>
-                        <span
-                          className={styles.profileInfoEmpty}
-                          aria-busy="true"
-                        >
-                          Loading…
-                        </span>
+                        <Skeleton width={120} height={14} radius={6} />
                       </div>
                     ),
                   )}
@@ -1110,7 +1108,20 @@ export default function SettingsPage() {
               even message them.
             </p>
             {prefLoading ? (
-              <p className={styles.profileInfoEmpty}>Loading preferences…</p>
+              <div aria-busy="true">
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className={styles.prefCard}>
+                    <div className={styles.prefHeader}>
+                      <Skeleton width={180} height={15} radius={6} />
+                      <Skeleton width={20} height={20} radius={6} />
+                    </div>
+                    <div className={styles.prefAnswers}>
+                      <Skeleton width={84} height={26} radius={999} />
+                      <Skeleton width={112} height={26} radius={999} />
+                    </div>
+                  </div>
+                ))}
+              </div>
             ) : (
               CLIENT_PREFERENCE_QUESTIONS.map((q) => {
                 const answers = prefAnswers[q.id] ?? [];
@@ -1188,7 +1199,24 @@ export default function SettingsPage() {
                   </p>
                 )}
                 {cardsLoading ? (
-                  <p className={styles.paymentLoading}>Loading saved cards…</p>
+                  <div className={styles.cardList} aria-busy="true">
+                    {[0, 1].map((i) => (
+                      <div key={i} className={styles.paymentRow}>
+                        <div className={styles.paymentRowLeft}>
+                          <Skeleton width={18} height={18} radius={4} />
+                          <div className={styles.paymentInfo}>
+                            <Skeleton width={140} height={14} radius={6} />
+                            <Skeleton
+                              width={88}
+                              height={12}
+                              radius={6}
+                              style={{ marginTop: 6 }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 ) : cards.length === 0 ? (
                   <div className={styles.paymentEmptyPanel}>
                     <CreditCard
@@ -1307,7 +1335,22 @@ export default function SettingsPage() {
             <div className={styles.card}>
               <div className={styles.cardTitle}>Notifications</div>
               {notifLoading ? (
-                <p className={styles.profileInfoEmpty}>Loading…</p>
+                <div aria-busy="true">
+                  {[0, 1].map((i) => (
+                    <div key={i} className={styles.notifRow}>
+                      <div className={styles.notifInfo}>
+                        <Skeleton width={130} height={14} radius={6} />
+                        <Skeleton
+                          width="80%"
+                          height={12}
+                          radius={6}
+                          style={{ marginTop: 8 }}
+                        />
+                      </div>
+                      <Skeleton width={44} height={26} radius={999} />
+                    </div>
+                  ))}
+                </div>
               ) : (
                 <>
                   <div className={styles.notifRow}>
@@ -1384,7 +1427,22 @@ export default function SettingsPage() {
                 use every channel you leave on.
               </p>
               {notifLoading ? (
-                <p className={styles.profileInfoEmpty}>Loading…</p>
+                <div aria-busy="true">
+                  {[0, 1].map((i) => (
+                    <div key={i} className={styles.notifRow}>
+                      <div className={styles.notifInfo}>
+                        <Skeleton width={90} height={14} radius={6} />
+                        <Skeleton
+                          width="75%"
+                          height={12}
+                          radius={6}
+                          style={{ marginTop: 8 }}
+                        />
+                      </div>
+                      <Skeleton width={44} height={26} radius={999} />
+                    </div>
+                  ))}
+                </div>
               ) : (
                 <>
                   <div className={styles.notifRow}>

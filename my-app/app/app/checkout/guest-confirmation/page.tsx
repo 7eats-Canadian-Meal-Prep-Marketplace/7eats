@@ -4,6 +4,7 @@ import { CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
+import { Skeleton } from "../../_skeleton";
 import { formatCartMoney } from "../../cart/_cart-tax";
 import styles from "./page.module.css";
 
@@ -94,7 +95,46 @@ function GuestConfirmationInner() {
   if (loading) {
     return (
       <div className={styles.page}>
-        <p className={styles.desc}>Loading your receipt…</p>
+        <div className={styles.card} aria-busy="true">
+          <div className={styles.iconWrap}>
+            <Skeleton circle width={36} height={36} />
+          </div>
+          <Skeleton
+            width={200}
+            height={24}
+            radius={8}
+            style={{ margin: "16px auto 0" }}
+          />
+          <Skeleton
+            width="80%"
+            height={14}
+            radius={6}
+            style={{ margin: "12px auto 0" }}
+          />
+          <div className={styles.codeBlock}>
+            <Skeleton width={120} height={12} radius={6} />
+            <Skeleton
+              width={160}
+              height={22}
+              radius={6}
+              style={{ marginTop: 10 }}
+            />
+          </div>
+          <section className={styles.summary}>
+            <div className={styles.summaryHead}>
+              <Skeleton width={140} height={15} radius={6} />
+              <Skeleton width={100} height={13} radius={6} />
+            </div>
+            <ul className={styles.itemList}>
+              {[0, 1].map((i) => (
+                <li key={i} className={styles.itemRow}>
+                  <Skeleton width={160} height={14} radius={6} />
+                  <Skeleton width={48} height={14} radius={6} />
+                </li>
+              ))}
+            </ul>
+          </section>
+        </div>
       </div>
     );
   }

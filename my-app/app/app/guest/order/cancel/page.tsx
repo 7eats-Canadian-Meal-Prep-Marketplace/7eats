@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
+import { Skeleton } from "../../../_skeleton";
 import styles from "../../../checkout/confirmation/page.module.css";
 
 type GuestCancelOrder = {
@@ -93,7 +94,20 @@ function GuestCancelInner() {
   if (loading) {
     return (
       <div className={styles.page}>
-        <p className={styles.desc}>Loading…</p>
+        <div className={styles.card} aria-busy="true">
+          <Skeleton width={160} height={24} radius={8} />
+          <Skeleton height={15} radius={6} style={{ marginTop: 16 }} />
+          <Skeleton
+            width="80%"
+            height={15}
+            radius={6}
+            style={{ marginTop: 10 }}
+          />
+          <div className={styles.actions}>
+            <Skeleton width={180} height={44} radius={10} />
+            <Skeleton width={120} height={44} radius={10} />
+          </div>
+        </div>
       </div>
     );
   }
