@@ -986,11 +986,6 @@
 }
 
 /* ─── Wallet (logged-in payment methods) ─────────────────────────────────────── */
-.loadingCards {
-  font-size: 13.5px;
-  color: var(--grey-500);
-  margin: 0;
-}
 
 .walletList {
   display: flex;

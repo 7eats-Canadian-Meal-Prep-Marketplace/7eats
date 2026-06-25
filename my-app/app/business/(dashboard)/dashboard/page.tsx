@@ -4,6 +4,7 @@ import { Calendar, ChevronRight, Plus, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useHost } from "../_host-context";
+import { Skeleton } from "../_skeleton";
 import styles from "./page.module.css";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -191,6 +192,25 @@ function RequestRow({
   );
 }
 
+// ─── Column skeleton ──────────────────────────────────────────────────────────
+
+// Mirrors the two-line row used by PickupRow/RequestRow so the loading state
+// keeps the column's shape instead of collapsing to a "Loading…" line.
+function ColRowSkeleton() {
+  return (
+    <div className={styles.pickupRow} aria-hidden="true">
+      <div
+        className={styles.pickupInfo}
+        style={{ display: "flex", flexDirection: "column", gap: 6, flex: 1 }}
+      >
+        <Skeleton width="45%" height={13} radius={6} />
+        <Skeleton width="70%" height={11} radius={6} />
+      </div>
+      <Skeleton width={52} height={14} radius={6} />
+    </div>
+  );
+}
+
 // ─── Quick actions ────────────────────────────────────────────────────────────
 
 const QUICK_ACTIONS = [
@@ -313,26 +333,46 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className={styles.statValue}>
-            {loading
-              ? "—"
-              : `$${period === "week" ? earningsWeek : earningsMonth}`}
+            {loading ? (
+              <Skeleton width={96} height={26} radius={6} />
+            ) : (
+              `$${period === "week" ? earningsWeek : earningsMonth}`
+            )}
           </div>
         </div>
 
         <div className={styles.statCard}>
           <span className={styles.statLabel}>Pending orders</span>
-          <div className={styles.statValue}>{loading ? "—" : pendingCount}</div>
+          <div className={styles.statValue}>
+            {loading ? (
+              <Skeleton width={40} height={26} radius={6} />
+            ) : (
+              pendingCount
+            )}
+          </div>
         </div>
 
         <div className={styles.statCard}>
           <span className={styles.statLabel}>Active meals</span>
-          <div className={styles.statValue}>{loading ? "—" : activeMeals}</div>
+          <div className={styles.statValue}>
+            {loading ? (
+              <Skeleton width={40} height={26} radius={6} />
+            ) : (
+              activeMeals
+            )}
+          </div>
         </div>
 
         <div className={styles.statCard}>
           <span className={styles.statLabel}>Rating</span>
           <div className={styles.statValue}>
-            {loading ? "—" : ratingAvg != null ? ratingAvg.toFixed(1) : "—"}
+            {loading ? (
+              <Skeleton width={52} height={26} radius={6} />
+            ) : ratingAvg != null ? (
+              ratingAvg.toFixed(1)
+            ) : (
+              "—"
+            )}
             {!loading && ratingAvg != null && (
               <span className={styles.statSub}>{ratingCount} reviews</span>
             )}
@@ -364,10 +404,14 @@ export default function DashboardPage() {
                   </button>
                 )}
               </>
+            ) : loading ? (
+              <>
+                <ColRowSkeleton />
+                <ColRowSkeleton />
+                <ColRowSkeleton />
+              </>
             ) : (
-              <div className={styles.colEmpty}>
-                {loading ? "Loading…" : "No pickups scheduled."}
-              </div>
+              <div className={styles.colEmpty}>No pickups scheduled.</div>
             )}
           </div>
         </div>
@@ -394,10 +438,13 @@ export default function DashboardPage() {
                   </button>
                 )}
               </>
+            ) : loading ? (
+              <>
+                <ColRowSkeleton />
+                <ColRowSkeleton />
+              </>
             ) : (
-              <div className={styles.colEmpty}>
-                {loading ? "Loading…" : "No pending requests."}
-              </div>
+              <div className={styles.colEmpty}>No pending requests.</div>
             )}
           </div>
         </div>

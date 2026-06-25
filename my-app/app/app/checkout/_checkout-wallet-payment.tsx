@@ -12,6 +12,7 @@ import {
 } from "react";
 import { stripeElementsAppearance, stripePromise } from "@/lib/stripe/browser";
 import { formatStripeCardError } from "@/lib/stripe/card-errors";
+import { Skeleton } from "../_skeleton";
 import {
   CheckoutPaymentForm,
   type CheckoutPaymentHandle,
@@ -147,7 +148,18 @@ export const CheckoutWalletPayment = forwardRef<CheckoutPaymentHandle, Props>(
     );
 
     if (cardsLoading) {
-      return <p className={styles.loadingCards}>Loading saved cards…</p>;
+      return (
+        <div className={styles.walletList} aria-busy="true">
+          {[0, 1].map((i) => (
+            <div key={i} className={styles.walletRow}>
+              <Skeleton circle width={18} height={18} />
+              <Skeleton width={18} height={18} radius={4} />
+              <Skeleton width={64} height={14} radius={6} />
+              <Skeleton width={72} height={14} radius={6} />
+            </div>
+          ))}
+        </div>
+      );
     }
 
     const showWallet = cards.length > 0;

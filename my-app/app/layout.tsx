@@ -58,7 +58,7 @@ const organizationSchema = {
   logo: "https://www.7eats.ca/7eats-icon-full.jpg",
   description:
     "7eats is the marketplace for Toronto's meal prep businesses. Get discovered by new customers, manage orders, and get paid without the admin overhead.",
-  email: "contact@7eats.ca",
+  email: "team@7eats.ca",
   address: {
     "@type": "PostalAddress",
     addressLocality: "Toronto",
@@ -72,7 +72,7 @@ const organizationSchema = {
   contactPoint: {
     "@type": "ContactPoint",
     contactType: "customer service",
-    email: "contact@7eats.ca",
+    email: "team@7eats.ca",
   },
 };
 

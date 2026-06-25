@@ -4,6 +4,7 @@ import {
   Check,
   ChevronDown,
   Heart,
+  HelpCircle,
   LogOut,
   MapPin,
   Package,
@@ -506,6 +507,17 @@ function ProfileMenu({
               {label}
             </Link>
           ))}
+          <a
+            href="/help"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={styles.menuItem}
+            role="menuitem"
+            onClick={() => setOpen(false)}
+          >
+            <HelpCircle size={17} className={styles.menuIcon} />
+            Help
+          </a>
           <div className={styles.menuDivider} />
           <button
             type="button"

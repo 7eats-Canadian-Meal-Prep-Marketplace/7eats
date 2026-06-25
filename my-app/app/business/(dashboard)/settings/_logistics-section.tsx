@@ -20,6 +20,7 @@ import {
 } from "@/lib/delivery-pricing";
 import { useDirtyState } from "@/lib/forms/use-dirty";
 import { isPriceKeystroke } from "@/lib/price";
+import { CardFormSkeleton } from "./_skeletons";
 import styles from "./page.module.css";
 
 type FulfillmentType = "pickup" | "delivery" | "both";
@@ -389,13 +390,7 @@ export function LogisticsSection() {
   }
 
   if (loading) {
-    return (
-      <div className={styles.card}>
-        <div className={styles.cardForm}>
-          <span style={{ color: "var(--muted)" }}>Loading…</span>
-        </div>
-      </div>
-    );
+    return <CardFormSkeleton rows={4} />;
   }
 
   return (
@@ -588,7 +583,7 @@ export function LogisticsSection() {
                 Based on typical local driving costs for home cooks ($
                 {DELIVERY_RATE_MIN.toFixed(2)} to $
                 {DELIVERY_RATE_MAX.toFixed(2)}
-                /km). Email <strong>contact@7eats.ca</strong> if you think this
+                /km). Email <strong>team@7eats.ca</strong> if you think this
                 range doesn&apos;t work for your area.
               </p>
             </div>

@@ -58,7 +58,7 @@ const SECTIONS = [
         </p>
         <p>
           After you are safe, report the issue to 7eats at{" "}
-          <a href="mailto:contact@7eats.ca">contact@7eats.ca</a> with your order
+          <a href="mailto:team@7eats.ca">team@7eats.ca</a> with your order
           number, cook name, meal name, symptoms or concern, timing, and any
           photos or packaging details you can safely provide.
         </p>
@@ -265,8 +265,8 @@ const SECTIONS = [
       <>
         <p>
           To report a food safety or allergen concern, email{" "}
-          <a href="mailto:contact@7eats.ca">contact@7eats.ca</a>. Include your
-          order number and as much detail as you safely can.
+          <a href="mailto:team@7eats.ca">team@7eats.ca</a>. Include your order
+          number and as much detail as you safely can.
         </p>
       </>
     ),

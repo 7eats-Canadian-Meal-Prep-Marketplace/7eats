@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight, ClipboardList, Send } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { PreferenceSheet } from "../_components/PreferenceSheet";
+import { Skeleton } from "../_skeleton";
 import styles from "./page.module.css";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -314,6 +315,61 @@ function Thread({
   );
 }
 
+// ─── Loading skeletons ────────────────────────────────────────────────────────
+
+// One conversation row placeholder — mirrors the avatar + name/preview layout.
+function ConvRowSkeleton() {
+  return (
+    <div className={styles.listRow} aria-hidden="true">
+      <Skeleton circle width={40} height={40} />
+      <span
+        className={styles.listRowMain}
+        style={{ display: "flex", flexDirection: "column", gap: 7 }}
+      >
+        <span
+          className={styles.listRowTop}
+          style={{ display: "flex", justifyContent: "space-between", gap: 12 }}
+        >
+          <Skeleton width="40%" height={13} radius={6} />
+          <Skeleton width={36} height={11} radius={6} />
+        </span>
+        <Skeleton width="80%" height={12} radius={6} />
+      </span>
+    </div>
+  );
+}
+
+// Thread placeholder — a few alternating message bubbles.
+function ThreadSkeleton() {
+  const bubbles = [
+    { id: "b1", mine: false, w: 180 },
+    { id: "b2", mine: true, w: 140 },
+    { id: "b3", mine: false, w: 210 },
+    { id: "b4", mine: true, w: 96 },
+  ];
+  return (
+    <div
+      aria-hidden="true"
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: 14,
+        padding: "1.5rem",
+      }}
+    >
+      {bubbles.map((b) => (
+        <Skeleton
+          key={b.id}
+          width={b.w}
+          height={40}
+          radius={16}
+          style={{ alignSelf: b.mine ? "flex-end" : "flex-start" }}
+        />
+      ))}
+    </div>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function InboxPage() {
@@ -416,7 +472,7 @@ export default function InboxPage() {
         </div>
 
         {loadingList ? (
-          <div style={{ padding: "1rem", color: "var(--muted)" }}>Loading…</div>
+          [0, 1, 2, 3, 4].map((i) => <ConvRowSkeleton key={i} />)
         ) : conversations.length === 0 ? (
           <div style={{ padding: "1rem", color: "var(--muted)" }}>
             No messages yet.
@@ -471,7 +527,7 @@ export default function InboxPage() {
       {/* Right: thread (desktop) */}
       <div className={styles.threadPanel}>
         {loadingDetail ? (
-          <div className={styles.emptyThread}>Loading…</div>
+          <ThreadSkeleton />
         ) : focusedDetail ? (
           <Thread
             key={focusedDetail.id}

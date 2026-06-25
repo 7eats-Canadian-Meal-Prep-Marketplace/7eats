@@ -230,7 +230,7 @@ const SECTIONS = [
       <>
         <p>
           To report a concern, email{" "}
-          <a href="mailto:contact@7eats.ca">contact@7eats.ca</a> with relevant
+          <a href="mailto:team@7eats.ca">team@7eats.ca</a> with relevant
           details, screenshots, order numbers, and any safety information.
         </p>
       </>

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { mealToastError, mealToastSuccess } from "@/lib/meal-toast";
 import { ConfirmDialog } from "../_components/ConfirmDialog";
+import { Skeleton } from "../_skeleton";
 import styles from "./page.module.css";
 
 type DishStatus = "active" | "inactive";
@@ -212,8 +213,23 @@ export default function MealsPage() {
         </div>
 
         {loading ? (
-          <div className={styles.empty}>
-            <p className={styles.emptyTitle}>Loading meals…</p>
+          <div className={styles.grid}>
+            {[0, 1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className={styles.card} aria-hidden="true">
+                <div className={styles.cardBody}>
+                  <div className={styles.cardTopRow}>
+                    <Skeleton width="55%" height={17} radius={6} />
+                    <Skeleton width={68} height={22} radius={11} />
+                  </div>
+                  <Skeleton
+                    width={64}
+                    height={20}
+                    radius={6}
+                    style={{ marginTop: 12 }}
+                  />
+                </div>
+              </div>
+            ))}
           </div>
         ) : dishes.length === 0 ? (
           <div className={styles.empty}>

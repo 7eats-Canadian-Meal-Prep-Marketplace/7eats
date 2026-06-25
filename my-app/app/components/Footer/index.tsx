@@ -53,7 +53,7 @@ export default function Footer() {
             <h4>Contact</h4>
             <ul>
               <li>
-                <a href="mailto:contact@7eats.ca">contact@7eats.ca</a>
+                <a href="mailto:team@7eats.ca">team@7eats.ca</a>
               </li>
             </ul>
           </div>

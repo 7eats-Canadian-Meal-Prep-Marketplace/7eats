@@ -165,9 +165,15 @@ export default function DashboardShell({
           </div>
 
           <div className={styles.headerRight}>
-            <button type="button" className={styles.iconBtn} aria-label="Help">
+            <a
+              className={styles.iconBtn}
+              href="/help"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Help (opens in a new tab)"
+            >
               <HelpCircle size={20} />
-            </button>
+            </a>
             <div className={styles.notifWrap} ref={notifRef}>
               <button
                 type="button"

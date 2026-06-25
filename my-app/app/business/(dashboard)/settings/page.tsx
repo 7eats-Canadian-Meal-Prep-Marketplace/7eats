@@ -18,6 +18,7 @@ import {
 } from "@/lib/phone";
 import { normalizeUrl } from "@/lib/url";
 import { LogisticsSection } from "./_logistics-section";
+import { CardFormSkeleton, NotifRowsSkeleton } from "./_skeletons";
 import styles from "./page.module.css";
 
 type SectionId =
@@ -162,13 +163,7 @@ function KitchenSection() {
   }
 
   if (loading) {
-    return (
-      <div className={styles.card}>
-        <div className={styles.cardForm}>
-          <span style={{ color: "var(--muted)" }}>Loading…</span>
-        </div>
-      </div>
-    );
+    return <CardFormSkeleton rows={5} />;
   }
 
   return (
@@ -447,13 +442,7 @@ function AccountSection() {
   }
 
   if (loading) {
-    return (
-      <div className={styles.card}>
-        <div className={styles.cardForm}>
-          <span style={{ color: "var(--muted)" }}>Loading…</span>
-        </div>
-      </div>
-    );
+    return <CardFormSkeleton rows={4} />;
   }
 
   return (
@@ -824,11 +813,7 @@ function OrderRulesSection() {
   }
 
   if (loading) {
-    return (
-      <div className={styles.card}>
-        <div style={{ padding: "1rem", color: "var(--muted)" }}>Loading…</div>
-      </div>
-    );
+    return <NotifRowsSkeleton rows={4} />;
   }
 
   return (
@@ -987,30 +972,30 @@ function NotificationsSection() {
     },
   ];
 
+  if (loading || !settings) {
+    return <NotifRowsSkeleton rows={2} />;
+  }
+
   return (
     <div className={styles.card}>
-      {loading || !settings ? (
-        <div style={{ padding: "1rem", color: "var(--muted)" }}>Loading…</div>
-      ) : (
-        items.map((item, i) => (
-          <div
-            key={item.key}
-            className={i < items.length - 1 ? styles.notifRowBorder : ""}
-          >
-            <div className={styles.notifRow}>
-              <div className={styles.notifInfo}>
-                <span className={styles.notifLabel}>{item.label}</span>
-                <span className={styles.notifDesc}>{item.description}</span>
-              </div>
-              <Toggle
-                on={settings[item.key]}
-                onToggle={() => toggle(item.key)}
-                label={item.label}
-              />
+      {items.map((item, i) => (
+        <div
+          key={item.key}
+          className={i < items.length - 1 ? styles.notifRowBorder : ""}
+        >
+          <div className={styles.notifRow}>
+            <div className={styles.notifInfo}>
+              <span className={styles.notifLabel}>{item.label}</span>
+              <span className={styles.notifDesc}>{item.description}</span>
             </div>
+            <Toggle
+              on={settings[item.key]}
+              onToggle={() => toggle(item.key)}
+              label={item.label}
+            />
           </div>
-        ))
-      )}
+        </div>
+      ))}
     </div>
   );
 }
@@ -1026,8 +1011,8 @@ function DangerSection() {
           <div className={styles.dangerDesc}>
             To permanently remove your kitchen and all associated data, contact
             support at{" "}
-            <a href="mailto:contact@7eats.ca" className={styles.inlineLink}>
-              contact@7eats.ca
+            <a href="mailto:team@7eats.ca" className={styles.inlineLink}>
+              team@7eats.ca
             </a>
             . We will verify your identity before deleting anything.
           </div>

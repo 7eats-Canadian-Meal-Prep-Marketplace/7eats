@@ -2,6 +2,7 @@
 
 import { Landmark, TrendingUp } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { Skeleton } from "../_skeleton";
 import styles from "./page.module.css";
 
 type Period = "week" | "month";
@@ -217,8 +218,18 @@ export default function EarningsPage() {
           <span className={styles.nextPayoutLabel}>Next payout</span>
           {loadingNextPayout ? (
             <>
-              <span className={styles.nextPayoutAmount}>—</span>
-              <span className={styles.nextPayoutSub}>Loading…</span>
+              <Skeleton
+                width={132}
+                height={28}
+                radius={6}
+                style={{ marginTop: 2 }}
+              />
+              <Skeleton
+                width={180}
+                height={12}
+                radius={6}
+                style={{ marginTop: 8 }}
+              />
             </>
           ) : !nextPayout?.hasAccount ? (
             <>
@@ -253,13 +264,19 @@ export default function EarningsPage() {
             {period === "week" ? "Last 8 weeks" : "Last 12 months"}
           </span>
           <span className={styles.revenueValue}>
-            {loadingChart ? "—" : formatMoney(seriesTotal)}
+            {loadingChart ? (
+              <Skeleton width={108} height={30} radius={6} />
+            ) : (
+              formatMoney(seriesTotal)
+            )}
           </span>
           <span className={styles.revenueSub}>
             <TrendingUp size={13} className={styles.trendIcon} />
-            {loadingChart
-              ? "Loading…"
-              : `${formatMoney(seriesTotal)} over the last ${series.length} ${period === "week" ? "weeks" : "months"}`}
+            {loadingChart ? (
+              <Skeleton width={170} height={12} radius={6} />
+            ) : (
+              `${formatMoney(seriesTotal)} over the last ${series.length} ${period === "week" ? "weeks" : "months"}`
+            )}
           </span>
         </div>
         <div className={styles.segControl}>
@@ -305,15 +322,32 @@ export default function EarningsPage() {
 
             <div className={styles.barsRow}>
               {loadingChart
-                ? Array.from({ length: period === "week" ? 8 : 12 }, (_, i) => (
-                    // biome-ignore lint/suspicious/noArrayIndexKey: loading skeleton only
-                    <div key={i} className={styles.barCol}>
-                      <div className={styles.barTrack}>
-                        <div className={styles.bar} style={{ height: "0%" }} />
+                ? Array.from({ length: period === "week" ? 8 : 12 }, (_, i) => {
+                    // Staggered heights give the loading chart a believable
+                    // silhouette instead of a flat baseline.
+                    const heights = [42, 64, 38, 78, 52, 70, 46, 60];
+                    return (
+                      // biome-ignore lint/suspicious/noArrayIndexKey: loading skeleton only
+                      <div key={i} className={styles.barCol}>
+                        <div className={styles.barTrack}>
+                          <Skeleton
+                            width="100%"
+                            height={`${heights[i % heights.length]}%`}
+                            style={{
+                              maxWidth: 40,
+                              borderRadius: "6px 6px 0 0",
+                            }}
+                          />
+                        </div>
+                        <Skeleton
+                          width={22}
+                          height={10}
+                          radius={4}
+                          style={{ marginTop: 8 }}
+                        />
                       </div>
-                      <span className={styles.barLabel}>—</span>
-                    </div>
-                  ))
+                    );
+                  })
                 : series.map((p) => (
                     <div key={p.label} className={styles.barCol}>
                       <div className={styles.barTrack}>
@@ -339,9 +373,20 @@ export default function EarningsPage() {
         <h2 className={styles.payoutsTitle}>Payout history</h2>
         <div className={styles.payoutList}>
           {loadingPayouts ? (
-            <div style={{ padding: "1rem", color: "var(--muted)" }}>
-              Loading payouts…
-            </div>
+            [0, 1, 2, 3].map((i) => (
+              <div key={i} className={styles.payoutRow} aria-hidden="true">
+                <div className={styles.payoutColDate}>
+                  <Skeleton width="70%" height={14} radius={6} />
+                </div>
+                <div className={styles.payoutColBank}>
+                  <Skeleton width={48} height={13} radius={6} />
+                </div>
+                <div className={styles.payoutColAmount}>
+                  <Skeleton width={56} height={14} radius={6} />
+                  <Skeleton width={48} height={20} radius={10} />
+                </div>
+              </div>
+            ))
           ) : payouts.length === 0 ? (
             <div style={{ padding: "1rem", color: "var(--muted)" }}>
               No payouts yet.

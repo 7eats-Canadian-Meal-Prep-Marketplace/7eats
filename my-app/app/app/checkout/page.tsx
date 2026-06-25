@@ -22,6 +22,7 @@ import type { NormalizedAddress } from "@/lib/types/address";
 import { useApp } from "../_app-context";
 import { type DeliveryAddress, useCart } from "../_cart-context";
 import { useServiceAddress } from "../_service-address-context";
+import { Skeleton } from "../_skeleton";
 import { calcTax, formatCartMoney, getTaxLabel } from "../cart/_cart-tax";
 import {
   type CheckoutPaymentHandle,
@@ -759,7 +760,15 @@ export default function CheckoutPage() {
             <section className={styles.formSection}>
               <h2 className={styles.formTitle}>Delivery address</h2>
               {!addressReady ? (
-                <p className={styles.sectionLead}>Loading address…</p>
+                <div aria-busy="true">
+                  <Skeleton width="60%" height={15} radius={6} />
+                  <Skeleton
+                    width="40%"
+                    height={13}
+                    radius={6}
+                    style={{ marginTop: 10 }}
+                  />
+                </div>
               ) : editingAddress || !displayAddress ? (
                 <div className={styles.addressEditBlock}>
                   <div className={styles.formGroup}>

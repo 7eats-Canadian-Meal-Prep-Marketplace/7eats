@@ -234,9 +234,9 @@ const SECTIONS = [
       <>
         <p>
           To request help with a cancellation, refund, or order issue, email{" "}
-          <a href="mailto:contact@7eats.ca">contact@7eats.ca</a>. Include your
-          order number, cook name, issue summary, photos if useful, and any
-          relevant messages.
+          <a href="mailto:team@7eats.ca">team@7eats.ca</a>. Include your order
+          number, cook name, issue summary, photos if useful, and any relevant
+          messages.
         </p>
       </>
     ),
