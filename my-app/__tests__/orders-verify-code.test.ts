@@ -25,6 +25,9 @@ vi.mock("@/lib/stripe-payments", () => ({
   capturePaymentIntent: captureMock,
   createSubscriptionTransfer: vi.fn().mockResolvedValue("tr_test"),
 }));
+vi.mock("@/lib/orders/settle-subsidy", () => ({
+  settleCookSubsidy: vi.fn().mockResolvedValue(undefined),
+}));
 
 import { NextRequest } from "next/server";
 import { POST } from "@/app/api/business/dashboard/orders/[orderId]/verify-code/route";

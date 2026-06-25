@@ -160,6 +160,10 @@ export default function CheckoutPage() {
     useState<NormalizedAddress | null>(null);
   const [noteDraft, setNoteDraft] = useState(notes ?? "");
   const [contactErrors, setContactErrors] = useState<ContactErrors>({});
+  const [discount, setDiscount] = useState<{
+    amount: number;
+    name: string | null;
+  }>({ amount: 0, name: null });
   const [pickupWindows, setPickupWindows] = useState<FulfillmentWindow[]>([]);
   const [deliveryWindows, setDeliveryWindows] = useState<FulfillmentWindow[]>(
     [],
@@ -249,15 +253,38 @@ export default function CheckoutPage() {
     };
   }, [isDelivery, cookId, subtotal, displayAddress?.lat, displayAddress?.lng]);
 
+  useEffect(() => {
+    let cancelled = false;
+    if (subtotal <= 0) {
+      setDiscount({ amount: 0, name: null });
+      return;
+    }
+    fetch(`/api/discounts/preview?subtotal=${subtotal}`)
+      .then((r) => r.json())
+      .then((j: { amount?: number; name?: string | null }) => {
+        if (!cancelled)
+          setDiscount({ amount: j.amount ?? 0, name: j.name ?? null });
+      })
+      .catch(() => {
+        if (!cancelled) setDiscount({ amount: 0, name: null });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [subtotal]);
+
   const { tax, grandTotal, taxLabel } = useMemo(() => {
     const taxAmount =
       Math.round(calcTax(subtotal + deliveryFee, cookProvince) * 100) / 100;
+    const total =
+      Math.round((subtotal + deliveryFee + taxAmount - discount.amount) * 100) /
+      100;
     return {
       tax: taxAmount,
-      grandTotal: Math.round((subtotal + deliveryFee + taxAmount) * 100) / 100,
+      grandTotal: Math.max(0, total),
       taxLabel: getTaxLabel(cookProvince),
     };
-  }, [subtotal, deliveryFee, cookProvince]);
+  }, [subtotal, deliveryFee, cookProvince, discount.amount]);
 
   const refundPickupAt = useMemo(
     () =>
@@ -957,6 +984,16 @@ export default function CheckoutPage() {
                       : "Free (pickup)"}
                   </span>
                 </div>
+                {discount.amount > 0 && (
+                  <div className={styles.summaryRow}>
+                    <span className={styles.summaryRowLabel}>
+                      {discount.name ?? "Discount"}
+                    </span>
+                    <span className={styles.summaryRowVal}>
+                      −${formatCartMoney(discount.amount)}
+                    </span>
+                  </div>
+                )}
                 {tax > 0 && (
                   <div className={styles.summaryRow}>
                     <span className={styles.summaryRowLabel}>{taxLabel}</span>

@@ -104,3 +104,8 @@ export const legalAcceptanceContext = pgEnum("legal_acceptance_context", [
   "guest_checkout",
   "cook_application",
 ]);
+
+export const platformDiscountType = pgEnum("platform_discount_type", [
+  "percentage",
+  "fixed",
+]);

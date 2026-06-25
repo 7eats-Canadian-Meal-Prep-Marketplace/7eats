@@ -16,6 +16,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { authUser } from "./auth";
 import { cookProfiles } from "./cooks";
+import { platformDiscounts } from "./discounts";
 import { dishes, dishPromotions } from "./dishes";
 import { lateCancelFeeTypeEnum, orderStatus } from "./enums";
 import { listings } from "./listings";
@@ -45,6 +46,15 @@ export const orders = pgTable(
     promotionId: uuid("promotion_id"),
     // Dollar amount discounted; null when no promotion applied
     discountAmount: numeric("discount_amount", { precision: 10, scale: 2 }),
+    // Platform-funded discount applied at checkout (null = none). See discounts.ts.
+    platformDiscountId: uuid("platform_discount_id").references(
+      () => platformDiscounts.id,
+      { onDelete: "set null" },
+    ),
+    platformDiscountAmount: numeric("platform_discount_amount", {
+      precision: 10,
+      scale: 2,
+    }),
     // Snapshot of the cook's cancellation policy at order time.
     cancellationAllowed: boolean("cancellation_allowed")
       .notNull()
@@ -115,6 +125,10 @@ export const orders = pgTable(
     // Hot-path indexes: client order list + cook dashboard/earnings.
     index("orders_client_id_idx").on(t.clientId),
     index("orders_cook_id_idx").on(t.cookId),
+    index("orders_platform_discount_client_idx").on(
+      t.platformDiscountId,
+      t.clientId,
+    ),
     check(
       "orders_discount_non_negative",
       sql`${t.discountAmount} IS NULL OR ${t.discountAmount} >= 0`,

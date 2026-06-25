@@ -19,10 +19,12 @@ import {
   isClientOrderCancellable,
   isClientRefundEligible,
 } from "@/lib/orders/client-cancel-policy";
+import { settleCookSubsidy } from "@/lib/orders/settle-subsidy";
 import {
   cancelPaymentIntent,
   capturePaymentIntent,
   refundPaymentIntent,
+  reverseCookSubsidyTransfer,
 } from "@/lib/stripe-payments";
 
 export type CancelOrderResult =
@@ -165,11 +167,15 @@ async function executeCancellation(
   const payments = await db
     .select({
       id: orderPayments.id,
+      type: orderPayments.type,
       status: orderPayments.status,
       stripePaymentIntentId: orderPayments.stripePaymentIntentId,
+      stripeTopupTransferId: orderPayments.stripeTopupTransferId,
     })
     .from(orderPayments)
     .where(eq(orderPayments.orderId, order.id));
+
+  let fullPaymentReleased = false;
 
   for (const payment of payments) {
     if (!payment.stripePaymentIntentId) continue;
@@ -199,6 +205,22 @@ async function executeCancellation(
           })
           .where(eq(orderPayments.id, payment.id));
         clientRefunded = true;
+        // If the full payment had a platform-funded subsidy top-up, claw it back
+        // so the platform isn't out of pocket when the customer is refunded.
+        // Refunds before capture leave stripeTopupTransferId null — skip those.
+        if (payment.type === "full" && payment.stripeTopupTransferId) {
+          try {
+            await reverseCookSubsidyTransfer({
+              transferId: payment.stripeTopupTransferId,
+              idempotencyKey: `subsidy-reversal-${order.id}`,
+            });
+          } catch (err) {
+            console.error(
+              `[cancelClientOrder] failed to reverse subsidy top-up for order ${order.id}`,
+              err,
+            );
+          }
+        }
       }
     } else if (payment.status === "authorized") {
       await capturePaymentIntent(
@@ -209,7 +231,14 @@ async function executeCancellation(
         .update(orderPayments)
         .set({ status: "released", releasedAt: new Date() })
         .where(eq(orderPayments.id, payment.id));
+      if (payment.type === "full") fullPaymentReleased = true;
     }
+  }
+
+  // Not-refund-eligible cancel captured+released the full payment to the cook —
+  // pay any platform-funded discount top-up too (best-effort, idempotent).
+  if (fullPaymentReleased) {
+    await settleCookSubsidy(order.id);
   }
 
   await db
