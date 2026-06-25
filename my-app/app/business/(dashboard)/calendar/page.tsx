@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { Skeleton } from "../_skeleton";
 import styles from "./page.module.css";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -253,6 +254,52 @@ function OrderRow({ order, now }: { order: CalendarOrder; now: number }) {
   );
 }
 
+// ─── Agenda skeleton ──────────────────────────────────────────────────────────
+
+// Mirrors a day section (header + a window block with a couple of order rows)
+// so the agenda holds its shape while the week loads.
+function AgendaSkeleton() {
+  return (
+    <>
+      {[0, 1].map((s) => (
+        <section key={s} className={styles.daySection} aria-hidden="true">
+          <div className={styles.dayHeader}>
+            <Skeleton width={84} height={15} radius={6} />
+            <Skeleton width={52} height={12} radius={6} />
+          </div>
+          <div className={`${styles.windowBlock} ${styles.pickup}`}>
+            <div className={styles.windowHead}>
+              <Skeleton width={70} height={13} radius={6} />
+              <Skeleton width={96} height={12} radius={6} />
+              <Skeleton width={56} height={12} radius={6} />
+            </div>
+            <div className={styles.orderList}>
+              {[0, 1].map((r) => (
+                <div key={r} className={styles.orderRow}>
+                  <Skeleton width={52} height={12} radius={6} />
+                  <span
+                    className={styles.orderMain}
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 6,
+                    }}
+                  >
+                    <Skeleton width="55%" height={13} radius={6} />
+                    <Skeleton width="40%" height={11} radius={6} />
+                  </span>
+                  <Skeleton width={28} height={12} radius={6} />
+                  <Skeleton width={90} height={22} radius={11} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      ))}
+    </>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function CalendarPage() {
@@ -468,7 +515,7 @@ export default function CalendarPage() {
       {/* Agenda */}
       <div className={styles.agenda}>
         {loading ? (
-          <div className={styles.empty}>Loading schedule…</div>
+          <AgendaSkeleton />
         ) : activeDays.length === 0 ? (
           <div className={styles.empty}>
             No pickup or delivery days this week.

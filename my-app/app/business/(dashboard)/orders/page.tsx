@@ -3,6 +3,7 @@
 import { CheckCircle2, ClipboardList, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { PreferenceSheet } from "../_components/PreferenceSheet";
+import { Skeleton } from "../_skeleton";
 import styles from "./page.module.css";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -802,6 +803,81 @@ function EmptyDetail() {
   );
 }
 
+// ─── Loading skeletons ────────────────────────────────────────────────────────
+
+// One list row placeholder — mirrors OrderListRow (two stacked lines + badge).
+function ListRowSkeleton() {
+  return (
+    <div className={styles.listRow} aria-hidden="true">
+      <div
+        className={styles.listRowLeft}
+        style={{ display: "flex", flexDirection: "column", gap: 7 }}
+      >
+        <Skeleton width="45%" height={14} radius={6} />
+        <Skeleton width="72%" height={11} radius={6} />
+      </div>
+      <Skeleton width={64} height={22} radius={11} />
+    </div>
+  );
+}
+
+// Detail-panel placeholder — echoes the header, time card and receipt block so
+// the panel holds its shape while the selected order loads.
+function DetailSkeleton() {
+  return (
+    <div className={styles.detail} aria-hidden="true">
+      <div className={styles.detailHeader}>
+        <div className={styles.detailHeaderTop}>
+          <Skeleton width="50%" height={22} radius={6} />
+          <Skeleton width={72} height={24} radius={12} />
+        </div>
+        <Skeleton
+          width="40%"
+          height={12}
+          radius={6}
+          style={{ marginTop: 10 }}
+        />
+      </div>
+      <div className={styles.timeCard}>
+        <Skeleton width="30%" height={11} radius={6} />
+        <Skeleton width="55%" height={16} radius={6} style={{ marginTop: 8 }} />
+      </div>
+      <div className={styles.receipt}>
+        <Skeleton width="35%" height={11} radius={6} />
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 14,
+            marginTop: 16,
+          }}
+        >
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              style={{ display: "flex", alignItems: "center", gap: 12 }}
+            >
+              <Skeleton width={20} height={14} radius={4} />
+              <div
+                style={{
+                  flex: 1,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 6,
+                }}
+              >
+                <Skeleton width="60%" height={13} radius={6} />
+                <Skeleton width="35%" height={11} radius={6} />
+              </div>
+              <Skeleton width={48} height={14} radius={6} />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function OrdersPage() {
@@ -895,11 +971,7 @@ export default function OrdersPage() {
           <span className={styles.listHeadCount}>{orders.length}</span>
         </div>
 
-        {loading && (
-          <div className={styles.emptyDetail} style={{ padding: "2rem" }}>
-            Loading orders…
-          </div>
-        )}
+        {loading && [0, 1, 2, 3, 4].map((i) => <ListRowSkeleton key={i} />)}
 
         {sorted.map((o) => (
           <OrderListRow
@@ -914,7 +986,7 @@ export default function OrdersPage() {
       {/* Right: detail panel (desktop) */}
       <div className={styles.detailPanel}>
         {detailLoading ? (
-          <div className={styles.emptyDetail}>Loading…</div>
+          <DetailSkeleton />
         ) : displayedDetail ? (
           <OrderDetail
             key={focusedId}
