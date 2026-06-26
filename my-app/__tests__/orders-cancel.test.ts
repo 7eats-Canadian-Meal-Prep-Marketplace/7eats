@@ -147,10 +147,37 @@ describe("DELETE /api/orders/[orderId]", () => {
     expect(captureMock).not.toHaveBeenCalled();
   });
 
-  it("captures (no refund) when cancellation is not allowed", async () => {
+  it("refunds pending orders even when cook policy is final sale", async () => {
     vi.mocked(db.select).mockImplementation(
       selectQueue([
         [orderRow({ cancellationAllowed: false })],
+        [{ id: "p1", status: "authorized", stripePaymentIntentId: "pi_1" }],
+        [
+          {
+            cookEmail: "k@t.com",
+            cookFirstName: "K",
+            cookDisplayName: "Kitchen",
+          },
+        ],
+        [{ firstName: "C", lastName: "D", email: "c@t.com" }],
+        [{ dishName: "Soup", quantity: 1 }],
+      ]),
+    );
+
+    const res = await DELETE(makeRequest(), {
+      params: Promise.resolve({ orderId: ORDER_ID }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.refunded).toBe(true);
+    expect(cancelPiMock).toHaveBeenCalledOnce();
+    expect(captureMock).not.toHaveBeenCalled();
+  });
+
+  it("captures (no refund) when cancellation is not allowed after cook confirmation", async () => {
+    vi.mocked(db.select).mockImplementation(
+      selectQueue([
+        [orderRow({ status: "confirmed", cancellationAllowed: false })],
         [{ id: "p1", status: "authorized", stripePaymentIntentId: "pi_1" }],
         [
           {

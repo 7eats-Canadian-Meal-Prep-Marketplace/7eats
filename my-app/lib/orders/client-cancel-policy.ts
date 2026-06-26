@@ -65,6 +65,10 @@ export function isClientOrderCancellable(order: { status: string }): boolean {
 
 export function isClientRefundEligible(order: CancelPolicyInput): boolean {
   if (!isClientOrderCancellable(order)) return false;
+
+  // Before the cook confirms, release the customer's payment in full.
+  if (order.status === "pending") return true;
+
   if (!order.cancellationAllowed) return false;
 
   const reference = refundReferenceAt(order);
@@ -102,6 +106,19 @@ export function getClientCancelPolicy(
       summary: "",
       detail: "",
       modalReminder: "",
+    };
+  }
+
+  if (order.status === "pending") {
+    return {
+      cancellable: true,
+      refundEligible: true,
+      refundDeadline: null,
+      refundDeadlineLabel: null,
+      summary:
+        "You'll receive a full refund. Your cook hasn't confirmed this order yet.",
+      detail: "",
+      modalReminder: "This cannot be undone.",
     };
   }
 

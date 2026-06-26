@@ -1086,8 +1086,10 @@ function Step2({
               }
             />
             <span className={styles.checkLabel}>
-              Allow customers to cancel for a full refund up until my lead time
-              before pickup. If left unchecked, all sales are final.
+              After I confirm an order, allow a full refund if the customer
+              cancels before my lead time. If unchecked, confirmed orders are
+              final. Customers can always cancel with a full refund before I
+              confirm.
             </span>
           </label>
         </div>

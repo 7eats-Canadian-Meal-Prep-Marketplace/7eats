@@ -42,10 +42,18 @@ export async function POST(req: Request) {
       role: authUser.role,
       emailVerified: authUser.emailVerified,
       onboardingCompletedAt: authUser.onboardingCompletedAt,
+      status: authUser.status,
     })
     .from(authUser)
     .where(eq(authUser.email, normalizedEmail))
     .limit(1);
+
+  if (account?.status === "deleted") {
+    return NextResponse.json(
+      { error: "Incorrect email or password." },
+      { status: 401 },
+    );
+  }
 
   if (account?.role === "client" && !account.emailVerified) {
     return NextResponse.json(

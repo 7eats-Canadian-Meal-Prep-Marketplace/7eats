@@ -3,8 +3,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { authUser } from "@/db/schema";
 import { auth } from "@/lib/auth";
-import { getStripe } from "@/lib/stripe";
-import { formatPaymentMethodBrand } from "@/lib/stripe/browser";
+import { listCustomerCards } from "@/lib/payment-methods";
 
 /**
  * Returns the logged-in customer's saved Stripe payment methods (cards only).
@@ -26,20 +25,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ data: [] });
   }
 
-  const stripe = getStripe();
-  const methods = await stripe.paymentMethods.list({
-    customer: user.stripeCustomerId as string,
-    type: "card",
-    limit: 10,
-  });
-
-  const data = methods.data.map((pm) => ({
-    id: pm.id,
-    brand: formatPaymentMethodBrand(pm.card?.brand ?? "card"),
-    last4: pm.card?.last4 ?? "••••",
-    expMonth: pm.card?.exp_month,
-    expYear: pm.card?.exp_year,
-  }));
+  const data = await listCustomerCards(user.stripeCustomerId as string);
 
   return NextResponse.json({ data });
 }

@@ -7,6 +7,7 @@ import {
   orderPayments,
   orders,
 } from "@/db/schema";
+import { sendCookNewOrderSms } from "@/lib/cook-order-notifications";
 import {
   sendGuestOrderReceiptToClient,
   sendOrderPlacedEmailToCook,
@@ -76,7 +77,10 @@ async function sendOrderConfirmationEmails(
       displayName: cookProfiles.displayName,
       cookEmail: authUser.email,
       cookFirstName: authUser.firstName,
+      cookPhone: authUser.phone,
+      cookPhoneVerified: authUser.phoneVerified,
       emailNotificationsNewOrder: cookProfiles.emailNotificationsNewOrder,
+      smsNotificationsNewOrder: cookProfiles.smsNotificationsNewOrder,
     })
     .from(cookProfiles)
     .innerJoin(authUser, eq(cookProfiles.userId, authUser.id))
@@ -118,6 +122,16 @@ async function sendOrderConfirmationEmails(
       orderEmailPayload,
     ).catch((err) => console.error("[confirmOrderPayment] cook email", err));
   }
+
+  sendCookNewOrderSms(
+    {
+      phone: cookRow.cookPhone,
+      phoneVerified: cookRow.cookPhoneVerified,
+      smsNotificationsNewOrder: cookRow.smsNotificationsNewOrder,
+    },
+    displayName,
+    listingTitle,
+  ).catch((err) => console.error("[confirmOrderPayment] cook sms", err));
 
   if (
     orderRow.isGuestCheckout &&

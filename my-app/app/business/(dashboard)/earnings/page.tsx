@@ -1,7 +1,8 @@
 "use client";
 
-import { Landmark, TrendingUp } from "lucide-react";
+import { Landmark, TrendingUp, Wallet } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import StripeConnectPanel from "@/app/components/StripeConnectPanel";
 import { Skeleton } from "../_skeleton";
 import styles from "./page.module.css";
 
@@ -35,15 +36,6 @@ function formatMoney(value: number): string {
   return value.toLocaleString("en-CA", {
     style: "currency",
     currency: "CAD",
-    maximumFractionDigits: 0,
-  });
-}
-
-// Payout amounts are real money in flight — show the cents.
-function formatMoneyExact(value: number): string {
-  return value.toLocaleString("en-CA", {
-    style: "currency",
-    currency: "CAD",
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
@@ -60,8 +52,12 @@ function formatDate(iso: string | null): string {
 
 function formatTick(v: number): string {
   if (v === 0) return "$0";
-  if (v >= 1000) return `$${v / 1000}k`;
-  return `$${v}`;
+  if (v >= 1000) {
+    const k = v / 1000;
+    return Number.isInteger(k) ? `$${k}k` : `$${k.toFixed(1)}k`;
+  }
+  if (Number.isInteger(v)) return `$${v}`;
+  return `$${v.toFixed(2)}`;
 }
 
 function computeChart(max: number): { ceiling: number; ticks: number[] } {
@@ -197,6 +193,8 @@ export default function EarningsPage() {
   // can't pay out a negative, so the headline floors at zero.
   const availablePayout = Math.max(0, nextPayout?.available ?? 0);
 
+  const hasRevenue = !loadingChart && seriesTotal > 0;
+
   function handleShowMore() {
     loadPayouts(payoutsMeta.page + 1);
   }
@@ -241,7 +239,7 @@ export default function EarningsPage() {
           ) : (
             <>
               <span className={styles.nextPayoutAmount}>
-                {formatMoneyExact(availablePayout)}
+                {formatMoney(availablePayout)}
               </span>
               <span className={styles.nextPayoutSub}>
                 {availablePayout > 0
@@ -250,12 +248,16 @@ export default function EarningsPage() {
               </span>
               {nextPayout.pending > 0 && (
                 <span className={styles.nextPayoutPending}>
-                  + {formatMoneyExact(nextPayout.pending)} still settling
+                  + {formatMoney(nextPayout.pending)} still settling
                 </span>
               )}
             </>
           )}
         </div>
+      </div>
+
+      <div className={styles.stripeSection}>
+        <StripeConnectPanel returnTo="/business/earnings" />
       </div>
 
       <div className={styles.revenueRow}>
@@ -274,8 +276,10 @@ export default function EarningsPage() {
             <TrendingUp size={13} className={styles.trendIcon} />
             {loadingChart ? (
               <Skeleton width={170} height={12} radius={6} />
+            ) : hasRevenue ? (
+              `Across the last ${series.length} ${period === "week" ? "weeks" : "months"}`
             ) : (
-              `${formatMoney(seriesTotal)} over the last ${series.length} ${period === "week" ? "weeks" : "months"}`
+              "Fulfill orders to see revenue here"
             )}
           </span>
         </div>
@@ -323,8 +327,6 @@ export default function EarningsPage() {
             <div className={styles.barsRow}>
               {loadingChart
                 ? Array.from({ length: period === "week" ? 8 : 12 }, (_, i) => {
-                    // Staggered heights give the loading chart a believable
-                    // silhouette instead of a flat baseline.
                     const heights = [42, 64, 38, 78, 52, 70, 46, 60];
                     return (
                       // biome-ignore lint/suspicious/noArrayIndexKey: loading skeleton only
@@ -351,11 +353,13 @@ export default function EarningsPage() {
                 : series.map((p) => (
                     <div key={p.label} className={styles.barCol}>
                       <div className={styles.barTrack}>
-                        <span className={styles.barTip}>
-                          {formatMoney(p.value)}
-                        </span>
+                        {p.value > 0 && (
+                          <span className={styles.barTip}>
+                            {formatMoney(p.value)}
+                          </span>
+                        )}
                         <div
-                          className={styles.bar}
+                          className={`${styles.bar} ${p.value === 0 ? styles.barZero : ""}`}
                           style={{
                             height: `${ceiling > 0 ? (p.value / ceiling) * 100 : 0}%`,
                           }}
@@ -365,6 +369,19 @@ export default function EarningsPage() {
                     </div>
                   ))}
             </div>
+            {!loadingChart && !hasRevenue && (
+              <div className={styles.chartEmpty}>
+                <TrendingUp
+                  size={18}
+                  className={styles.emptyIcon}
+                  aria-hidden
+                />
+                <p className={styles.emptyTitle}>No earnings yet</p>
+                <p className={styles.emptyText}>
+                  Revenue from fulfilled orders will chart here week by week.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -388,8 +405,13 @@ export default function EarningsPage() {
               </div>
             ))
           ) : payouts.length === 0 ? (
-            <div style={{ padding: "1rem", color: "var(--muted)" }}>
-              No payouts yet.
+            <div className={styles.emptyState}>
+              <Wallet size={20} className={styles.emptyIcon} aria-hidden />
+              <p className={styles.emptyTitle}>No payouts yet</p>
+              <p className={styles.emptyText}>
+                After orders are fulfilled and funds settle, Stripe transfers
+                will show up here.
+              </p>
             </div>
           ) : (
             payouts.map((payout) => (

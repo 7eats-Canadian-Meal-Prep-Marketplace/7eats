@@ -22,3 +22,12 @@
   color: var(--ink);
   line-height: 1.5;
 }
+
+.plainNotice {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 0 24px;
+  font-size: 13.5px;
+  color: var(--ink);
+  line-height: 1.55;
+}

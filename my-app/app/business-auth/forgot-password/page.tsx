@@ -3,7 +3,7 @@ import ForgotPasswordForm from "@/app/components/ForgotPasswordForm";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
-  title: "Forgot password | 7eats",
+  title: "Forgot password - 7eats",
 };
 
 export default async function ForgotPasswordPage({

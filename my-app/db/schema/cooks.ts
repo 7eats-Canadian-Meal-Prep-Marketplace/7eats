@@ -109,7 +109,7 @@ export const cookProfiles = pgTable(
       .default(true),
     smsNotificationsNewOrder: boolean("sms_notifications_new_order")
       .notNull()
-      .default(false),
+      .default(true),
   },
   (t) => [
     check(

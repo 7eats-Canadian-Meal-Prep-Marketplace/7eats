@@ -2,6 +2,7 @@ import { and, count, desc, eq, inArray, sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { authUser, cookProfiles, orderDishes, reviews } from "@/db/schema";
+import { formatReviewerDisplayName } from "@/lib/reviews/display-name";
 
 export async function GET(
   req: NextRequest,
@@ -53,6 +54,7 @@ export async function GET(
         rating: reviews.rating,
         comment: reviews.comment,
         createdAt: reviews.createdAt,
+        reviewerDisplayName: reviews.reviewerDisplayName,
         reviewerFirstName: authUser.firstName,
         reviewerLastName: authUser.lastName,
       })
@@ -82,12 +84,9 @@ export async function GET(
     }
 
     const data = rows.map((r) => {
-      const firstName = r.reviewerFirstName ?? "";
-      const lastInitial = r.reviewerLastName
-        ? `${r.reviewerLastName.charAt(0)}.`
-        : "";
       const reviewerName =
-        [firstName, lastInitial].filter(Boolean).join(" ") || "Anonymous";
+        r.reviewerDisplayName ??
+        formatReviewerDisplayName(r.reviewerFirstName, r.reviewerLastName);
 
       return {
         id: r.id,

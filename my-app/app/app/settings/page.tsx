@@ -1,6 +1,7 @@
 "use client";
 
 import { CreditCard, Edit3, Lock, Plus, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import ImageDropzone from "@/app/components/ImageDropzone";
@@ -28,6 +29,7 @@ import { profileDisplayName, profileInitials } from "@/lib/user-display";
 import { useApp } from "../_app-context";
 import { Skeleton } from "../_skeleton";
 import { AddCardModal } from "./_add-card-modal";
+import { DeleteAccountModal } from "./_delete-account-modal";
 import styles from "./page.module.css";
 
 type PrefAnswers = ClientPreferences;
@@ -85,6 +87,7 @@ const DEFAULT_NOTIF_PREFS = DEFAULT_CLIENT_NOTIFICATION_PREFS;
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function SettingsPage() {
+  const router = useRouter();
   const { setUserImage, setUserInitials, setUserName } = useApp();
   const [tab, setTab] = useState<Tab>("profile");
   const [prefAnswers, setPrefAnswers] = useState<PrefAnswers>(
@@ -138,6 +141,7 @@ export default function SettingsPage() {
   const [cardsError, setCardsError] = useState<string | null>(null);
   const [showAddCard, setShowAddCard] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
   const [removingCardId, setRemovingCardId] = useState<string | null>(null);
 
   const loadCards = useCallback(async () => {
@@ -1088,11 +1092,16 @@ export default function SettingsPage() {
                 <div>
                   <div className={styles.dangerTitle}>Delete account</div>
                   <div className={styles.dangerDesc}>
-                    Permanently delete your account and all data. This cannot be
-                    undone.
+                    Permanent. No grace period and no way to restore your
+                    account. Profile, cards, and preferences go away. Reviews
+                    you posted keep the name you chose.
                   </div>
                 </div>
-                <button type="button" className={styles.deleteBtn}>
+                <button
+                  type="button"
+                  className={styles.deleteBtn}
+                  onClick={() => setDeleteAccountOpen(true)}
+                >
                   Delete
                 </button>
               </div>
@@ -1596,6 +1605,16 @@ export default function SettingsPage() {
           userEmail={profile?.email ?? null}
           onSaved={handleCardSaved}
           onClose={() => setShowAddCard(false)}
+        />
+      )}
+
+      {deleteAccountOpen && (
+        <DeleteAccountModal
+          onClose={() => setDeleteAccountOpen(false)}
+          onDeleted={(redirect) => {
+            setDeleteAccountOpen(false);
+            router.push(redirect);
+          }}
         />
       )}
     </div>

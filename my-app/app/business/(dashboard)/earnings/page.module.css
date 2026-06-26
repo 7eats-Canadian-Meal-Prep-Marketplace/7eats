@@ -98,6 +98,14 @@
   font-feature-settings: "tnum";
 }
 
+/* ─── Stripe dashboard ─────────────────────────────────────────────────────── */
+.stripeSection {
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-md);
+  padding: 18px 20px;
+  background: var(--white);
+}
+
 /* ─── Segmented control ────────────────────────────────────────────────────── */
 .segControl {
   display: flex;
@@ -280,6 +288,15 @@
   opacity: 0.7;
 }
 
+.barZero {
+  min-height: 0;
+  background: transparent;
+}
+
+.barCol:hover .barZero {
+  opacity: 1;
+}
+
 /* Floating tooltip shown on bar hover */
 .barTip {
   position: absolute;
@@ -321,6 +338,54 @@
   font-weight: 500;
   color: #888888;
   white-space: nowrap;
+}
+
+.chartEmpty {
+  position: absolute;
+  inset: 0 0 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  text-align: center;
+  padding: 0 16px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 6px;
+  padding: 36px 24px;
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-sm);
+  background: var(--white);
+}
+
+.emptyIcon {
+  color: #9a9aa4;
+  flex: none;
+  margin-bottom: 2px;
+}
+
+.emptyTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 0;
+}
+
+.emptyText {
+  font-size: 13px;
+  font-weight: 500;
+  color: #8a8a96;
+  margin: 0;
+  max-width: 300px;
+  line-height: 1.45;
 }
 
 /* ─── Payout history ───────────────────────────────────────────────────────── */

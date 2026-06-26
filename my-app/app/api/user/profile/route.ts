@@ -24,16 +24,18 @@ export async function GET(req: NextRequest) {
 
   try {
     const [user] = await db
-      .select(profileFields)
+      .select({ ...profileFields, status: authUser.status })
       .from(authUser)
       .where(eq(authUser.id, session.user.id))
       .limit(1);
 
-    if (!user) {
+    if (!user || user.status === "deleted") {
       return NextResponse.json({ error: "User not found." }, { status: 404 });
     }
 
-    return NextResponse.json({ success: true, data: user });
+    const { status: _status, ...data } = user;
+
+    return NextResponse.json({ success: true, data });
   } catch (err) {
     console.error("[user/profile/GET]", err);
     return NextResponse.json(

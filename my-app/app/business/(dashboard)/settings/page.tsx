@@ -896,7 +896,9 @@ function OrderRulesSection() {
         <div className={styles.notifInfo}>
           <span className={styles.notifLabel}>Allow cancellations</span>
           <span className={styles.notifDesc}>
-            Let clients cancel before the lead date for a full refund.
+            After you confirm an order, offer a full refund if the client
+            cancels before the lead date. Until you confirm, they can always
+            cancel for a full refund.
           </span>
         </div>
         <Toggle
@@ -931,18 +933,27 @@ function OrderRulesSection() {
 
 function NotificationsSection() {
   const [settings, setSettings] = useState<NotifSettings | null>(null);
+  const [phoneVerified, setPhoneVerified] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/business/dashboard/settings")
-      .then((r) => r.json())
-      .then((json) => {
-        if (json.success) {
+    Promise.all([
+      fetch("/api/business/dashboard/settings").then((r) => r.json()),
+      fetch("/api/business/me").then((r) => r.json()),
+    ])
+      .then(([settingsJson, meJson]) => {
+        if (settingsJson.success) {
           setSettings({
-            emailNotificationsNewOrder: json.data.emailNotificationsNewOrder,
-            emailNotificationsNewReview: json.data.emailNotificationsNewReview,
-            smsNotificationsNewOrder: json.data.smsNotificationsNewOrder,
+            emailNotificationsNewOrder:
+              settingsJson.data.emailNotificationsNewOrder,
+            emailNotificationsNewReview:
+              settingsJson.data.emailNotificationsNewReview,
+            smsNotificationsNewOrder:
+              settingsJson.data.smsNotificationsNewOrder,
           });
+        }
+        if (meJson.success) {
+          setPhoneVerified(Boolean(meJson.data.phoneVerified));
         }
       })
       .finally(() => setLoading(false));
@@ -966,6 +977,13 @@ function NotificationsSection() {
       description: "Get notified by email when a customer places an order.",
     },
     {
+      key: "smsNotificationsNewOrder" as const,
+      label: "New orders (SMS)",
+      description: phoneVerified
+        ? "Get a text when a customer places an order."
+        : "Add and verify your phone in Account to receive texts.",
+    },
+    {
       key: "emailNotificationsNewReview" as const,
       label: "Reviews (email)",
       description: "Get notified by email when a customer leaves a review.",
@@ -973,7 +991,7 @@ function NotificationsSection() {
   ];
 
   if (loading || !settings) {
-    return <NotifRowsSkeleton rows={2} />;
+    return <NotifRowsSkeleton rows={3} />;
   }
 
   return (

@@ -286,6 +286,8 @@ export const reviews = pgTable(
     }),
     rating: integer("rating").notNull(),
     comment: text("comment"),
+    /** Snapshot at post time; kept after account deletion. */
+    reviewerDisplayName: varchar("reviewer_display_name", { length: 120 }),
     cookResponse: text("cook_response"),
     cookResponseAt: timestamp("cook_response_at"),
     isVisible: boolean("is_visible").notNull().default(true),

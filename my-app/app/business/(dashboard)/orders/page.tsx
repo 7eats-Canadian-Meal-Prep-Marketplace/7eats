@@ -552,7 +552,7 @@ function advanceDialogCopy(
     return {
       title: "Confirm this order?",
       message:
-        "The customer will be notified that you've accepted their order. You won't be able to send it back to pending. If something goes wrong later, you can still cancel in an emergency.",
+        "The customer will be notified that you've accepted their order. You won't be able to send it back to pending. Until you confirm, they can cancel anytime for a full refund. After you confirm, cancellations follow your refund policy in Settings.",
       confirmLabel: "Yes, confirm order",
     };
   }
