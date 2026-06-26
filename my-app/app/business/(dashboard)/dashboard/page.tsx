@@ -3,6 +3,7 @@
 import { Calendar, ChevronRight, Plus, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { nextPickupDayOrders, queueScheduleIso } from "@/lib/dashboard-queue";
 import { useHost } from "../_host-context";
 import { Skeleton } from "../_skeleton";
 import styles from "./page.module.css";
@@ -19,7 +20,12 @@ type QueueOrder = {
   listingTitle: string | null;
   quantity: number;
   totalPrice: string;
-  pickupAt: string;
+  // Null until a cook pins an exact delivery minute (always null for pickup),
+  // so the schedule falls back to the fulfillment window below.
+  pickupAt: string | null;
+  fulfillmentMode: string | null;
+  fulfillmentWindowStart: string | null;
+  fulfillmentWindowEnd: string | null;
   notes: string | null;
 };
 
@@ -51,7 +57,15 @@ function greeting(): string {
   return "Good evening";
 }
 
-function pickupLabel(iso: string): string {
+function clock(d: Date): string {
+  return d.toLocaleTimeString("en-CA", { hour: "numeric", minute: "2-digit" });
+}
+
+// Day + time for a queue order. Uses the pinned pickup minute when present, else
+// the fulfillment window (showing its range when no exact minute exists).
+function scheduleLabel(order: QueueOrder): string {
+  const iso = queueScheduleIso(order);
+  if (!iso) return "Not scheduled";
   const d = new Date(iso);
   const now = new Date();
   const todayStr = now.toDateString();
@@ -60,10 +74,17 @@ function pickupLabel(iso: string): string {
     now.getMonth(),
     now.getDate() + 1,
   ).toDateString();
-  const time = d.toLocaleTimeString("en-CA", {
-    hour: "numeric",
-    minute: "2-digit",
-  });
+
+  // When there's no pinned minute, show the window as a range.
+  const end =
+    !order.pickupAt && order.fulfillmentWindowEnd
+      ? new Date(order.fulfillmentWindowEnd)
+      : null;
+  const time =
+    end && !Number.isNaN(end.getTime())
+      ? `${clock(d)}–${clock(end)}`
+      : clock(d);
+
   if (d.toDateString() === todayStr) return `Today · ${time}`;
   if (d.toDateString() === tomorrowStr) return `Tomorrow · ${time}`;
   return `${d.toLocaleDateString("en-CA", { month: "short", day: "numeric" })} · ${time}`;
@@ -83,44 +104,6 @@ function formatMoney(cents: number): string {
   });
 }
 
-// ─── Next pickup day logic ─────────────────────────────────────────────────────
-
-function getNextPickupDayOrders(orders: QueueOrder[]): {
-  label: string;
-  orders: QueueOrder[];
-} {
-  const confirmed = orders.filter((o) => o.status !== "pending");
-  if (confirmed.length === 0) return { label: "Today's pickups", orders: [] };
-
-  const dayStart = (iso: string) => {
-    const d = new Date(iso);
-    d.setHours(0, 0, 0, 0);
-    return d.getTime();
-  };
-
-  const earliest = Math.min(...confirmed.map((o) => dayStart(o.pickupAt)));
-  const dayOrders = confirmed
-    .filter((o) => dayStart(o.pickupAt) === earliest)
-    .sort(
-      (a, b) => new Date(a.pickupAt).getTime() - new Date(b.pickupAt).getTime(),
-    );
-
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  const tomorrow = new Date(now);
-  tomorrow.setDate(now.getDate() + 1);
-
-  let label: string;
-  if (earliest === now.getTime()) label = "Today's pickups";
-  else if (earliest === tomorrow.getTime()) label = "Tomorrow's pickups";
-  else {
-    const d = new Date(earliest);
-    label = `${d.toLocaleDateString("en-CA", { weekday: "long", month: "short", day: "numeric" })} pickups`;
-  }
-
-  return { label, orders: dayOrders };
-}
-
 // ─── Pickup row ───────────────────────────────────────────────────────────────
 
 function PickupRow({ order }: { order: QueueOrder }) {
@@ -129,7 +112,7 @@ function PickupRow({ order }: { order: QueueOrder }) {
       <div className={styles.pickupInfo}>
         <span className={styles.pickupCustomer}>{displayName(order)}</span>
         <span className={styles.pickupMeta}>
-          {order.listingTitle} &middot; {pickupLabel(order.pickupAt)} &middot;{" "}
+          {order.listingTitle} &middot; {scheduleLabel(order)} &middot;{" "}
           <span className={styles.metaQty}>&times;{order.quantity}</span>
         </span>
       </div>
@@ -173,7 +156,7 @@ function RequestRow({
       <div className={styles.requestInfo}>
         <span className={styles.requestCustomer}>{displayName(order)}</span>
         <span className={styles.requestMeta}>
-          {order.listingTitle} &middot; {pickupLabel(order.pickupAt)} &middot;{" "}
+          {order.listingTitle} &middot; {scheduleLabel(order)} &middot;{" "}
           <span className={styles.metaQty}>&times;{order.quantity}</span>
         </span>
       </div>
@@ -280,7 +263,7 @@ export default function DashboardPage() {
   }
 
   const { label: pickupDayLabel, orders: pickupOrders } =
-    getNextPickupDayOrders(queueOrders);
+    nextPickupDayOrders(queueOrders);
   const requests = queueOrders.filter((o) => o.status === "pending");
 
   const visiblePickups = pickupExpanded

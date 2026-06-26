@@ -5,6 +5,7 @@ import {
 } from "@/lib/order-client-notifications";
 import { formatOrderTimingLabel } from "@/lib/order-timing-label";
 import {
+  bulletList,
   contactParagraph,
   contactTextLine,
   htmlEmail,
@@ -45,6 +46,17 @@ function fulfillmentLabel(mode: OrderEmailData["fulfillmentMode"]): string {
 
 function formatTiming(order: OrderEmailData): string {
   return formatOrderTimingLabel(order);
+}
+
+/** Short clock string for the cook's approximate delivery arrival, e.g. "5:30 p.m.". */
+function arrivalClock(value: Date | string | null | undefined): string | null {
+  if (!value) return null;
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleTimeString("en-CA", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
 /** Omit TBD — cancelled orders don't need a vague timing line. */
@@ -434,38 +446,79 @@ export async function sendOrderReadyEmailToClient(
 ): Promise<void> {
   const isDelivery = order.fulfillmentMode === "delivery";
   const codeLabel = isDelivery ? "Delivery code" : "Pickup code";
+  const arrival = isDelivery ? arrivalClock(order.pickupAt) : null;
+
+  // Delivery hand-off guidance: an approximate ETA, and a person must be there
+  // to receive the order and hand over the code (it's never left at the door).
+  const deliveryTips = [
+    arrival
+      ? `Have someone available at the delivery address around ${arrival} to receive the order.`
+      : "Have someone available at the delivery address to receive the order.",
+    "Have your delivery code ready. Your cook needs it to confirm the hand-off.",
+    "This isn't a leave-at-door drop-off; a person must be there to collect it.",
+  ];
+  const deliveryTipsText = deliveryTips.map((t) => `• ${t}`);
+
   await deliverOrderClientUpdate(
     orderClientRecipient(client),
     async () => {
       try {
         const timingRow = emailTimingRow(order);
         const subject = `Your order is ready, ${isDelivery ? "delivery" : "pickup"} code ${pickupCode}`;
+
+        const introHtml = isDelivery
+          ? paragraph(
+              `Your order from <strong>${cook.name}</strong> is on its way!` +
+                (arrival
+                  ? ` Your cook is arriving <strong>around ${arrival}</strong>. The exact time may shift a little, like any delivery ETA.`
+                  : ""),
+            ) + paragraph("Show this code to your cook when they arrive:")
+          : paragraph(
+              `Your order from <strong>${cook.name}</strong> is ready. Show this code when you arrive:`,
+            );
+
+        const tipsHtml = isDelivery ? bulletList(deliveryTips) : "";
+        const closingHtml = isDelivery
+          ? ""
+          : paragraph("Show this code any time during your pickup window.");
+
         const html = htmlEmail({
           title: subject,
           preheader: `Your order from ${cook.name} is ready.`,
           bodyHtml:
             paragraph(greeting(client.firstName)) +
-            paragraph(
-              `Your order from <strong>${cook.name}</strong> is ready. Show this code when you arrive:`,
-            ) +
+            introHtml +
             pickupCodeBlock(pickupCode, codeLabel) +
+            tipsHtml +
             orderDetailsTable([
               { label: "Order", value: order.listingTitle },
               ...(timingRow ? [timingRow] : []),
             ]) +
-            paragraph("This code expires 24 hours after it was issued.") +
+            closingHtml +
             contactParagraph(),
         });
+
+        const introText = isDelivery
+          ? `Your order from ${cook.name} is on its way!` +
+            (arrival
+              ? ` Your cook is arriving around ${arrival}. The exact time may shift a little, like any delivery ETA.`
+              : "") +
+            " Show this code to your cook when they arrive:"
+          : `Your order from ${cook.name} is ready. Show this code when you arrive:`;
+
         const text = textWithContact([
           greeting(client.firstName),
           "",
-          `Your order from ${cook.name} is ready. Show this code when you arrive:`,
+          introText,
           "",
           pickupCode,
           "",
+          ...(isDelivery ? [...deliveryTipsText, ""] : []),
           `Order: ${order.listingTitle}`,
           ...(timingRow ? [`${timingRow.label}: ${timingRow.value}`, ""] : []),
-          "This code expires 24 hours after it was issued.",
+          ...(isDelivery
+            ? []
+            : ["Show this code any time during your pickup window."]),
         ]);
         await sendMail({ to: client.email, subject, text, html });
       } catch (err) {
@@ -493,7 +546,7 @@ export async function sendOrderCompletedEmailToClient(
           bodyHtml:
             paragraph(greeting(client.firstName)) +
             paragraph(
-              `Your order from <strong>${cook.name}</strong> is all yours — we hope every bite is wonderful. Thanks for supporting a home cook in your neighbourhood.`,
+              `Your order from <strong>${cook.name}</strong> is all yours. We hope every bite is wonderful. Thanks for supporting a home cook in your neighbourhood.`,
             ) +
             orderSummaryHtml(order) +
             paragraph(
@@ -506,7 +559,7 @@ export async function sendOrderCompletedEmailToClient(
         const text = textWithContact([
           greeting(client.firstName),
           "",
-          `Your order from ${cook.name} is all yours — we hope every bite is wonderful. Thanks for supporting a home cook in your neighbourhood.`,
+          `Your order from ${cook.name} is all yours. We hope every bite is wonderful. Thanks for supporting a home cook in your neighbourhood.`,
           "",
           ...orderSummaryText(order),
           "",

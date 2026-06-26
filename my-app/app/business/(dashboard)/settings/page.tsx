@@ -1086,7 +1086,20 @@ export default function SettingsPage() {
       notifications: notifRef,
       danger: dangerRef,
     };
-    refMap[id].current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    const el = refMap[id].current;
+    if (!el) return;
+    // Scroll the dashboard's own scroll container (.main) directly instead of
+    // scrollIntoView, which walks up and scrolls every scrollable ancestor —
+    // that left the page in a split-scroll state where the top was no longer
+    // reachable. Targeting the one known scroller keeps the top always in reach.
+    const scroller = el.closest("main");
+    if (!scroller) return;
+    const top =
+      el.getBoundingClientRect().top -
+      scroller.getBoundingClientRect().top +
+      scroller.scrollTop -
+      16;
+    scroller.scrollTo({ top, behavior: "smooth" });
   }
 
   return (

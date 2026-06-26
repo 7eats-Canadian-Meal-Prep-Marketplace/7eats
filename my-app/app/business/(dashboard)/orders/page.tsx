@@ -1,7 +1,16 @@
 "use client";
 
-import { CheckCircle2, ClipboardList, X } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  ClipboardList,
+  MapPin,
+  Truck,
+  X,
+} from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { arrivalSlots } from "@/lib/delivery-arrival";
+import { canMarkReady, readyAvailableFrom } from "@/lib/order-readiness";
 import { PreferenceSheet } from "../_components/PreferenceSheet";
 import { Skeleton } from "../_skeleton";
 import styles from "./page.module.css";
@@ -14,6 +23,14 @@ type OrderStatus =
   | "ready"
   | "fulfilled"
   | "cancelled";
+
+type DeliveryAddress = {
+  street?: string | null;
+  unit?: string | null;
+  city?: string | null;
+  province?: string | null;
+  postal?: string | null;
+};
 
 type DishSnapshot = {
   id: string;
@@ -48,6 +65,7 @@ type Order = {
   platformFeeAmount?: string | null;
   cookPayoutAmount?: string | null;
   fulfillmentMode: string | null;
+  deliveryAddress: DeliveryAddress | null;
   pickupAt: string | null;
   fulfillmentWindowStart: string | null;
   fulfillmentWindowEnd: string | null;
@@ -102,6 +120,24 @@ function money(value: string | number | null | undefined): string {
 
 function fulfillmentLabel(order: Pick<Order, "fulfillmentMode">): string {
   return order.fulfillmentMode === "delivery" ? "Delivery" : "Pickup";
+}
+
+// "123 King St, Apt 4 · Toronto, ON M5V 1A1" split into two lines for display.
+function addressLines(addr: DeliveryAddress | null): [string, string] | null {
+  if (!addr) return null;
+  const line1 = [addr.street, addr.unit].filter(Boolean).join(", ");
+  const line2 = [
+    [addr.city, addr.province].filter(Boolean).join(", "),
+    addr.postal,
+  ]
+    .filter(Boolean)
+    .join(" ");
+  if (!line1 && !line2) return null;
+  return [line1, line2];
+}
+
+function formatSlotClock(d: Date): string {
+  return d.toLocaleTimeString("en-CA", { hour: "numeric", minute: "2-digit" });
 }
 
 function dishesSubtotal(dishes: DishSnapshot[] | undefined): number {
@@ -344,6 +380,8 @@ function ConfirmDialog({
   confirmLabel,
   busy,
   tone = "default",
+  confirmDisabled = false,
+  children,
   onConfirm,
   onClose,
 }: {
@@ -352,6 +390,11 @@ function ConfirmDialog({
   confirmLabel: string;
   busy: boolean;
   tone?: "default" | "danger";
+  // When true the confirm button is blocked (e.g. a required field is unfilled).
+  confirmDisabled?: boolean;
+  // Optional extra content (e.g. the delivery arrival-time step) shown between
+  // the message and the action buttons.
+  children?: React.ReactNode;
   onConfirm: () => void;
   onClose: () => void;
 }) {
@@ -372,7 +415,7 @@ function ConfirmDialog({
         onClick={() => !busy && onClose()}
       />
       <div
-        className={styles.confirmModal}
+        className={`${styles.confirmModal} ${children ? styles.confirmModalWide : ""}`}
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="confirm-title"
@@ -381,15 +424,19 @@ function ConfirmDialog({
         <h3 id="confirm-title" className={styles.confirmTitle}>
           {title}
         </h3>
-        <p id="confirm-message" className={styles.confirmText}>
+        <p
+          id="confirm-message"
+          className={`${styles.confirmText} ${children ? styles.confirmTextTight : ""}`}
+        >
           {message}
         </p>
+        {children}
         <div className={styles.confirmBtns}>
           <button
             type="button"
             className={`${styles.confirmYes} ${tone === "danger" ? styles.confirmYesDanger : ""}`}
             onClick={onConfirm}
-            disabled={busy}
+            disabled={busy || confirmDisabled}
           >
             {busy ? <Spinner label="Saving" /> : confirmLabel}
           </button>
@@ -407,8 +454,96 @@ function ConfirmDialog({
   );
 }
 
+// The delivery "mark ready" step: read-only address + a required arrival-time
+// picker constrained to the order's snapshotted delivery window.
+function DeliveryReadyStep({
+  order,
+  value,
+  onChange,
+}: {
+  order: Order;
+  value: string;
+  onChange: (iso: string) => void;
+}) {
+  const addr = addressLines(order.deliveryAddress);
+  const slots = arrivalSlots(
+    order.fulfillmentWindowStart,
+    order.fulfillmentWindowEnd,
+  );
+
+  return (
+    <div className={styles.readyStep}>
+      <p className={styles.readyStepMeta}>
+        <Truck size={14} aria-hidden="true" />
+        <span>{formatTime(order)}</span>
+      </p>
+
+      {addr && (
+        <div className={styles.addrBlock}>
+          <span className={styles.addrLabel}>
+            <MapPin size={13} aria-hidden="true" />
+            Deliver to
+          </span>
+          <p className={styles.addrText}>
+            {addr[0]}
+            {addr[1] && (
+              <>
+                <br />
+                {addr[1]}
+              </>
+            )}
+          </p>
+        </div>
+      )}
+
+      <div className={styles.arrivalField}>
+        <label htmlFor="arrival-time" className={styles.arrivalLabel}>
+          Your estimated arrival{" "}
+          <span className={styles.arrivalReq} aria-hidden="true">
+            *
+          </span>
+        </label>
+        {slots.length > 0 ? (
+          <div className={styles.arrivalSelectWrap}>
+            <select
+              id="arrival-time"
+              className={`${styles.arrivalSelect} ${!value ? styles.arrivalSelectEmpty : ""}`}
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+            >
+              <option value="" disabled>
+                Select a time
+              </option>
+              {slots.map((slot) => {
+                const iso = slot.toISOString();
+                return (
+                  <option key={iso} value={iso}>
+                    {formatSlotClock(slot)}
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+        ) : (
+          <p className={styles.arrivalNote}>
+            No delivery window on file for this order — please contact the
+            customer to arrange a time.
+          </p>
+        )}
+        <p className={styles.arrivalHelp}>
+          Pick a time within the customer&apos;s window. They&apos;ll see
+          &ldquo;around&rdquo; this time when you mark ready.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 // Copy for each state-changing action, keyed off the action and current status.
-function advanceDialogCopy(status: OrderStatus): {
+function advanceDialogCopy(
+  status: OrderStatus,
+  isDelivery: boolean,
+): {
   title: string;
   message: string;
   confirmLabel: string;
@@ -417,8 +552,16 @@ function advanceDialogCopy(status: OrderStatus): {
     return {
       title: "Confirm this order?",
       message:
-        "The customer will be notified that you've accepted their order. You won't be able to send it back to pending afterward.",
+        "The customer will be notified that you've accepted their order. You won't be able to send it back to pending. If something goes wrong later, you can still cancel in an emergency.",
       confirmLabel: "Yes, confirm order",
+    };
+  }
+  if (isDelivery) {
+    return {
+      title: "Mark order as ready?",
+      message:
+        "The customer gets a delivery code and a notification that you're on the way.",
+      confirmLabel: "Yes, mark ready",
     };
   }
   return {
@@ -453,6 +596,14 @@ function OrderDetail({
   const [justFulfilled, setJustFulfilled] = useState(false);
   const canCancel = order.status === "pending" || order.status === "confirmed";
   const canAdvance = order.status === "pending" || order.status === "confirmed";
+  // A confirmed order can only be marked ready from the day before fulfillment.
+  // Block the action (and explain why) until then so the customer's pickup code
+  // isn't issued days early and left to expire before they arrive.
+  const readyTooEarly = order.status === "confirmed" && !canMarkReady(order);
+  const readyFrom = readyTooEarly ? readyAvailableFrom(order) : null;
+  const isDelivery = order.fulfillmentMode === "delivery";
+  // Cook's chosen arrival time (ISO) for the delivery "mark ready" step.
+  const [arrivalAt, setArrivalAt] = useState("");
 
   const hasDishes = !!order.dishes && order.dishes.length > 0;
   const subtotal = dishesSubtotal(order.dishes);
@@ -472,7 +623,10 @@ function OrderDetail({
     order.quantity ??
     0;
 
-  async function patchStatus(status: "confirmed" | "ready" | "cancelled") {
+  async function patchStatus(
+    status: "confirmed" | "ready" | "cancelled",
+    arrivalAt?: string,
+  ) {
     setMutating(true);
     try {
       const res = await fetch(
@@ -480,7 +634,7 @@ function OrderDetail({
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status }),
+          body: JSON.stringify(arrivalAt ? { status, arrivalAt } : { status }),
         },
       );
       if (res.ok) onStatusChange(order.id, status);
@@ -493,11 +647,16 @@ function OrderDetail({
   async function handleConfirmAction() {
     if (confirmAction === "advance") {
       const next = nextStatus(order.status);
-      if (next) await patchStatus(next);
+      if (next) {
+        // Delivery orders carry the cook's chosen arrival time into "ready".
+        const arrival = next === "ready" && isDelivery ? arrivalAt : undefined;
+        await patchStatus(next, arrival);
+      }
     } else if (confirmAction === "revert") {
       await patchStatus("confirmed");
     }
     setConfirmAction(null);
+    setArrivalAt("");
   }
 
   async function handleCancel() {
@@ -535,6 +694,29 @@ function OrderDetail({
         <span className={styles.timeCardLabel}>{fulfillmentLabel(order)}</span>
         <span className={styles.timeCardValue}>{formatTime(order)}</span>
       </div>
+
+      {isDelivery &&
+        (() => {
+          const addr = addressLines(order.deliveryAddress);
+          if (!addr) return null;
+          return (
+            <div className={styles.deliverToCard}>
+              <span className={styles.deliverToLabel}>
+                <MapPin size={13} aria-hidden="true" />
+                Deliver to
+              </span>
+              <p className={styles.deliverToText}>
+                {addr[0]}
+                {addr[1] && (
+                  <>
+                    <br />
+                    {addr[1]}
+                  </>
+                )}
+              </p>
+            </div>
+          );
+        })()}
 
       <div className={styles.detailActions}>
         <button
@@ -673,9 +855,20 @@ function OrderDetail({
         <div className={styles.actionZone}>
           {cancelConfirm ? (
             <div className={styles.cancelConfirm}>
+              <div className={styles.cancelConfirmHead}>
+                <AlertTriangle
+                  size={18}
+                  className={styles.cancelConfirmIcon}
+                  aria-hidden="true"
+                />
+                <p className={styles.cancelConfirmTitle}>Cancel this order?</p>
+              </div>
               <p className={styles.cancelConfirmText}>
-                Cancel this order? This cannot be undone.
+                {order.status === "pending"
+                  ? "The customer will be fully refunded and notified. Only cancel if you cannot take this order."
+                  : "You've already confirmed this order. The customer will be fully refunded and notified."}
               </p>
+              <p className={styles.cancelConfirmWarn}>This cannot be undone.</p>
               <div className={styles.cancelConfirmBtns}>
                 <button
                   type="button"
@@ -683,12 +876,17 @@ function OrderDetail({
                   onClick={handleCancel}
                   disabled={mutating}
                 >
-                  Yes, cancel order
+                  {mutating ? (
+                    <Spinner label="Cancelling order" />
+                  ) : (
+                    "Yes, cancel order"
+                  )}
                 </button>
                 <button
                   type="button"
                   className={styles.cancelConfirmNo}
                   onClick={() => setCancelConfirm(false)}
+                  disabled={mutating}
                 >
                   Go back
                 </button>
@@ -701,7 +899,7 @@ function OrderDetail({
                   type="button"
                   className={styles.advanceBtn}
                   onClick={() => setConfirmAction("advance")}
-                  disabled={mutating}
+                  disabled={mutating || readyTooEarly}
                 >
                   {ACTION_LABEL[order.status]}
                 </button>
@@ -712,10 +910,26 @@ function OrderDetail({
                   className={styles.cancelBtn}
                   onClick={() => setCancelConfirm(true)}
                 >
+                  <AlertTriangle size={14} aria-hidden="true" />
                   Cancel order
                 </button>
               )}
             </div>
+          )}
+          {readyTooEarly && (
+            <p className={styles.readyHint}>
+              You can mark this order ready starting{" "}
+              {readyFrom
+                ? readyFrom.toLocaleDateString("en-CA", {
+                    weekday: "long",
+                    month: "short",
+                    day: "numeric",
+                  })
+                : "the day before"}{" "}
+              the day before the scheduled{" "}
+              {fulfillmentLabel(order).toLowerCase()}. This keeps the
+              customer&apos;s pickup code from expiring before they arrive.
+            </p>
           )}
         </div>
       )}
@@ -745,11 +959,25 @@ function OrderDetail({
         />
       ) : confirmAction === "advance" ? (
         <ConfirmDialog
-          {...advanceDialogCopy(order.status)}
+          {...advanceDialogCopy(order.status, isDelivery)}
           busy={mutating}
+          confirmDisabled={
+            order.status === "confirmed" && isDelivery && !arrivalAt
+          }
           onConfirm={handleConfirmAction}
-          onClose={() => setConfirmAction(null)}
-        />
+          onClose={() => {
+            setConfirmAction(null);
+            setArrivalAt("");
+          }}
+        >
+          {order.status === "confirmed" && isDelivery && (
+            <DeliveryReadyStep
+              order={order}
+              value={arrivalAt}
+              onChange={setArrivalAt}
+            />
+          )}
+        </ConfirmDialog>
       ) : null}
 
       <PreferenceSheet

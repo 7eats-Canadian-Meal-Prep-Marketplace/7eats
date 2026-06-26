@@ -5,6 +5,10 @@ import { db } from "@/db";
 import { orders } from "@/db/schema";
 import { ensureStripeCustomer, resolveGuestClient } from "@/lib/guest-client";
 import {
+  GUEST_EMAIL_VERIFIED_COOKIE,
+  isEmailVerified,
+} from "@/lib/guest-email-otp";
+import {
   generateConfirmationCode,
   generateGuestAccessToken,
   hashGuestAccessToken,
@@ -111,6 +115,20 @@ export async function POST(req: NextRequest) {
     acceptedTerms: _,
     ...orderBody
   } = parsed.data;
+
+  // Email-verification gate: a guest must have proven they can read mail at this
+  // address (via the email OTP flow) before we create an account and order for
+  // it. Without this, a mistyped email silently loses the order and its receipt.
+  const verifiedCookie = req.cookies.get(GUEST_EMAIL_VERIFIED_COOKIE)?.value;
+  if (!isEmailVerified(verifiedCookie, email)) {
+    return NextResponse.json(
+      {
+        error: "Please verify your email before placing your order.",
+        needsEmailVerification: true,
+      },
+      { status: 403 },
+    );
+  }
 
   try {
     const guest = await resolveGuestClient({

@@ -252,7 +252,7 @@ export function orderSummaryTable(opts: {
     const totalText =
       opts.total != null && opts.total !== ""
         ? `${money(Number(opts.total))} ${currency}`
-        : "—";
+        : "-";
 
     totalsRows =
       lineRow("Subtotal", money(subtotal), { border: true }) +
@@ -266,6 +266,18 @@ export function orderSummaryTable(opts: {
 
 export function paragraph(text: string): string {
   return `<p style="margin:0 0 16px;font-family:${FONT_STACK};font-size:15px;line-height:1.65;color:${COLOR.ink};">${text}</p>`;
+}
+
+// Compact bullet list for short bits of guidance (e.g. delivery hand-off tips).
+// Kept tight so a few pointers don't feel cluttered.
+export function bulletList(items: string[]): string {
+  const lis = items
+    .map(
+      (item) =>
+        `<li style="margin:0 0 8px;font-family:${FONT_STACK};font-size:15px;line-height:1.6;color:${COLOR.ink};">${item}</li>`,
+    )
+    .join("");
+  return `<ul style="margin:0 0 16px;padding:0 0 0 22px;">${lis}</ul>`;
 }
 
 export function pickupCodeBlock(code: string, label = "Pickup code"): string {

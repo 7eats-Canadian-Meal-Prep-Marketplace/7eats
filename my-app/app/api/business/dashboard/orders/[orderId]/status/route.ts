@@ -11,12 +11,14 @@ import {
   orderPayments,
   orders,
 } from "@/db/schema";
+import { isArrivalWithinWindow } from "@/lib/delivery-arrival";
 import {
   sendOrderCancelledByCookEmailToClient,
   sendOrderConfirmedEmailToClient,
   sendOrderNotReadyEmailToClient,
   sendOrderReadyEmailToClient,
 } from "@/lib/emails/order-events";
+import { canMarkReady } from "@/lib/order-readiness";
 import { findUncollectiblePayment } from "@/lib/orders/fulfillment-readiness";
 import { settleCookSubsidy } from "@/lib/orders/settle-subsidy";
 import {
@@ -32,6 +34,9 @@ const orderIdSchema = z.uuid();
 const bodySchema = z.object({
   status: z.enum(["confirmed", "ready", "cancelled"]),
   reason: z.enum(["client_no_show"]).optional(),
+  // Cook's approximate arrival time when marking a delivery order ready. Must
+  // fall inside the order's snapshotted delivery window (validated below).
+  arrivalAt: z.string().datetime().optional(),
 });
 
 // Allowed forward/backward moves a cook can make. Note `confirmed` can only go
@@ -71,7 +76,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     );
   }
 
-  const { status: newStatus, reason } = parsed.data;
+  const { status: newStatus, reason, arrivalAt } = parsed.data;
 
   try {
     const [order] = await db
@@ -83,6 +88,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
         totalPrice: orders.totalPrice,
         currency: orders.currency,
         pickupAt: orders.pickupAt,
+        fulfillmentMode: orders.fulfillmentMode,
         fulfillmentWindowStart: orders.fulfillmentWindowStart,
         fulfillmentWindowEnd: orders.fulfillmentWindowEnd,
         lateCancelFeeEnabled: orders.lateCancelFeeEnabled,
@@ -227,6 +233,60 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       }
     }
 
+    // Guard against marking ready too far ahead. A cook may only mark an order
+    // ready from the calendar day before the scheduled fulfillment onward — the
+    // pickup code has a finite life, so releasing it days early risks it
+    // expiring before the customer arrives.
+    if (newStatus === "ready" && !canMarkReady(order)) {
+      return NextResponse.json(
+        {
+          error:
+            "This order is scheduled further out. You can mark it ready " +
+            "starting the day before the scheduled pickup or delivery.",
+        },
+        { status: 400 },
+      );
+    }
+
+    // Delivery orders capture the cook's approximate arrival time as a required
+    // step of going ready. It must fall inside the snapshotted delivery window,
+    // and becomes the order's exact `pickupAt` minute (which also anchors the
+    // pickup-code expiry and the customer's "order ready" notification).
+    let deliveryArrivalAt: Date | null = null;
+    if (newStatus === "ready" && order.fulfillmentMode === "delivery") {
+      if (!arrivalAt) {
+        return NextResponse.json(
+          {
+            error:
+              "Select your approximate arrival time before marking this " +
+              "delivery ready.",
+          },
+          { status: 400 },
+        );
+      }
+      const arrival = new Date(arrivalAt);
+      const hasWindow =
+        order.fulfillmentWindowStart != null &&
+        order.fulfillmentWindowEnd != null;
+      if (
+        hasWindow &&
+        !isArrivalWithinWindow(
+          arrival,
+          order.fulfillmentWindowStart,
+          order.fulfillmentWindowEnd,
+        )
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Your arrival time must be within the customer's delivery window.",
+          },
+          { status: 400 },
+        );
+      }
+      deliveryArrivalAt = arrival;
+    }
+
     // Guard before issuing a pickup/delivery code so cooks never release food
     // for an order whose remaining payment cannot be collected.
     if (newStatus === "ready") {
@@ -256,16 +316,33 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       const rawCode = randomInt(100000, 1000000).toString().padStart(6, "0");
       pickupCodeForEmail = rawCode;
       const hash = createHash("sha256").update(rawCode).digest("hex");
+      // Anchor expiry to the latest moment in the order's fulfillment range
+      // (window end, or the exact pickup minute) + 6h, with a 24h-from-now
+      // floor so a stale/past schedule still yields a usable code.
       const minExpiry = new Date(Date.now() + 24 * 3600_000);
-      const pickupBasedExpiry = order.pickupAt
-        ? new Date(order.pickupAt.getTime() + 6 * 3600_000)
-        : minExpiry;
+      const scheduleTimes = [
+        deliveryArrivalAt ?? order.pickupAt,
+        order.fulfillmentWindowEnd,
+        order.fulfillmentWindowStart,
+      ]
+        .filter((d): d is Date => d != null)
+        .map((d) => d.getTime());
+      const latestSchedule = scheduleTimes.length
+        ? Math.max(...scheduleTimes)
+        : null;
+      const scheduleBasedExpiry =
+        latestSchedule != null
+          ? new Date(latestSchedule + 6 * 3600_000)
+          : minExpiry;
       const expiry =
-        pickupBasedExpiry > minExpiry ? pickupBasedExpiry : minExpiry;
+        scheduleBasedExpiry > minExpiry ? scheduleBasedExpiry : minExpiry;
       updateFields.pickupCode = rawCode;
       updateFields.pickupCodeHash = hash;
       updateFields.pickupCodeExpiresAt = expiry;
       updateFields.pickupCodeAttempts = 0;
+      // Pin the cook's chosen delivery minute so the customer's notification
+      // and order detail show a concrete arrival time.
+      if (deliveryArrivalAt) updateFields.pickupAt = deliveryArrivalAt;
     }
     if (newStatus === "cancelled") {
       updateFields.cancelledAt = new Date();

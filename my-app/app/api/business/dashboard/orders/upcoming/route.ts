@@ -8,6 +8,15 @@ export async function GET(req: NextRequest) {
   const cookId = await getCookId(req.headers);
   if (!cookId) return unauthorized();
 
+  // The order's scheduled moment: the pinned pickup minute when set, else the
+  // fulfillment window (start/end). A freshly placed order always has a null
+  // `pickupAt` (set only when a cook pins a delivery time, never for pickup), so
+  // comparing `pickupAt` alone excludes every new request — NULL >= now() is
+  // NULL, not true. COALESCE onto the window, captured for both modes at order
+  // time, mirrors the orders list endpoint.
+  const scheduledStart = sql`COALESCE(${orders.pickupAt}, ${orders.fulfillmentWindowStart})`;
+  const scheduledEnd = sql`COALESCE(${orders.pickupAt}, ${orders.fulfillmentWindowEnd}, ${orders.fulfillmentWindowStart})`;
+
   try {
     const rows = await db
       .select({
@@ -20,6 +29,9 @@ export async function GET(req: NextRequest) {
         unitPrice: orders.unitPrice,
         totalPrice: orders.totalPrice,
         pickupAt: orders.pickupAt,
+        fulfillmentMode: orders.fulfillmentMode,
+        fulfillmentWindowStart: orders.fulfillmentWindowStart,
+        fulfillmentWindowEnd: orders.fulfillmentWindowEnd,
         fulfilledAt: orders.fulfilledAt,
         cancelledAt: orders.cancelledAt,
         notes: orders.notes,
@@ -44,10 +56,11 @@ export async function GET(req: NextRequest) {
         and(
           eq(orders.cookId, cookId),
           inArray(orders.status, ["pending", "confirmed", "ready"]),
-          gte(orders.pickupAt, sql`now()`),
+          // Still "upcoming" until the scheduled window has fully passed.
+          gte(scheduledEnd, sql`now()`),
         ),
       )
-      .orderBy(asc(orders.pickupAt))
+      .orderBy(asc(scheduledStart))
       .limit(100);
 
     return NextResponse.json({ success: true, data: rows });

@@ -2,6 +2,7 @@
 
 import { X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Skeleton } from "../_skeleton";
 import styles from "./PreferenceSheet.module.css";
 
 // Read-only client preference sheet. Opened from an order or a conversation; the
@@ -30,6 +31,30 @@ const SECTIONS: {
   { key: "goals", label: "Goals" },
   { key: "whyMealPrep", label: "Why they meal prep" },
 ];
+
+const SKELETON_SECTIONS = [
+  { id: "dietary", labelWidth: "28%", chips: [72, 88, 64] },
+  { id: "allergies", labelWidth: "34%", chips: [96, 80] },
+  { id: "goals", labelWidth: "28%", chips: [70, 84, 56] },
+  { id: "whyMealPrep", labelWidth: "34%", chips: [100, 76] },
+] as const;
+
+function PreferenceSheetSkeleton() {
+  return (
+    <>
+      {SKELETON_SECTIONS.map((section) => (
+        <section key={section.id} className={styles.section} aria-hidden="true">
+          <Skeleton width={section.labelWidth} height={11} radius={6} />
+          <div className={styles.chips}>
+            {section.chips.map((w) => (
+              <Skeleton key={w} width={w} height={30} radius={999} />
+            ))}
+          </div>
+        </section>
+      ))}
+    </>
+  );
+}
 
 export function PreferenceSheet({
   clientId,
@@ -110,10 +135,8 @@ export function PreferenceSheet({
           </button>
         </header>
 
-        <div className={styles.body}>
-          {state.status === "loading" && (
-            <p className={styles.muted}>Loading preferences…</p>
-          )}
+        <div className={styles.body} aria-busy={state.status === "loading"}>
+          {state.status === "loading" && <PreferenceSheetSkeleton />}
 
           {state.status === "error" && (
             <p className={styles.error}>{state.message}</p>

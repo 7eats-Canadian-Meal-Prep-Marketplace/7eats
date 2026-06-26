@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Check, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -113,6 +113,185 @@ function resolvedToNormalized(resolved: ResolvedAddress): NormalizedAddress {
   };
 }
 
+// Inline email verification for guests. A guest must prove they can read mail at
+// the address they typed before the order (and its receipt) is created for it.
+// Lives under the email field: a quiet "Send code" once the email is valid, then
+// a compact code panel with a resend cooldown, then a calm verified state.
+function GuestEmailVerify({
+  email,
+  emailValid,
+  verified,
+  onVerified,
+}: {
+  email: string;
+  emailValid: boolean;
+  verified: boolean;
+  onVerified: () => void;
+}) {
+  const [phase, setPhase] = useState<"idle" | "sent">("idle");
+  const [code, setCode] = useState("");
+  const [sending, setSending] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [cooldown, setCooldown] = useState(0);
+  const [sentTo, setSentTo] = useState<string | null>(null);
+
+  const trimmed = email.trim();
+  const normalized = trimmed.toLowerCase();
+
+  // If the email is edited away from what we sent to, collapse back to idle.
+  useEffect(() => {
+    if (sentTo && normalized !== sentTo) {
+      setPhase("idle");
+      setCode("");
+      setError(null);
+      setSentTo(null);
+    }
+  }, [normalized, sentTo]);
+
+  // Resend cooldown ticker — one decrement per second.
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const id = setTimeout(() => setCooldown(cooldown - 1), 1000);
+    return () => clearTimeout(id);
+  }, [cooldown]);
+
+  async function sendCode() {
+    setSending(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/auth/guest-email/send-otp", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: trimmed }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setError(json.error ?? "Couldn't send a code. Try again.");
+        return;
+      }
+      setSentTo(normalized);
+      setPhase("sent");
+      setCode("");
+      setCooldown(40);
+    } catch {
+      setError("Network error. Please try again.");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function submitCode() {
+    if (code.length < 6 || verifying) return;
+    setVerifying(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/auth/guest-email/verify-otp", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: trimmed, code }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setError(json.error ?? "That code didn't work. Try again.");
+        setCode("");
+        return;
+      }
+      onVerified();
+    } catch {
+      setError("Network error. Please try again.");
+    } finally {
+      setVerifying(false);
+    }
+  }
+
+  if (verified) {
+    return (
+      <output className={styles.verifyDone}>
+        <Check size={15} aria-hidden="true" />
+        Email verified
+      </output>
+    );
+  }
+
+  if (phase === "idle") {
+    return (
+      <div className={styles.verifyIdle}>
+        <p className={styles.verifyHint}>
+          <ShieldCheck size={14} aria-hidden="true" />
+          We&apos;ll email a code to confirm this address before payment.
+        </p>
+        <button
+          type="button"
+          className={styles.verifySendBtn}
+          onClick={() => void sendCode()}
+          disabled={!emailValid || sending}
+        >
+          {sending ? "Sending…" : "Send code"}
+        </button>
+        {error && (
+          <p className={styles.verifyError} role="alert">
+            {error}
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.verifyPanel}>
+      <p className={styles.verifySentTo}>
+        Enter the 6-digit code sent to <strong>{sentTo}</strong>.
+      </p>
+      <div className={styles.verifyRow}>
+        <input
+          type="text"
+          inputMode="numeric"
+          autoComplete="one-time-code"
+          maxLength={6}
+          value={code}
+          onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              void submitCode();
+            }
+          }}
+          placeholder="000000"
+          className={styles.verifyCodeInput}
+          aria-label="Verification code"
+          aria-invalid={Boolean(error)}
+        />
+        <button
+          type="button"
+          className={styles.verifyConfirmBtn}
+          onClick={() => void submitCode()}
+          disabled={code.length < 6 || verifying}
+        >
+          {verifying ? "Verifying…" : "Verify"}
+        </button>
+      </div>
+      {error && (
+        <p className={styles.verifyError} role="alert">
+          {error}
+        </p>
+      )}
+      <button
+        type="button"
+        className={styles.verifyResendBtn}
+        onClick={() => void sendCode()}
+        disabled={cooldown > 0 || sending}
+      >
+        {cooldown > 0
+          ? `Resend code in ${cooldown}s`
+          : sending
+            ? "Sending…"
+            : "Resend code"}
+      </button>
+    </div>
+  );
+}
+
 export default function CheckoutPage() {
   const router = useRouter();
   const { isLoggedIn, userName, userEmail, setProvince } = useApp();
@@ -151,6 +330,8 @@ export default function CheckoutPage() {
   const [ordered, setOrdered] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [needsLogin, setNeedsLogin] = useState<{ email: string } | null>(null);
+  // Guests must verify their email (OTP) before the order is placed.
+  const [emailVerified, setEmailVerified] = useState(false);
   const [deliveryFee, setDeliveryFee] = useState(0);
   const [deliveryOutOfRange, setDeliveryOutOfRange] = useState(false);
   const [paymentReady, setPaymentReady] = useState(false);
@@ -179,6 +360,9 @@ export default function CheckoutPage() {
 
   const isDelivery = fulfillmentMode === "delivery";
   const displayAddress = pendingAddress ?? currentAddress;
+  // Once the order exists (payment pending), the contact details are committed to
+  // it — editing them would mislead, so the whole section freezes read-only.
+  const contactLocked = Boolean(pendingPayment);
 
   useEffect(() => {
     if (items.length === 0 && !placing && !ordered) router.replace("/app/cart");
@@ -323,6 +507,8 @@ export default function CheckoutPage() {
     setter: (v: string) => void,
   ) {
     setter(value);
+    // Changing the email invalidates any prior verification of the old address.
+    if (field === "email") setEmailVerified(false);
     if (contactErrors[field]) {
       const message = contactFieldError(field, {
         ...contactValues,
@@ -472,6 +658,11 @@ export default function CheckoutPage() {
             setNeedsLogin({ email: guestData.email ?? email.trim() });
             return;
           }
+          if (guestData.needsEmailVerification) {
+            setEmailVerified(false);
+            setError("Your email verification expired. Please verify again.");
+            return;
+          }
           if (!guestRes.ok) {
             setError(guestData.error ?? "Could not place your order.");
             return;
@@ -589,6 +780,12 @@ export default function CheckoutPage() {
           {/* Contact */}
           <section className={styles.formSection}>
             <h2 className={styles.formTitle}>Contact</h2>
+            {contactLocked && (
+              <p className={styles.contactLockNote}>
+                Locked in for this order. Cancel to start over with different
+                details.
+              </p>
+            )}
             {isLoggedIn ? (
               <p className={styles.orderingAs}>
                 Ordering as{" "}
@@ -619,6 +816,7 @@ export default function CheckoutPage() {
                       onBlur={() => touchContactField("firstName")}
                       autoComplete="given-name"
                       required
+                      disabled={contactLocked}
                       aria-invalid={Boolean(contactErrors.firstName)}
                       aria-describedby={
                         contactErrors.firstName
@@ -658,6 +856,7 @@ export default function CheckoutPage() {
                       onBlur={() => touchContactField("lastName")}
                       autoComplete="family-name"
                       required
+                      disabled={contactLocked}
                       aria-invalid={Boolean(contactErrors.lastName)}
                       aria-describedby={
                         contactErrors.lastName
@@ -680,35 +879,72 @@ export default function CheckoutPage() {
                   <label className={styles.label} htmlFor="checkout-email">
                     Email
                   </label>
-                  <input
-                    id="checkout-email"
-                    type="email"
-                    inputMode="email"
-                    className={
-                      contactErrors.email
-                        ? `${styles.input} ${styles.inputInvalid}`
-                        : styles.input
-                    }
-                    value={email}
-                    onChange={(e) =>
-                      updateContactField("email", e.target.value, setEmail)
-                    }
-                    onBlur={() => touchContactField("email")}
-                    autoComplete="email"
-                    required
-                    aria-invalid={Boolean(contactErrors.email)}
-                    aria-describedby={
-                      contactErrors.email ? "checkout-email-error" : undefined
-                    }
-                  />
-                  {contactErrors.email && (
-                    <p
-                      id="checkout-email-error"
-                      className={styles.fieldErrorInline}
-                      role="alert"
-                    >
-                      {contactErrors.email}
-                    </p>
+                  {emailVerified ? (
+                    <div className={styles.verifiedEmailRow}>
+                      <span className={styles.verifiedEmailMain}>
+                        <Check size={15} aria-hidden="true" />
+                        <span
+                          className={styles.verifiedEmailAddr}
+                          title={email}
+                        >
+                          {email}
+                        </span>
+                        <span className={styles.verifiedTag}>Verified</span>
+                      </span>
+                      {!contactLocked && (
+                        <button
+                          type="button"
+                          className={styles.changeEmailBtn}
+                          onClick={() => setEmailVerified(false)}
+                        >
+                          Change
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <>
+                      <input
+                        id="checkout-email"
+                        type="email"
+                        inputMode="email"
+                        className={
+                          contactErrors.email
+                            ? `${styles.input} ${styles.inputInvalid}`
+                            : styles.input
+                        }
+                        value={email}
+                        onChange={(e) =>
+                          updateContactField("email", e.target.value, setEmail)
+                        }
+                        onBlur={() => touchContactField("email")}
+                        autoComplete="email"
+                        required
+                        disabled={contactLocked}
+                        aria-invalid={Boolean(contactErrors.email)}
+                        aria-describedby={
+                          contactErrors.email
+                            ? "checkout-email-error"
+                            : undefined
+                        }
+                      />
+                      {contactErrors.email && (
+                        <p
+                          id="checkout-email-error"
+                          className={styles.fieldErrorInline}
+                          role="alert"
+                        >
+                          {contactErrors.email}
+                        </p>
+                      )}
+                      {!contactLocked && (
+                        <GuestEmailVerify
+                          email={email}
+                          emailValid={EMAIL_RE.test(email.trim())}
+                          verified={emailVerified}
+                          onVerified={() => setEmailVerified(true)}
+                        />
+                      )}
+                    </>
                   )}
                 </div>
                 <div className={styles.formGroup}>
@@ -736,6 +972,7 @@ export default function CheckoutPage() {
                     autoComplete="tel"
                     placeholder="(416) 555-0100"
                     required
+                    disabled={contactLocked}
                     aria-invalid={Boolean(contactErrors.phone)}
                     aria-describedby={
                       contactErrors.phone ? "checkout-phone-error" : undefined
@@ -913,7 +1150,8 @@ export default function CheckoutPage() {
                   placing ||
                   (pendingPayment ? !paymentReady : false) ||
                   !agreedPolicy ||
-                  (isDelivery && deliveryOutOfRange)
+                  (isDelivery && deliveryOutOfRange) ||
+                  (!isLoggedIn && !pendingPayment && !emailVerified)
                 }
                 onClick={() => void placeOrder()}
               >
@@ -923,6 +1161,12 @@ export default function CheckoutPage() {
                     ? `Pay $${formatCartMoney(grandTotal)}`
                     : "Continue to payment"}
               </button>
+
+              {!isLoggedIn && !pendingPayment && !emailVerified && (
+                <p className={styles.ctaGateHint}>
+                  Verify your email above to continue to payment.
+                </p>
+              )}
 
               <p className={styles.terms}>
                 By placing your order you agree to our{" "}

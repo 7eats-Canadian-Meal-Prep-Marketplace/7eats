@@ -25,6 +25,7 @@ import {
   useDishDetail,
 } from "./_dish-detail-context";
 import { PromotionsTab } from "./_promotions-tab";
+import { DishDetailSkeleton } from "./_skeletons";
 import styles from "./page.module.css";
 
 type Tab = "details" | "nutrition" | "promotions";
@@ -922,11 +923,7 @@ function DishDetailContent() {
   const [tab, setTab] = useState<Tab>("details");
 
   if (loading) {
-    return (
-      <div className={styles.page}>
-        <p className={styles.loadingNote}>Loading dish…</p>
-      </div>
-    );
+    return <DishDetailSkeleton />;
   }
 
   if (error) {

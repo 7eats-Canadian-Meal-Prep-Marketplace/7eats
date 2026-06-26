@@ -44,6 +44,7 @@ export async function GET(req: NextRequest, { params }: Params) {
           deliveryFeeSnapshot: orders.deliveryFeeSnapshot,
           currency: orders.currency,
           fulfillmentMode: orders.fulfillmentMode,
+          deliveryAddress: orders.deliveryAddress,
           pickupAt: orders.pickupAt,
           fulfillmentWindowStart: orders.fulfillmentWindowStart,
           fulfillmentWindowEnd: orders.fulfillmentWindowEnd,
