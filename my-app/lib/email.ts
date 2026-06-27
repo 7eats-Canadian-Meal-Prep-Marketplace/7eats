@@ -1,11 +1,13 @@
 import { Resend } from "resend";
-import { NOREPLY_FROM } from "@/lib/emails/base";
+import { type EmailSenderProfile, formatEmailFrom } from "@/lib/emails/base";
 
 export interface MailMessage {
   to: string;
   subject: string;
   text: string;
   html?: string;
+  /** Inbox sender label. Default `noreply`; use `team` for human onboarding mail. */
+  sender?: EmailSenderProfile;
 }
 
 /**
@@ -21,13 +23,14 @@ export async function sendMail({
   subject,
   text,
   html,
+  sender = "noreply",
 }: MailMessage): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) return;
 
   const resend = new Resend(apiKey);
   const { error } = await resend.emails.send({
-    from: process.env.RESEND_FROM_EMAIL ?? NOREPLY_FROM,
+    from: formatEmailFrom(sender),
     to,
     subject,
     text,

@@ -25,14 +25,9 @@ export function shouldSendOrderUpdateEmail(client: OrderNotifyClient): boolean {
 }
 
 export function shouldSendOrderUpdateSms(client: OrderNotifyClient): boolean {
-  if (client.notificationPreferences === undefined) return false;
+  if (!client.phoneVerified || !client.phone) return false;
   const { notifs, channels } = orderUpdatePrefs(client.notificationPreferences);
-  return (
-    notifs.order_updates &&
-    channels.sms &&
-    client.phoneVerified &&
-    Boolean(client.phone)
-  );
+  return notifs.order_updates && channels.sms;
 }
 
 export async function sendOrderUpdateSms(

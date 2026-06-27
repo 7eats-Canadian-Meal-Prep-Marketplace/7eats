@@ -127,6 +127,25 @@
   justify-content: space-between;
 }
 
+.cardSectionHead {
+  padding: 18px 22px 16px;
+  border-bottom: 1px solid var(--grey-200);
+}
+
+.cardSectionTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+
+.cardSectionDesc {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--grey-500);
+  line-height: 1.55;
+}
+
 .cardBody {
   padding: 18px 22px 22px;
 }
@@ -644,6 +663,25 @@
   opacity: 0.38;
 }
 
+.saveSuccessBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  margin: 0;
+  padding: 13px 22px;
+  background: var(--white);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 700;
+  font-style: normal;
+  border: 1.5px solid var(--grey-200);
+  border-radius: var(--radius-pill);
+  font-family: inherit;
+  letter-spacing: -0.01em;
+}
+
 .cardBody .saveBtn {
   width: 100%;
 }
@@ -820,7 +858,7 @@
 /* ─── Notifications ──────────────────────────────────────────────────────── */
 .notifRow {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 20px;
   padding: 16px 22px;
@@ -851,6 +889,10 @@
   line-height: 1.5;
 }
 
+.notifPhone {
+  white-space: nowrap;
+}
+
 /* ─── Toggle ─────────────────────────────────────────────────────────────── */
 .toggle {
   position: relative;
@@ -862,6 +904,7 @@
   padding: 0;
   cursor: pointer;
   flex-shrink: 0;
+  margin-top: 1px;
   transition: background 0.2s;
 }
 
@@ -1247,10 +1290,10 @@
 
 /* ─── Subscription cancel confirmation ───────────────────────────────────── */
 .subCancelConfirm {
-  padding: 14px;
-  border-top: 1px solid var(--grey-200);
+  padding: 18px 22px;
+  border: 1px solid var(--grey-200);
   background: var(--white);
-  border-radius: 0 0 10px 10px;
+  border-radius: 12px;
   display: flex;
   flex-direction: column;
   gap: 12px;

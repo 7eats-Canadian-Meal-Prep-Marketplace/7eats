@@ -170,6 +170,7 @@ export async function POST(req: Request) {
 async function confirmCook(to: string, firstName: string, kitchenName: string) {
   await sendMail({
     to,
+    sender: "team",
     subject: `We received your application, ${firstName}`,
     text: [
       `Hi ${firstName},`,

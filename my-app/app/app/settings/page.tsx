@@ -1,6 +1,6 @@
 "use client";
 
-import { CreditCard, Edit3, Lock, Plus, Trash2 } from "lucide-react";
+import { Check, CreditCard, Edit3, Lock, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -1430,11 +1430,13 @@ export default function SettingsPage() {
 
             {/* Communication channels */}
             <div className={styles.card}>
-              <div className={styles.cardTitle}>How we reach you</div>
-              <p className={styles.cardDesc}>
-                Keep at least one channel on. When order updates are enabled, we
-                use every channel you leave on.
-              </p>
+              <div className={styles.cardSectionHead}>
+                <div className={styles.cardSectionTitle}>How we reach you</div>
+                <p className={styles.cardSectionDesc}>
+                  Keep at least one channel on. When order updates are enabled,
+                  we use every channel you leave on.
+                </p>
+              </div>
               {notifLoading ? (
                 <div aria-busy="true">
                   {[0, 1].map((i) => (
@@ -1458,13 +1460,23 @@ export default function SettingsPage() {
                     <div className={styles.notifInfo}>
                       <span className={styles.notifLabel}>SMS</span>
                       <span className={styles.notifDesc}>
-                        {smsChannelOn && orderUpdatesOn
-                          ? phoneVerified && phoneDisplay
-                            ? `Order updates will be texted to ${phoneDisplay}.`
-                            : "Add and verify a phone number in Profile to receive texts."
-                          : smsChannelOn
-                            ? "Texts for tips and promotions when you have a verified phone."
-                            : "SMS is off. You will not receive text notifications."}
+                        {smsChannelOn && orderUpdatesOn ? (
+                          phoneVerified && phoneDisplay ? (
+                            <>
+                              Order updates will be texted to{" "}
+                              <span className={styles.notifPhone}>
+                                {phoneDisplay}
+                              </span>
+                              .
+                            </>
+                          ) : (
+                            "Add and verify a phone number in Profile to receive texts."
+                          )
+                        ) : smsChannelOn ? (
+                          "Texts for tips and promotions when you have a verified phone."
+                        ) : (
+                          "SMS is off. You will not receive text notifications."
+                        )}
                       </span>
                     </div>
                     <button
@@ -1539,48 +1551,48 @@ export default function SettingsPage() {
               )}
             </div>
 
-            {/* Save notifications button */}
-            <div className={styles.cardFooter}>
-              {orderUpdatesOffConfirm && (
-                <div className={styles.subCancelConfirm}>
-                  <div className={styles.subCancelConfirmText}>
-                    <span className={styles.subCancelConfirmTitle}>
-                      Turn off order updates?
-                    </span>
-                    <span className={styles.subCancelConfirmPolicy}>
-                      You will not get texts or emails when your order status
-                      changes. Open the app and check My orders so you do not
-                      miss pickup codes or delivery steps.
-                    </span>
-                  </div>
-                  <div className={styles.subCancelConfirmActions}>
-                    <button
-                      type="button"
-                      className={styles.subCancelKeep}
-                      onClick={() => setOrderUpdatesOffConfirm(false)}
-                    >
-                      Keep updates on
-                    </button>
-                    <button
-                      type="button"
-                      className={styles.subCancelConfirmBtn}
-                      onClick={() => void handleNotifSave(notifPrefs)}
-                      disabled={notifSaving}
-                    >
-                      {notifSaving ? "Saving…" : "Save without updates"}
-                    </button>
-                  </div>
+            {/* Save notifications */}
+            {orderUpdatesOffConfirm && (
+              <div className={styles.subCancelConfirm}>
+                <div className={styles.subCancelConfirmText}>
+                  <span className={styles.subCancelConfirmTitle}>
+                    Turn off order updates?
+                  </span>
+                  <span className={styles.subCancelConfirmPolicy}>
+                    You will not get texts or emails when your order status
+                    changes. Open the app and check My orders so you do not miss
+                    pickup codes or delivery steps.
+                  </span>
                 </div>
-              )}
-              {notifSaveError && (
-                <p className={styles.channelError}>{notifSaveError}</p>
-              )}
-              {notifSaveSuccess && (
-                <p className={styles.saveSuccessMsg}>
-                  Notification preferences saved.
-                </p>
-              )}
-              {!orderUpdatesOffConfirm && (
+                <div className={styles.subCancelConfirmActions}>
+                  <button
+                    type="button"
+                    className={styles.subCancelKeep}
+                    onClick={() => setOrderUpdatesOffConfirm(false)}
+                  >
+                    Keep updates on
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.subCancelConfirmBtn}
+                    onClick={() => void handleNotifSave(notifPrefs)}
+                    disabled={notifSaving}
+                  >
+                    {notifSaving ? "Saving…" : "Save without updates"}
+                  </button>
+                </div>
+              </div>
+            )}
+            {notifSaveError && (
+              <p className={styles.channelError}>{notifSaveError}</p>
+            )}
+            {!orderUpdatesOffConfirm &&
+              (notifSaveSuccess ? (
+                <output className={styles.saveSuccessBtn} aria-live="polite">
+                  <Check size={16} aria-hidden="true" />
+                  Saved
+                </output>
+              ) : (
                 <button
                   type="button"
                   className={styles.saveBtn}
@@ -1594,8 +1606,7 @@ export default function SettingsPage() {
                 >
                   {notifSaving ? "Saving…" : "Save notifications"}
                 </button>
-              )}
-            </div>
+              ))}
           </div>
         )}
       </div>

@@ -1,7 +1,26 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { orderSummaryTable } from "@/lib/emails/base";
+import { formatEmailFrom, orderSummaryTable } from "@/lib/emails/base";
+
+describe("formatEmailFrom", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("defaults to noreply display name", () => {
+    expect(formatEmailFrom()).toBe("noreply <noreply@7eats.ca>");
+  });
+
+  it("uses team display name for onboarding mail", () => {
+    expect(formatEmailFrom("team")).toBe("7eats Team <noreply@7eats.ca>");
+  });
+
+  it("respects RESEND_FROM_EMAIL for the mailbox address", () => {
+    vi.stubEnv("RESEND_FROM_EMAIL", "mail@7eats.ca");
+    expect(formatEmailFrom("noreply")).toBe("noreply <mail@7eats.ca>");
+  });
+});
 
 describe("htmlEmail", () => {
   afterEach(() => {

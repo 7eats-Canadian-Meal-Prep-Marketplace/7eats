@@ -15,6 +15,8 @@ type Preferences = {
   goals: string[];
   whyMealPrep: string[];
   hasPreferences: boolean;
+  clientStatus: string;
+  isGuest: boolean;
 };
 
 type LoadState =
@@ -54,6 +56,26 @@ function PreferenceSheetSkeleton() {
       ))}
     </>
   );
+}
+
+function emptyPreferencesCopy(prefs: Preferences): string {
+  if (prefs.clientStatus === "deleted") {
+    return "This account has been deleted. Their preferences are no longer available.";
+  }
+  if (prefs.isGuest) {
+    return "This customer checked out as a guest and has not shared meal prep preferences.";
+  }
+  return "They haven't shared any preferences yet.";
+}
+
+function footnoteCopy(prefs: Preferences): string {
+  if (prefs.clientStatus === "deleted") {
+    return "Account deleted · preferences removed";
+  }
+  if (prefs.isGuest) {
+    return "Read-only · guest checkout";
+  }
+  return "Read-only · set by the client";
 }
 
 export function PreferenceSheet({
@@ -145,7 +167,7 @@ export function PreferenceSheet({
           {state.status === "ready" &&
             (!state.prefs.hasPreferences ? (
               <p className={styles.muted}>
-                They haven&apos;t shared any preferences yet.
+                {emptyPreferencesCopy(state.prefs)}
               </p>
             ) : (
               SECTIONS.map(({ key, label }) => {
@@ -170,7 +192,9 @@ export function PreferenceSheet({
             ))}
         </div>
 
-        <p className={styles.footnote}>Read-only · set by the client</p>
+        {state.status === "ready" && (
+          <p className={styles.footnote}>{footnoteCopy(state.prefs)}</p>
+        )}
       </aside>
     </>
   );

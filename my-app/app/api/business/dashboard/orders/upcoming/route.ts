@@ -49,6 +49,9 @@ export async function GET(req: NextRequest) {
         customerName: authUser.name,
         customerFirstName: authUser.firstName,
         customerLastName: authUser.lastName,
+        clientAccountStatus: authUser.status,
+        isGuestCheckout: orders.isGuestCheckout,
+        clientIsGuestAccount: authUser.isGuestAccount,
       })
       .from(orders)
       .leftJoin(listings, eq(orders.listingId, listings.id))

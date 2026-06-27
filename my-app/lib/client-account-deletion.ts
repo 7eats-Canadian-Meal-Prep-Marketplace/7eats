@@ -15,7 +15,6 @@ import {
 import { auth } from "@/lib/auth";
 import {
   BLOCKING_ORDER_STATUSES,
-  DELETED_ACCOUNT_DISPLAY_NAME,
   tombstoneEmail,
 } from "@/lib/client-account-deletion-policy";
 import { sendAccountDeletedEmail } from "@/lib/emails/account-deletion";
@@ -153,9 +152,6 @@ export async function deleteClientAccount(userId: string): Promise<void> {
         status: "deleted",
         email: tombstoneEmail(userId),
         emailVerified: false,
-        name: DELETED_ACCOUNT_DISPLAY_NAME,
-        firstName: DELETED_ACCOUNT_DISPLAY_NAME,
-        lastName: null,
         phone: null,
         phoneVerified: false,
         image: null,

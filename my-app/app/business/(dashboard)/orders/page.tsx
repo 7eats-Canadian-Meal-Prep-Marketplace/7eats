@@ -9,8 +9,14 @@ import {
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { DELETED_ACCOUNT_DISPLAY_NAME } from "@/lib/client-account-deletion-policy";
 import { arrivalSlots } from "@/lib/delivery-arrival";
 import { canMarkReady, readyAvailableFrom } from "@/lib/order-readiness";
+import {
+  type CookClientOrderFields,
+  cookClientDisplayName,
+  isCookClientDeleted,
+} from "@/lib/orders/cook-client-display";
 import { PreferenceSheet } from "../_components/PreferenceSheet";
 import { Skeleton } from "../_skeleton";
 import styles from "./page.module.css";
@@ -43,13 +49,10 @@ type DishSnapshot = {
   sortOrder: number;
 };
 
-type Order = {
+type Order = CookClientOrderFields & {
   id: string;
   status: OrderStatus;
   clientId: string | null;
-  customerName: string | null;
-  customerFirstName: string | null;
-  customerLastName: string | null;
   listingTitle: string | null;
   // Deprecated order-level fields — null for current multi-dish orders.
   quantity: number | null;
@@ -59,8 +62,7 @@ type Order = {
   totalPrice: string;
   taxAmount: string | null;
   deliveryFeeSnapshot: string | null;
-  // Money breakdown from order_payments — only present on the order detail
-  // fetch, so the cook can see the platform cut and their net payout.
+  // Money breakdown from order_payments (list + detail).
   platformFeePct?: string | null;
   platformFeeAmount?: string | null;
   cookPayoutAmount?: string | null;
@@ -149,16 +151,25 @@ function dishesSubtotal(dishes: DishSnapshot[] | undefined): number {
   );
 }
 
-function customerDisplay(order: Order): string {
-  if (order.customerFirstName)
-    return (
-      order.customerFirstName +
-      (order.customerName?.split(" ")[1]
-        ? ` ${order.customerName.split(" ")[1]}`
-        : "")
-    );
-  if (order.customerName) return order.customerName;
-  return "Customer";
+function CustomerName({
+  order,
+  className,
+}: {
+  order: CookClientOrderFields;
+  className?: string;
+}) {
+  const name = cookClientDisplayName(order);
+  const deleted = isCookClientDeleted(order);
+  const showDeletedTag = deleted && name !== DELETED_ACCOUNT_DISPLAY_NAME;
+
+  return (
+    <span className={className}>
+      {name}
+      {showDeletedTag && (
+        <span className={styles.clientTagDeleted}>Deleted</span>
+      )}
+    </span>
+  );
 }
 
 const STATUS_LABEL: Record<OrderStatus, string> = {
@@ -610,14 +621,19 @@ function OrderDetail({
   const subtotal = dishesSubtotal(order.dishes);
   const deliveryFee = Number.parseFloat(order.deliveryFeeSnapshot ?? "0");
   const tax = Number.parseFloat(order.taxAmount ?? "0");
-  // Cook earnings: what's left after the platform cut and remitted tax.
-  // `cookPayoutAmount` is the authoritative snapshot (total − fee − tax).
-  const hasPayout = order.cookPayoutAmount != null;
+  const total = Number.parseFloat(order.totalPrice ?? "0");
   const platformFee = Number.parseFloat(order.platformFeeAmount ?? "0");
   const feePctLabel =
     order.platformFeePct != null
       ? `${Number.parseFloat(order.platformFeePct)}%`
       : null;
+  const cookEarns =
+    order.cookPayoutAmount != null
+      ? Number.parseFloat(order.cookPayoutAmount)
+      : Number.isFinite(total)
+        ? Math.max(0, Math.round((total - platformFee - tax) * 100) / 100)
+        : null;
+  const showEarnBreakdown = order.cookPayoutAmount != null;
   const totalItems =
     order.dishes?.reduce((sum, d) => sum + d.quantity, 0) ??
     order.itemCount ??
@@ -680,8 +696,11 @@ function OrderDetail({
 
       <div className={styles.detailHeader}>
         <div className={styles.detailHeaderTop}>
-          <h2 className={styles.detailTitle} title={customerDisplay(order)}>
-            {customerDisplay(order)}
+          <h2
+            className={styles.detailTitle}
+            title={cookClientDisplayName(order)}
+          >
+            <CustomerName order={order} />
           </h2>
           <StatusBadge status={order.status} />
         </div>
@@ -788,42 +807,40 @@ function OrderDetail({
           <div
             className={`${styles.receiptTotalRow} ${styles.receiptGrandTotal}`}
           >
-            <span>Total</span>
+            <span>Customer total</span>
             <span>{money(order.totalPrice)}</span>
           </div>
-        </div>
-
-        {hasPayout && (
-          <div className={styles.payout}>
-            <p className={styles.payoutLabel}>Your earnings</p>
-            <div className={styles.payoutRows}>
-              <div className={styles.payoutRow}>
-                <span>
-                  Platform fee{feePctLabel ? ` (${feePctLabel})` : ""}
-                </span>
-                <span className={styles.payoutDeduct}>
-                  &minus;{money(platformFee)}
-                </span>
-              </div>
-              {tax > 0 && (
-                <div className={styles.payoutRow}>
-                  <span>Tax (collected &amp; remitted)</span>
-                  <span className={styles.payoutDeduct}>
-                    &minus;{money(tax)}
-                  </span>
-                </div>
+          {cookEarns != null && (
+            <>
+              {showEarnBreakdown && (
+                <>
+                  <div className={styles.receiptTotalRow}>
+                    <span>
+                      Platform fee{feePctLabel ? ` (${feePctLabel})` : ""}
+                    </span>
+                    <span className={styles.payoutDeduct}>
+                      &minus;{money(platformFee)}
+                    </span>
+                  </div>
+                  {tax > 0 && (
+                    <div className={styles.receiptTotalRow}>
+                      <span>Tax remitted</span>
+                      <span className={styles.payoutDeduct}>
+                        &minus;{money(tax)}
+                      </span>
+                    </div>
+                  )}
+                </>
               )}
-              <div className={`${styles.payoutRow} ${styles.payoutNet}`}>
+              <div
+                className={`${styles.receiptTotalRow} ${styles.cookEarnRow}`}
+              >
                 <span>You earn</span>
-                <span>{money(order.cookPayoutAmount)}</span>
+                <span>{money(cookEarns)}</span>
               </div>
-            </div>
-            <p className={styles.payoutNote}>
-              Tax is collected from the customer and remitted on your behalf, so
-              it isn&apos;t part of your earnings.
-            </p>
-          </div>
-        )}
+            </>
+          )}
+        </div>
       </div>
 
       {order.notes && (
@@ -942,7 +959,7 @@ function OrderDetail({
 
       {order.status === "fulfilled" &&
         (justFulfilled ? (
-          <OrderComplete customerName={customerDisplay(order)} />
+          <OrderComplete customerName={cookClientDisplayName(order)} />
         ) : (
           <div className={styles.completedCalm}>
             <CheckCircle2 size={16} aria-hidden="true" />
@@ -988,7 +1005,7 @@ function OrderDetail({
 
       <PreferenceSheet
         clientId={order.clientId}
-        clientName={customerDisplay(order)}
+        clientName={cookClientDisplayName(order)}
         open={prefsOpen}
         onClose={() => setPrefsOpen(false)}
       />
@@ -1015,7 +1032,7 @@ function OrderListRow({
       onClick={onSelect}
     >
       <div className={styles.listRowLeft}>
-        <span className={styles.listRowCustomer}>{customerDisplay(order)}</span>
+        <CustomerName order={order} className={styles.listRowCustomer} />
         <span className={styles.listRowMeta}>
           {formatTime(order)} &middot;{" "}
           <span className={styles.listRowQty}>
@@ -1107,6 +1124,25 @@ function DetailSkeleton() {
             </div>
           ))}
         </div>
+        <div
+          style={{
+            marginTop: 18,
+            paddingTop: 14,
+            borderTop: "1px solid var(--grey-200)",
+            display: "flex",
+            flexDirection: "column",
+            gap: 10,
+          }}
+        >
+          <Skeleton width="100%" height={14} radius={6} />
+          <Skeleton width="100%" height={14} radius={6} />
+          <Skeleton
+            width="55%"
+            height={20}
+            radius={6}
+            style={{ marginTop: 4 }}
+          />
+        </div>
       </div>
     </div>
   );
@@ -1152,9 +1188,13 @@ export default function OrdersPage() {
     }
   }, []);
 
-  // Fetch order detail (with dishes) when selection changes
+  // Fetch order detail (with dishes + payout) when selection changes.
   useEffect(() => {
-    if (!focusedId) return;
+    if (!focusedId) {
+      setFocusedDetail(null);
+      return;
+    }
+    setFocusedDetail(null);
     setDetailLoading(true);
     fetch(`/api/business/dashboard/orders/${focusedId}`)
       .then((r) => r.json())

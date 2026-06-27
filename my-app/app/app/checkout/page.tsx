@@ -23,7 +23,7 @@ import { useApp } from "../_app-context";
 import { type DeliveryAddress, useCart } from "../_cart-context";
 import { useServiceAddress } from "../_service-address-context";
 import { Skeleton } from "../_skeleton";
-import { calcTax, formatCartMoney, getTaxLabel } from "../cart/_cart-tax";
+import { calcTax, formatCartMoney } from "../cart/_cart-tax";
 import {
   type CheckoutPaymentHandle,
   CheckoutPaymentSection,
@@ -456,17 +456,13 @@ export default function CheckoutPage() {
     };
   }, [subtotal]);
 
-  const { tax, grandTotal, taxLabel } = useMemo(() => {
+  const grandTotal = useMemo(() => {
     const taxAmount =
       Math.round(calcTax(subtotal + deliveryFee, cookProvince) * 100) / 100;
     const total =
       Math.round((subtotal + deliveryFee + taxAmount - discount.amount) * 100) /
       100;
-    return {
-      tax: taxAmount,
-      grandTotal: Math.max(0, total),
-      taxLabel: getTaxLabel(cookProvince),
-    };
+    return Math.max(0, total);
   }, [subtotal, deliveryFee, cookProvince, discount.amount]);
 
   const refundPickupAt = useMemo(
@@ -1236,14 +1232,6 @@ export default function CheckoutPage() {
                     </span>
                     <span className={styles.summaryRowVal}>
                       −${formatCartMoney(discount.amount)}
-                    </span>
-                  </div>
-                )}
-                {tax > 0 && (
-                  <div className={styles.summaryRow}>
-                    <span className={styles.summaryRowLabel}>{taxLabel}</span>
-                    <span className={styles.summaryRowVal}>
-                      ${formatCartMoney(tax)}
                     </span>
                   </div>
                 )}

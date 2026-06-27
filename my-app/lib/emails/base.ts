@@ -35,6 +35,22 @@ const COLOR = {
 export const CONTACT_EMAIL = "team@7eats.ca";
 export const NOREPLY_FROM = "noreply@7eats.ca";
 
+/** Resend From header display names — same mailbox, different inbox label. */
+export type EmailSenderProfile = "noreply" | "team";
+
+const SENDER_DISPLAY_NAMES: Record<EmailSenderProfile, string> = {
+  noreply: "noreply",
+  team: "7eats Team",
+};
+
+/** Builds a Resend-compatible From value, e.g. `noreply <noreply@7eats.ca>`. */
+export function formatEmailFrom(
+  profile: EmailSenderProfile = "noreply",
+  email = process.env.RESEND_FROM_EMAIL ?? NOREPLY_FROM,
+): string {
+  return `${SENDER_DISPLAY_NAMES[profile]} <${email}>`;
+}
+
 // The brand wordmark, served as a PNG (email clients don't render SVG). Built
 // from public/7eats-logo.svg via scripts/make-email-logo.mjs; intrinsic 113x64.
 // Email clients must fetch images from the public internet, so local app URLs

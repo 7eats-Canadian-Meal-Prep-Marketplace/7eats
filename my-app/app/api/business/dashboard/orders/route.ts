@@ -3,7 +3,13 @@ import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getCookId, unauthorized } from "@/app/api/business/_lib/cook-auth";
 import { db } from "@/db";
-import { authUser, listings, orderDishes, orders } from "@/db/schema";
+import {
+  authUser,
+  listings,
+  orderDishes,
+  orderPayments,
+  orders,
+} from "@/db/schema";
 
 const querySchema = z.object({
   status: z
@@ -66,6 +72,8 @@ export async function GET(req: NextRequest) {
             WHERE ${orderDishes.orderId} = ${orders.id}
           )`,
           totalPrice: orders.totalPrice,
+          taxAmount: orders.taxAmount,
+          deliveryFeeSnapshot: orders.deliveryFeeSnapshot,
           pickupAt: orders.pickupAt,
           fulfillmentWindowStart: orders.fulfillmentWindowStart,
           fulfillmentWindowEnd: orders.fulfillmentWindowEnd,
@@ -87,10 +95,23 @@ export async function GET(req: NextRequest) {
           customerName: authUser.name,
           customerFirstName: authUser.firstName,
           customerLastName: authUser.lastName,
+          clientAccountStatus: authUser.status,
+          isGuestCheckout: orders.isGuestCheckout,
+          clientIsGuestAccount: authUser.isGuestAccount,
+          platformFeePct: orderPayments.platformFeePct,
+          platformFeeAmount: orderPayments.platformFeeAmount,
+          cookPayoutAmount: orderPayments.cookPayoutAmount,
         })
         .from(orders)
         .leftJoin(listings, eq(orders.listingId, listings.id))
         .leftJoin(authUser, eq(orders.clientId, authUser.id))
+        .leftJoin(
+          orderPayments,
+          and(
+            eq(orderPayments.orderId, orders.id),
+            eq(orderPayments.type, "full"),
+          ),
+        )
         .where(where)
         .orderBy(desc(orders.createdAt))
         .limit(limit)
