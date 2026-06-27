@@ -22,6 +22,7 @@ export type GuestOrderView = {
   fulfillmentMode: string | null;
   timingLabel: string;
   notes: string | null;
+  deliveryDetails: string | null;
   cancellationAllowed: boolean;
   cancellable: boolean;
   refundEligible: boolean;
@@ -60,6 +61,7 @@ export async function getGuestOrderByToken(
       taxAmount: orders.taxAmount,
       taxProvince: orders.taxProvince,
       notes: orders.notes,
+      deliveryDetails: orders.deliveryDetails,
       cancellationAllowed: orders.cancellationAllowed,
       guestAccessTokenHash: orders.guestAccessTokenHash,
       createdAt: orders.createdAt,
@@ -171,6 +173,7 @@ export async function getGuestOrderByToken(
       fulfillmentMode,
     }),
     notes: row.notes,
+    deliveryDetails: row.deliveryDetails,
     ...(() => {
       const cancelPolicy = getClientCancelPolicy({
         status: row.status,

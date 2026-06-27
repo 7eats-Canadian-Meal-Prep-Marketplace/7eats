@@ -39,6 +39,25 @@ vi.mock("@/lib/mapbox-directions", () => ({
 import { createOrderBodySchema } from "@/lib/orders/place-order";
 
 describe("createOrderBodySchema", () => {
+  it("accepts optional delivery details for delivery orders", () => {
+    const parsed = createOrderBodySchema.safeParse({
+      cookId: "b2c3d4e5-f6a7-4b8c-9d0e-f1a2b3c4d5e6",
+      dishes: [
+        {
+          dishId: "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+          quantity: 1,
+        },
+      ],
+      fulfillmentMode: "delivery",
+      deliveryDetails: "Ring the side doorbell",
+    });
+
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.deliveryDetails).toBe("Ring the side doorbell");
+    }
+  });
+
   it("strips client-supplied pickupAt so the server owns order timing", () => {
     const parsed = createOrderBodySchema.safeParse({
       cookId: "b2c3d4e5-f6a7-4b8c-9d0e-f1a2b3c4d5e6",

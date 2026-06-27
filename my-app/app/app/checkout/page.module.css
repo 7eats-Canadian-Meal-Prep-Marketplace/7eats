@@ -325,6 +325,10 @@
   margin-bottom: 0;
 }
 
+.deliveryDetailsGroup {
+  margin-top: 18px;
+}
+
 .label {
   font-size: 12px;
   font-weight: 700;
@@ -367,7 +371,7 @@
   padding: 12px 14px;
   border: 1.5px solid var(--grey-200);
   border-radius: var(--radius-sm, 8px);
-  font-size: 15px;
+  font-size: 16px;
   font-family: inherit;
   color: var(--ink);
   background: var(--white);
@@ -377,11 +381,16 @@
   transition: border-color 0.15s;
 }
 
+.textarea::placeholder {
+  color: var(--grey-300);
+}
+
 .textarea:focus {
   border-color: var(--ink);
 }
 
-.noteDisclaimer {
+.noteDisclaimer,
+.fieldDisclaimer {
   margin: 8px 0 0;
   font-size: 12px;
   line-height: 1.45;

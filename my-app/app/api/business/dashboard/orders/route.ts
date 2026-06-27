@@ -73,6 +73,7 @@ export async function GET(req: NextRequest) {
           fulfilledAt: orders.fulfilledAt,
           cancelledAt: orders.cancelledAt,
           notes: orders.notes,
+          deliveryDetails: orders.deliveryDetails,
           createdAt: orders.createdAt,
           pickupCodeExpiresAt: orders.pickupCodeExpiresAt,
           pickupCodeVerifiedAt: orders.pickupCodeVerifiedAt,

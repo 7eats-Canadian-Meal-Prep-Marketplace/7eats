@@ -70,6 +70,7 @@ type Order = {
   fulfillmentWindowStart: string | null;
   fulfillmentWindowEnd: string | null;
   notes: string | null;
+  deliveryDetails: string | null;
   pickupCodeAttempts: number;
   createdAt: string;
   dishes?: DishSnapshot[];
@@ -714,6 +715,11 @@ function OrderDetail({
                   </>
                 )}
               </p>
+              {order.deliveryDetails && (
+                <p className={styles.deliveryDetailsText}>
+                  {order.deliveryDetails}
+                </p>
+              )}
             </div>
           );
         })()}

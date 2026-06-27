@@ -48,6 +48,7 @@ export const createOrderBodySchema = z.object({
   customerLat: z.number().min(-90).max(90).optional(),
   customerLng: z.number().min(-180).max(180).optional(),
   notes: z.string().max(500).optional(),
+  deliveryDetails: z.string().max(500).optional(),
 });
 
 export type CreateOrderBody = z.infer<typeof createOrderBodySchema>;
@@ -84,6 +85,7 @@ export async function placeClientOrder(
     customerLat,
     customerLng,
     notes,
+    deliveryDetails,
   } = body;
 
   const [cook] = await db
@@ -457,6 +459,10 @@ export async function placeClientOrder(
             : null,
         deliveryDistanceKm: deliveryDistanceKm > 0 ? deliveryDistanceKm : null,
         notes: notes ?? null,
+        deliveryDetails:
+          fulfillmentMode === "delivery"
+            ? deliveryDetails?.trim() || null
+            : null,
         confirmationCode: guestMeta?.confirmationCode ?? null,
         guestAccessTokenHash: guestMeta?.guestAccessTokenHash ?? null,
         isGuestCheckout,

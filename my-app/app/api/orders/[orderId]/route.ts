@@ -53,6 +53,7 @@ export async function GET(req: NextRequest, { params }: Params) {
         fulfillmentWindowStart: orders.fulfillmentWindowStart,
         fulfillmentWindowEnd: orders.fulfillmentWindowEnd,
         notes: orders.notes,
+        deliveryDetails: orders.deliveryDetails,
         createdAt: orders.createdAt,
         pickupCode: orders.pickupCode,
         fulfillmentMode: orders.fulfillmentMode,
@@ -172,6 +173,7 @@ export async function GET(req: NextRequest, { params }: Params) {
       fulfillmentWindowStart: fulfillmentWindowStartIso,
       fulfillmentWindowEnd: fulfillmentWindowEndIso,
       notes: row.notes ?? null,
+      deliveryDetails: row.deliveryDetails ?? null,
       createdAt:
         row.createdAt instanceof Date
           ? row.createdAt.toISOString()

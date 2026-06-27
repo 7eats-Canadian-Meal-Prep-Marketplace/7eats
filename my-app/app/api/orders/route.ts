@@ -76,6 +76,7 @@ export async function GET(req: NextRequest) {
         fulfillmentWindowStart: orders.fulfillmentWindowStart,
         fulfillmentWindowEnd: orders.fulfillmentWindowEnd,
         notes: orders.notes,
+        deliveryDetails: orders.deliveryDetails,
         createdAt: orders.createdAt,
         pickupCode: orders.pickupCode,
         cookFirstName: authUser.firstName,
@@ -154,6 +155,7 @@ export async function GET(req: NextRequest) {
         fulfillmentWindowStart: fulfillmentWindowStartIso,
         fulfillmentWindowEnd: fulfillmentWindowEndIso,
         notes: r.notes ?? null,
+        deliveryDetails: r.deliveryDetails ?? null,
         createdAt:
           r.createdAt instanceof Date ? r.createdAt.toISOString() : r.createdAt,
         pickupCode: r.status === "ready" ? (r.pickupCode ?? null) : null,

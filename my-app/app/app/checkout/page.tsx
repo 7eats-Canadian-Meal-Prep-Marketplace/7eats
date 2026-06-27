@@ -11,7 +11,7 @@ import {
   nextFulfillmentSlotIso,
 } from "@/lib/cook-card-schedule";
 import { useGuestAddress } from "@/lib/hooks/use-guest-address";
-import { SPECIAL_REQUESTS_DISCLAIMER } from "@/lib/orders/special-requests-copy";
+import { DELIVERY_HANDOFF_DISCLAIMER } from "@/lib/orders/delivery-details-copy";
 import {
   formatPhoneDisplay,
   isValidNorthAmericanPhone,
@@ -314,10 +314,11 @@ export default function CheckoutPage() {
     fulfillmentMode,
     deliveryAddress,
     notes,
+    deliveryDetails,
     cancellationAllowed,
     leadTime,
     setDeliveryAddress,
-    setNotes,
+    setDeliveryDetails,
     clearCart,
   } = useCart();
 
@@ -339,7 +340,9 @@ export default function CheckoutPage() {
   const [addressInput, setAddressInput] = useState("");
   const [pendingAddress, setPendingAddress] =
     useState<NormalizedAddress | null>(null);
-  const [noteDraft, setNoteDraft] = useState(notes ?? "");
+  const [deliveryDetailsDraft, setDeliveryDetailsDraft] = useState(
+    deliveryDetails ?? "",
+  );
   const [contactErrors, setContactErrors] = useState<ContactErrors>({});
   const [discount, setDiscount] = useState<{
     amount: number;
@@ -349,9 +352,6 @@ export default function CheckoutPage() {
   const [deliveryWindows, setDeliveryWindows] = useState<FulfillmentWindow[]>(
     [],
   );
-  const [acceptsSpecialRequests, setAcceptsSpecialRequests] = useState<
-    boolean | null
-  >(null);
   const [pendingPayment, setPendingPayment] = useState<{
     orderId: string;
     clientSecret: string;
@@ -369,8 +369,8 @@ export default function CheckoutPage() {
   }, [items.length, placing, ordered, router]);
 
   useEffect(() => {
-    setNoteDraft(notes ?? "");
-  }, [notes]);
+    setDeliveryDetailsDraft(deliveryDetails ?? "");
+  }, [deliveryDetails]);
 
   useEffect(() => {
     if (!cookId) return;
@@ -382,7 +382,6 @@ export default function CheckoutPage() {
         const cook = json.data.cook;
         setPickupWindows(cook.pickupWindows ?? []);
         setDeliveryWindows(cook.deliveryWindows ?? []);
-        setAcceptsSpecialRequests(Boolean(cook.acceptsSpecialRequests));
       })
       .catch(() => {});
     return () => {
@@ -624,7 +623,10 @@ export default function CheckoutPage() {
     if (!pendingPayment) {
       setPlacing(true);
       try {
-        if (notes !== noteDraft) setNotes(noteDraft.trim() || null);
+        const trimmedDeliveryDetails = deliveryDetailsDraft.trim();
+        if (isDelivery && trimmedDeliveryDetails !== (deliveryDetails ?? "")) {
+          setDeliveryDetails(trimmedDeliveryDetails || null);
+        }
 
         const orderPayload = {
           cookId,
@@ -637,7 +639,10 @@ export default function CheckoutPage() {
           deliveryAddress: isDelivery ? deliveryAddress : undefined,
           customerLat: isDelivery ? displayAddress?.lat : undefined,
           customerLng: isDelivery ? displayAddress?.lng : undefined,
-          notes: (noteDraft.trim() || notes) ?? undefined,
+          notes: notes ?? undefined,
+          deliveryDetails: isDelivery
+            ? trimmedDeliveryDetails || undefined
+            : undefined,
         };
 
         if (!isLoggedIn) {
@@ -1057,34 +1062,30 @@ export default function CheckoutPage() {
                   menu.
                 </p>
               )}
+              <div
+                className={`${styles.formGroup} ${styles.deliveryDetailsGroup}`}
+              >
+                <label
+                  className={styles.label}
+                  htmlFor="checkout-delivery-details"
+                >
+                  Delivery details (optional)
+                </label>
+                <textarea
+                  id="checkout-delivery-details"
+                  className={styles.textarea}
+                  rows={3}
+                  maxLength={500}
+                  placeholder="Ring doorbell, side entrance, buzzer code…"
+                  value={deliveryDetailsDraft}
+                  onChange={(e) => setDeliveryDetailsDraft(e.target.value)}
+                />
+                <p className={styles.fieldDisclaimer}>
+                  {DELIVERY_HANDOFF_DISCLAIMER}
+                </p>
+              </div>
             </section>
           )}
-
-          <section className={styles.formSection}>
-            <h2 className={styles.formTitle}>Note for the cook</h2>
-            <div className={styles.formGroup}>
-              <label className={styles.label} htmlFor="checkout-note">
-                Special request (optional)
-              </label>
-              <textarea
-                id="checkout-note"
-                className={styles.textarea}
-                rows={3}
-                placeholder={
-                  acceptsSpecialRequests === false
-                    ? "Allergies, dietary restrictions, health-related needs…"
-                    : "Allergies, spice level, pickup instructions…"
-                }
-                value={noteDraft}
-                onChange={(e) => setNoteDraft(e.target.value)}
-              />
-              {acceptsSpecialRequests === false && (
-                <p className={styles.noteDisclaimer}>
-                  {SPECIAL_REQUESTS_DISCLAIMER}
-                </p>
-              )}
-            </div>
-          </section>
 
           {/* Payment — only appears once the order total is locked in and a
               secure payment session exists (after "Continue to payment"), so

@@ -86,6 +86,8 @@ export const orders = pgTable(
     }),
     lateCancelFee: numeric("late_cancel_fee", { precision: 10, scale: 2 }),
     notes: text("notes"),
+    /** Drop-off instructions from the customer (delivery only). */
+    deliveryDetails: text("delivery_details"),
     // Deprecated: subscriptions removed for launch. Plain uuid kept for history.
     subscriptionId: uuid("subscription_id"),
     pickupCodeHash: text("pickup_code_hash"),

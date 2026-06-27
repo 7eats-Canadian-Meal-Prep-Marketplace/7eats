@@ -120,6 +120,13 @@
       "when": 1783500000000,
       "tag": "0016_review_keep_poster_name",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1783600000000,
+      "tag": "0017_order_delivery_details",
+      "breakpoints": true
     }
   ]
 }

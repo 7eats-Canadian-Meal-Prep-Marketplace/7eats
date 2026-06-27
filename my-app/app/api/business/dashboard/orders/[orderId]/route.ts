@@ -51,6 +51,7 @@ export async function GET(req: NextRequest, { params }: Params) {
           fulfilledAt: orders.fulfilledAt,
           cancelledAt: orders.cancelledAt,
           notes: orders.notes,
+          deliveryDetails: orders.deliveryDetails,
           listingId: orders.listingId,
           listingTitle: listings.title,
           clientId: orders.clientId,
