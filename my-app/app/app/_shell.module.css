@@ -845,6 +845,12 @@
   color: var(--ink);
 }
 
+@media (max-width: 767px) {
+  .menuItemDesktopOnly {
+    display: none;
+  }
+}
+
 /* ─── Guest actions (logged-out header, desktop only) ───────────────────────── */
 .guestActions {
   display: none;

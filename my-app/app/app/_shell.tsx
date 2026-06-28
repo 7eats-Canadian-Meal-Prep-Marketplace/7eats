@@ -173,8 +173,21 @@ function AddressModal({
 }
 
 const PROFILE_MENU_LINKS = [
-  { href: "/app/settings", label: "Settings", Icon: Settings },
-];
+  {
+    href: "/app/search?all=1",
+    label: "Search",
+    Icon: Search,
+    desktopOnly: true,
+  },
+  { href: "/app/saved", label: "Favourites", Icon: Heart, desktopOnly: true },
+  { href: "/app/orders", label: "Orders", Icon: Package, desktopOnly: true },
+  {
+    href: "/app/settings",
+    label: "Account",
+    Icon: Settings,
+    desktopOnly: true,
+  },
+] as const;
 
 function ProfileMenu({
   initials,
@@ -272,11 +285,11 @@ function ProfileMenu({
             </div>
           </div>
           <div className={styles.menuDivider} />
-          {PROFILE_MENU_LINKS.map(({ href, label, Icon }) => (
+          {PROFILE_MENU_LINKS.map(({ href, label, Icon, desktopOnly }) => (
             <Link
               key={href}
               href={href}
-              className={styles.menuItem}
+              className={`${styles.menuItem} ${desktopOnly ? styles.menuItemDesktopOnly : ""}`}
               role="menuitem"
               onClick={() => setOpen(false)}
             >
