@@ -9,6 +9,7 @@ import {
   orders,
   reviews,
 } from "@/db/schema";
+import { formatPickupLocation } from "@/lib/address";
 import { auth } from "@/lib/auth";
 import {
   formatOrderTimingDate,
@@ -67,7 +68,11 @@ export async function GET(req: NextRequest, { params }: Params) {
         cookPhotoUrl: cookProfiles.photoUrl,
         cookBannerUrl: cookProfiles.bannerUrl,
         cookNeighborhood: authUser.neighborhood,
-        cookPickupAddress: cookProfiles.pickupAddress,
+        cookPickupStreet: cookProfiles.pickupStreet,
+        cookPickupUnit: cookProfiles.pickupUnit,
+        cookPickupCity: cookProfiles.pickupCity,
+        cookPickupProvince: cookProfiles.pickupProvince,
+        cookPickupPostal: cookProfiles.pickupPostal,
         cookLeadTime: cookProfiles.leadTime,
       })
       .from(orders)
@@ -146,7 +151,19 @@ export async function GET(req: NextRequest, { params }: Params) {
           .join(", ");
       }
     } else {
-      pickupAddress = row.cookPickupAddress ?? row.cookNeighborhood ?? null;
+      // Compose the cook's real pickup address from the structured fields the
+      // onboarding/settings flow actually writes; fall back to neighborhood
+      // (city-level) only when no street address is on file.
+      pickupAddress =
+        formatPickupLocation({
+          street: row.cookPickupStreet,
+          unit: row.cookPickupUnit,
+          city: row.cookPickupCity,
+          province: row.cookPickupProvince,
+          postal: row.cookPickupPostal,
+        }) ??
+        row.cookNeighborhood ??
+        null;
     }
 
     const cancelPolicy = getClientCancelPolicy({

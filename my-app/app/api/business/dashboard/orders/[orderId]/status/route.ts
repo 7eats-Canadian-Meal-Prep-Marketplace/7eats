@@ -11,6 +11,7 @@ import {
   orderPayments,
   orders,
 } from "@/db/schema";
+import { formatPickupLocation } from "@/lib/address";
 import { isArrivalWithinWindow } from "@/lib/delivery-arrival";
 import {
   sendOrderCancelledByCookEmailToClient,
@@ -386,6 +387,11 @@ export async function PATCH(req: NextRequest, { params }: Params) {
         fulfillmentWindowStart: orders.fulfillmentWindowStart,
         fulfillmentWindowEnd: orders.fulfillmentWindowEnd,
         cookName: cookProfiles.displayName,
+        cookPickupStreet: cookProfiles.pickupStreet,
+        cookPickupUnit: cookProfiles.pickupUnit,
+        cookPickupCity: cookProfiles.pickupCity,
+        cookPickupProvince: cookProfiles.pickupProvince,
+        cookPickupPostal: cookProfiles.pickupPostal,
       })
         .from(orders)
         .innerJoin(authUser, eq(orders.clientId, authUser.id))
@@ -419,6 +425,16 @@ export async function PATCH(req: NextRequest, { params }: Params) {
             row.fulfillmentMode === "delivery"
               ? row.fulfillmentMode
               : null;
+          const pickupLocation =
+            fulfillmentMode === "pickup"
+              ? formatPickupLocation({
+                  street: row.cookPickupStreet,
+                  unit: row.cookPickupUnit,
+                  city: row.cookPickupCity,
+                  province: row.cookPickupProvince,
+                  postal: row.cookPickupPostal,
+                })
+              : null;
           const orderData = {
             id: orderId,
             listingTitle: orderedDishes.map((d) => d.name).join(", "),
@@ -427,6 +443,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
             currency: row.currency,
             pickupAt: row.pickupAt,
             fulfillmentMode,
+            pickupLocation,
             fulfillmentWindowStart: row.fulfillmentWindowStart,
             fulfillmentWindowEnd: row.fulfillmentWindowEnd,
             items: orderedDishes.map((d) => ({

@@ -74,9 +74,10 @@ function emailAssetOrigin(): string {
 
 const LOGO_URL = `${emailAssetOrigin()}/7eats-logo-email.png`;
 
-// Minimal HTML escaping for untrusted, plain-text values (names, dish titles)
-// that get dropped into a markup context such as the headline.
-function escapeHtml(value: string): string {
+// Minimal HTML escaping for untrusted, plain-text values (names, dish titles,
+// cook-entered addresses) that get dropped into a markup context such as the
+// headline or a details-table value.
+export function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")

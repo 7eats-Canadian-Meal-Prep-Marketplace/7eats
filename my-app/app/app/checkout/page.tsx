@@ -1,6 +1,12 @@
 "use client";
 
-import { ArrowLeft, Check, ShieldCheck } from "lucide-react";
+import {
+  ArrowLeft,
+  Check,
+  MapPin,
+  ShieldCheck,
+  UtensilsCrossed,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -292,6 +298,61 @@ function GuestEmailVerify({
   );
 }
 
+type UnavailableCartItem = {
+  dishId: string;
+  name: string;
+};
+
+function UnavailableMealsAlert({
+  items,
+  cookId,
+}: {
+  items: UnavailableCartItem[];
+  cookId: string | null;
+}) {
+  if (items.length === 0) return null;
+
+  const menuHref = cookId ? `/app/cooks/${cookId}/menu` : "/app/browse";
+
+  return (
+    <div className={styles.unavailableAlert} role="alert">
+      <div className={styles.unavailableAlertHead}>
+        <div className={styles.unavailableAlertIcon} aria-hidden="true">
+          <UtensilsCrossed size={17} strokeWidth={1.75} />
+        </div>
+        <p className={styles.unavailableAlertTitle}>
+          {items.length === 1
+            ? "A meal in your cart is no longer available"
+            : "Some meals in your cart are no longer available"}
+        </p>
+      </div>
+      <div className={styles.unavailableAlertBody}>
+        <ul className={styles.unavailableAlertTags}>
+          {items.map((item) => (
+            <li key={item.dishId} className={styles.unavailableAlertTag}>
+              {item.name}
+            </li>
+          ))}
+        </ul>
+        <p className={styles.unavailableAlertCopy}>
+          The cook paused {items.length === 1 ? "this meal" : "these meals"}{" "}
+          while you were checking out. Remove{" "}
+          {items.length === 1 ? "it" : "them"} from your cart or pick something
+          else to continue.
+        </p>
+        <div className={styles.unavailableAlertActions}>
+          <Link href="/app/cart" className={styles.unavailableAlertPrimary}>
+            Update cart
+          </Link>
+          <Link href={menuHref} className={styles.unavailableAlertSecondary}>
+            Browse menu
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function CheckoutPage() {
   const router = useRouter();
   const { isLoggedIn, userName, userEmail, setProvince } = useApp();
@@ -352,11 +413,17 @@ export default function CheckoutPage() {
   const [deliveryWindows, setDeliveryWindows] = useState<FulfillmentWindow[]>(
     [],
   );
+  // Cook's pickup address, shown for pickup orders. Loaded with the menu sync.
+  const [pickupLocation, setPickupLocation] = useState<string | null>(null);
   const [pendingPayment, setPendingPayment] = useState<{
     orderId: string;
     clientSecret: string;
     guestAccessToken?: string;
   } | null>(null);
+  const [unavailableItems, setUnavailableItems] = useState<
+    UnavailableCartItem[]
+  >([]);
+  const [checkingAvailability, setCheckingAvailability] = useState(false);
 
   const isDelivery = fulfillmentMode === "delivery";
   const displayAddress = pendingAddress ?? currentAddress;
@@ -372,22 +439,80 @@ export default function CheckoutPage() {
     setDeliveryDetailsDraft(deliveryDetails ?? "");
   }, [deliveryDetails]);
 
+  const syncCartAvailability = useCallback(async () => {
+    if (!cookId || items.length === 0) {
+      setUnavailableItems([]);
+      return;
+    }
+
+    setCheckingAvailability(true);
+    try {
+      const res = await fetch(`/api/cooks/${cookId}/menu`, {
+        cache: "no-store",
+      });
+      const json = await res.json();
+      if (!res.ok || !json?.data) return;
+
+      const cook = json.data.cook;
+      setPickupWindows(cook.pickupWindows ?? []);
+      setDeliveryWindows(cook.deliveryWindows ?? []);
+      setPickupLocation(cook.pickupLocation ?? null);
+
+      const activeIds = new Set<string>(
+        (json.data.dishes as { id: string }[] | undefined)?.map((d) => d.id) ??
+          [],
+      );
+      setUnavailableItems(
+        items
+          .filter((item) => !activeIds.has(item.dishId))
+          .map((item) => ({ dishId: item.dishId, name: item.name })),
+      );
+    } catch {
+      /* non-fatal — place-order still validates server-side */
+    } finally {
+      setCheckingAvailability(false);
+    }
+  }, [cookId, items]);
+
   useEffect(() => {
-    if (!cookId) return;
-    let cancelled = false;
-    fetch(`/api/cooks/${cookId}/menu`, { cache: "no-store" })
-      .then((r) => r.json())
-      .then((json) => {
-        if (cancelled || !json?.data?.cook) return;
-        const cook = json.data.cook;
-        setPickupWindows(cook.pickupWindows ?? []);
-        setDeliveryWindows(cook.deliveryWindows ?? []);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [cookId]);
+    void syncCartAvailability();
+  }, [syncCartAvailability]);
+
+  useEffect(() => {
+    function onFocus() {
+      void syncCartAvailability();
+    }
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [syncCartAvailability]);
+
+  const applyUnavailableOrderError = useCallback(
+    (data: {
+      code?: string;
+      unavailableDishes?: { dishId: string; name: string }[];
+    }) => {
+      if (
+        data.code !== "dishes_unavailable" ||
+        !data.unavailableDishes?.length
+      ) {
+        return false;
+      }
+
+      setUnavailableItems(
+        data.unavailableDishes.map((dish) => ({
+          dishId: dish.dishId,
+          name:
+            dish.name === "A meal in your cart"
+              ? (items.find((item) => item.dishId === dish.dishId)?.name ??
+                dish.name)
+              : dish.name,
+        })),
+      );
+      setError(null);
+      return true;
+    },
+    [items],
+  );
 
   useEffect(() => {
     if (!isDelivery || !displayAddress) return;
@@ -582,6 +707,8 @@ export default function CheckoutPage() {
     setError(null);
     setNeedsLogin(null);
 
+    if (unavailableItems.length > 0) return;
+
     if (!meetsMinimum) {
       setError(
         "Your cart no longer meets the minimum order. Please return to the menu.",
@@ -665,6 +792,14 @@ export default function CheckoutPage() {
             return;
           }
           if (!guestRes.ok) {
+            if (
+              applyUnavailableOrderError({
+                code: guestData.code,
+                unavailableDishes: guestData.unavailableDishes,
+              })
+            ) {
+              return;
+            }
             setError(guestData.error ?? "Could not place your order.");
             return;
           }
@@ -685,6 +820,14 @@ export default function CheckoutPage() {
         });
         const data = await res.json();
         if (!res.ok) {
+          if (
+            applyUnavailableOrderError({
+              code: data.code,
+              unavailableDishes: data.unavailableDishes,
+            })
+          ) {
+            return;
+          }
           setError(data.error ?? "Could not place your order.");
           return;
         }
@@ -1083,6 +1226,28 @@ export default function CheckoutPage() {
             </section>
           )}
 
+          {/* Pickup location — where the client collects a pickup order. Shown
+              once the cook's address loads with the menu sync. */}
+          {!isDelivery && pickupLocation && (
+            <section className={styles.formSection}>
+              <h2 className={styles.formTitle}>Pickup location</h2>
+              <div className={styles.addressSummary}>
+                <p className={styles.pickupAddressLine}>
+                  <MapPin
+                    size={16}
+                    className={styles.pickupAddressIcon}
+                    aria-hidden="true"
+                  />
+                  <span>{pickupLocation}</span>
+                </p>
+              </div>
+              <p className={styles.fieldDisclaimer}>
+                Collect your order from {cookName ?? "the cook"} here during
+                your selected pickup window.
+              </p>
+            </section>
+          )}
+
           {/* Payment — only appears once the order total is locked in and a
               secure payment session exists (after "Continue to payment"), so
               there's no empty placeholder sitting in the flow beforehand. */}
@@ -1122,6 +1287,8 @@ export default function CheckoutPage() {
             </div>
 
             <div className={styles.submitBlock}>
+              <UnavailableMealsAlert items={unavailableItems} cookId={cookId} />
+
               {needsLogin && (
                 <div className={styles.guestBlock} role="alert">
                   <p className={styles.guestBlockMsg}>
@@ -1145,6 +1312,8 @@ export default function CheckoutPage() {
                 className={styles.placeOrderBtn}
                 disabled={
                   placing ||
+                  checkingAvailability ||
+                  unavailableItems.length > 0 ||
                   (pendingPayment ? !paymentReady : false) ||
                   !agreedPolicy ||
                   (isDelivery && deliveryOutOfRange) ||
@@ -1154,9 +1323,11 @@ export default function CheckoutPage() {
               >
                 {placing
                   ? "Processing…"
-                  : pendingPayment
-                    ? `Pay $${formatCartMoney(grandTotal)}`
-                    : "Continue to payment"}
+                  : unavailableItems.length > 0
+                    ? "Update cart to continue"
+                    : pendingPayment
+                      ? `Pay $${formatCartMoney(grandTotal)}`
+                      : "Continue to payment"}
               </button>
 
               {!isLoggedIn && !pendingPayment && !emailVerified && (

@@ -20,7 +20,16 @@ vi.mock("drizzle-orm", () => ({
   and: vi.fn(),
   asc: vi.fn(),
   desc: vi.fn(),
+  ne: vi.fn(),
   sql: vi.fn(() => ({ as: vi.fn((alias: string) => alias) })),
+}));
+vi.mock("@/lib/dish-lifecycle", () => ({
+  getDishLifecycleInfo: vi.fn().mockResolvedValue({
+    totalOrders: 0,
+    openOrderCount: 0,
+    isLastActiveDish: false,
+    canDelete: true,
+  }),
 }));
 
 import { NextRequest } from "next/server";

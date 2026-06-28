@@ -6,6 +6,19 @@ export type ClientPreferenceKey =
   | "goals"
   | "whyMealPrep";
 
+/** Mutually exclusive “none / N/A” option per section (clears other picks). */
+export const CLIENT_PREFERENCE_EXCLUSIVE_OPTION: Record<
+  ClientPreferenceKey,
+  string
+> = {
+  dietary: "No restrictions",
+  allergies: "No known allergies",
+  goals: "No specific goals",
+  whyMealPrep: "Just exploring",
+};
+
+const LEGACY_ALLERGY_NONE = "None";
+
 export type ClientPreferenceQuestion = {
   id: ClientPreferenceKey;
   question: string;
@@ -25,6 +38,7 @@ export const CLIENT_PREFERENCE_QUESTIONS: ClientPreferenceQuestion[] = [
       "Dairy-free",
       "Nut-free",
       "Kosher",
+      CLIENT_PREFERENCE_EXCLUSIVE_OPTION.dietary,
     ],
     multiSelect: true,
   },
@@ -39,7 +53,7 @@ export const CLIENT_PREFERENCE_QUESTIONS: ClientPreferenceQuestion[] = [
       "Shellfish",
       "Eggs",
       "Soy",
-      "None",
+      CLIENT_PREFERENCE_EXCLUSIVE_OPTION.allergies,
     ],
     multiSelect: true,
   },
@@ -55,6 +69,7 @@ export const CLIENT_PREFERENCE_QUESTIONS: ClientPreferenceQuestion[] = [
       "Comfort food",
       "Family-friendly",
       "Balanced",
+      CLIENT_PREFERENCE_EXCLUSIVE_OPTION.goals,
     ],
     multiSelect: true,
   },
@@ -68,6 +83,7 @@ export const CLIENT_PREFERENCE_QUESTIONS: ClientPreferenceQuestion[] = [
       "Discover new cuisines",
       "Support local home cooks",
       "Convenient for my schedule",
+      CLIENT_PREFERENCE_EXCLUSIVE_OPTION.whyMealPrep,
     ],
     multiSelect: true,
   },
@@ -82,17 +98,54 @@ export const EMPTY_CLIENT_PREFERENCES: ClientPreferences = {
   whyMealPrep: [],
 };
 
+const PREFERENCE_KEYS: ClientPreferenceKey[] = [
+  "dietary",
+  "allergies",
+  "goals",
+  "whyMealPrep",
+];
+
+function migrateLegacyAllergyValue(value: string): string {
+  return value === LEGACY_ALLERGY_NONE
+    ? CLIENT_PREFERENCE_EXCLUSIVE_OPTION.allergies
+    : value;
+}
+
 export function normalizeClientPreferences(
   raw: Partial<ClientPreferences> | null | undefined,
 ): ClientPreferences {
   return {
     dietary: Array.isArray(raw?.dietary) ? raw.dietary.map(String) : [],
-    allergies: Array.isArray(raw?.allergies) ? raw.allergies.map(String) : [],
+    allergies: Array.isArray(raw?.allergies)
+      ? raw.allergies.map(String).map(migrateLegacyAllergyValue)
+      : [],
     goals: Array.isArray(raw?.goals) ? raw.goals.map(String) : [],
     whyMealPrep: Array.isArray(raw?.whyMealPrep)
       ? raw.whyMealPrep.map(String)
       : [],
   };
+}
+
+export function isClientPreferencesComplete(prefs: ClientPreferences): boolean {
+  return PREFERENCE_KEYS.every((key) => prefs[key].length > 0);
+}
+
+export function clientPreferencesValidationError(
+  prefs: ClientPreferences,
+): string | null {
+  if (!isClientPreferencesComplete(prefs)) {
+    return "Pick at least one option in every section.";
+  }
+
+  for (const question of CLIENT_PREFERENCE_QUESTIONS) {
+    for (const value of prefs[question.id]) {
+      if (!question.options.includes(value)) {
+        return "Invalid preference selection.";
+      }
+    }
+  }
+
+  return null;
 }
 
 function sortedValues(values: string[]): string[] {
@@ -103,13 +156,7 @@ export function clientPreferencesEqual(
   a: ClientPreferences,
   b: ClientPreferences,
 ): boolean {
-  const keys: ClientPreferenceKey[] = [
-    "dietary",
-    "allergies",
-    "goals",
-    "whyMealPrep",
-  ];
-  return keys.every((key) => {
+  return PREFERENCE_KEYS.every((key) => {
     const left = sortedValues(a[key]);
     const right = sortedValues(b[key]);
     return (
@@ -160,24 +207,26 @@ export function togglePreference(
   value: string,
   multiSelect: boolean,
 ): ClientPreferences {
-  if (key === "allergies") {
-    const arr = prefs.allergies;
-    if (value === "None") {
+  const exclusive = CLIENT_PREFERENCE_EXCLUSIVE_OPTION[key];
+  const arr = prefs[key];
+
+  if (multiSelect && exclusive) {
+    if (value === exclusive) {
       return {
         ...prefs,
-        allergies: arr.includes("None") ? [] : ["None"],
+        [key]: arr.includes(exclusive) ? [] : [exclusive],
       };
     }
-    const withoutNone = arr.filter((v) => v !== "None");
+
+    const withoutExclusive = arr.filter((v) => v !== exclusive);
     return {
       ...prefs,
-      allergies: withoutNone.includes(value)
-        ? withoutNone.filter((v) => v !== value)
-        : [...withoutNone, value],
+      [key]: withoutExclusive.includes(value)
+        ? withoutExclusive.filter((v) => v !== value)
+        : [...withoutExclusive, value],
     };
   }
 
-  const arr = prefs[key];
   if (multiSelect) {
     return {
       ...prefs,
@@ -186,5 +235,6 @@ export function togglePreference(
         : [...arr, value],
     };
   }
+
   return { ...prefs, [key]: [value] };
 }

@@ -8,6 +8,7 @@ import {
   bulletList,
   contactParagraph,
   contactTextLine,
+  escapeHtml,
   htmlEmail,
   orderDetailsTable,
   orderSummaryTable,
@@ -38,6 +39,9 @@ type OrderEmailData = {
   deliveryFee?: string | number | null;
   taxAmount?: string | number | null;
   taxLabel?: string | null;
+  // Cook's pickup address, shown to the client for pickup orders only. Composed
+  // upstream via formatPickupLocation(); null/absent for delivery or unknown.
+  pickupLocation?: string | null;
 };
 
 function fulfillmentLabel(mode: OrderEmailData["fulfillmentMode"]): string {
@@ -71,6 +75,28 @@ function emailTimingRow(
   const timing = knownTimingLabel(order);
   if (!timing) return null;
   return { label: fulfillmentLabel(order.fulfillmentMode), value: timing };
+}
+
+/**
+ * Pickup-address row for the order-details table. Pickup orders only — delivery
+ * has its own hand-off copy. Returns null when the mode is delivery or no
+ * address is known, so the row is simply omitted. The value is HTML-escaped
+ * because `orderDetailsTable` inserts it verbatim and addresses are cook-entered.
+ */
+function pickupLocationRow(
+  order: OrderEmailData,
+): { label: string; value: string } | null {
+  if (order.fulfillmentMode === "delivery") return null;
+  const location = order.pickupLocation?.trim();
+  if (!location) return null;
+  return { label: "Pickup location", value: escapeHtml(location) };
+}
+
+/** Plain-text counterpart of pickupLocationRow; raw (unescaped) for text email. */
+function pickupLocationTextLine(order: OrderEmailData): string | null {
+  if (order.fulfillmentMode === "delivery") return null;
+  const location = order.pickupLocation?.trim();
+  return location ? `Pickup location: ${location}` : null;
 }
 
 function cancellationScheduleClause(order: OrderEmailData): string {
@@ -226,6 +252,8 @@ export async function sendOrderReceiptToClient(
     async () => {
       try {
         const timing = formatTiming(order);
+        const pickupRow = pickupLocationRow(order);
+        const pickupTextLine = pickupLocationTextLine(order);
         const subject = `Your 7eats order with ${cook.name} is confirmed`;
         const html = htmlEmail({
           title: subject,
@@ -242,6 +270,7 @@ export async function sendOrderReceiptToClient(
                 value: fulfillmentLabel(order.fulfillmentMode),
               },
               { label: "Timing", value: timing },
+              ...(pickupRow ? [pickupRow] : []),
             ]) +
             paragraph(
               "You can track its status and pickup code any time from your orders.",
@@ -259,6 +288,7 @@ export async function sendOrderReceiptToClient(
           "",
           `Fulfillment: ${fulfillmentLabel(order.fulfillmentMode)}`,
           `Timing: ${timing}`,
+          ...(pickupTextLine ? [pickupTextLine] : []),
           "",
           "Track it any time from your orders:",
           `${process.env.NEXT_PUBLIC_APP_URL}/app/orders/${order.id}`,
@@ -280,6 +310,8 @@ export async function sendGuestOrderReceiptToClient(
 ): Promise<void> {
   try {
     const timing = formatTiming(order);
+    const pickupRow = pickupLocationRow(order);
+    const pickupTextLine = pickupLocationTextLine(order);
     const receiptUrl = `${process.env.NEXT_PUBLIC_APP_URL}/app/checkout/guest-confirmation?token=${encodeURIComponent(guest.accessToken)}`;
     const cancelUrl = `${process.env.NEXT_PUBLIC_APP_URL}/app/guest/order/cancel?token=${encodeURIComponent(guest.accessToken)}`;
     const subject = `Order confirmed - ${guest.confirmationCode}`;
@@ -305,6 +337,7 @@ export async function sendGuestOrderReceiptToClient(
             value: fulfillmentLabel(order.fulfillmentMode),
           },
           { label: "Timing", value: timing },
+          ...(pickupRow ? [pickupRow] : []),
         ]) +
         paragraph(
           "Save your confirmation code if you need to contact support.",
@@ -325,6 +358,7 @@ export async function sendGuestOrderReceiptToClient(
       `Confirmation code: ${guest.confirmationCode}`,
       `Fulfillment: ${fulfillmentLabel(order.fulfillmentMode)}`,
       `Timing: ${timing}`,
+      ...(pickupTextLine ? [pickupTextLine] : []),
       "",
       "Save your confirmation code if you need to contact support.",
       "",
@@ -352,6 +386,8 @@ export async function sendOrderConfirmedEmailToClient(
     async () => {
       try {
         const timing = formatTiming(order);
+        const pickupRow = pickupLocationRow(order);
+        const pickupTextLine = pickupLocationTextLine(order);
         const subject = "Your order is confirmed";
         const html = htmlEmail({
           title: subject,
@@ -362,6 +398,7 @@ export async function sendOrderConfirmedEmailToClient(
             orderSummaryHtml(order) +
             orderDetailsTable([
               { label: fulfillmentLabel(order.fulfillmentMode), value: timing },
+              ...(pickupRow ? [pickupRow] : []),
             ]) +
             paragraph(
               "You'll get another email with your pickup code once the order is ready.",
@@ -376,6 +413,7 @@ export async function sendOrderConfirmedEmailToClient(
           ...orderSummaryText(order),
           "",
           `${fulfillmentLabel(order.fulfillmentMode)}: ${timing}`,
+          ...(pickupTextLine ? [pickupTextLine] : []),
           "",
           "You'll get another email with your pickup code once the order is ready.",
         ]);
@@ -398,6 +436,8 @@ export async function sendOrderNotReadyEmailToClient(
     async () => {
       try {
         const timingRow = emailTimingRow(order);
+        const pickupRow = pickupLocationRow(order);
+        const pickupTextLine = pickupLocationTextLine(order);
         const codeNoun =
           order.fulfillmentMode === "delivery"
             ? "delivery code"
@@ -414,6 +454,7 @@ export async function sendOrderNotReadyEmailToClient(
             orderDetailsTable([
               { label: "Order", value: order.listingTitle },
               ...(timingRow ? [timingRow] : []),
+              ...(pickupRow ? [pickupRow] : []),
             ]) +
             paragraph(
               `No need to do anything. We'll email you a fresh ${codeNoun} the moment it's ready. Thanks for your patience!`,
@@ -426,7 +467,9 @@ export async function sendOrderNotReadyEmailToClient(
           `Quick heads up. Your order from ${cook.name} is taking a little longer than expected. They're still hard at work on it and will have it ready as soon as they can.`,
           "",
           `Order: ${order.listingTitle}`,
-          ...(timingRow ? [`${timingRow.label}: ${timingRow.value}`, ""] : []),
+          ...(timingRow ? [`${timingRow.label}: ${timingRow.value}`] : []),
+          ...(pickupTextLine ? [pickupTextLine] : []),
+          "",
           `No need to do anything. We'll email you a fresh ${codeNoun} the moment it's ready. Thanks for your patience!`,
         ]);
         await sendMail({ to: client.email, subject, text, html });
@@ -464,6 +507,8 @@ export async function sendOrderReadyEmailToClient(
     async () => {
       try {
         const timingRow = emailTimingRow(order);
+        const pickupRow = pickupLocationRow(order);
+        const pickupTextLine = pickupLocationTextLine(order);
         const subject = `Your order is ready, ${isDelivery ? "delivery" : "pickup"} code ${pickupCode}`;
 
         const introHtml = isDelivery
@@ -493,6 +538,7 @@ export async function sendOrderReadyEmailToClient(
             orderDetailsTable([
               { label: "Order", value: order.listingTitle },
               ...(timingRow ? [timingRow] : []),
+              ...(pickupRow ? [pickupRow] : []),
             ]) +
             closingHtml +
             contactParagraph(),
@@ -515,7 +561,9 @@ export async function sendOrderReadyEmailToClient(
           "",
           ...(isDelivery ? [...deliveryTipsText, ""] : []),
           `Order: ${order.listingTitle}`,
-          ...(timingRow ? [`${timingRow.label}: ${timingRow.value}`, ""] : []),
+          ...(timingRow ? [`${timingRow.label}: ${timingRow.value}`] : []),
+          ...(pickupTextLine ? [pickupTextLine] : []),
+          "",
           ...(isDelivery
             ? []
             : ["Show this code any time during your pickup window."]),

@@ -7,6 +7,8 @@ import {
 } from "@/app/api/business/_lib/cook-auth";
 import { db } from "@/db";
 import { dishes } from "@/db/schema";
+import { getDishLifecycleInfo } from "@/lib/dish-lifecycle";
+import { openOrdersArchiveError } from "@/lib/dish-lifecycle-messages";
 import { isDishPaused, setDishPaused } from "@/lib/dish-status";
 import { rebuildCookSearchIndexSafe } from "@/lib/search/index-builder";
 
@@ -35,13 +37,29 @@ export async function POST(req: NextRequest, { params }: Params) {
       );
     }
 
+    const lifecycle = await getDishLifecycleInfo(cookId, dishId);
+    if (!lifecycle) return notFound("Dish");
+
+    if (lifecycle.openOrderCount > 0) {
+      return NextResponse.json(
+        {
+          error: openOrdersArchiveError(lifecycle.openOrderCount),
+          openOrderCount: lifecycle.openOrderCount,
+        },
+        { status: 409 },
+      );
+    }
+
     const updated = await setDishPaused(dishId, cookId);
     if (!updated) return notFound("Dish");
 
-    // Pausing may drop the cook below the "has an active dish" visibility bar.
     rebuildCookSearchIndexSafe(cookId);
 
-    return NextResponse.json({ success: true, data: updated });
+    return NextResponse.json({
+      success: true,
+      data: updated,
+      hiddenFromBrowse: lifecycle.isLastActiveDish,
+    });
   } catch (err) {
     console.error("[dishes/archive]", err);
     return NextResponse.json(

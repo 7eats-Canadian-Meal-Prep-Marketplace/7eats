@@ -4,6 +4,10 @@ import { z } from "zod";
 import { db } from "@/db";
 import { authUser, authUserTable, userPreferences } from "@/db/schema";
 import { auth } from "@/lib/auth";
+import {
+  clientPreferencesValidationError,
+  normalizeClientPreferences,
+} from "@/lib/client-preferences";
 import { validateDateOfBirth16 } from "@/lib/onboarding-validation";
 
 const schema = z.object({
@@ -61,7 +65,14 @@ export async function POST(req: Request) {
     );
   }
 
-  const { dietary, allergies, goals, whyMealPrep, dateOfBirth } = parsed.data;
+  const { dateOfBirth } = parsed.data;
+  const prefs = normalizeClientPreferences(parsed.data);
+  const prefsError = clientPreferencesValidationError(prefs);
+  if (prefsError) {
+    return NextResponse.json({ error: prefsError }, { status: 400 });
+  }
+
+  const { dietary, allergies, goals, whyMealPrep } = prefs;
   const userId = session.user.id;
   const isFirstCompletion = user.onboardingCompletedAt == null;
 

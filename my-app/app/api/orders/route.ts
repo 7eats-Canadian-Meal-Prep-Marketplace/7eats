@@ -286,7 +286,12 @@ export async function POST(req: NextRequest) {
 
     if (!result.ok) {
       return NextResponse.json(
-        { error: result.error, dishId: result.dishId },
+        {
+          error: result.error,
+          code: result.code,
+          unavailableDishes: result.unavailableDishes,
+          dishId: result.dishId,
+        },
         { status: result.status },
       );
     }

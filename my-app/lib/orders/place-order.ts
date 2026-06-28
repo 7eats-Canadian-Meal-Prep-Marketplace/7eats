@@ -13,6 +13,11 @@ import {
 } from "@/db/schema";
 import { earliestFulfillmentWindow } from "@/lib/cook-card-schedule";
 import { calcDeliveryFee } from "@/lib/delivery-fee";
+import { resolveUnavailableOrderDishes } from "@/lib/dish-lifecycle";
+import {
+  formatUnavailableDishesMessage,
+  type UnavailableOrderDish,
+} from "@/lib/dish-lifecycle-messages";
 import { getDrivingDistanceKm } from "@/lib/mapbox-directions";
 import { computeLineTotal } from "@/lib/order-pricing";
 import { computeOrderChargeBreakdown } from "@/lib/order-totals";
@@ -70,7 +75,14 @@ export type GuestOrderMeta = {
 
 export type PlaceOrderResult =
   | { ok: true; orderId: string; clientSecret: string; guest?: GuestOrderMeta }
-  | { ok: false; status: number; error: string; dishId?: string };
+  | {
+      ok: false;
+      status: number;
+      error: string;
+      code?: "dishes_unavailable";
+      unavailableDishes?: UnavailableOrderDish[];
+      dishId?: string;
+    };
 
 export async function placeClientOrder(
   client: PlaceOrderClient,
@@ -144,6 +156,17 @@ export async function placeClientOrder(
   }
 
   const dishIds = lines.map((l) => l.dishId);
+  const unavailable = await resolveUnavailableOrderDishes(cookId, dishIds);
+  if (unavailable.length > 0) {
+    return {
+      ok: false,
+      status: 422,
+      code: "dishes_unavailable",
+      error: formatUnavailableDishesMessage(unavailable),
+      unavailableDishes: unavailable,
+    };
+  }
+
   const dishRows = await db
     .select({ id: dishes.id, name: dishes.name, price: dishes.price })
     .from(dishes)
@@ -160,6 +183,7 @@ export async function placeClientOrder(
       return {
         ok: false,
         status: 422,
+        code: "dishes_unavailable",
         error: "One or more dishes are unavailable.",
       };
     }

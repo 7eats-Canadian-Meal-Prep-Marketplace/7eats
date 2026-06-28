@@ -167,10 +167,9 @@ describe("POST /api/auth/complete-onboarding", () => {
     expect(cookie).toContain("HttpOnly");
   });
 
-  it("accepts empty preference arrays on first completion", async () => {
+  it("returns 400 when preference sections are incomplete on first completion", async () => {
     mockSession(USER_ID);
     mockUserRow(READY_USER);
-    mockDbChain();
 
     const res = await POST(
       makeRequest({
@@ -181,7 +180,27 @@ describe("POST /api/auth/complete-onboarding", () => {
         dateOfBirth: "2000-01-15",
       }),
     );
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Pick at least one option in every section.");
+  });
+
+  it("returns 400 when preference sections are incomplete after onboarding", async () => {
+    mockSession(USER_ID);
+    mockUserRow({
+      ...READY_USER,
+      onboardingCompletedAt: new Date("2024-01-01"),
+    });
+
+    const res = await POST(
+      makeRequest({
+        dietary: ["Vegan"],
+        allergies: [],
+        goals: [],
+        whyMealPrep: [],
+      }),
+    );
+    expect(res.status).toBe(400);
   });
 
   it("allows preference updates after onboarding is complete", async () => {
@@ -195,9 +214,9 @@ describe("POST /api/auth/complete-onboarding", () => {
     const res = await POST(
       makeRequest({
         dietary: ["Vegan"],
-        allergies: [],
-        goals: [],
-        whyMealPrep: [],
+        allergies: ["No known allergies"],
+        goals: ["Balanced"],
+        whyMealPrep: ["Save time cooking"],
       }),
     );
     expect(res.status).toBe(200);

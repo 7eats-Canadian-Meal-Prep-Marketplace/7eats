@@ -4,7 +4,10 @@ import { z } from "zod";
 import { db } from "@/db";
 import { authUser, userPreferences } from "@/db/schema";
 import { auth } from "@/lib/auth";
-import { normalizeClientPreferences } from "@/lib/client-preferences";
+import {
+  clientPreferencesValidationError,
+  normalizeClientPreferences,
+} from "@/lib/client-preferences";
 
 const preferencesSchema = z.object({
   dietary: z.array(z.string()),
@@ -91,7 +94,13 @@ export async function PATCH(req: NextRequest) {
     );
   }
 
-  const { dietary, allergies, goals, whyMealPrep } = parsed.data;
+  const prefs = normalizeClientPreferences(parsed.data);
+  const prefsError = clientPreferencesValidationError(prefs);
+  if (prefsError) {
+    return NextResponse.json({ error: prefsError }, { status: 400 });
+  }
+
+  const { dietary, allergies, goals, whyMealPrep } = prefs;
 
   try {
     const [saved] = await db

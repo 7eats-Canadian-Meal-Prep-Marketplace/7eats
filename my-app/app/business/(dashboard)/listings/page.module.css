@@ -207,13 +207,21 @@
   position: absolute;
   top: calc(100% + 4px);
   right: 0;
-  min-width: 140px;
+  min-width: 148px;
   background: var(--white);
   border: 1px solid var(--grey-200);
   border-radius: var(--radius-sm);
   box-shadow: 0 8px 24px rgba(15, 15, 15, 0.1);
   padding: 4px;
   z-index: 10;
+}
+
+@media (max-width: 480px) {
+  .menuDropdown {
+    right: 0;
+    left: auto;
+    min-width: min(168px, calc(100vw - 32px));
+  }
 }
 
 .menuItem {
@@ -227,14 +235,31 @@
   border: none;
   border-radius: calc(var(--radius-sm) - 2px);
   cursor: pointer;
+  transition: color 0.12s;
 }
 
-.menuItem:hover {
-  background: var(--grey-100);
+.menuItem:disabled {
+  color: var(--grey-400);
+  cursor: not-allowed;
+}
+
+.menuItem:hover:not(:disabled) {
+  color: var(--ink);
 }
 
 .menuItemDanger {
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid var(--grey-200);
   color: var(--red);
+}
+
+.menuItemDanger:hover:not(:disabled) {
+  color: var(--red-deep);
+}
+
+.menuItemDanger:disabled {
+  color: var(--grey-400);
 }
 
 /* ─── Card image ──────────────────────────────────────────────────────────── */
@@ -586,4 +611,10 @@
   font-weight: 700;
   color: var(--ink);
   letter-spacing: -0.02em;
+}
+
+.mealMeta {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--grey-500);
 }

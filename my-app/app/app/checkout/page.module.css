@@ -412,6 +412,24 @@
   color: var(--ink);
 }
 
+/* Pickup address — same summary box as delivery, with a leading pin accent */
+.pickupAddressLine {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0;
+  padding: 14px 16px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.pickupAddressIcon {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--red);
+}
+
 .addressEditBlock {
   display: flex;
   flex-direction: column;
@@ -1473,6 +1491,137 @@
 
 .submitBlock .guestBlock {
   margin-top: 0;
+}
+
+.unavailableAlert {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 18px;
+  background: var(--white);
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-sm, 8px);
+}
+
+.unavailableAlertHead {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.unavailableAlertIcon {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(214, 64, 69, 0.28);
+  color: var(--red);
+  background: transparent;
+}
+
+.unavailableAlertBody {
+  min-width: 0;
+}
+
+.unavailableAlertTitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+  line-height: 1.35;
+}
+
+.unavailableAlertTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.unavailableAlertTag {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 5px 10px;
+  border: 1px solid var(--grey-200);
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--white);
+  line-height: 1.2;
+}
+
+.unavailableAlertCopy {
+  margin: 12px 0 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--grey-700);
+}
+
+.unavailableAlertActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.unavailableAlertPrimary,
+.unavailableAlertSecondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  transition:
+    border-color 0.15s,
+    color 0.15s;
+}
+
+.unavailableAlertPrimary {
+  background: var(--white);
+  color: var(--red);
+  border: 1.5px solid var(--red);
+}
+
+.unavailableAlertPrimary:hover {
+  border-color: var(--red-deep);
+  color: var(--red-deep);
+}
+
+.unavailableAlertSecondary {
+  background: var(--white);
+  border: 1.5px solid var(--grey-200);
+  color: var(--ink);
+}
+
+.unavailableAlertSecondary:hover {
+  border-color: var(--ink);
+}
+
+@media (max-width: 559px) {
+  .unavailableAlert {
+    padding: 14px 16px;
+  }
+
+  .unavailableAlertActions {
+    flex-direction: column;
+  }
+
+  .unavailableAlertPrimary,
+  .unavailableAlertSecondary {
+    width: 100%;
+  }
 }
 
 .guestBlockMsg {

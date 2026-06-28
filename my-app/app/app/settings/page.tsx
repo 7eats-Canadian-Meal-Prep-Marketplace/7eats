@@ -17,6 +17,7 @@ import {
   type ClientPreferences,
   clientPreferencesEqual,
   EMPTY_CLIENT_PREFERENCES,
+  isClientPreferencesComplete,
   normalizeClientPreferences,
   togglePreference,
 } from "@/lib/client-preferences";
@@ -277,6 +278,7 @@ export default function SettingsPage() {
     : null;
 
   const prefsDirty = !clientPreferencesEqual(savedPrefs, prefAnswers);
+  const prefsComplete = isClientPreferencesComplete(prefAnswers);
 
   const toggleAnswer = (
     qid: ClientPreferenceKey,
@@ -321,7 +323,7 @@ export default function SettingsPage() {
   };
 
   const handlePrefSave = async () => {
-    if (!prefsDirty || prefSaving) return;
+    if (!prefsDirty || prefSaving || !prefsComplete) return;
     setPrefSaving(true);
     try {
       const res = await fetch("/api/user/preferences", {
@@ -1113,8 +1115,8 @@ export default function SettingsPage() {
         {tab === "preferences" && (
           <div className={styles.tabContent}>
             <p className={styles.prefIntro}>
-              Your preference sheet helps cooks understand you better before you
-              even message them.
+              Pick at least one option in each section. Cooks see this before
+              they prepare your order.
             </p>
             {prefLoading ? (
               <div aria-busy="true">
@@ -1188,7 +1190,9 @@ export default function SettingsPage() {
             <button
               type="button"
               className={styles.saveBtn}
-              disabled={prefLoading || prefSaving || !prefsDirty}
+              disabled={
+                prefLoading || prefSaving || !prefsDirty || !prefsComplete
+              }
               onClick={() => void handlePrefSave()}
             >
               {prefSaving ? "Saving…" : "Save preferences"}

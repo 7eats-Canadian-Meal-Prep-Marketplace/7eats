@@ -9,6 +9,7 @@ vi.mock("@/db", () => ({
 }));
 
 vi.mock("@/db/schema", () => ({
+  authUser: { firstName: "firstName", lastName: "lastName" },
   orders: {},
   reviews: {},
   rateLimitLog: {},
@@ -230,7 +231,8 @@ describe("POST /api/orders/[orderId]/reviews", () => {
     vi.mocked(db.select).mockImplementation(() => {
       call++;
       if (call === 1) return limitChain([FULFILLED_ORDER]);
-      return limitChain([]);
+      if (call === 2) return limitChain([]);
+      return limitChain([{ firstName: "Sam", lastName: "Lee" }]);
     });
     mockInsertReturning(MOCK_REVIEW);
 

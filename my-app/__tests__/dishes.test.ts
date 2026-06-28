@@ -152,7 +152,11 @@ describe("GET /api/business/listings/dishes", () => {
         const from = vi.fn(() => ({ where }));
         return { from } as never;
       }
-      const orderBy = vi.fn().mockResolvedValue(mockDishes);
+      const orderBy = vi
+        .fn()
+        .mockResolvedValue(
+          mockDishes.map((dish) => ({ dish, totalOrders: 0 })),
+        );
       const where = vi.fn(() => ({ orderBy }));
       const from = vi.fn(() => ({ where }));
       return { from } as never;
@@ -162,7 +166,13 @@ describe("GET /api/business/listings/dishes", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.success).toBe(true);
-    expect(body.data).toEqual(mockDishes);
+    expect(body.data).toEqual(
+      mockDishes.map((dish) => ({
+        ...dish,
+        totalOrders: 0,
+        canDelete: true,
+      })),
+    );
   });
 
   it("accepts valid ?status=active filter and returns 200", async () => {
@@ -177,7 +187,11 @@ describe("GET /api/business/listings/dishes", () => {
         const from = vi.fn(() => ({ where }));
         return { from } as never;
       }
-      const orderBy = vi.fn().mockResolvedValue(mockDishes);
+      const orderBy = vi
+        .fn()
+        .mockResolvedValue(
+          mockDishes.map((dish) => ({ dish, totalOrders: 0 })),
+        );
       const where = vi.fn(() => ({ orderBy }));
       const from = vi.fn(() => ({ where }));
       return { from } as never;

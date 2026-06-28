@@ -7,6 +7,7 @@ import {
   orderPayments,
   orders,
 } from "@/db/schema";
+import { formatPickupLocation } from "@/lib/address";
 import { sendCookNewOrderSms } from "@/lib/cook-order-notifications";
 import {
   sendGuestOrderReceiptToClient,
@@ -81,6 +82,11 @@ async function sendOrderConfirmationEmails(
       cookPhoneVerified: authUser.phoneVerified,
       emailNotificationsNewOrder: cookProfiles.emailNotificationsNewOrder,
       smsNotificationsNewOrder: cookProfiles.smsNotificationsNewOrder,
+      pickupStreet: cookProfiles.pickupStreet,
+      pickupUnit: cookProfiles.pickupUnit,
+      pickupCity: cookProfiles.pickupCity,
+      pickupProvince: cookProfiles.pickupProvince,
+      pickupPostal: cookProfiles.pickupPostal,
     })
     .from(cookProfiles)
     .innerJoin(authUser, eq(cookProfiles.userId, authUser.id))
@@ -95,10 +101,22 @@ async function sendOrderConfirmationEmails(
     [clientUser.firstName, clientUser.lastName].filter(Boolean).join(" ") ||
     clientUser.email;
 
+  const pickupLocation =
+    orderRow.fulfillmentMode === "pickup"
+      ? formatPickupLocation({
+          street: cookRow.pickupStreet,
+          unit: cookRow.pickupUnit,
+          city: cookRow.pickupCity,
+          province: cookRow.pickupProvince,
+          postal: cookRow.pickupPostal,
+        })
+      : null;
+
   const orderEmailPayload = {
     id: orderId,
     listingTitle,
     quantity: totalQty,
+    pickupLocation,
     totalPrice: orderRow.totalPrice,
     currency: orderRow.currency ?? "CAD",
     pickupAt: orderRow.pickupAt,

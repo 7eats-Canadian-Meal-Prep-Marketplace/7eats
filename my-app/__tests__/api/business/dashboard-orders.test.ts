@@ -11,6 +11,13 @@ vi.mock("@/db/schema", () => ({
   cookProfiles: {},
   listings: {},
   orderDishes: {},
+  orderPayments: {
+    orderId: "orderId",
+    type: "type",
+    platformFeePct: "platformFeePct",
+    platformFeeAmount: "platformFeeAmount",
+    cookPayoutAmount: "cookPayoutAmount",
+  },
   orders: {
     id: "id",
     cookId: "cookId",
@@ -61,7 +68,8 @@ function ordersListChain(rows: unknown[]) {
   const limit = vi.fn().mockReturnValue({ offset });
   const orderBy = vi.fn().mockReturnValue({ limit });
   const where = vi.fn().mockReturnValue({ orderBy });
-  const leftJoinUser = vi.fn().mockReturnValue({ where });
+  const leftJoinPayments = vi.fn().mockReturnValue({ where });
+  const leftJoinUser = vi.fn().mockReturnValue({ leftJoin: leftJoinPayments });
   const leftJoinListings = vi.fn().mockReturnValue({ leftJoin: leftJoinUser });
   const from = vi.fn().mockReturnValue({ leftJoin: leftJoinListings });
   return { from } as never;

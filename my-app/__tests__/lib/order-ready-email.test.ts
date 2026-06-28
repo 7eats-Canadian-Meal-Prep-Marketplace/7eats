@@ -69,6 +69,19 @@ describe("order ready email — delivery", () => {
     const { subject } = sendMailMock.mock.calls[0][0];
     expect(subject.toLowerCase()).toContain("delivery code");
   });
+
+  it("never shows a pickup location for a delivery order", async () => {
+    await sendOrderReadyEmailToClient(
+      client,
+      cook,
+      { ...deliveryOrder, pickupLocation: "123 King St W, Toronto, ON" },
+      "123456",
+    );
+    const { text, html } = sendMailMock.mock.calls[0][0];
+    expect(text).not.toContain("Pickup location");
+    expect(html).not.toContain("Pickup location");
+    expect(text).not.toContain("123 King St W");
+  });
 });
 
 describe("order ready email — pickup", () => {
@@ -89,5 +102,46 @@ describe("order ready email — pickup", () => {
     const { text, subject } = sendMailMock.mock.calls[0][0];
     expect(subject.toLowerCase()).toContain("pickup code");
     expect(text.toLowerCase()).not.toContain("around");
+  });
+
+  it("shows the cook's pickup location to the client", async () => {
+    await sendOrderReadyEmailToClient(
+      client,
+      cook,
+      { ...pickupOrder, pickupLocation: "123 King St W, Toronto, ON, M5H 1A1" },
+      "654321",
+    );
+    const { text, html } = sendMailMock.mock.calls[0][0];
+    expect(text).toContain(
+      "Pickup location: 123 King St W, Toronto, ON, M5H 1A1",
+    );
+    expect(html).toContain("Pickup location");
+    expect(html).toContain("123 King St W, Toronto, ON, M5H 1A1");
+  });
+
+  it("omits the pickup location row when no address is on file", async () => {
+    await sendOrderReadyEmailToClient(
+      client,
+      cook,
+      { ...pickupOrder, pickupLocation: null },
+      "654321",
+    );
+    const { text, html } = sendMailMock.mock.calls[0][0];
+    expect(text).not.toContain("Pickup location");
+    expect(html).not.toContain("Pickup location");
+  });
+
+  it("HTML-escapes a cook-entered pickup address", async () => {
+    await sendOrderReadyEmailToClient(
+      client,
+      cook,
+      { ...pickupOrder, pickupLocation: "Tom & Jerry's <Diner>" },
+      "654321",
+    );
+    const { text, html } = sendMailMock.mock.calls[0][0];
+    expect(html).toContain("Tom &amp; Jerry's &lt;Diner&gt;");
+    expect(html).not.toContain("<Diner>");
+    // Plain-text part stays raw.
+    expect(text).toContain("Tom & Jerry's <Diner>");
   });
 });

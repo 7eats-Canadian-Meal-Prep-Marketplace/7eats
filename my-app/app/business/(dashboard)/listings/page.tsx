@@ -3,6 +3,7 @@
 import { MoreHorizontal, Plus, Utensils } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { openOrdersArchiveError } from "@/lib/dish-lifecycle-messages";
 import { mealToastError, mealToastSuccess } from "@/lib/meal-toast";
 import { ConfirmDialog } from "../_components/ConfirmDialog";
 import { Skeleton } from "../_skeleton";
@@ -15,6 +16,8 @@ type Dish = {
   name: string;
   price: string;
   status: DishStatus;
+  totalOrders: number;
+  canDelete: boolean;
 };
 
 const FILTERS: { value: DishStatus; label: string }[] = [
@@ -36,6 +39,8 @@ function StatusPill({ status }: { status: DishStatus }) {
 function DishMenu({ dish, onChanged }: { dish: Dish; onChanged: () => void }) {
   const [open, setOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [archiveOpen, setArchiveOpen] = useState(false);
+  const [archiveWarning, setArchiveWarning] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -50,11 +55,10 @@ function DishMenu({ dish, onChanged }: { dish: Dish; onChanged: () => void }) {
     return () => document.removeEventListener("mousedown", onDoc);
   }, [open]);
 
-  async function run(action: "archive" | "unarchive") {
+  async function runUnarchive() {
     setBusy(true);
     try {
-      const path = action === "archive" ? "archive" : "unarchive";
-      const res = await fetch(`/api/business/dishes/${dish.id}/${path}`, {
+      const res = await fetch(`/api/business/dishes/${dish.id}/unarchive`, {
         method: "POST",
       });
       const data = await res.json();
@@ -62,15 +66,75 @@ function DishMenu({ dish, onChanged }: { dish: Dish; onChanged: () => void }) {
         mealToastError(data.error ?? "Action failed.");
         return;
       }
-      mealToastSuccess(
-        action === "archive" ? "Meal archived" : "Meal is active again",
-      );
+      mealToastSuccess("Meal is active again");
       onChanged();
     } catch {
       mealToastError("Something went wrong.");
     } finally {
       setBusy(false);
       setOpen(false);
+    }
+  }
+
+  async function openArchiveConfirm() {
+    setOpen(false);
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/business/dishes/${dish.id}`);
+      const data = await res.json();
+      if (!res.ok) {
+        mealToastError(data.error ?? "Could not load meal details.");
+        return;
+      }
+
+      const stats = data.data?.stats as
+        | {
+            openOrderCount?: number;
+            isLastActiveDish?: boolean;
+          }
+        | undefined;
+
+      const openOrderCount = stats?.openOrderCount ?? 0;
+      if (openOrderCount > 0) {
+        mealToastError(openOrdersArchiveError(openOrderCount));
+        return;
+      }
+
+      setArchiveWarning(
+        stats?.isLastActiveDish
+          ? "This is your only active meal. You will be hidden from browse and search until another meal is active."
+          : null,
+      );
+      setArchiveOpen(true);
+    } catch {
+      mealToastError("Something went wrong.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function confirmArchive() {
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/business/dishes/${dish.id}/archive`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        mealToastError(data.error ?? "Could not pause meal.");
+        return;
+      }
+      mealToastSuccess(
+        data.hiddenFromBrowse
+          ? "Meal paused. Activate another meal to appear in search again."
+          : "Meal paused",
+      );
+      onChanged();
+      setArchiveOpen(false);
+    } catch {
+      mealToastError("Something went wrong.");
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -96,6 +160,9 @@ function DishMenu({ dish, onChanged }: { dish: Dish; onChanged: () => void }) {
     }
   }
 
+  const archiveMessage =
+    "It will stop appearing on your menu for new orders. You can activate it again anytime.";
+
   return (
     <div className={styles.menuWrap} ref={ref}>
       <button
@@ -119,10 +186,10 @@ function DishMenu({ dish, onChanged }: { dish: Dish; onChanged: () => void }) {
               className={styles.menuItem}
               onClick={(e) => {
                 e.stopPropagation();
-                void run("archive");
+                void openArchiveConfirm();
               }}
             >
-              Archive
+              Pause meal
             </button>
           ) : (
             <button
@@ -130,17 +197,24 @@ function DishMenu({ dish, onChanged }: { dish: Dish; onChanged: () => void }) {
               className={styles.menuItem}
               onClick={(e) => {
                 e.stopPropagation();
-                void run("unarchive");
+                void runUnarchive();
               }}
             >
-              Unarchive
+              Activate
             </button>
           )}
           <button
             type="button"
             className={`${styles.menuItem} ${styles.menuItemDanger}`}
+            disabled={!dish.canDelete}
+            title={
+              dish.canDelete
+                ? undefined
+                : "Meals with order history must be paused, not deleted."
+            }
             onClick={(e) => {
               e.stopPropagation();
+              if (!dish.canDelete) return;
               setOpen(false);
               setDeleteOpen(true);
             }}
@@ -150,9 +224,22 @@ function DishMenu({ dish, onChanged }: { dish: Dish; onChanged: () => void }) {
         </div>
       )}
       <ConfirmDialog
+        open={archiveOpen}
+        title={`Pause "${dish.name}"?`}
+        message={archiveMessage}
+        callout={archiveWarning ?? undefined}
+        confirmLabel="Pause meal"
+        cancelLabel="Keep active"
+        busy={busy}
+        onConfirm={() => void confirmArchive()}
+        onCancel={() => {
+          if (!busy) setArchiveOpen(false);
+        }}
+      />
+      <ConfirmDialog
         open={deleteOpen}
         title={`Delete "${dish.name}"?`}
-        message="This permanently removes the meal from your menu. This cannot be undone."
+        message="This permanently removes the meal from your menu. Only use this for meals that were never ordered. If customers have ordered it before, pause it instead."
         confirmLabel="Delete meal"
         cancelLabel="Keep meal"
         danger
@@ -175,7 +262,24 @@ export default function MealsPage() {
     setLoading(true);
     fetch(`/api/business/dishes?status=${filter}`)
       .then((r) => (r.ok ? r.json() : { data: [] }))
-      .then((json) => setDishes(Array.isArray(json.data) ? json.data : []))
+      .then((json) =>
+        setDishes(
+          Array.isArray(json.data)
+            ? json.data.map(
+                (
+                  row: Dish & { totalOrders?: number; canDelete?: boolean },
+                ) => ({
+                  id: row.id,
+                  name: row.name,
+                  price: row.price,
+                  status: row.status,
+                  totalOrders: row.totalOrders ?? 0,
+                  canDelete: row.canDelete ?? (row.totalOrders ?? 0) === 0,
+                }),
+              )
+            : [],
+        ),
+      )
       .catch(() => setDishes([]))
       .finally(() => setLoading(false));
   }, [filter]);
@@ -273,6 +377,12 @@ export default function MealsPage() {
                     <p className={styles.mealPrice}>
                       ${Number(dish.price).toFixed(2)}
                     </p>
+                    {dish.totalOrders > 0 && (
+                      <p className={styles.mealMeta}>
+                        {dish.totalOrders}{" "}
+                        {dish.totalOrders === 1 ? "order" : "orders"}
+                      </p>
+                    )}
                   </Link>
                 </div>
               </div>

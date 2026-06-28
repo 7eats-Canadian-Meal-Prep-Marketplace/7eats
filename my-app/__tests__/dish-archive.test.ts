@@ -22,11 +22,23 @@ vi.mock("drizzle-orm", () => ({
   eq: vi.fn(),
   and: vi.fn(),
 }));
+vi.mock("@/lib/dish-lifecycle", () => ({
+  getDishLifecycleInfo: vi.fn(),
+}));
+vi.mock("@/lib/dish-status", () => ({
+  isDishPaused: vi.fn((status: string) => status !== "active"),
+  setDishPaused: vi.fn(),
+}));
+vi.mock("@/lib/search/index-builder", () => ({
+  rebuildCookSearchIndexSafe: vi.fn(),
+}));
 
 import { NextRequest } from "next/server";
 import { POST } from "@/app/api/business/dishes/[dishId]/archive/route";
 import { db } from "@/db";
 import { auth } from "@/lib/auth";
+import { getDishLifecycleInfo } from "@/lib/dish-lifecycle";
+import { setDishPaused } from "@/lib/dish-status";
 
 const COOK_ID = "cook-uuid";
 const USER_ID = "user-uuid";
@@ -55,13 +67,6 @@ function mockTwoSelects(dishRow: object | null) {
     const from = vi.fn(() => ({ where }));
     return { from } as never;
   });
-}
-
-function mockUpdate(row: object) {
-  const returning = vi.fn().mockResolvedValue([row]);
-  const where = vi.fn(() => ({ returning }));
-  const set = vi.fn(() => ({ where }));
-  vi.mocked(db.update).mockReturnValue({ set } as never);
 }
 
 function makePost(): NextRequest {
@@ -136,10 +141,34 @@ describe("POST /api/business/listings/dishes/[dishId]/archive", () => {
     expect(body.error).toBe("Meal is already archived.");
   });
 
+  it("returns 409 when the meal is on open orders", async () => {
+    mockSession(USER_ID);
+    mockTwoSelects(activeDish);
+    vi.mocked(getDishLifecycleInfo).mockResolvedValue({
+      totalOrders: 2,
+      openOrderCount: 1,
+      isLastActiveDish: false,
+      canDelete: false,
+    });
+
+    const res = await POST(makePost(), params);
+    const body = await res.json();
+
+    expect(res.status).toBe(409);
+    expect(body.error).toContain("1 open order");
+    expect(setDishPaused).not.toHaveBeenCalled();
+  });
+
   it("returns 200 with updated dish on success", async () => {
     mockSession(USER_ID);
     mockTwoSelects(activeDish);
-    mockUpdate(updatedDish);
+    vi.mocked(getDishLifecycleInfo).mockResolvedValue({
+      totalOrders: 0,
+      openOrderCount: 0,
+      isLastActiveDish: true,
+      canDelete: true,
+    });
+    vi.mocked(setDishPaused).mockResolvedValue(updatedDish);
 
     const res = await POST(makePost(), params);
     const body = await res.json();
@@ -147,15 +176,19 @@ describe("POST /api/business/listings/dishes/[dishId]/archive", () => {
     expect(res.status).toBe(200);
     expect(body.success).toBe(true);
     expect(body.data).toEqual(updatedDish);
+    expect(body.hiddenFromBrowse).toBe(true);
   });
 
   it("returns 500 on unexpected DB error during update", async () => {
     mockSession(USER_ID);
     mockTwoSelects(activeDish);
-
-    const where = vi.fn().mockRejectedValue(new Error("DB error"));
-    const set = vi.fn(() => ({ where }));
-    vi.mocked(db.update).mockReturnValue({ set } as never);
+    vi.mocked(getDishLifecycleInfo).mockResolvedValue({
+      totalOrders: 0,
+      openOrderCount: 0,
+      isLastActiveDish: false,
+      canDelete: true,
+    });
+    vi.mocked(setDishPaused).mockRejectedValue(new Error("DB error"));
 
     const res = await POST(makePost(), params);
 
