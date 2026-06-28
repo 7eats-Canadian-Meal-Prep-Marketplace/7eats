@@ -428,3 +428,63 @@
   font-size: 12px;
   color: var(--grey-500);
 }
+
+@media (max-width: 767px) {
+  .page {
+    padding: 12px 16px 12px;
+  }
+
+  .back {
+    margin-bottom: 10px;
+  }
+
+  .cover {
+    height: 112px;
+  }
+
+  .heroBody {
+    padding: 0 16px 18px;
+  }
+
+  .avatar {
+    width: 72px;
+    height: 72px;
+    margin-top: -36px;
+    font-size: 26px;
+  }
+
+  .tagGroup {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .tagLabel {
+    width: auto;
+    padding-top: 0;
+  }
+
+  .ratingRow {
+    gap: 4px 8px;
+  }
+
+  .ratingLoc {
+    margin-left: 0;
+    flex-basis: 100%;
+  }
+
+  .section {
+    margin-top: 24px;
+  }
+
+  .section:last-child {
+    margin-bottom: 0;
+  }
+
+  .reviewsEmpty {
+    padding: 14px 16px;
+    border: 1px solid var(--grey-200);
+    border-radius: 12px;
+    text-align: center;
+  }
+}

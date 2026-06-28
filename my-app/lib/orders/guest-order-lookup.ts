@@ -5,6 +5,7 @@ import {
   guestAccessTokensMatch,
   hashGuestAccessToken,
 } from "@/lib/guest-order-access";
+import { resolveOrderLeadTimeRules } from "@/lib/lead-time";
 import { formatOrderTimingLabel } from "@/lib/order-timing-label";
 import { getClientCancelPolicy } from "@/lib/orders/client-cancel-policy";
 import { getTaxLabel } from "@/lib/tax";
@@ -65,10 +66,13 @@ export async function getGuestOrderByToken(
       cancellationAllowed: orders.cancellationAllowed,
       guestAccessTokenHash: orders.guestAccessTokenHash,
       createdAt: orders.createdAt,
+      leadTimeSnapshot: orders.leadTimeSnapshot,
+      leadTimeCutoffSnapshot: orders.leadTimeCutoffSnapshot,
       cookFirstName: authUser.firstName,
       cookLastName: authUser.lastName,
       cookDisplayName: cookProfiles.displayName,
       cookLeadTime: cookProfiles.leadTime,
+      cookLeadTimeCutoff: cookProfiles.leadTimeCutoff,
     })
     .from(orders)
     .leftJoin(cookProfiles, eq(orders.cookId, cookProfiles.id))
@@ -175,12 +179,14 @@ export async function getGuestOrderByToken(
     notes: row.notes,
     deliveryDetails: row.deliveryDetails,
     ...(() => {
+      const leadTimeRules = resolveOrderLeadTimeRules(row);
       const cancelPolicy = getClientCancelPolicy({
         status: row.status,
         cancellationAllowed: row.cancellationAllowed,
         pickupAt: row.pickupAt,
         fulfillmentWindowStart: row.fulfillmentWindowStart,
-        cookLeadTime: row.cookLeadTime,
+        cookLeadTime: leadTimeRules.leadTime,
+        cookLeadTimeCutoff: leadTimeRules.leadTimeCutoff,
         fulfillmentMode,
       });
       return {

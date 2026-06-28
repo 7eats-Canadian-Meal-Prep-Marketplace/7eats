@@ -4,6 +4,12 @@
   display: flex;
   flex-direction: column;
   background: var(--white);
+  --app-header-h: 72px;
+  --app-bottom-nav-content-h: 64px;
+  --app-bottom-nav-h: calc(
+    var(--app-bottom-nav-content-h) +
+    env(safe-area-inset-bottom, 0px)
+  );
 }
 
 /* ─── Header ───────────────────────────────────────────────────────────────── */
@@ -13,7 +19,7 @@
   left: 0;
   right: 0;
   z-index: 200;
-  height: 72px;
+  height: var(--app-header-h);
   background: var(--white);
   border-bottom: 1px solid var(--grey-200);
 }
@@ -108,6 +114,23 @@
 
 .headerSegmented {
   display: none;
+}
+
+.segmentedWide {
+  width: 100%;
+  display: flex;
+}
+
+@media (max-width: 879px) {
+  .segmentedWide .segment {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    min-height: 44px;
+    padding: 10px 16px;
+  }
 }
 
 @media (min-width: 880px) {
@@ -306,22 +329,54 @@
 }
 
 .addressChipText {
-  max-width: 120px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  min-width: 0;
 }
 
-@media (max-width: 480px) {
+@media (min-width: 768px) {
   .addressChipText {
-    display: none;
+    max-width: 160px;
   }
 }
 
-/* On very small screens hide the address chip entirely to prevent header overflow */
-@media (max-width: 360px) {
+@media (max-width: 767px) {
+  .headerInner {
+    gap: 10px;
+    padding: 0 16px;
+  }
+
+  .brandLink {
+    transform: translateY(-8px);
+  }
+
   .addressWrap {
-    display: none;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .addressChip {
+    width: 100%;
+    max-width: none;
+    min-height: 44px;
+    padding: 8px 12px 8px 10px;
+  }
+
+  .addressChipText {
+    flex: 1;
+    max-width: none;
+  }
+
+  .headerRight {
+    margin-left: 0;
+    flex-shrink: 0;
+    gap: 8px;
+  }
+
+  .cartPill {
+    padding: 8px 12px;
+    min-height: 44px;
   }
 }
 
@@ -790,12 +845,18 @@
   color: var(--ink);
 }
 
-/* ─── Guest actions (logged-out header) ─────────────────────────────────────── */
+/* ─── Guest actions (logged-out header, desktop only) ───────────────────────── */
 .guestActions {
-  display: flex;
+  display: none;
   align-items: center;
   gap: 6px;
   flex-shrink: 0;
+}
+
+@media (min-width: 768px) {
+  .guestActions {
+    display: flex;
+  }
 }
 
 .loginBtn {
@@ -839,8 +900,8 @@
 /* ─── Main ──────────────────────────────────────────────────────────────────── */
 .main {
   flex: 1;
-  padding-top: 72px;
-  padding-bottom: 64px;
+  padding-top: var(--app-header-h);
+  padding-bottom: var(--app-bottom-nav-h);
 }
 
 @media (min-width: 768px) {
@@ -861,12 +922,14 @@
   left: 0;
   right: 0;
   z-index: 200;
-  height: 64px;
+  height: var(--app-bottom-nav-h);
+  box-sizing: border-box;
   background: var(--white);
-  border-top: 1px solid var(--grey-200);
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 20px env(safe-area-inset-bottom, 0px);
 }
 
 @media (min-width: 768px) {
@@ -875,13 +938,27 @@
   }
 }
 
+@media (max-width: 767px) {
+  .bottomNav {
+    /* Bleed white 1px past the viewport edge — kills sub-pixel gaps on some mobile browsers */
+    box-shadow: 0 1px 0 1px var(--white);
+  }
+
+  .main {
+    background: var(--white);
+  }
+}
+
 .bottomNavItem {
   display: flex;
+  flex: 0 0 auto;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 3px;
-  color: #bbbbc0;
+  gap: 4px;
+  width: 76px;
+  padding: 8px 4px 6px;
+  color: var(--grey-700);
   transition: color 0.12s;
   text-decoration: none;
 }
@@ -915,7 +992,9 @@
 }
 
 .bottomNavLabel {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.01em;
+  line-height: 1.1;
+  text-align: center;
 }

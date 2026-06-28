@@ -29,6 +29,7 @@ describe("earliestFulfillmentWindow", () => {
       [],
       "2_days",
       now,
+      "23:59:59",
     );
     expect(result).not.toBeNull();
     expect(result?.start.getDay()).toBe(5); // Friday — Mon/Tue skipped by 2-day lead
@@ -66,6 +67,21 @@ describe("earliestFulfillmentWindow", () => {
     expect(result?.start.getDay()).toBe(6); // Saturday
     expect(result?.start.getHours()).toBe(16);
     expect(result?.end.getHours()).toBe(19);
+  });
+
+  it("respects a 10pm cutoff when generating the next window", () => {
+    const now = new Date(2026, 5, 18, 22, 30, 0); // Thu 10:30pm
+    const result = earliestFulfillmentWindow(
+      "pickup",
+      [{ dayOfWeek: "saturday", fromTime: "10:00:00", toTime: "13:00:00" }],
+      [],
+      "2_days",
+      now,
+      "22:00:00",
+    );
+    expect(result).not.toBeNull();
+    expect(result?.start.getDay()).toBe(6);
+    expect(result?.start.getDate()).toBe(27);
   });
 });
 

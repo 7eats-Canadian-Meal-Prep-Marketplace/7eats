@@ -18,6 +18,7 @@ import {
   formatUnavailableDishesMessage,
   type UnavailableOrderDish,
 } from "@/lib/dish-lifecycle-messages";
+import { formatDbLeadTimeCutoff } from "@/lib/lead-time";
 import { getDrivingDistanceKm } from "@/lib/mapbox-directions";
 import { computeLineTotal } from "@/lib/order-pricing";
 import { computeOrderChargeBreakdown } from "@/lib/order-totals";
@@ -120,6 +121,7 @@ export async function placeClientOrder(
       freeDeliveryAbove: cookProfiles.freeDeliveryAbove,
       pickupProvince: cookProfiles.pickupProvince,
       leadTime: cookProfiles.leadTime,
+      leadTimeCutoff: cookProfiles.leadTimeCutoff,
     })
     .from(cookProfiles)
     .innerJoin(authUser, eq(cookProfiles.userId, authUser.id))
@@ -368,6 +370,7 @@ export async function placeClientOrder(
     deliveryWindows,
     cook.leadTime,
     placementNow,
+    formatDbLeadTimeCutoff(cook.leadTimeCutoff),
   );
 
   const platformFeePct = Number.parseFloat(cook.platformFeePct);
@@ -465,6 +468,8 @@ export async function placeClientOrder(
         cookId,
         status: "pending",
         cancellationAllowed: cook.cancellationAllowed,
+        leadTimeSnapshot: cook.leadTime,
+        leadTimeCutoffSnapshot: formatDbLeadTimeCutoff(cook.leadTimeCutoff),
         platformDiscountId: resolved?.discountId ?? null,
         platformDiscountAmount:
           platformDiscount > 0 ? String(platformDiscount.toFixed(2)) : null,

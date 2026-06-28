@@ -4,6 +4,7 @@ import {
   type OrderNotifyClient,
 } from "@/lib/order-client-notifications";
 import { formatOrderTimingLabel } from "@/lib/order-timing-label";
+import { cancelByDate } from "@/lib/refund-policy";
 import {
   bulletList,
   contactParagraph,
@@ -42,6 +43,9 @@ type OrderEmailData = {
   // Cook's pickup address, shown to the client for pickup orders only. Composed
   // upstream via formatPickupLocation(); null/absent for delivery or unknown.
   pickupLocation?: string | null;
+  cancellationAllowed?: boolean;
+  cookLeadTime?: string | null;
+  cookLeadTimeCutoff?: string | null;
 };
 
 function fulfillmentLabel(mode: OrderEmailData["fulfillmentMode"]): string {
@@ -102,6 +106,33 @@ function pickupLocationTextLine(order: OrderEmailData): string | null {
 function cancellationScheduleClause(order: OrderEmailData): string {
   const timing = knownTimingLabel(order);
   return timing ? ` scheduled for ${timing}` : "";
+}
+
+function refundDeadlineRow(
+  order: OrderEmailData,
+): { label: string; value: string } | null {
+  if (!order.cancellationAllowed) return null;
+  const reference = order.fulfillmentWindowStart ?? order.pickupAt ?? null;
+  if (!reference) return null;
+  const deadline = cancelByDate(
+    reference instanceof Date ? reference.toISOString() : String(reference),
+    order.cookLeadTime ?? null,
+    order.cookLeadTimeCutoff,
+  );
+  if (!deadline) return null;
+  const value = deadline.toLocaleString("en-CA", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+  return { label: "Cancel for refund until", value };
+}
+
+function refundDeadlineTextLine(order: OrderEmailData): string | null {
+  const row = refundDeadlineRow(order);
+  return row ? `${row.label}: ${row.value}` : null;
 }
 
 function formatMoney(total: string, currency: string): string {
@@ -254,6 +285,8 @@ export async function sendOrderReceiptToClient(
         const timing = formatTiming(order);
         const pickupRow = pickupLocationRow(order);
         const pickupTextLine = pickupLocationTextLine(order);
+        const refundRow = refundDeadlineRow(order);
+        const refundTextLine = refundDeadlineTextLine(order);
         const subject = `Your 7eats order with ${cook.name} is confirmed`;
         const html = htmlEmail({
           title: subject,
@@ -271,6 +304,7 @@ export async function sendOrderReceiptToClient(
               },
               { label: "Timing", value: timing },
               ...(pickupRow ? [pickupRow] : []),
+              ...(refundRow ? [refundRow] : []),
             ]) +
             paragraph(
               "You can track its status and pickup code any time from your orders.",
@@ -289,6 +323,7 @@ export async function sendOrderReceiptToClient(
           `Fulfillment: ${fulfillmentLabel(order.fulfillmentMode)}`,
           `Timing: ${timing}`,
           ...(pickupTextLine ? [pickupTextLine] : []),
+          ...(refundTextLine ? [refundTextLine] : []),
           "",
           "Track it any time from your orders:",
           `${process.env.NEXT_PUBLIC_APP_URL}/app/orders/${order.id}`,
@@ -312,6 +347,8 @@ export async function sendGuestOrderReceiptToClient(
     const timing = formatTiming(order);
     const pickupRow = pickupLocationRow(order);
     const pickupTextLine = pickupLocationTextLine(order);
+    const refundRow = refundDeadlineRow(order);
+    const refundTextLine = refundDeadlineTextLine(order);
     const receiptUrl = `${process.env.NEXT_PUBLIC_APP_URL}/app/checkout/guest-confirmation?token=${encodeURIComponent(guest.accessToken)}`;
     const cancelUrl = `${process.env.NEXT_PUBLIC_APP_URL}/app/guest/order/cancel?token=${encodeURIComponent(guest.accessToken)}`;
     const subject = `Order confirmed - ${guest.confirmationCode}`;
@@ -338,6 +375,7 @@ export async function sendGuestOrderReceiptToClient(
           },
           { label: "Timing", value: timing },
           ...(pickupRow ? [pickupRow] : []),
+          ...(refundRow ? [refundRow] : []),
         ]) +
         paragraph(
           "Save your confirmation code if you need to contact support.",
@@ -359,6 +397,7 @@ export async function sendGuestOrderReceiptToClient(
       `Fulfillment: ${fulfillmentLabel(order.fulfillmentMode)}`,
       `Timing: ${timing}`,
       ...(pickupTextLine ? [pickupTextLine] : []),
+      ...(refundTextLine ? [refundTextLine] : []),
       "",
       "Save your confirmation code if you need to contact support.",
       "",

@@ -1,5 +1,45 @@
 import type Stripe from "stripe";
 
+export type CookStripeProfileInput = {
+  cookProfileId: string;
+  displayName?: string | null;
+};
+
+/** Public storefront URL Stripe can use when a cook has no personal website. */
+export function cookMarketplaceProfileUrl(cookProfileId: string): string {
+  const base = (
+    process.env.NEXT_PUBLIC_APP_URL ?? "https://www.7eats.ca"
+  ).replace(/\/$/, "");
+  return `${base}/app/cooks/${cookProfileId}`;
+}
+
+/** Prefill Stripe onboarding so cooks aren't asked for a website they don't have. */
+export function buildCookStripeProfileDefaults(cook: CookStripeProfileInput): {
+  business_url: string;
+  doing_business_as?: string;
+  product_description: string;
+} {
+  const name = cook.displayName?.trim();
+  const business_url = cookMarketplaceProfileUrl(cook.cookProfileId);
+  return {
+    business_url,
+    ...(name ? { doing_business_as: name } : {}),
+    product_description: name
+      ? `${name} sells homemade meals on 7eats.`
+      : "Homemade meals sold on 7eats.",
+  };
+}
+
+export async function syncCookStripeProfileToAccount(
+  stripe: Stripe,
+  stripeAccountId: string,
+  cook: CookStripeProfileInput,
+): Promise<void> {
+  await stripe.v2.core.accounts.update(stripeAccountId, {
+    defaults: { profile: buildCookStripeProfileDefaults(cook) },
+  });
+}
+
 /**
  * Status of a cook's Accounts v2 connected account.
  *

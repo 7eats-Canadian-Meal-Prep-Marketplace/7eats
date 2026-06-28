@@ -9,6 +9,7 @@ import {
   formatOrderTimingWindow,
 } from "@/lib/order-timing";
 import { formatClientOrderTiming } from "@/lib/order-timing-label";
+import { orderHasPlacedPaymentFilter } from "@/lib/orders/abandoned-checkout";
 import { resolveOrderCookFields } from "@/lib/orders/cook-order-fields";
 import {
   createOrderBodySchema,
@@ -51,12 +52,13 @@ export async function GET(req: NextRequest) {
   const offset = Number.isNaN(rawOffset) ? 0 : Math.max(0, rawOffset);
 
   try {
+    const clientScope = and(
+      eq(orders.clientId, session.user.id),
+      orderHasPlacedPaymentFilter(),
+    );
     const whereClause = statusFilter
-      ? and(
-          eq(orders.clientId, session.user.id),
-          eq(orders.status, statusFilter),
-        )
-      : eq(orders.clientId, session.user.id);
+      ? and(clientScope, eq(orders.status, statusFilter))
+      : clientScope;
 
     const [{ total }] = await db
       .select({ total: count() })

@@ -14,6 +14,7 @@ function cook(overrides: Partial<BrowseCookCard> = {}): BrowseCookCard {
     niches: [],
     cuisines: [],
     leadTime: null,
+    leadTimeCutoff: null,
     delivery: "self",
     offersPickup: true,
     pickupCity: "Toronto",

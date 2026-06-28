@@ -188,7 +188,11 @@
   .inner {
     grid-template-columns: 1fr;
     flex-direction: column;
-    gap: 24px;
+    gap: 16px;
+  }
+
+  .rail {
+    order: -1;
   }
 
   .railInner {
@@ -200,6 +204,24 @@
     position: static;
     max-height: none;
     overflow: visible;
+    padding: 16px;
+    box-shadow: none;
+  }
+
+  .summaryLines {
+    gap: 8px;
+    padding-bottom: 12px;
+    margin-bottom: 12px;
+  }
+
+  .summarySheet {
+    gap: 8px;
+    padding-bottom: 12px;
+    margin-bottom: 12px;
+  }
+
+  .pageHeader {
+    margin-bottom: 16px;
   }
 }
 
@@ -559,10 +581,10 @@
 }
 
 .reassurance {
-  margin: 8px 0 0;
-  font-size: 13.5px;
-  font-weight: 600;
-  color: var(--grey-700);
+  margin: 6px 0 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--grey-600);
 }
 
 .discountHint {
@@ -573,17 +595,28 @@
 .backLink {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  margin-bottom: 20px;
-  font-size: 13.5px;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 11px 20px;
+  font-size: 14px;
   font-weight: 600;
-  color: var(--grey-700);
+  color: var(--red);
   text-decoration: none;
-  transition: color 0.12s;
+  border: 1px solid var(--red);
+  border-radius: var(--radius-pill);
+  transition:
+    background 0.12s,
+    color 0.12s;
 }
 
 .backLink:hover {
-  color: var(--ink);
+  background: var(--red);
+  color: var(--white);
+}
+
+.submitBlock .backLink {
+  width: 100%;
 }
 
 .input {
@@ -1130,6 +1163,29 @@
   letter-spacing: -0.01em;
 }
 
+.summaryNote {
+  padding-top: 12px;
+  border-top: 1px dashed var(--grey-200);
+}
+
+.summaryNoteLabel {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--grey-500);
+  margin-bottom: 6px;
+}
+
+.summaryNoteText {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--grey-700);
+  white-space: pre-wrap;
+}
+
 .summarySheet {
   display: flex;
   flex-direction: column;
@@ -1174,7 +1230,7 @@
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  margin-bottom: 16px;
+  margin-bottom: 0;
 }
 
 .summaryTotal span:first-child {
@@ -1216,8 +1272,11 @@
 }
 
 .placeOrderBtn:disabled {
-  opacity: 0.55;
+  background: var(--grey-300);
+  color: var(--grey-700);
+  opacity: 1;
   cursor: not-allowed;
+  box-shadow: none;
 }
 
 .stepActions .placeOrderBtn {
@@ -1467,7 +1526,40 @@
 
 @media (max-width: 768px) {
   .page {
-    padding: 20px 16px 80px;
+    /* Shell .main already reserves space for the bottom nav */
+    padding: 16px 16px 0;
+  }
+
+  .formSection {
+    padding: 18px 16px;
+    margin-bottom: 12px;
+    box-shadow: none;
+  }
+
+  .input,
+  .addressEditInput {
+    font-size: 16px;
+  }
+
+  .verifyRow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .verifyConfirmBtn {
+    width: 100%;
+  }
+
+  .verifiedEmailRow {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .changeEmailBtn {
+    align-self: flex-end;
+    min-height: 44px;
+    padding: 8px 4px;
   }
 
   /* Wallet rows: ensure minimum 44px tap target */
@@ -1478,6 +1570,12 @@
   /* Stepper: compact on mobile */
   .stepLabel {
     font-size: 12px;
+  }
+
+  .unavailableAlertTag {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 

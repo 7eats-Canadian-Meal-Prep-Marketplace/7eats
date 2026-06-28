@@ -12,6 +12,7 @@ import {
   tags,
 } from "@/db/schema";
 import { auth } from "@/lib/auth";
+import { formatDbLeadTimeCutoff } from "@/lib/lead-time";
 
 function formatCertExpiry(value: Date | null | undefined): string {
   if (!value) return "";
@@ -54,6 +55,7 @@ export default async function OnboardingPage() {
       pickupLng: cookProfiles.pickupLng,
       pickupPlaceId: cookProfiles.pickupPlaceId,
       leadTime: cookProfiles.leadTime,
+      leadTimeCutoff: cookProfiles.leadTimeCutoff,
       offersPickup: cookProfiles.offersPickup,
       delivery: cookProfiles.delivery,
       acceptsSpecialRequests: cookProfiles.acceptsSpecialRequests,
@@ -162,6 +164,7 @@ export default async function OnboardingPage() {
                     to: w.toTime.slice(0, 5),
                   })),
                 leadTime: profile.leadTime ?? "",
+                leadTimeCutoff: formatDbLeadTimeCutoff(profile.leadTimeCutoff),
                 delivery: profile.delivery ?? "none",
                 offersPickup: profile.offersPickup,
                 acceptsSpecialRequests: profile.acceptsSpecialRequests,

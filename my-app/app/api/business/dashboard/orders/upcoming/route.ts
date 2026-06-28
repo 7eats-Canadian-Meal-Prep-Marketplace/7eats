@@ -3,6 +3,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { getCookId, unauthorized } from "@/app/api/business/_lib/cook-auth";
 import { db } from "@/db";
 import { authUser, listings, orders } from "@/db/schema";
+import { orderHasPlacedPaymentFilter } from "@/lib/orders/abandoned-checkout";
 
 export async function GET(req: NextRequest) {
   const cookId = await getCookId(req.headers);
@@ -59,6 +60,7 @@ export async function GET(req: NextRequest) {
       .where(
         and(
           eq(orders.cookId, cookId),
+          orderHasPlacedPaymentFilter(),
           inArray(orders.status, ["pending", "confirmed", "ready"]),
           // Still "upcoming" until the scheduled window has fully passed.
           gte(scheduledEnd, sql`now()`),

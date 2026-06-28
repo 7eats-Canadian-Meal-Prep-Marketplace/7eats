@@ -1,14 +1,16 @@
-import { and, count, eq, gte, inArray, lte, sql, sum } from "drizzle-orm";
+import { and, count, eq, gte, inArray, lte, ne, sql, sum } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { getCookId, unauthorized } from "@/app/api/business/_lib/cook-auth";
 import { db } from "@/db";
 import { dishes, orderPayments, orders, reviews } from "@/db/schema";
+import { orderHasPlacedPaymentFilter } from "@/lib/orders/abandoned-checkout";
 
 // Cook earnings reflect the net payout (total − platform fee − tax) snapshotted
 // on order_payments, not the gross `orders.totalPrice` the customer paid.
 const fullPaymentJoin = and(
   eq(orderPayments.orderId, orders.id),
   eq(orderPayments.type, "full"),
+  ne(orderPayments.status, "pending"),
 );
 
 export async function GET(req: NextRequest) {
@@ -32,6 +34,7 @@ export async function GET(req: NextRequest) {
         .where(
           and(
             eq(orders.cookId, cookId),
+            orderHasPlacedPaymentFilter(),
             inArray(orders.status, [
               "pending",
               "confirmed",

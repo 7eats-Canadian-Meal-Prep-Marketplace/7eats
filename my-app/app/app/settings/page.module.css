@@ -1434,13 +1434,28 @@
 /* ─── Mobile responsive ──────────────────────────────────────────────────────── */
 @media (max-width: 600px) {
   .inner {
-    padding: 20px 16px 80px;
+    padding: 20px 16px calc(80px + env(safe-area-inset-bottom, 0px));
   }
 
   /* Collapse 2-col form grid to single column */
   .formGrid {
     grid-template-columns: 1fr;
     gap: 0;
+  }
+
+  .prefCard {
+    padding: 14px 16px;
+  }
+
+  .optionChip {
+    min-height: 44px;
+    padding: 10px 16px;
+  }
+
+  .notifRow {
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
   }
 
   /* Danger row: stack text + button vertically */

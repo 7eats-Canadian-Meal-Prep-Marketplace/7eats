@@ -231,6 +231,32 @@
     color 0.12s;
 }
 
+.detailBack {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  width: fit-content;
+  min-height: 44px;
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-sm);
+  background: var(--white);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    border-color 0.12s,
+    background 0.12s;
+}
+
+.detailBack:hover {
+  border-color: var(--grey-300);
+  background: var(--grey-100);
+}
+
 .detailClose:hover {
   background: var(--grey-100);
   color: var(--ink);
@@ -1419,6 +1445,7 @@
 @media (max-width: 767px) {
   .page {
     margin: -20px -16px;
+    overflow-x: clip;
   }
 
   .listPanel {
@@ -1427,6 +1454,18 @@
   }
 
   .detailPanel {
+    display: none;
+  }
+
+  .slideOver .detail {
+    padding: 16px;
+  }
+
+  .detailBack {
+    display: inline-flex;
+  }
+
+  .detailClose {
     display: none;
   }
 }

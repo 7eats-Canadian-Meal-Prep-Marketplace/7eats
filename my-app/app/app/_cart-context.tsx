@@ -41,6 +41,7 @@ type AddItemInput = {
   minOrderQty: number;
   maxOrderQty: number | null;
   leadTime: string | null;
+  leadTimeCutoff: string | null;
   cancellationAllowed: boolean;
   item: CartItem;
 };
@@ -53,6 +54,7 @@ type CartContextType = {
   minOrderQty: number;
   maxOrderQty: number | null;
   leadTime: string | null;
+  leadTimeCutoff: string | null;
   cancellationAllowed: boolean;
   items: CartItem[];
   fulfillmentMode: "pickup" | "delivery";
@@ -151,6 +153,7 @@ type CookMeta = {
   minOrderQty: number;
   maxOrderQty: number | null;
   leadTime: string | null;
+  leadTimeCutoff: string | null;
   cancellationAllowed: boolean;
 };
 
@@ -245,6 +248,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           minOrderQty: input.minOrderQty,
           maxOrderQty: input.maxOrderQty,
           leadTime: input.leadTime,
+          leadTimeCutoff: input.leadTimeCutoff,
           cancellationAllowed: input.cancellationAllowed,
         },
         input.item,
@@ -267,6 +271,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           minOrderQty: input.minOrderQty,
           maxOrderQty: input.maxOrderQty,
           leadTime: input.leadTime,
+          leadTimeCutoff: input.leadTimeCutoff,
           cancellationAllowed: input.cancellationAllowed,
         },
         input.item,
@@ -309,6 +314,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     minOrderQty,
     maxOrderQty,
     leadTime: cook?.leadTime ?? null,
+    leadTimeCutoff: cook?.leadTimeCutoff ?? null,
     cancellationAllowed: cook?.cancellationAllowed ?? false,
     items,
     fulfillmentMode,

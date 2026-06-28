@@ -15,6 +15,7 @@ import {
   guestAccessTokensMatch,
   hashGuestAccessToken,
 } from "@/lib/guest-order-access";
+import { resolveOrderLeadTimeRules } from "@/lib/lead-time";
 import {
   isClientOrderCancellable,
   isClientRefundEligible,
@@ -59,7 +60,10 @@ export async function cancelClientOrder(
       fulfillmentMode: orders.fulfillmentMode,
       confirmationCode: orders.confirmationCode,
       isGuestCheckout: orders.isGuestCheckout,
+      leadTimeSnapshot: orders.leadTimeSnapshot,
+      leadTimeCutoffSnapshot: orders.leadTimeCutoffSnapshot,
       cookLeadTime: cookProfiles.leadTime,
+      cookLeadTimeCutoff: cookProfiles.leadTimeCutoff,
     })
     .from(orders)
     .leftJoin(cookProfiles, eq(orders.cookId, cookProfiles.id))
@@ -101,7 +105,10 @@ export async function cancelGuestOrderByToken(
       confirmationCode: orders.confirmationCode,
       isGuestCheckout: orders.isGuestCheckout,
       guestAccessTokenHash: orders.guestAccessTokenHash,
+      leadTimeSnapshot: orders.leadTimeSnapshot,
+      leadTimeCutoffSnapshot: orders.leadTimeCutoffSnapshot,
       cookLeadTime: cookProfiles.leadTime,
+      cookLeadTimeCutoff: cookProfiles.leadTimeCutoff,
     })
     .from(orders)
     .leftJoin(cookProfiles, eq(orders.cookId, cookProfiles.id))
@@ -138,7 +145,10 @@ async function executeCancellation(
     fulfillmentMode: string | null;
     confirmationCode: string | null;
     isGuestCheckout: boolean;
+    leadTimeSnapshot: string | null;
+    leadTimeCutoffSnapshot: string | null;
     cookLeadTime: string | null;
+    cookLeadTimeCutoff: string | null;
   },
   cancelledBy: string,
   options?: { guestAccessToken?: string },
@@ -151,12 +161,15 @@ async function executeCancellation(
     };
   }
 
+  const leadTimeRules = resolveOrderLeadTimeRules(order);
+
   const refundEligible = isClientRefundEligible({
     status: order.status,
     cancellationAllowed: order.cancellationAllowed,
     pickupAt: order.pickupAt,
     fulfillmentWindowStart: order.fulfillmentWindowStart,
-    cookLeadTime: order.cookLeadTime,
+    cookLeadTime: leadTimeRules.leadTime,
+    cookLeadTimeCutoff: leadTimeRules.leadTimeCutoff,
     fulfillmentMode:
       order.fulfillmentMode === "delivery" || order.fulfillmentMode === "pickup"
         ? order.fulfillmentMode

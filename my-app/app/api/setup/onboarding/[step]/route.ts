@@ -10,6 +10,10 @@ import {
 } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { withDeliveryDefaults } from "@/lib/delivery-pricing";
+import {
+  isValidLeadTimeCutoff,
+  normalizeLeadTimeCutoff,
+} from "@/lib/lead-time";
 import { rebuildCookSearchIndexSafe } from "@/lib/search/index-builder";
 import { uploadAvatar, uploadBanner } from "@/lib/storage/avatars";
 import { uploadCert } from "@/lib/storage/certs";
@@ -241,6 +245,17 @@ async function step2(req: Request, userId: string) {
       { status: 400 },
     );
 
+  const leadTimeCutoffRaw = (data.leadTimeCutoff ?? "").trim();
+  if (leadTimeCutoffRaw && !isValidLeadTimeCutoff(leadTimeCutoffRaw)) {
+    return NextResponse.json(
+      { error: "Select a valid order cutoff time." },
+      { status: 400 },
+    );
+  }
+  const leadTimeCutoff = normalizeLeadTimeCutoff(
+    leadTimeCutoffRaw || undefined,
+  );
+
   const leadTime = data.leadTime as LeadTimeValue;
   const delivery =
     data.delivery === "self" ? ("self" as const) : ("none" as const);
@@ -301,6 +316,7 @@ async function step2(req: Request, userId: string) {
         pickupLng,
         pickupPlaceId,
         leadTime,
+        leadTimeCutoff,
         offersPickup,
         delivery,
         ...(offersDelivery

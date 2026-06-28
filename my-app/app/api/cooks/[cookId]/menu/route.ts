@@ -14,6 +14,7 @@ import {
   tags,
 } from "@/db/schema";
 import { formatPickupLocation } from "@/lib/address";
+import { formatDbLeadTimeCutoff } from "@/lib/lead-time";
 
 export async function GET(
   _req: NextRequest,
@@ -34,6 +35,7 @@ export async function GET(
         minOrderQty: cookProfiles.minOrderQty,
         maxOrderQty: cookProfiles.maxOrderQty,
         leadTime: cookProfiles.leadTime,
+        leadTimeCutoff: cookProfiles.leadTimeCutoff,
         offersPickup: cookProfiles.offersPickup,
         delivery: cookProfiles.delivery,
         cancellationAllowed: cookProfiles.cancellationAllowed,
@@ -283,6 +285,7 @@ export async function GET(
       data: {
         cook: {
           ...cookRest,
+          leadTimeCutoff: formatDbLeadTimeCutoff(cook.leadTimeCutoff),
           cookName,
           pickupLocation,
           pickupWindows,

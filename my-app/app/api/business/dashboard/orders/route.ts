@@ -10,6 +10,7 @@ import {
   orderPayments,
   orders,
 } from "@/db/schema";
+import { orderHasPlacedPaymentFilter } from "@/lib/orders/abandoned-checkout";
 
 const querySchema = z.object({
   status: z
@@ -38,7 +39,7 @@ export async function GET(req: NextRequest) {
   const { status, listingId, dateFrom, dateTo, page, limit } = parsed.data;
   const offset = (page - 1) * limit;
 
-  const conditions = [eq(orders.cookId, cookId)];
+  const conditions = [eq(orders.cookId, cookId), orderHasPlacedPaymentFilter()];
   if (status) conditions.push(eq(orders.status, status));
   if (listingId) conditions.push(eq(orders.listingId, listingId));
   // Date range filters the *scheduled* day. `pickupAt` is only ever set for

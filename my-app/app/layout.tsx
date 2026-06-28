@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import Script from "next/script";
 import { Toaster } from "sonner";
@@ -48,6 +48,12 @@ export const metadata: Metadata = {
       "7eats is the marketplace for Toronto's meal prep businesses. Get discovered by new customers, manage orders, and get paid without the admin overhead.",
     images: ["/7eats-icon-full.jpg"],
   },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 const organizationSchema = {

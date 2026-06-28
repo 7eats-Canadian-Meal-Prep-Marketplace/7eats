@@ -2,6 +2,8 @@
 .page {
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  max-width: 100%;
 }
 
 /* ─── Header ───────────────────────────────────────────────────────────────── */
@@ -16,11 +18,13 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 12.5px;
-  font-weight: 500;
-  color: var(--grey-500);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--grey-700);
   text-decoration: none;
   align-self: flex-start;
+  min-height: 44px;
+  padding: 4px 0;
   transition: color 0.12s;
 }
 
@@ -135,6 +139,7 @@
 
 /* ─── Content animation ────────────────────────────────────────────────────── */
 .content {
+  min-width: 0;
   animation: fadeUp 0.14s ease both;
 }
 
@@ -729,13 +734,20 @@
 
 /* ─── Mobile ───────────────────────────────────────────────────────────────── */
 @media (max-width: 640px) {
+  .steps {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
+  }
+
   .nutritionGrid {
     grid-template-columns: repeat(2, 1fr);
   }
 
   .ingHeader,
   .ingRow {
-    grid-template-columns: 1fr 64px 64px 32px;
+    grid-template-columns: minmax(0, 1fr) 52px 52px 32px;
   }
 
   .coverWrap {
@@ -749,6 +761,13 @@
 
   .step {
     padding: 7px 8px;
+    flex-shrink: 0;
+  }
+
+  .content,
+  .form {
+    min-width: 0;
+    max-width: 100%;
   }
 }
 

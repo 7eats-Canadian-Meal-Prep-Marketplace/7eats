@@ -16,7 +16,50 @@
 @media (max-width: 900px) {
   .layout {
     grid-template-columns: 1fr;
-    gap: 24px;
+    gap: 0;
+  }
+
+  .page {
+    /* Dock height only — shell .main already pads for bottom nav */
+    padding: 0 0 64px;
+  }
+
+  .page:has(.orderDockNoteBtn) {
+    padding: 0 0 112px;
+  }
+
+  .menuCol {
+    padding: 12px 16px 8px;
+  }
+
+  .rail {
+    display: none;
+  }
+
+  .menuHead {
+    display: none;
+  }
+
+  .leadBanner {
+    margin-bottom: 16px;
+  }
+
+  .dishGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .dishInfoBtn {
+    min-height: 96px;
+    padding: 10px 12px 12px;
+  }
+
+  .dishName {
+    font-size: 14px;
+  }
+
+  .dishPrice {
+    font-size: 14px;
   }
 }
 
@@ -616,6 +659,11 @@
 .segmentActive {
   background: var(--ink);
   color: var(--white);
+}
+
+.segment:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .policy {
@@ -1236,11 +1284,390 @@
   }
 }
 
+/* ── Mobile sticky chrome (kitchen + fulfillment) ───────────────── */
+.mobileChrome,
+.mobileOrderDock {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .mobileChrome {
+    display: block;
+    margin-bottom: 10px;
+  }
+
+  .mobileCookPanel {
+    border: 1px solid var(--grey-200);
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--white);
+  }
+
+  .mobileCookToggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 8px 12px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-family: var(--font);
+    text-align: left;
+  }
+
+  .mobileCookAvatar {
+    position: relative;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    overflow: hidden;
+    flex-shrink: 0;
+    background: var(--ink);
+    color: var(--white);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  .mobileCookTeaser {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .mobileCookName {
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mobileCookMeta {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--grey-600);
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mobileCookChevron {
+    flex-shrink: 0;
+    color: var(--grey-500);
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .mobileCookChevronOpen {
+    transform: rotate(180deg);
+  }
+
+  .mobileCookExpand {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .mobileCookExpandOpen {
+    grid-template-rows: 1fr;
+  }
+
+  .mobileCookExpandInner {
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  .mobileCookBody {
+    padding: 12px;
+    border-top: 1px solid var(--grey-200);
+    opacity: 0;
+    transform: translateY(-4px);
+    transition:
+      opacity 0.22s ease,
+      transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .mobileCookExpandOpen .mobileCookBody {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .mobileCookBy {
+    margin: 0;
+    font-size: 13px;
+    color: var(--grey-700);
+  }
+
+  .mobileCookMetaRow {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    margin-top: 8px;
+  }
+
+  .mobileCookFacts {
+    margin: 12px 0 0;
+    padding-top: 12px;
+    border-top: 1px solid var(--grey-200);
+  }
+
+  .mobileProfileLink {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--red);
+    text-decoration: none;
+  }
+
+  .mobileSegmented {
+    margin: 8px 0 0;
+    width: 100%;
+  }
+
+  .mobileSegmented .segment {
+    padding: 7px 0;
+    font-size: 12.5px;
+  }
+
+  .mobileDeliveryNote {
+    margin: 6px 0 0;
+    font-size: 12px;
+    line-height: 1.4;
+    color: var(--grey-600);
+  }
+
+  /* ── Mobile order dock ─────────────────────────────────────────── */
+  .mobileOrderDock {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 190;
+    padding-bottom: var(--app-bottom-nav-h, 64px);
+    background: var(--white);
+    border-top: 1px solid var(--grey-200);
+    box-shadow: 0 -6px 20px rgba(15, 15, 15, 0.05);
+  }
+
+  .orderDockMain {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 10px 16px;
+  }
+
+  .orderDockSummary {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 1px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-family: var(--font);
+    text-align: left;
+  }
+
+  .orderDockQty {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--grey-500);
+  }
+
+  .orderDockSubtotal {
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+    line-height: 1.1;
+  }
+
+  .orderDockEmpty {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--grey-500);
+  }
+
+  .orderDockCta {
+    flex-shrink: 0;
+    min-width: 132px;
+    height: 44px;
+    padding: 0 20px;
+    border: none;
+    border-radius: var(--radius-pill);
+    background: var(--red);
+    color: var(--white);
+    font-family: var(--font);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.12s;
+    white-space: nowrap;
+  }
+
+  .orderDockCta:hover:not(:disabled) {
+    background: var(--red-deep);
+  }
+
+  .orderDockCta:disabled {
+    opacity: 0.55;
+    cursor: pointer;
+  }
+
+  .orderDockNoteWrap {
+    padding: 0 16px 10px;
+  }
+
+  .orderDockNoteBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    height: 38px;
+    padding: 0 16px;
+    border: 1px solid var(--ink);
+    border-radius: var(--radius-pill);
+    background: var(--white);
+    color: var(--ink);
+    cursor: pointer;
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 600;
+    transition:
+      background 0.12s,
+      color 0.12s,
+      border-color 0.12s;
+  }
+
+  .orderDockNoteBtn:hover {
+    background: var(--grey-100);
+  }
+
+  .orderDockNoteBtnActive {
+    background: var(--ink);
+    color: var(--white);
+    border-color: var(--ink);
+  }
+
+  .orderDockNoteBtnActive:hover {
+    background: var(--grey-900);
+    border-color: var(--grey-900);
+  }
+}
+
+/* ── Mobile order sheet ─────────────────────────────────────────── */
+.orderSheetOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  animation: menuFade 0.15s ease both;
+}
+
+.orderSheetBackdrop {
+  position: absolute;
+  inset: 0;
+  border: none;
+  background: rgba(15, 12, 10, 0.52);
+  cursor: pointer;
+}
+
+.orderSheet {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-height: min(88vh, 720px);
+  background: var(--white);
+  border-radius: 18px 18px 0 0;
+  display: flex;
+  flex-direction: column;
+  animation: orderSheetUp 0.22s ease both;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.orderSheetHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid var(--grey-200);
+  flex-shrink: 0;
+}
+
+.orderSheetTitle {
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.orderSheetClose {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: var(--grey-100);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.orderSheetBody {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 4px 16px 20px;
+}
+
+.billInSheet {
+  border: none;
+  border-radius: 0;
+  padding: 12px 0 0;
+  box-shadow: none;
+}
+
+@keyframes orderSheetUp {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .dishCard,
   .modal,
   .modalOverlay,
-  .addCircle {
+  .orderSheet,
+  .orderSheetOverlay,
+  .addCircle,
+  .mobileCookExpand,
+  .mobileCookBody,
+  .mobileCookChevron {
     animation: none;
     transition: none;
   }

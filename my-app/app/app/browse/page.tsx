@@ -8,8 +8,8 @@ import {
   CookGrid,
   normalizeBrowseCook,
 } from "../_cook-card";
+import { DiscoveryFilterBar } from "../_discovery-bar";
 import { useServiceAddress } from "../_service-address-context";
-import { FulfillmentToggle } from "../_shell";
 import { Skeleton } from "../_skeleton";
 import { BrowseEmpty } from "./_browse-empty";
 import styles from "./page.module.css";
@@ -75,11 +75,10 @@ export default function BrowsePage() {
 
   return (
     <div className={styles.page}>
-      <div className={styles.filterBar}>
+      <DiscoveryFilterBar />
+
+      <div className={styles.desktopChipBar}>
         <div className={styles.filterInner}>
-          <div className={styles.mobileToggle}>
-            <FulfillmentToggle />
-          </div>
           <div className={styles.chipScroller}>
             {CUISINE_OPTIONS.map(({ label, value }) => (
               <Link

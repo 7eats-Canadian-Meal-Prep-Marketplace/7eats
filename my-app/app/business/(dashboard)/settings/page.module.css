@@ -4,6 +4,7 @@
   flex-direction: column;
   max-width: 1100px;
   width: 100%;
+  min-width: 0;
   margin: 0 auto;
 }
 
@@ -62,6 +63,7 @@
   grid-template-columns: 1fr 160px;
   gap: 64px;
   align-items: start;
+  min-width: 0;
 }
 
 /* ─── Sections (left column) ───────────────────────────────────────────────── */
@@ -70,6 +72,7 @@
   flex-direction: column;
   gap: 52px;
   padding-bottom: 120px;
+  min-width: 0;
 }
 
 .section {
@@ -77,6 +80,7 @@
   flex-direction: column;
   gap: 14px;
   scroll-margin-top: 32px;
+  min-width: 0;
 }
 
 .sectionTitle {
@@ -94,6 +98,7 @@
   border-radius: var(--radius-sm);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
   overflow: hidden;
+  min-width: 0;
 }
 
 .cardForm {
@@ -892,9 +897,62 @@
     display: none;
   }
 
+  .header {
+    margin-bottom: 28px;
+  }
+
+  .sections {
+    gap: 40px;
+    padding-bottom: 80px;
+  }
+
+  .formRow,
+  .formRow3 {
+    grid-template-columns: 1fr;
+  }
+
+  .cardForm {
+    padding: 16px 18px;
+  }
+
+  .cardFooter {
+    padding: 12px 18px;
+  }
+
+  .notifRow {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+  }
+
+  .perDayRow {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .timeRow {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  .formInput {
+    min-width: 0;
+  }
+
   /* Rail is hidden on mobile — fall back to the top back link. */
   .back {
     display: inline-flex;
+    min-height: 44px;
+    padding: 6px 12px;
+    margin: 0 0 4px 0;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  .back:hover {
+    background: var(--grey-100);
   }
 }
 

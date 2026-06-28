@@ -4,6 +4,10 @@ import { z } from "zod";
 import { getCookId, unauthorized } from "@/app/api/business/_lib/cook-auth";
 import { db, dbPool } from "@/db";
 import { cookPickupWindows, cookProfiles } from "@/db/schema";
+import {
+  formatDbLeadTimeCutoff,
+  normalizeLeadTimeCutoff,
+} from "@/lib/lead-time";
 
 const DAY_ORDER = [
   "monday",
@@ -32,6 +36,10 @@ const bodySchema = z.object({
   leadTime: z
     .enum(["same_day", "1_day", "2_days", "3_days", "4_days", "5_days"])
     .optional(),
+  leadTimeCutoff: z
+    .string()
+    .regex(/^\d{1,2}:\d{2}(:\d{2})?$/)
+    .optional(),
   delivery: z.enum(["none", "self"]).optional(),
 });
 
@@ -53,6 +61,20 @@ function sortWindows(
       from: formatTime(w.fromTime),
       to: formatTime(w.toTime),
     }));
+}
+
+function formatAvailabilityProfile(cook: {
+  leadTime: string | null;
+  leadTimeCutoff: unknown;
+  offersPickup: boolean;
+  delivery: string | null;
+}) {
+  return {
+    leadTime: cook.leadTime,
+    leadTimeCutoff: formatDbLeadTimeCutoff(cook.leadTimeCutoff),
+    offersPickup: cook.offersPickup,
+    delivery: cook.delivery,
+  };
 }
 
 function splitWindows(
@@ -80,6 +102,7 @@ export async function GET(req: NextRequest) {
       db
         .select({
           leadTime: cookProfiles.leadTime,
+          leadTimeCutoff: cookProfiles.leadTimeCutoff,
           offersPickup: cookProfiles.offersPickup,
           delivery: cookProfiles.delivery,
         })
@@ -105,7 +128,11 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: { ...cook, pickupWindows, deliveryWindows },
+      data: {
+        ...formatAvailabilityProfile(cook),
+        pickupWindows,
+        deliveryWindows,
+      },
     });
   } catch (err) {
     console.error("[dashboard/availability GET]", err);
@@ -203,9 +230,19 @@ export async function PUT(req: NextRequest) {
     await dbPool.transaction(async (tx) => {
       const profileUpdate: {
         leadTime?: (typeof profileFields)["leadTime"];
+        leadTimeCutoff?: string;
         delivery?: "none" | "self";
         offersPickup?: boolean;
-      } = { ...profileFields };
+      } = {
+        ...profileFields,
+        ...(profileFields.leadTimeCutoff !== undefined
+          ? {
+              leadTimeCutoff: normalizeLeadTimeCutoff(
+                profileFields.leadTimeCutoff,
+              ),
+            }
+          : {}),
+      };
 
       if (offersPickupBody !== undefined) {
         profileUpdate.offersPickup = offersPickupBody;
@@ -254,6 +291,7 @@ export async function PUT(req: NextRequest) {
       db
         .select({
           leadTime: cookProfiles.leadTime,
+          leadTimeCutoff: cookProfiles.leadTimeCutoff,
           offersPickup: cookProfiles.offersPickup,
           delivery: cookProfiles.delivery,
         })
@@ -280,7 +318,11 @@ export async function PUT(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: { ...updatedCook, pickupWindows: pw, deliveryWindows: dw },
+      data: {
+        ...formatAvailabilityProfile(updatedCook),
+        pickupWindows: pw,
+        deliveryWindows: dw,
+      },
     });
   } catch (err) {
     console.error("[dashboard/availability PUT]", err);

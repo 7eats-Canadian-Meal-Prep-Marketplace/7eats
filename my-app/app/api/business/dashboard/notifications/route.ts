@@ -9,6 +9,7 @@ import {
   orders,
   reviews,
 } from "@/db/schema";
+import { orderHasPlacedPaymentFilter } from "@/lib/orders/abandoned-checkout";
 import {
   buildOrderCancelledNotif,
   buildOrderNewNotif,
@@ -42,7 +43,13 @@ export async function GET(req: NextRequest) {
         .from(orders)
         .leftJoin(listings, eq(orders.listingId, listings.id))
         .leftJoin(authUser, eq(orders.clientId, authUser.id))
-        .where(and(eq(orders.cookId, cookId), gte(orders.createdAt, since)))
+        .where(
+          and(
+            eq(orders.cookId, cookId),
+            orderHasPlacedPaymentFilter(),
+            gte(orders.createdAt, since),
+          ),
+        )
         .orderBy(desc(orders.createdAt))
         .limit(ORDER_LIMIT),
 

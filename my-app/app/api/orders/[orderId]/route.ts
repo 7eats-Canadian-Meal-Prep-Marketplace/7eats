@@ -11,11 +11,13 @@ import {
 } from "@/db/schema";
 import { formatPickupLocation } from "@/lib/address";
 import { auth } from "@/lib/auth";
+import { resolveOrderLeadTimeRules } from "@/lib/lead-time";
 import {
   formatOrderTimingDate,
   formatOrderTimingWindow,
 } from "@/lib/order-timing";
 import { formatClientOrderTiming } from "@/lib/order-timing-label";
+import { orderHasPlacedPaymentFilter } from "@/lib/orders/abandoned-checkout";
 import {
   cancelClientOrder,
   getClientCancelPolicy,
@@ -62,6 +64,8 @@ export async function GET(req: NextRequest, { params }: Params) {
         deliveryFeeSnapshot: orders.deliveryFeeSnapshot,
         cancellationAllowed: orders.cancellationAllowed,
         cancelledAt: orders.cancelledAt,
+        leadTimeSnapshot: orders.leadTimeSnapshot,
+        leadTimeCutoffSnapshot: orders.leadTimeCutoffSnapshot,
         cookFirstName: authUser.firstName,
         cookLastName: authUser.lastName,
         cookDisplayName: cookProfiles.displayName,
@@ -74,11 +78,18 @@ export async function GET(req: NextRequest, { params }: Params) {
         cookPickupProvince: cookProfiles.pickupProvince,
         cookPickupPostal: cookProfiles.pickupPostal,
         cookLeadTime: cookProfiles.leadTime,
+        cookLeadTimeCutoff: cookProfiles.leadTimeCutoff,
       })
       .from(orders)
       .leftJoin(cookProfiles, eq(orders.cookId, cookProfiles.id))
       .leftJoin(authUser, eq(cookProfiles.userId, authUser.id))
-      .where(and(eq(orders.id, orderId), eq(orders.clientId, session.user.id)))
+      .where(
+        and(
+          eq(orders.id, orderId),
+          eq(orders.clientId, session.user.id),
+          orderHasPlacedPaymentFilter(),
+        ),
+      )
       .limit(1);
 
     if (!row) {
@@ -166,12 +177,15 @@ export async function GET(req: NextRequest, { params }: Params) {
         null;
     }
 
+    const leadTimeRules = resolveOrderLeadTimeRules(row);
+
     const cancelPolicy = getClientCancelPolicy({
       status: row.status,
       cancellationAllowed: row.cancellationAllowed,
       pickupAt: row.pickupAt instanceof Date ? row.pickupAt : null,
       fulfillmentWindowStart: row.fulfillmentWindowStart,
-      cookLeadTime: row.cookLeadTime,
+      cookLeadTime: leadTimeRules.leadTime,
+      cookLeadTimeCutoff: leadTimeRules.leadTimeCutoff,
       fulfillmentMode:
         row.fulfillmentMode === "delivery" || row.fulfillmentMode === "pickup"
           ? row.fulfillmentMode

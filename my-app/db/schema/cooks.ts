@@ -8,6 +8,7 @@ import {
   pgPolicy,
   pgTable,
   text,
+  time,
   timestamp,
   uuid,
   varchar,
@@ -65,6 +66,10 @@ export const cookProfiles = pgTable(
       scale: 2,
     }),
     leadTime: leadTimeEnum("lead_time"),
+    /** Local time on the order-by day when the lead-time window closes. */
+    leadTimeCutoff: time("lead_time_cutoff", { precision: 0 })
+      .notNull()
+      .default("23:59:59"),
     offersPickup: boolean("offers_pickup").notNull().default(true),
     delivery: deliveryEnum("delivery"),
     acceptsSpecialRequests: boolean("accepts_special_requests")

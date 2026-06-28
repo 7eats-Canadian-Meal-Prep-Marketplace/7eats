@@ -15,6 +15,7 @@ import {
   sendOrderReceiptToClient,
 } from "@/lib/emails/order-events";
 import { guestAccessTokensMatch } from "@/lib/guest-order-access";
+import { resolveOrderLeadTimeRules } from "@/lib/lead-time";
 import { getStripe } from "@/lib/stripe";
 
 export type ConfirmPaymentResult =
@@ -41,6 +42,8 @@ async function sendOrderConfirmationEmails(
       confirmationCode: orders.confirmationCode,
       clientId: orders.clientId,
       cookId: orders.cookId,
+      leadTimeSnapshot: orders.leadTimeSnapshot,
+      leadTimeCutoffSnapshot: orders.leadTimeCutoffSnapshot,
     })
     .from(orders)
     .where(eq(orders.id, orderId))
@@ -82,6 +85,8 @@ async function sendOrderConfirmationEmails(
       cookPhoneVerified: authUser.phoneVerified,
       emailNotificationsNewOrder: cookProfiles.emailNotificationsNewOrder,
       smsNotificationsNewOrder: cookProfiles.smsNotificationsNewOrder,
+      leadTime: cookProfiles.leadTime,
+      leadTimeCutoff: cookProfiles.leadTimeCutoff,
       pickupStreet: cookProfiles.pickupStreet,
       pickupUnit: cookProfiles.pickupUnit,
       pickupCity: cookProfiles.pickupCity,
@@ -94,6 +99,13 @@ async function sendOrderConfirmationEmails(
     .limit(1);
 
   if (!clientUser || !cookRow) return;
+
+  const leadTimeRules = resolveOrderLeadTimeRules({
+    leadTimeSnapshot: orderRow.leadTimeSnapshot,
+    leadTimeCutoffSnapshot: orderRow.leadTimeCutoffSnapshot,
+    cookLeadTime: cookRow.leadTime,
+    cookLeadTimeCutoff: cookRow.leadTimeCutoff,
+  });
 
   const listingTitle = orderedDishes.map((d) => d.dishName).join(", ");
   const totalQty = orderedDishes.reduce((sum, d) => sum + d.quantity, 0);
@@ -131,6 +143,9 @@ async function sendOrderConfirmationEmails(
     })),
     deliveryFee: orderRow.deliveryFeeSnapshot,
     taxAmount: orderRow.taxAmount,
+    cancellationAllowed: orderRow.cancellationAllowed,
+    cookLeadTime: leadTimeRules.leadTime,
+    cookLeadTimeCutoff: leadTimeRules.leadTimeCutoff,
   };
 
   if (cookRow.emailNotificationsNewOrder) {

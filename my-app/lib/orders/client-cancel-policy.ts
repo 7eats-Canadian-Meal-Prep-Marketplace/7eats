@@ -20,6 +20,7 @@ type CancelPolicyInput = {
   pickupAt: Date | string | null;
   fulfillmentWindowStart?: Date | string | null;
   cookLeadTime: string | null;
+  cookLeadTimeCutoff?: string | null;
   fulfillmentMode?: "pickup" | "delivery" | null;
   now?: Date;
 };
@@ -79,6 +80,7 @@ export function isClientRefundEligible(order: CancelPolicyInput): boolean {
     order.cookLeadTime as Parameters<typeof isRefundEligible>[1],
     true,
     order.now ?? new Date(),
+    order.cookLeadTimeCutoff,
   );
 }
 
@@ -90,7 +92,7 @@ export function getClientCancelPolicy(
   const reference = refundReferenceAt(order);
   const referenceIso = reference ? reference.toISOString() : null;
   const deadline = referenceIso
-    ? cancelByDate(referenceIso, order.cookLeadTime)
+    ? cancelByDate(referenceIso, order.cookLeadTime, order.cookLeadTimeCutoff)
     : null;
   const refundDeadline = toIso(deadline);
   const refundDeadlineLabel = formatRefundDeadlineLabel(deadline);

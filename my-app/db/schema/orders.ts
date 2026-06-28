@@ -9,6 +9,7 @@ import {
   pgPolicy,
   pgTable,
   text,
+  time,
   timestamp,
   uniqueIndex,
   uuid,
@@ -18,7 +19,7 @@ import { authUser } from "./auth";
 import { cookProfiles } from "./cooks";
 import { platformDiscounts } from "./discounts";
 import { dishes, dishPromotions } from "./dishes";
-import { lateCancelFeeTypeEnum, orderStatus } from "./enums";
+import { lateCancelFeeTypeEnum, leadTimeEnum, orderStatus } from "./enums";
 import { listings } from "./listings";
 
 const isAdmin = sql`auth.role() = 'admin'`;
@@ -59,6 +60,11 @@ export const orders = pgTable(
     cancellationAllowed: boolean("cancellation_allowed")
       .notNull()
       .default(false),
+    /** Lead time + cutoff frozen at checkout so later cook edits cannot move refund windows. */
+    leadTimeSnapshot: leadTimeEnum("lead_time_snapshot"),
+    leadTimeCutoffSnapshot: time("lead_time_cutoff_snapshot", {
+      precision: 0,
+    }),
     // total_price = unit_price * quantity - COALESCE(discount_amount, 0)
     totalPrice: numeric("total_price", { precision: 10, scale: 2 }).notNull(),
     currency: varchar("currency", { length: 3 }).notNull().default("CAD"),

@@ -378,6 +378,7 @@ export default function CheckoutPage() {
     deliveryDetails,
     cancellationAllowed,
     leadTime,
+    leadTimeCutoff,
     setDeliveryAddress,
     setDeliveryDetails,
     clearCart,
@@ -597,13 +598,21 @@ export default function CheckoutPage() {
         pickupWindows,
         deliveryWindows,
         leadTime,
+        new Date(),
+        leadTimeCutoff,
       ),
-    [fulfillmentMode, pickupWindows, deliveryWindows, leadTime],
+    [fulfillmentMode, pickupWindows, deliveryWindows, leadTime, leadTimeCutoff],
   );
 
   const cancellationPolicyText = useMemo(
-    () => refundPolicyText(cancellationAllowed, refundPickupAt, leadTime),
-    [cancellationAllowed, refundPickupAt, leadTime],
+    () =>
+      refundPolicyText(
+        cancellationAllowed,
+        refundPickupAt,
+        leadTime,
+        leadTimeCutoff,
+      ),
+    [cancellationAllowed, refundPickupAt, leadTime, leadTimeCutoff],
   );
 
   const contactValues = useMemo(
@@ -904,11 +913,6 @@ export default function CheckoutPage() {
 
   return (
     <div className={styles.page}>
-      <Link href="/app/cart" className={styles.backLink}>
-        <ArrowLeft size={16} aria-hidden />
-        Back to cart
-      </Link>
-
       <header className={styles.pageHeader}>
         <h1 className={styles.heading}>Checkout</h1>
         <p className={styles.subheading}>
@@ -1343,6 +1347,11 @@ export default function CheckoutPage() {
                 </Link>
                 .
               </p>
+
+              <Link href="/app/cart" className={styles.backLink}>
+                <ArrowLeft size={16} aria-hidden />
+                Back to cart
+              </Link>
             </div>
           </section>
         </div>
@@ -1375,6 +1384,14 @@ export default function CheckoutPage() {
                     </li>
                   ))}
                 </ul>
+                {notes && (
+                  <div className={styles.summaryNote}>
+                    <span className={styles.summaryNoteLabel}>
+                      Note for cook
+                    </span>
+                    <p className={styles.summaryNoteText}>{notes}</p>
+                  </div>
+                )}
               </div>
 
               <div className={styles.summarySheet}>

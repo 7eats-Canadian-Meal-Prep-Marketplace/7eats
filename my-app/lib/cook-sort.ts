@@ -89,6 +89,8 @@ export function sortCooks(
             a.pickupWindows,
             a.deliveryWindows,
             a.leadTime,
+            new Date(),
+            a.leadTimeCutoff,
           ) ?? Number.POSITIVE_INFINITY;
         const tb =
           firstSlotTimestamp(
@@ -96,6 +98,8 @@ export function sortCooks(
             b.pickupWindows,
             b.deliveryWindows,
             b.leadTime,
+            new Date(),
+            b.leadTimeCutoff,
           ) ?? Number.POSITIVE_INFINITY;
         return ta - tb;
       });

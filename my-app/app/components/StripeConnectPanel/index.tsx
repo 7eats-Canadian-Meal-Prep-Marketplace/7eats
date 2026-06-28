@@ -54,25 +54,6 @@ export default function StripeConnectPanel({
     }
   }, []);
 
-  const pollUntilConnected = useCallback(async () => {
-    for (let attempt = 0; attempt < 15; attempt += 1) {
-      try {
-        const res = await fetch(
-          "/api/business/dashboard/stripe/status",
-          STATUS_FETCH,
-        );
-        const json = await res.json();
-        if (json.success) {
-          setStatus(json.data);
-          if (isStripeFullyConnected(json.data)) return;
-        }
-      } catch {
-        // Keep polling after transient failures.
-      }
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-    }
-  }, []);
-
   useEffect(() => {
     void loadStatus();
   }, [loadStatus]);
@@ -160,17 +141,9 @@ export default function StripeConnectPanel({
       });
       const json = await res.json();
       if (json.success && json.data?.url) {
-        const popup = window.open(json.data.url, "_blank");
-        if (popup) {
-          const timer = window.setInterval(() => {
-            if (popup.closed) {
-              window.clearInterval(timer);
-              void pollUntilConnected();
-            }
-          }, 500);
-        } else {
-          void pollUntilConnected();
-        }
+        // Same-tab navigation so Stripe's return_url lands back here, not in a popup.
+        window.location.assign(json.data.url);
+        return;
       }
     } catch (err) {
       console.error("[StripeConnectPanel]", err);
@@ -184,7 +157,7 @@ export default function StripeConnectPanel({
     ? styles.badgeConnected
     : styles.badgeDisconnected;
   const actionLabel = linkLoading
-    ? "Opening…"
+    ? "Redirecting…"
     : isConnected
       ? "Open Stripe dashboard"
       : status?.hasAccount

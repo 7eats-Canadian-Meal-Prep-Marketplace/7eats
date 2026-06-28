@@ -65,13 +65,14 @@ export default function CartPage() {
     fulfillmentMode,
     notes,
     removeItem,
+    leadTime,
+    leadTimeCutoff,
   } = useCart();
 
   const [pickupWindows, setPickupWindows] = useState<FulfillmentWindow[]>([]);
   const [deliveryWindows, setDeliveryWindows] = useState<FulfillmentWindow[]>(
     [],
   );
-  const [leadTime, setLeadTime] = useState<string | null>(null);
 
   useEffect(() => {
     if (!cookId) return;
@@ -83,7 +84,6 @@ export default function CartPage() {
         const cook = json.data.cook;
         setPickupWindows(cook.pickupWindows ?? []);
         setDeliveryWindows(cook.deliveryWindows ?? []);
-        setLeadTime(cook.leadTime ?? null);
       })
       .catch(() => {});
     return () => {
@@ -101,8 +101,10 @@ export default function CartPage() {
         pickupWindows,
         deliveryWindows,
         leadTime,
+        new Date(),
+        leadTimeCutoff,
       ),
-    [fulfillmentMode, pickupWindows, deliveryWindows, leadTime],
+    [fulfillmentMode, pickupWindows, deliveryWindows, leadTime, leadTimeCutoff],
   );
 
   const { tax, estimatedTotal, taxLabel } = useMemo(() => {
@@ -138,15 +140,20 @@ export default function CartPage() {
   const checkoutDisabled = !meetsMinimum || !withinMaximum;
   const remaining = Math.max(0, minOrderQty - totalQuantity);
 
+  const checkoutButton = checkoutDisabled ? (
+    <button type="button" className={styles.checkoutBtn} disabled aria-disabled>
+      {!meetsMinimum ? `Add ${remaining} more to check out` : "Too many items"}
+    </button>
+  ) : (
+    <Link href="/app/checkout" className={styles.checkoutBtn}>
+      Proceed to checkout
+    </Link>
+  );
+
   return (
     <div className={styles.page}>
       <div className={styles.layout}>
         <div className={styles.mainCol}>
-          <Link href={menuHref} className={styles.backLink}>
-            <ArrowLeft size={16} aria-hidden />
-            Back to menu
-          </Link>
-
           <header className={styles.pageHead}>
             <p className={styles.pageEyebrow}>Cart</p>
             <h1 className={styles.pageTitle}>Your cart</h1>
@@ -235,6 +242,11 @@ export default function CartPage() {
               </p>
             )}
           </section>
+
+          <Link href={menuHref} className={styles.backLink}>
+            <ArrowLeft size={16} aria-hidden />
+            Back to menu
+          </Link>
         </div>
 
         <aside className={styles.rail} aria-label="Order summary">
@@ -266,25 +278,28 @@ export default function CartPage() {
                 <span>${formatCartMoney(estimatedTotal)}</span>
               </div>
 
-              {checkoutDisabled ? (
-                <button
-                  type="button"
-                  className={styles.checkoutBtn}
-                  disabled
-                  aria-disabled
-                >
-                  {!meetsMinimum
-                    ? `Add ${remaining} more to check out`
-                    : "Too many items"}
-                </button>
-              ) : (
-                <Link href="/app/checkout" className={styles.checkoutBtn}>
-                  Proceed to checkout
-                </Link>
-              )}
+              {checkoutButton}
             </section>
           </div>
         </aside>
+      </div>
+
+      <div className={styles.mobileCartDock}>
+        <div className={styles.mobileCartMain}>
+          <div className={styles.mobileCartTotal}>
+            <span className={styles.mobileCartQty}>
+              {totalQuantity} item{totalQuantity === 1 ? "" : "s"}
+            </span>
+            <span className={styles.mobileCartAmount}>
+              ${formatCartMoney(estimatedTotal)}
+            </span>
+          </div>
+          {checkoutButton}
+        </div>
+        <Link href={menuHref} className={styles.mobileBackLink}>
+          <ArrowLeft size={15} aria-hidden />
+          Back to menu
+        </Link>
       </div>
     </div>
   );

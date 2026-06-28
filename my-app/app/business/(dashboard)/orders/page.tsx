@@ -2,6 +2,7 @@
 
 import {
   AlertTriangle,
+  ArrowLeft,
   CheckCircle2,
   ClipboardList,
   MapPin,
@@ -684,14 +685,20 @@ function OrderDetail({
   return (
     <div className={styles.detail}>
       {onClose && (
-        <button
-          type="button"
-          className={styles.detailClose}
-          onClick={onClose}
-          aria-label="Close order details"
-        >
-          <X size={16} aria-hidden="true" />
-        </button>
+        <>
+          <button type="button" className={styles.detailBack} onClick={onClose}>
+            <ArrowLeft size={18} aria-hidden="true" />
+            Back to orders
+          </button>
+          <button
+            type="button"
+            className={styles.detailClose}
+            onClick={onClose}
+            aria-label="Close order details"
+          >
+            <X size={16} aria-hidden="true" />
+          </button>
+        </>
       )}
 
       <div className={styles.detailHeader}>

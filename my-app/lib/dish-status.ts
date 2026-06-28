@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { dishes } from "@/db/schema";
 import { type DishStatus, normalizeDishStatus } from "@/lib/dish-status-core";
@@ -61,10 +61,7 @@ export async function setDishActive(dishId: string, cookId: string) {
 /** Filter dishes by active/inactive for the cook dashboard. */
 export function dishStatusFilter(cookId: string, status: DishStatus) {
   if (status === "inactive") {
-    return and(
-      eq(dishes.cookId, cookId),
-      inArray(dishes.status, ["inactive", "archived"]),
-    );
+    return and(eq(dishes.cookId, cookId), ne(dishes.status, "active"));
   }
   return and(eq(dishes.cookId, cookId), eq(dishes.status, "active"));
 }

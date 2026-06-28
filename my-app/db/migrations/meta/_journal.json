@@ -127,6 +127,20 @@
       "when": 1783600000000,
       "tag": "0017_order_delivery_details",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1783700000000,
+      "tag": "0018_lead_time_cutoff",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1783800000000,
+      "tag": "0019_order_lead_time_snapshot",
+      "breakpoints": true
     }
   ]
 }
