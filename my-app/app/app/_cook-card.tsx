@@ -17,6 +17,7 @@ export type BrowseCookCard = {
   niches: { slug: string; label: string }[];
   cuisines: { slug: string; label: string }[];
   leadTime: string | null;
+  leadTimeCutoff: string | null;
   delivery: "none" | "self" | null;
   offersPickup: boolean;
   pickupCity: string | null;
@@ -59,6 +60,7 @@ export function normalizeBrowseCook(
       ? (raw.cuisines as BrowseCookCard["cuisines"])
       : [],
     leadTime: (raw.leadTime as string | null) ?? null,
+    leadTimeCutoff: (raw.leadTimeCutoff as string | null) ?? null,
     delivery: (raw.delivery as BrowseCookCard["delivery"]) ?? null,
     offersPickup: raw.offersPickup !== false,
     pickupCity: (raw.pickupCity as string | null) ?? null,
@@ -138,6 +140,8 @@ export function CookCardLink({
     cook.pickupWindows,
     cook.deliveryWindows,
     cook.leadTime,
+    new Date(),
+    cook.leadTimeCutoff,
   );
 
   const locationParts: string[] = [];

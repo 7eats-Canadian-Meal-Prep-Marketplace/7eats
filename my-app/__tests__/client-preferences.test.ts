@@ -7,6 +7,7 @@ vi.mock("@/db", () => ({
   db: { select: vi.fn() },
 }));
 vi.mock("@/db/schema", () => ({
+  authUser: { status: "status", isGuestAccount: "isGuestAccount" },
   orders: {},
   conversations: {},
   cookProfiles: {},
@@ -40,9 +41,8 @@ function mockSession(userId: string | null) {
   );
 }
 
-// Every query in the route is a `.from().where().limit()` chain that resolves to
-// an array. The call order is: (1) cook lookup inside getCookId, (2) order link,
-// (3) conversation link, (4) preferences row.
+// Call order: (1) cook lookup, (2) order link, (3) conversation link,
+// (4) authUser row, (5) preferences row.
 function chain(result: unknown[]) {
   const limit = vi.fn().mockResolvedValue(result);
   const where = vi.fn(() => ({ limit }));
@@ -61,6 +61,8 @@ const PREFS_ROW = {
   goals: ["High protein", "Muscle gain"],
   whyMealPrep: ["Save time cooking"],
 };
+
+const CLIENT_ROW = { status: "active", isGuestAccount: false };
 
 describe("GET /api/business/clients/[clientId]/preferences", () => {
   beforeEach(() => {
@@ -82,7 +84,13 @@ describe("GET /api/business/clients/[clientId]/preferences", () => {
   });
 
   it("returns the client's preferences when linked via an order", async () => {
-    mockSelects([[{ id: COOK_ID }], [{ id: "order-1" }], [], [PREFS_ROW]]);
+    mockSelects([
+      [{ id: COOK_ID }],
+      [{ id: "order-1" }],
+      [],
+      [CLIENT_ROW],
+      [PREFS_ROW],
+    ]);
     const res = await GET(makeGet(), { params });
     expect(res.status).toBe(200);
     const json = await res.json();
@@ -93,11 +101,19 @@ describe("GET /api/business/clients/[clientId]/preferences", () => {
       goals: PREFS_ROW.goals,
       whyMealPrep: PREFS_ROW.whyMealPrep,
       hasPreferences: true,
+      clientStatus: "active",
+      isGuest: false,
     });
   });
 
   it("returns the client's preferences when linked only via a conversation", async () => {
-    mockSelects([[{ id: COOK_ID }], [], [{ id: "conv-1" }], [PREFS_ROW]]);
+    mockSelects([
+      [{ id: COOK_ID }],
+      [],
+      [{ id: "conv-1" }],
+      [CLIENT_ROW],
+      [PREFS_ROW],
+    ]);
     const res = await GET(makeGet(), { params });
     expect(res.status).toBe(200);
     const json = await res.json();
@@ -106,7 +122,7 @@ describe("GET /api/business/clients/[clientId]/preferences", () => {
   });
 
   it("returns an empty state when linked but the client has no preferences row", async () => {
-    mockSelects([[{ id: COOK_ID }], [{ id: "order-1" }], [], []]);
+    mockSelects([[{ id: COOK_ID }], [{ id: "order-1" }], [], [CLIENT_ROW], []]);
     const res = await GET(makeGet(), { params });
     expect(res.status).toBe(200);
     const json = await res.json();
@@ -117,6 +133,8 @@ describe("GET /api/business/clients/[clientId]/preferences", () => {
       goals: [],
       whyMealPrep: [],
       hasPreferences: false,
+      clientStatus: "active",
+      isGuest: false,
     });
   });
 });

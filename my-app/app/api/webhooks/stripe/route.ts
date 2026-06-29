@@ -14,6 +14,7 @@ import {
   orders,
   stripeWebhookEvents,
 } from "@/db/schema";
+import { cancelAbandonedCheckoutOrder } from "@/lib/orders/abandoned-checkout";
 import { markOrderPaymentAuthorized } from "@/lib/orders/confirm-order-payment";
 import { getStripe } from "@/lib/stripe";
 import {
@@ -422,6 +423,19 @@ export async function POST(req: NextRequest) {
           .update(orderPayments)
           .set({ status: "pending" })
           .where(eq(orderPayments.stripePaymentIntentId, pi.id));
+        break;
+      }
+
+      case "payment_intent.canceled": {
+        const pi = event.data.object as Stripe.PaymentIntent;
+        const [payment] = await db
+          .select({ orderId: orderPayments.orderId })
+          .from(orderPayments)
+          .where(eq(orderPayments.stripePaymentIntentId, pi.id))
+          .limit(1);
+        if (payment?.orderId) {
+          await cancelAbandonedCheckoutOrder(payment.orderId);
+        }
         break;
       }
 

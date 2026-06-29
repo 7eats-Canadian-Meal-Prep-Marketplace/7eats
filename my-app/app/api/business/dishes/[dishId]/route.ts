@@ -16,6 +16,7 @@ import {
   orderDishes,
   tags,
 } from "@/db/schema";
+import { getDishLifecycleInfo } from "@/lib/dish-lifecycle";
 import { mapDishStatusForDb, normalizeDishStatus } from "@/lib/dish-status";
 import { rebuildCookSearchIndexSafe } from "@/lib/search/index-builder";
 
@@ -108,6 +109,7 @@ export async function GET(req: NextRequest, { params }: Params) {
     ]);
 
     const nutrition = nutritionRows[0] ?? null;
+    const lifecycle = await getDishLifecycleInfo(cookId, dishId);
 
     return NextResponse.json({
       success: true,
@@ -118,7 +120,14 @@ export async function GET(req: NextRequest, { params }: Params) {
         ingredients,
         nutrition,
         tags: tagRows,
-        stats: { listingCount, totalOrders, avgQtyPerOrder },
+        stats: {
+          listingCount,
+          totalOrders: lifecycle?.totalOrders ?? totalOrders,
+          avgQtyPerOrder,
+          openOrderCount: lifecycle?.openOrderCount ?? 0,
+          isLastActiveDish: lifecycle?.isLastActiveDish ?? false,
+          canDelete: lifecycle?.canDelete ?? totalOrders === 0,
+        },
       },
     });
   } catch (err) {

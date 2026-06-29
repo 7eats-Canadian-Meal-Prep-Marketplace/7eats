@@ -1,0 +1,74 @@
+.filterBar {
+  border-bottom: 1px solid var(--grey-200);
+  background: var(--white);
+  position: sticky;
+  z-index: 100;
+}
+
+.filterInner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 12px 24px;
+  max-width: var(--app-maxw);
+  margin: 0 auto;
+}
+
+.filterInnerSearch {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  padding: 12px 16px 14px;
+}
+
+/* Mobile/tablet: pin flush under the fixed header — background fills the
+   header slot when stuck so no content shows through a seam. */
+@media (max-width: 879px) {
+  .filterBar {
+    top: 0;
+    margin-top: calc(-1 * var(--app-header-h, 72px));
+    padding-top: var(--app-header-h, 72px);
+  }
+
+  .filterInner {
+    padding: 10px 16px 12px;
+  }
+
+  .filterInnerSearch {
+    padding: 10px 16px 12px;
+    gap: 8px;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 879px) {
+  .filterInnerSearch {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 24px 12px;
+  }
+
+  .filterInnerSearch .toggleWrap {
+    flex-shrink: 0;
+    width: auto;
+  }
+}
+
+.toggleWrap {
+  display: flex;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+@media (max-width: 767px) {
+  .toggleWrap {
+    width: 100%;
+  }
+}
+
+@media (min-width: 880px) {
+  .filterBar {
+    display: none;
+  }
+}

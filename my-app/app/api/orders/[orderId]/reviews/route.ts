@@ -2,9 +2,10 @@ import { and, eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/db";
-import { orders, reviews } from "@/db/schema";
+import { authUser, orders, reviews } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { logAndCheckRateLimit } from "@/lib/rate-limit";
+import { formatReviewerDisplayName } from "@/lib/reviews/display-name";
 import { notifyCookNewReview } from "@/lib/reviews/notify-cook-new-review";
 
 export type Params = { params: Promise<{ orderId: string }> };
@@ -102,6 +103,20 @@ export async function POST(req: NextRequest, { params }: Params) {
       );
     }
 
+    const [client] = await db
+      .select({
+        firstName: authUser.firstName,
+        lastName: authUser.lastName,
+      })
+      .from(authUser)
+      .where(eq(authUser.id, session.user.id))
+      .limit(1);
+
+    const reviewerDisplayName = formatReviewerDisplayName(
+      client?.firstName,
+      client?.lastName,
+    );
+
     const [review] = await db
       .insert(reviews)
       .values({
@@ -110,6 +125,7 @@ export async function POST(req: NextRequest, { params }: Params) {
         cookId: order.cookId,
         rating,
         comment: comment ?? null,
+        reviewerDisplayName,
       })
       .returning();
 

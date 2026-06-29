@@ -5,9 +5,8 @@ import { authUser } from "@/db/schema";
 import { auth } from "@/lib/auth";
 
 export async function POST(req: Request) {
-  // Decide where to send the user BEFORE the session is invalidated, so the
-  // sign-out lands them back on the right login page for their audience.
-  let redirect = "/app-auth/login";
+  // Client users keep browsing as a guest; business users go to their login page.
+  let redirect = "/app/browse";
   try {
     const session = await auth.api.getSession({ headers: req.headers });
     if (session?.user?.id) {

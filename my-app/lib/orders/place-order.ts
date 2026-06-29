@@ -13,6 +13,12 @@ import {
 } from "@/db/schema";
 import { earliestFulfillmentWindow } from "@/lib/cook-card-schedule";
 import { calcDeliveryFee } from "@/lib/delivery-fee";
+import { resolveUnavailableOrderDishes } from "@/lib/dish-lifecycle";
+import {
+  formatUnavailableDishesMessage,
+  type UnavailableOrderDish,
+} from "@/lib/dish-lifecycle-messages";
+import { formatDbLeadTimeCutoff } from "@/lib/lead-time";
 import { getDrivingDistanceKm } from "@/lib/mapbox-directions";
 import { computeLineTotal } from "@/lib/order-pricing";
 import { computeOrderChargeBreakdown } from "@/lib/order-totals";
@@ -48,6 +54,7 @@ export const createOrderBodySchema = z.object({
   customerLat: z.number().min(-90).max(90).optional(),
   customerLng: z.number().min(-180).max(180).optional(),
   notes: z.string().max(500).optional(),
+  deliveryDetails: z.string().max(500).optional(),
 });
 
 export type CreateOrderBody = z.infer<typeof createOrderBodySchema>;
@@ -69,7 +76,14 @@ export type GuestOrderMeta = {
 
 export type PlaceOrderResult =
   | { ok: true; orderId: string; clientSecret: string; guest?: GuestOrderMeta }
-  | { ok: false; status: number; error: string; dishId?: string };
+  | {
+      ok: false;
+      status: number;
+      error: string;
+      code?: "dishes_unavailable";
+      unavailableDishes?: UnavailableOrderDish[];
+      dishId?: string;
+    };
 
 export async function placeClientOrder(
   client: PlaceOrderClient,
@@ -84,6 +98,7 @@ export async function placeClientOrder(
     customerLat,
     customerLng,
     notes,
+    deliveryDetails,
   } = body;
 
   const [cook] = await db
@@ -106,6 +121,7 @@ export async function placeClientOrder(
       freeDeliveryAbove: cookProfiles.freeDeliveryAbove,
       pickupProvince: cookProfiles.pickupProvince,
       leadTime: cookProfiles.leadTime,
+      leadTimeCutoff: cookProfiles.leadTimeCutoff,
     })
     .from(cookProfiles)
     .innerJoin(authUser, eq(cookProfiles.userId, authUser.id))
@@ -142,6 +158,17 @@ export async function placeClientOrder(
   }
 
   const dishIds = lines.map((l) => l.dishId);
+  const unavailable = await resolveUnavailableOrderDishes(cookId, dishIds);
+  if (unavailable.length > 0) {
+    return {
+      ok: false,
+      status: 422,
+      code: "dishes_unavailable",
+      error: formatUnavailableDishesMessage(unavailable),
+      unavailableDishes: unavailable,
+    };
+  }
+
   const dishRows = await db
     .select({ id: dishes.id, name: dishes.name, price: dishes.price })
     .from(dishes)
@@ -158,6 +185,7 @@ export async function placeClientOrder(
       return {
         ok: false,
         status: 422,
+        code: "dishes_unavailable",
         error: "One or more dishes are unavailable.",
       };
     }
@@ -342,6 +370,7 @@ export async function placeClientOrder(
     deliveryWindows,
     cook.leadTime,
     placementNow,
+    formatDbLeadTimeCutoff(cook.leadTimeCutoff),
   );
 
   const platformFeePct = Number.parseFloat(cook.platformFeePct);
@@ -439,6 +468,8 @@ export async function placeClientOrder(
         cookId,
         status: "pending",
         cancellationAllowed: cook.cancellationAllowed,
+        leadTimeSnapshot: cook.leadTime,
+        leadTimeCutoffSnapshot: formatDbLeadTimeCutoff(cook.leadTimeCutoff),
         platformDiscountId: resolved?.discountId ?? null,
         platformDiscountAmount:
           platformDiscount > 0 ? String(platformDiscount.toFixed(2)) : null,
@@ -457,6 +488,10 @@ export async function placeClientOrder(
             : null,
         deliveryDistanceKm: deliveryDistanceKm > 0 ? deliveryDistanceKm : null,
         notes: notes ?? null,
+        deliveryDetails:
+          fulfillmentMode === "delivery"
+            ? deliveryDetails?.trim() || null
+            : null,
         confirmationCode: guestMeta?.confirmationCode ?? null,
         guestAccessTokenHash: guestMeta?.guestAccessTokenHash ?? null,
         isGuestCheckout,

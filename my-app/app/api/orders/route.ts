@@ -9,6 +9,7 @@ import {
   formatOrderTimingWindow,
 } from "@/lib/order-timing";
 import { formatClientOrderTiming } from "@/lib/order-timing-label";
+import { orderHasPlacedPaymentFilter } from "@/lib/orders/abandoned-checkout";
 import { resolveOrderCookFields } from "@/lib/orders/cook-order-fields";
 import {
   createOrderBodySchema,
@@ -51,12 +52,13 @@ export async function GET(req: NextRequest) {
   const offset = Number.isNaN(rawOffset) ? 0 : Math.max(0, rawOffset);
 
   try {
+    const clientScope = and(
+      eq(orders.clientId, session.user.id),
+      orderHasPlacedPaymentFilter(),
+    );
     const whereClause = statusFilter
-      ? and(
-          eq(orders.clientId, session.user.id),
-          eq(orders.status, statusFilter),
-        )
-      : eq(orders.clientId, session.user.id);
+      ? and(clientScope, eq(orders.status, statusFilter))
+      : clientScope;
 
     const [{ total }] = await db
       .select({ total: count() })
@@ -76,6 +78,7 @@ export async function GET(req: NextRequest) {
         fulfillmentWindowStart: orders.fulfillmentWindowStart,
         fulfillmentWindowEnd: orders.fulfillmentWindowEnd,
         notes: orders.notes,
+        deliveryDetails: orders.deliveryDetails,
         createdAt: orders.createdAt,
         pickupCode: orders.pickupCode,
         cookFirstName: authUser.firstName,
@@ -154,6 +157,7 @@ export async function GET(req: NextRequest) {
         fulfillmentWindowStart: fulfillmentWindowStartIso,
         fulfillmentWindowEnd: fulfillmentWindowEndIso,
         notes: r.notes ?? null,
+        deliveryDetails: r.deliveryDetails ?? null,
         createdAt:
           r.createdAt instanceof Date ? r.createdAt.toISOString() : r.createdAt,
         pickupCode: r.status === "ready" ? (r.pickupCode ?? null) : null,
@@ -284,7 +288,12 @@ export async function POST(req: NextRequest) {
 
     if (!result.ok) {
       return NextResponse.json(
-        { error: result.error, dishId: result.dishId },
+        {
+          error: result.error,
+          code: result.code,
+          unavailableDishes: result.unavailableDishes,
+          dishId: result.dishId,
+        },
         { status: result.status },
       );
     }

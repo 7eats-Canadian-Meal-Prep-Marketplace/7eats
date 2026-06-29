@@ -17,7 +17,11 @@ import {
   followCook,
   unfollowCook,
 } from "@/lib/favourites/follow-cook";
-import { formatLeadTime } from "@/lib/refund-policy";
+import {
+  describeCancellationPolicy,
+  describeLeadTimePolicy,
+  formatLeadTime,
+} from "@/lib/refund-policy";
 import { useApp } from "../../_app-context";
 import { Skeleton } from "../../_skeleton";
 import styles from "./page.module.css";
@@ -45,6 +49,7 @@ type ApiCook = {
   memberSince: string | null;
   ordersCompleted: number;
   leadTime: string | null;
+  leadTimeCutoff: string | null;
   offersPickup: boolean;
   delivery: "none" | "self" | null;
   pickupWindows: Window[];
@@ -121,6 +126,10 @@ function formatReviewDate(iso: string): string {
     day: "numeric",
     year: "numeric",
   });
+}
+
+function formatMealsMade(count: number): string {
+  return count === 1 ? "1 meal made" : `${count.toLocaleString()} meals made`;
 }
 
 function scrollToReviews() {
@@ -414,7 +423,7 @@ export default function CookProfilePage({
           )}
 
           <p className={styles.metaLine}>
-            {cook.ordersCompleted} meals made
+            {formatMealsMade(cook.ordersCompleted)}
             {cook.memberSince ? ` · Member since ${cook.memberSince}` : ""}
           </p>
 
@@ -439,7 +448,10 @@ export default function CookProfilePage({
           {cook.leadTime && (
             <div className={styles.fact}>
               <dt>Order ahead</dt>
-              <dd>{formatLeadTime(cook.leadTime)} notice</dd>
+              <dd>
+                {describeLeadTimePolicy(cook.leadTime, cook.leadTimeCutoff) ??
+                  `${formatLeadTime(cook.leadTime)} notice`}
+              </dd>
             </div>
           )}
           {pickupSummary && (
@@ -463,9 +475,11 @@ export default function CookProfilePage({
           <div className={styles.fact}>
             <dt>Cancellations</dt>
             <dd>
-              {cook.cancellationAllowed
-                ? "Free before lead time"
-                : "Final once placed"}
+              {describeCancellationPolicy(
+                cook.cancellationAllowed,
+                cook.leadTime,
+                cook.leadTimeCutoff,
+              )}
             </dd>
           </div>
           {!pickupSummary && !deliverySummary && (

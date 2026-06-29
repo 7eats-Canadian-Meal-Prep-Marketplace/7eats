@@ -8,6 +8,7 @@ export function ConfirmDialog({
   open,
   title,
   message,
+  callout,
   confirmLabel = "Confirm",
   cancelLabel = "Cancel",
   danger = false,
@@ -18,6 +19,7 @@ export function ConfirmDialog({
   open: boolean;
   title: string;
   message: string;
+  callout?: string;
   confirmLabel?: string;
   cancelLabel?: string;
   danger?: boolean;
@@ -70,6 +72,7 @@ export function ConfirmDialog({
         <p id="confirm-dialog-message" className={styles.message}>
           {message}
         </p>
+        {callout ? <p className={styles.callout}>{callout}</p> : null}
         <div className={styles.actions}>
           <button
             type="button"

@@ -4,6 +4,7 @@ import { getCookId, unauthorized } from "@/app/api/business/_lib/cook-auth";
 import { db } from "@/db";
 import { cookProfiles } from "@/db/schema";
 import { getStripe } from "@/lib/stripe";
+import { syncCookStripeProfileToAccount } from "@/lib/stripe-connect";
 
 export async function POST(req: NextRequest) {
   const cookId = await getCookId(req.headers);
@@ -25,7 +26,11 @@ export async function POST(req: NextRequest) {
 
   try {
     const [cook] = await db
-      .select({ stripeAccountId: cookProfiles.stripeAccountId })
+      .select({
+        id: cookProfiles.id,
+        displayName: cookProfiles.displayName,
+        stripeAccountId: cookProfiles.stripeAccountId,
+      })
       .from(cookProfiles)
       .where(eq(cookProfiles.id, cookId))
       .limit(1);
@@ -40,6 +45,13 @@ export async function POST(req: NextRequest) {
     const stripe = getStripe();
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
     const returnUrl = `${appUrl}${returnTo}`;
+
+    // Prefill business URL with the cook's 7eats storefront so Stripe onboarding
+    // doesn't require a personal website. Also backfills accounts created earlier.
+    await syncCookStripeProfileToAccount(stripe, cook.stripeAccountId, {
+      cookProfileId: cook.id,
+      displayName: cook.displayName,
+    });
 
     // If the recipient configuration's transfers capability is already active,
     // the cook has onboarded and only needs an update link; otherwise onboard.

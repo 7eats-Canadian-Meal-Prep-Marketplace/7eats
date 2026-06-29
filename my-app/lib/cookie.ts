@@ -29,6 +29,32 @@ export function verifySignedValue(signed: string): boolean {
   }
 }
 
+// Signs an arbitrary string payload (e.g. a JSON blob) so it can be stored in a
+// client cookie and trusted on the way back. Format: "<base64url(payload)>.<hmac>".
+export function signPayload(payload: string): string {
+  const encoded = Buffer.from(payload, "utf8").toString("base64url");
+  const sig = createHmac("sha256", getSecret()).update(encoded).digest("hex");
+  return `${encoded}.${sig}`;
+}
+
+export function readSignedPayload(token: string): string | null {
+  const dot = token.lastIndexOf(".");
+  if (dot === -1) return null;
+  const encoded = token.slice(0, dot);
+  const sig = token.slice(dot + 1);
+  const expected = createHmac("sha256", getSecret())
+    .update(encoded)
+    .digest("hex");
+  try {
+    const a = Buffer.from(sig, "hex");
+    const b = Buffer.from(expected, "hex");
+    if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
+    return Buffer.from(encoded, "base64url").toString("utf8");
+  } catch {
+    return null;
+  }
+}
+
 // Signs an E.164 phone number so stage 2 can verify the number hasn't been swapped.
 // Format: "<phone>.<hmac-hex>"
 export function generateSignedPhone(phone: string): string {

@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getCookId, unauthorized } from "@/app/api/business/_lib/cook-auth";
@@ -68,16 +68,24 @@ export async function GET(req: NextRequest) {
       : eq(dishes.cookId, cookId);
 
     const rows = await db
-      .select()
+      .select({
+        dish: dishes,
+        totalOrders:
+          sql<number>`(SELECT COUNT(DISTINCT order_id)::int FROM order_dishes WHERE dish_id = ${dishes.id})`.as(
+            "total_orders",
+          ),
+      })
       .from(dishes)
       .where(conditions)
       .orderBy(desc(dishes.createdAt));
 
     return NextResponse.json({
       success: true,
-      data: rows.map((row) => ({
-        ...row,
-        status: normalizeDishStatus(row.status),
+      data: rows.map(({ dish, totalOrders }) => ({
+        ...dish,
+        status: normalizeDishStatus(dish.status),
+        totalOrders: Number(totalOrders),
+        canDelete: Number(totalOrders) === 0,
       })),
     });
   } catch (err) {

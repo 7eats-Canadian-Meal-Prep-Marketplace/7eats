@@ -14,6 +14,7 @@ import {
   orderPayments,
   orders,
 } from "@/db/schema";
+import { orderHasPlacedPaymentFilter } from "@/lib/orders/abandoned-checkout";
 
 export type Params = { params: Promise<{ orderId: string }> };
 
@@ -44,18 +45,23 @@ export async function GET(req: NextRequest, { params }: Params) {
           deliveryFeeSnapshot: orders.deliveryFeeSnapshot,
           currency: orders.currency,
           fulfillmentMode: orders.fulfillmentMode,
+          deliveryAddress: orders.deliveryAddress,
           pickupAt: orders.pickupAt,
           fulfillmentWindowStart: orders.fulfillmentWindowStart,
           fulfillmentWindowEnd: orders.fulfillmentWindowEnd,
           fulfilledAt: orders.fulfilledAt,
           cancelledAt: orders.cancelledAt,
           notes: orders.notes,
+          deliveryDetails: orders.deliveryDetails,
           listingId: orders.listingId,
           listingTitle: listings.title,
           clientId: orders.clientId,
           customerName: authUser.name,
           customerFirstName: authUser.firstName,
           customerLastName: authUser.lastName,
+          clientAccountStatus: authUser.status,
+          isGuestCheckout: orders.isGuestCheckout,
+          clientIsGuestAccount: authUser.isGuestAccount,
           pickupCodeExpiresAt: orders.pickupCodeExpiresAt,
           pickupCodeVerifiedAt: orders.pickupCodeVerifiedAt,
           pickupCodeAttempts: orders.pickupCodeAttempts,
@@ -79,7 +85,13 @@ export async function GET(req: NextRequest, { params }: Params) {
             eq(orderPayments.type, "full"),
           ),
         )
-        .where(and(eq(orders.id, orderId), eq(orders.cookId, cookId)))
+        .where(
+          and(
+            eq(orders.id, orderId),
+            eq(orders.cookId, cookId),
+            orderHasPlacedPaymentFilter(),
+          ),
+        )
         .limit(1),
 
       db

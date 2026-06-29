@@ -13,8 +13,25 @@
   backdrop-filter: saturate(180%) blur(12px);
   -webkit-backdrop-filter: saturate(180%) blur(12px);
   position: sticky;
-  top: 72px;
+  top: var(--app-header-h, 72px);
   z-index: 100;
+}
+
+/* Desktop-only quick search pills (toggle lives in the header ≥880px) */
+.desktopChipBar {
+  display: none;
+}
+
+@media (min-width: 880px) {
+  .desktopChipBar {
+    display: block;
+    border-bottom: 1px solid var(--grey-200);
+    background: var(--white);
+    position: sticky;
+    top: var(--app-header-h, 72px);
+    z-index: 100;
+    margin-top: -1px;
+  }
 }
 
 .filterBar::-webkit-scrollbar {

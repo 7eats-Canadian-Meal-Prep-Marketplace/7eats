@@ -1,18 +1,12 @@
-import { and, eq, sql } from "drizzle-orm";
+import "server-only";
+
+import { and, eq, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { dishes } from "@/db/schema";
+import { type DishStatus, normalizeDishStatus } from "@/lib/dish-status-core";
 
-export type DishStatus = "active" | "inactive";
-
-/** Legacy DB values mapped to the current active/inactive model. */
-export function normalizeDishStatus(raw: string): DishStatus {
-  if (raw === "inactive" || raw === "archived") return "inactive";
-  return "active";
-}
-
-export function isDishPaused(raw: string): boolean {
-  return raw === "inactive" || raw === "archived";
-}
+export type { DishStatus } from "@/lib/dish-status-core";
+export { isDishPaused, normalizeDishStatus } from "@/lib/dish-status-core";
 
 let pausedDbLabel: "inactive" | "archived" | null = null;
 
@@ -66,5 +60,8 @@ export async function setDishActive(dishId: string, cookId: string) {
 
 /** Filter dishes by active/inactive for the cook dashboard. */
 export function dishStatusFilter(cookId: string, status: DishStatus) {
-  return and(eq(dishes.cookId, cookId), eq(dishes.status, status));
+  if (status === "inactive") {
+    return and(eq(dishes.cookId, cookId), ne(dishes.status, "active"));
+  }
+  return and(eq(dishes.cookId, cookId), eq(dishes.status, "active"));
 }

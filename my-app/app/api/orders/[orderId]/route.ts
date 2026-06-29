@@ -9,12 +9,15 @@ import {
   orders,
   reviews,
 } from "@/db/schema";
+import { formatPickupLocation } from "@/lib/address";
 import { auth } from "@/lib/auth";
+import { resolveOrderLeadTimeRules } from "@/lib/lead-time";
 import {
   formatOrderTimingDate,
   formatOrderTimingWindow,
 } from "@/lib/order-timing";
 import { formatClientOrderTiming } from "@/lib/order-timing-label";
+import { orderHasPlacedPaymentFilter } from "@/lib/orders/abandoned-checkout";
 import {
   cancelClientOrder,
   getClientCancelPolicy,
@@ -53,6 +56,7 @@ export async function GET(req: NextRequest, { params }: Params) {
         fulfillmentWindowStart: orders.fulfillmentWindowStart,
         fulfillmentWindowEnd: orders.fulfillmentWindowEnd,
         notes: orders.notes,
+        deliveryDetails: orders.deliveryDetails,
         createdAt: orders.createdAt,
         pickupCode: orders.pickupCode,
         fulfillmentMode: orders.fulfillmentMode,
@@ -60,19 +64,32 @@ export async function GET(req: NextRequest, { params }: Params) {
         deliveryFeeSnapshot: orders.deliveryFeeSnapshot,
         cancellationAllowed: orders.cancellationAllowed,
         cancelledAt: orders.cancelledAt,
+        leadTimeSnapshot: orders.leadTimeSnapshot,
+        leadTimeCutoffSnapshot: orders.leadTimeCutoffSnapshot,
         cookFirstName: authUser.firstName,
         cookLastName: authUser.lastName,
         cookDisplayName: cookProfiles.displayName,
         cookPhotoUrl: cookProfiles.photoUrl,
         cookBannerUrl: cookProfiles.bannerUrl,
         cookNeighborhood: authUser.neighborhood,
-        cookPickupAddress: cookProfiles.pickupAddress,
+        cookPickupStreet: cookProfiles.pickupStreet,
+        cookPickupUnit: cookProfiles.pickupUnit,
+        cookPickupCity: cookProfiles.pickupCity,
+        cookPickupProvince: cookProfiles.pickupProvince,
+        cookPickupPostal: cookProfiles.pickupPostal,
         cookLeadTime: cookProfiles.leadTime,
+        cookLeadTimeCutoff: cookProfiles.leadTimeCutoff,
       })
       .from(orders)
       .leftJoin(cookProfiles, eq(orders.cookId, cookProfiles.id))
       .leftJoin(authUser, eq(cookProfiles.userId, authUser.id))
-      .where(and(eq(orders.id, orderId), eq(orders.clientId, session.user.id)))
+      .where(
+        and(
+          eq(orders.id, orderId),
+          eq(orders.clientId, session.user.id),
+          orderHasPlacedPaymentFilter(),
+        ),
+      )
       .limit(1);
 
     if (!row) {
@@ -145,15 +162,30 @@ export async function GET(req: NextRequest, { params }: Params) {
           .join(", ");
       }
     } else {
-      pickupAddress = row.cookPickupAddress ?? row.cookNeighborhood ?? null;
+      // Compose the cook's real pickup address from the structured fields the
+      // onboarding/settings flow actually writes; fall back to neighborhood
+      // (city-level) only when no street address is on file.
+      pickupAddress =
+        formatPickupLocation({
+          street: row.cookPickupStreet,
+          unit: row.cookPickupUnit,
+          city: row.cookPickupCity,
+          province: row.cookPickupProvince,
+          postal: row.cookPickupPostal,
+        }) ??
+        row.cookNeighborhood ??
+        null;
     }
+
+    const leadTimeRules = resolveOrderLeadTimeRules(row);
 
     const cancelPolicy = getClientCancelPolicy({
       status: row.status,
       cancellationAllowed: row.cancellationAllowed,
       pickupAt: row.pickupAt instanceof Date ? row.pickupAt : null,
       fulfillmentWindowStart: row.fulfillmentWindowStart,
-      cookLeadTime: row.cookLeadTime,
+      cookLeadTime: leadTimeRules.leadTime,
+      cookLeadTimeCutoff: leadTimeRules.leadTimeCutoff,
       fulfillmentMode:
         row.fulfillmentMode === "delivery" || row.fulfillmentMode === "pickup"
           ? row.fulfillmentMode
@@ -172,6 +204,7 @@ export async function GET(req: NextRequest, { params }: Params) {
       fulfillmentWindowStart: fulfillmentWindowStartIso,
       fulfillmentWindowEnd: fulfillmentWindowEndIso,
       notes: row.notes ?? null,
+      deliveryDetails: row.deliveryDetails ?? null,
       createdAt:
         row.createdAt instanceof Date
           ? row.createdAt.toISOString()

@@ -1,6 +1,12 @@
 "use client";
 
-import { ArrowLeft } from "lucide-react";
+import {
+  ArrowLeft,
+  Check,
+  MapPin,
+  ShieldCheck,
+  UtensilsCrossed,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -11,7 +17,7 @@ import {
   nextFulfillmentSlotIso,
 } from "@/lib/cook-card-schedule";
 import { useGuestAddress } from "@/lib/hooks/use-guest-address";
-import { SPECIAL_REQUESTS_DISCLAIMER } from "@/lib/orders/special-requests-copy";
+import { DELIVERY_HANDOFF_DISCLAIMER } from "@/lib/orders/delivery-details-copy";
 import {
   formatPhoneDisplay,
   isValidNorthAmericanPhone,
@@ -23,7 +29,7 @@ import { useApp } from "../_app-context";
 import { type DeliveryAddress, useCart } from "../_cart-context";
 import { useServiceAddress } from "../_service-address-context";
 import { Skeleton } from "../_skeleton";
-import { calcTax, formatCartMoney, getTaxLabel } from "../cart/_cart-tax";
+import { calcTax, formatCartMoney } from "../cart/_cart-tax";
 import {
   type CheckoutPaymentHandle,
   CheckoutPaymentSection,
@@ -113,6 +119,240 @@ function resolvedToNormalized(resolved: ResolvedAddress): NormalizedAddress {
   };
 }
 
+// Inline email verification for guests. A guest must prove they can read mail at
+// the address they typed before the order (and its receipt) is created for it.
+// Lives under the email field: a quiet "Send code" once the email is valid, then
+// a compact code panel with a resend cooldown, then a calm verified state.
+function GuestEmailVerify({
+  email,
+  emailValid,
+  verified,
+  onVerified,
+}: {
+  email: string;
+  emailValid: boolean;
+  verified: boolean;
+  onVerified: () => void;
+}) {
+  const [phase, setPhase] = useState<"idle" | "sent">("idle");
+  const [code, setCode] = useState("");
+  const [sending, setSending] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [cooldown, setCooldown] = useState(0);
+  const [sentTo, setSentTo] = useState<string | null>(null);
+
+  const trimmed = email.trim();
+  const normalized = trimmed.toLowerCase();
+
+  // If the email is edited away from what we sent to, collapse back to idle.
+  useEffect(() => {
+    if (sentTo && normalized !== sentTo) {
+      setPhase("idle");
+      setCode("");
+      setError(null);
+      setSentTo(null);
+    }
+  }, [normalized, sentTo]);
+
+  // Resend cooldown ticker — one decrement per second.
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const id = setTimeout(() => setCooldown(cooldown - 1), 1000);
+    return () => clearTimeout(id);
+  }, [cooldown]);
+
+  async function sendCode() {
+    setSending(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/auth/guest-email/send-otp", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: trimmed }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setError(json.error ?? "Couldn't send a code. Try again.");
+        return;
+      }
+      setSentTo(normalized);
+      setPhase("sent");
+      setCode("");
+      setCooldown(40);
+    } catch {
+      setError("Network error. Please try again.");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function submitCode() {
+    if (code.length < 6 || verifying) return;
+    setVerifying(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/auth/guest-email/verify-otp", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: trimmed, code }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setError(json.error ?? "That code didn't work. Try again.");
+        setCode("");
+        return;
+      }
+      onVerified();
+    } catch {
+      setError("Network error. Please try again.");
+    } finally {
+      setVerifying(false);
+    }
+  }
+
+  if (verified) {
+    return (
+      <output className={styles.verifyDone}>
+        <Check size={15} aria-hidden="true" />
+        Email verified
+      </output>
+    );
+  }
+
+  if (phase === "idle") {
+    return (
+      <div className={styles.verifyIdle}>
+        <p className={styles.verifyHint}>
+          <ShieldCheck size={14} aria-hidden="true" />
+          We&apos;ll email a code to confirm this address before payment.
+        </p>
+        <button
+          type="button"
+          className={styles.verifySendBtn}
+          onClick={() => void sendCode()}
+          disabled={!emailValid || sending}
+        >
+          {sending ? "Sending…" : "Send code"}
+        </button>
+        {error && (
+          <p className={styles.verifyError} role="alert">
+            {error}
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.verifyPanel}>
+      <p className={styles.verifySentTo}>
+        Enter the 6-digit code sent to <strong>{sentTo}</strong>.
+      </p>
+      <div className={styles.verifyRow}>
+        <input
+          type="text"
+          inputMode="numeric"
+          autoComplete="one-time-code"
+          maxLength={6}
+          value={code}
+          onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              void submitCode();
+            }
+          }}
+          placeholder="000000"
+          className={styles.verifyCodeInput}
+          aria-label="Verification code"
+          aria-invalid={Boolean(error)}
+        />
+        <button
+          type="button"
+          className={styles.verifyConfirmBtn}
+          onClick={() => void submitCode()}
+          disabled={code.length < 6 || verifying}
+        >
+          {verifying ? "Verifying…" : "Verify"}
+        </button>
+      </div>
+      {error && (
+        <p className={styles.verifyError} role="alert">
+          {error}
+        </p>
+      )}
+      <button
+        type="button"
+        className={styles.verifyResendBtn}
+        onClick={() => void sendCode()}
+        disabled={cooldown > 0 || sending}
+      >
+        {cooldown > 0
+          ? `Resend code in ${cooldown}s`
+          : sending
+            ? "Sending…"
+            : "Resend code"}
+      </button>
+    </div>
+  );
+}
+
+type UnavailableCartItem = {
+  dishId: string;
+  name: string;
+};
+
+function UnavailableMealsAlert({
+  items,
+  cookId,
+}: {
+  items: UnavailableCartItem[];
+  cookId: string | null;
+}) {
+  if (items.length === 0) return null;
+
+  const menuHref = cookId ? `/app/cooks/${cookId}/menu` : "/app/browse";
+
+  return (
+    <div className={styles.unavailableAlert} role="alert">
+      <div className={styles.unavailableAlertHead}>
+        <div className={styles.unavailableAlertIcon} aria-hidden="true">
+          <UtensilsCrossed size={17} strokeWidth={1.75} />
+        </div>
+        <p className={styles.unavailableAlertTitle}>
+          {items.length === 1
+            ? "A meal in your cart is no longer available"
+            : "Some meals in your cart are no longer available"}
+        </p>
+      </div>
+      <div className={styles.unavailableAlertBody}>
+        <ul className={styles.unavailableAlertTags}>
+          {items.map((item) => (
+            <li key={item.dishId} className={styles.unavailableAlertTag}>
+              {item.name}
+            </li>
+          ))}
+        </ul>
+        <p className={styles.unavailableAlertCopy}>
+          The cook paused {items.length === 1 ? "this meal" : "these meals"}{" "}
+          while you were checking out. Remove{" "}
+          {items.length === 1 ? "it" : "them"} from your cart or pick something
+          else to continue.
+        </p>
+        <div className={styles.unavailableAlertActions}>
+          <Link href="/app/cart" className={styles.unavailableAlertPrimary}>
+            Update cart
+          </Link>
+          <Link href={menuHref} className={styles.unavailableAlertSecondary}>
+            Browse menu
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function CheckoutPage() {
   const router = useRouter();
   const { isLoggedIn, userName, userEmail, setProvince } = useApp();
@@ -135,10 +375,12 @@ export default function CheckoutPage() {
     fulfillmentMode,
     deliveryAddress,
     notes,
+    deliveryDetails,
     cancellationAllowed,
     leadTime,
+    leadTimeCutoff,
     setDeliveryAddress,
-    setNotes,
+    setDeliveryDetails,
     clearCart,
   } = useCart();
 
@@ -151,6 +393,8 @@ export default function CheckoutPage() {
   const [ordered, setOrdered] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [needsLogin, setNeedsLogin] = useState<{ email: string } | null>(null);
+  // Guests must verify their email (OTP) before the order is placed.
+  const [emailVerified, setEmailVerified] = useState(false);
   const [deliveryFee, setDeliveryFee] = useState(0);
   const [deliveryOutOfRange, setDeliveryOutOfRange] = useState(false);
   const [paymentReady, setPaymentReady] = useState(false);
@@ -158,7 +402,9 @@ export default function CheckoutPage() {
   const [addressInput, setAddressInput] = useState("");
   const [pendingAddress, setPendingAddress] =
     useState<NormalizedAddress | null>(null);
-  const [noteDraft, setNoteDraft] = useState(notes ?? "");
+  const [deliveryDetailsDraft, setDeliveryDetailsDraft] = useState(
+    deliveryDetails ?? "",
+  );
   const [contactErrors, setContactErrors] = useState<ContactErrors>({});
   const [discount, setDiscount] = useState<{
     amount: number;
@@ -168,43 +414,106 @@ export default function CheckoutPage() {
   const [deliveryWindows, setDeliveryWindows] = useState<FulfillmentWindow[]>(
     [],
   );
-  const [acceptsSpecialRequests, setAcceptsSpecialRequests] = useState<
-    boolean | null
-  >(null);
+  // Cook's pickup address, shown for pickup orders. Loaded with the menu sync.
+  const [pickupLocation, setPickupLocation] = useState<string | null>(null);
   const [pendingPayment, setPendingPayment] = useState<{
     orderId: string;
     clientSecret: string;
     guestAccessToken?: string;
   } | null>(null);
+  const [unavailableItems, setUnavailableItems] = useState<
+    UnavailableCartItem[]
+  >([]);
+  const [checkingAvailability, setCheckingAvailability] = useState(false);
 
   const isDelivery = fulfillmentMode === "delivery";
   const displayAddress = pendingAddress ?? currentAddress;
+  // Once the order exists (payment pending), the contact details are committed to
+  // it — editing them would mislead, so the whole section freezes read-only.
+  const contactLocked = Boolean(pendingPayment);
 
   useEffect(() => {
     if (items.length === 0 && !placing && !ordered) router.replace("/app/cart");
   }, [items.length, placing, ordered, router]);
 
   useEffect(() => {
-    setNoteDraft(notes ?? "");
-  }, [notes]);
+    setDeliveryDetailsDraft(deliveryDetails ?? "");
+  }, [deliveryDetails]);
+
+  const syncCartAvailability = useCallback(async () => {
+    if (!cookId || items.length === 0) {
+      setUnavailableItems([]);
+      return;
+    }
+
+    setCheckingAvailability(true);
+    try {
+      const res = await fetch(`/api/cooks/${cookId}/menu`, {
+        cache: "no-store",
+      });
+      const json = await res.json();
+      if (!res.ok || !json?.data) return;
+
+      const cook = json.data.cook;
+      setPickupWindows(cook.pickupWindows ?? []);
+      setDeliveryWindows(cook.deliveryWindows ?? []);
+      setPickupLocation(cook.pickupLocation ?? null);
+
+      const activeIds = new Set<string>(
+        (json.data.dishes as { id: string }[] | undefined)?.map((d) => d.id) ??
+          [],
+      );
+      setUnavailableItems(
+        items
+          .filter((item) => !activeIds.has(item.dishId))
+          .map((item) => ({ dishId: item.dishId, name: item.name })),
+      );
+    } catch {
+      /* non-fatal — place-order still validates server-side */
+    } finally {
+      setCheckingAvailability(false);
+    }
+  }, [cookId, items]);
 
   useEffect(() => {
-    if (!cookId) return;
-    let cancelled = false;
-    fetch(`/api/cooks/${cookId}/menu`, { cache: "no-store" })
-      .then((r) => r.json())
-      .then((json) => {
-        if (cancelled || !json?.data?.cook) return;
-        const cook = json.data.cook;
-        setPickupWindows(cook.pickupWindows ?? []);
-        setDeliveryWindows(cook.deliveryWindows ?? []);
-        setAcceptsSpecialRequests(Boolean(cook.acceptsSpecialRequests));
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [cookId]);
+    void syncCartAvailability();
+  }, [syncCartAvailability]);
+
+  useEffect(() => {
+    function onFocus() {
+      void syncCartAvailability();
+    }
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [syncCartAvailability]);
+
+  const applyUnavailableOrderError = useCallback(
+    (data: {
+      code?: string;
+      unavailableDishes?: { dishId: string; name: string }[];
+    }) => {
+      if (
+        data.code !== "dishes_unavailable" ||
+        !data.unavailableDishes?.length
+      ) {
+        return false;
+      }
+
+      setUnavailableItems(
+        data.unavailableDishes.map((dish) => ({
+          dishId: dish.dishId,
+          name:
+            dish.name === "A meal in your cart"
+              ? (items.find((item) => item.dishId === dish.dishId)?.name ??
+                dish.name)
+              : dish.name,
+        })),
+      );
+      setError(null);
+      return true;
+    },
+    [items],
+  );
 
   useEffect(() => {
     if (!isDelivery || !displayAddress) return;
@@ -273,17 +582,13 @@ export default function CheckoutPage() {
     };
   }, [subtotal]);
 
-  const { tax, grandTotal, taxLabel } = useMemo(() => {
+  const grandTotal = useMemo(() => {
     const taxAmount =
       Math.round(calcTax(subtotal + deliveryFee, cookProvince) * 100) / 100;
     const total =
       Math.round((subtotal + deliveryFee + taxAmount - discount.amount) * 100) /
       100;
-    return {
-      tax: taxAmount,
-      grandTotal: Math.max(0, total),
-      taxLabel: getTaxLabel(cookProvince),
-    };
+    return Math.max(0, total);
   }, [subtotal, deliveryFee, cookProvince, discount.amount]);
 
   const refundPickupAt = useMemo(
@@ -293,13 +598,21 @@ export default function CheckoutPage() {
         pickupWindows,
         deliveryWindows,
         leadTime,
+        new Date(),
+        leadTimeCutoff,
       ),
-    [fulfillmentMode, pickupWindows, deliveryWindows, leadTime],
+    [fulfillmentMode, pickupWindows, deliveryWindows, leadTime, leadTimeCutoff],
   );
 
   const cancellationPolicyText = useMemo(
-    () => refundPolicyText(cancellationAllowed, refundPickupAt, leadTime),
-    [cancellationAllowed, refundPickupAt, leadTime],
+    () =>
+      refundPolicyText(
+        cancellationAllowed,
+        refundPickupAt,
+        leadTime,
+        leadTimeCutoff,
+      ),
+    [cancellationAllowed, refundPickupAt, leadTime, leadTimeCutoff],
   );
 
   const contactValues = useMemo(
@@ -323,6 +636,8 @@ export default function CheckoutPage() {
     setter: (v: string) => void,
   ) {
     setter(value);
+    // Changing the email invalidates any prior verification of the old address.
+    if (field === "email") setEmailVerified(false);
     if (contactErrors[field]) {
       const message = contactFieldError(field, {
         ...contactValues,
@@ -401,6 +716,8 @@ export default function CheckoutPage() {
     setError(null);
     setNeedsLogin(null);
 
+    if (unavailableItems.length > 0) return;
+
     if (!meetsMinimum) {
       setError(
         "Your cart no longer meets the minimum order. Please return to the menu.",
@@ -438,7 +755,10 @@ export default function CheckoutPage() {
     if (!pendingPayment) {
       setPlacing(true);
       try {
-        if (notes !== noteDraft) setNotes(noteDraft.trim() || null);
+        const trimmedDeliveryDetails = deliveryDetailsDraft.trim();
+        if (isDelivery && trimmedDeliveryDetails !== (deliveryDetails ?? "")) {
+          setDeliveryDetails(trimmedDeliveryDetails || null);
+        }
 
         const orderPayload = {
           cookId,
@@ -451,7 +771,10 @@ export default function CheckoutPage() {
           deliveryAddress: isDelivery ? deliveryAddress : undefined,
           customerLat: isDelivery ? displayAddress?.lat : undefined,
           customerLng: isDelivery ? displayAddress?.lng : undefined,
-          notes: (noteDraft.trim() || notes) ?? undefined,
+          notes: notes ?? undefined,
+          deliveryDetails: isDelivery
+            ? trimmedDeliveryDetails || undefined
+            : undefined,
         };
 
         if (!isLoggedIn) {
@@ -472,7 +795,20 @@ export default function CheckoutPage() {
             setNeedsLogin({ email: guestData.email ?? email.trim() });
             return;
           }
+          if (guestData.needsEmailVerification) {
+            setEmailVerified(false);
+            setError("Your email verification expired. Please verify again.");
+            return;
+          }
           if (!guestRes.ok) {
+            if (
+              applyUnavailableOrderError({
+                code: guestData.code,
+                unavailableDishes: guestData.unavailableDishes,
+              })
+            ) {
+              return;
+            }
             setError(guestData.error ?? "Could not place your order.");
             return;
           }
@@ -493,6 +829,14 @@ export default function CheckoutPage() {
         });
         const data = await res.json();
         if (!res.ok) {
+          if (
+            applyUnavailableOrderError({
+              code: data.code,
+              unavailableDishes: data.unavailableDishes,
+            })
+          ) {
+            return;
+          }
           setError(data.error ?? "Could not place your order.");
           return;
         }
@@ -569,11 +913,6 @@ export default function CheckoutPage() {
 
   return (
     <div className={styles.page}>
-      <Link href="/app/cart" className={styles.backLink}>
-        <ArrowLeft size={16} aria-hidden />
-        Back to cart
-      </Link>
-
       <header className={styles.pageHeader}>
         <h1 className={styles.heading}>Checkout</h1>
         <p className={styles.subheading}>
@@ -589,6 +928,12 @@ export default function CheckoutPage() {
           {/* Contact */}
           <section className={styles.formSection}>
             <h2 className={styles.formTitle}>Contact</h2>
+            {contactLocked && (
+              <p className={styles.contactLockNote}>
+                Locked in for this order. Cancel to start over with different
+                details.
+              </p>
+            )}
             {isLoggedIn ? (
               <p className={styles.orderingAs}>
                 Ordering as{" "}
@@ -619,6 +964,7 @@ export default function CheckoutPage() {
                       onBlur={() => touchContactField("firstName")}
                       autoComplete="given-name"
                       required
+                      disabled={contactLocked}
                       aria-invalid={Boolean(contactErrors.firstName)}
                       aria-describedby={
                         contactErrors.firstName
@@ -658,6 +1004,7 @@ export default function CheckoutPage() {
                       onBlur={() => touchContactField("lastName")}
                       autoComplete="family-name"
                       required
+                      disabled={contactLocked}
                       aria-invalid={Boolean(contactErrors.lastName)}
                       aria-describedby={
                         contactErrors.lastName
@@ -680,35 +1027,72 @@ export default function CheckoutPage() {
                   <label className={styles.label} htmlFor="checkout-email">
                     Email
                   </label>
-                  <input
-                    id="checkout-email"
-                    type="email"
-                    inputMode="email"
-                    className={
-                      contactErrors.email
-                        ? `${styles.input} ${styles.inputInvalid}`
-                        : styles.input
-                    }
-                    value={email}
-                    onChange={(e) =>
-                      updateContactField("email", e.target.value, setEmail)
-                    }
-                    onBlur={() => touchContactField("email")}
-                    autoComplete="email"
-                    required
-                    aria-invalid={Boolean(contactErrors.email)}
-                    aria-describedby={
-                      contactErrors.email ? "checkout-email-error" : undefined
-                    }
-                  />
-                  {contactErrors.email && (
-                    <p
-                      id="checkout-email-error"
-                      className={styles.fieldErrorInline}
-                      role="alert"
-                    >
-                      {contactErrors.email}
-                    </p>
+                  {emailVerified ? (
+                    <div className={styles.verifiedEmailRow}>
+                      <span className={styles.verifiedEmailMain}>
+                        <Check size={15} aria-hidden="true" />
+                        <span
+                          className={styles.verifiedEmailAddr}
+                          title={email}
+                        >
+                          {email}
+                        </span>
+                        <span className={styles.verifiedTag}>Verified</span>
+                      </span>
+                      {!contactLocked && (
+                        <button
+                          type="button"
+                          className={styles.changeEmailBtn}
+                          onClick={() => setEmailVerified(false)}
+                        >
+                          Change
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <>
+                      <input
+                        id="checkout-email"
+                        type="email"
+                        inputMode="email"
+                        className={
+                          contactErrors.email
+                            ? `${styles.input} ${styles.inputInvalid}`
+                            : styles.input
+                        }
+                        value={email}
+                        onChange={(e) =>
+                          updateContactField("email", e.target.value, setEmail)
+                        }
+                        onBlur={() => touchContactField("email")}
+                        autoComplete="email"
+                        required
+                        disabled={contactLocked}
+                        aria-invalid={Boolean(contactErrors.email)}
+                        aria-describedby={
+                          contactErrors.email
+                            ? "checkout-email-error"
+                            : undefined
+                        }
+                      />
+                      {contactErrors.email && (
+                        <p
+                          id="checkout-email-error"
+                          className={styles.fieldErrorInline}
+                          role="alert"
+                        >
+                          {contactErrors.email}
+                        </p>
+                      )}
+                      {!contactLocked && (
+                        <GuestEmailVerify
+                          email={email}
+                          emailValid={EMAIL_RE.test(email.trim())}
+                          verified={emailVerified}
+                          onVerified={() => setEmailVerified(true)}
+                        />
+                      )}
+                    </>
                   )}
                 </div>
                 <div className={styles.formGroup}>
@@ -736,6 +1120,7 @@ export default function CheckoutPage() {
                     autoComplete="tel"
                     placeholder="(416) 555-0100"
                     required
+                    disabled={contactLocked}
                     aria-invalid={Boolean(contactErrors.phone)}
                     aria-describedby={
                       contactErrors.phone ? "checkout-phone-error" : undefined
@@ -820,34 +1205,52 @@ export default function CheckoutPage() {
                   menu.
                 </p>
               )}
+              <div
+                className={`${styles.formGroup} ${styles.deliveryDetailsGroup}`}
+              >
+                <label
+                  className={styles.label}
+                  htmlFor="checkout-delivery-details"
+                >
+                  Delivery details (optional)
+                </label>
+                <textarea
+                  id="checkout-delivery-details"
+                  className={styles.textarea}
+                  rows={3}
+                  maxLength={500}
+                  placeholder="Ring doorbell, side entrance, buzzer code…"
+                  value={deliveryDetailsDraft}
+                  onChange={(e) => setDeliveryDetailsDraft(e.target.value)}
+                />
+                <p className={styles.fieldDisclaimer}>
+                  {DELIVERY_HANDOFF_DISCLAIMER}
+                </p>
+              </div>
             </section>
           )}
 
-          <section className={styles.formSection}>
-            <h2 className={styles.formTitle}>Note for the cook</h2>
-            <div className={styles.formGroup}>
-              <label className={styles.label} htmlFor="checkout-note">
-                Special request (optional)
-              </label>
-              <textarea
-                id="checkout-note"
-                className={styles.textarea}
-                rows={3}
-                placeholder={
-                  acceptsSpecialRequests === false
-                    ? "Allergies, dietary restrictions, health-related needs…"
-                    : "Allergies, spice level, pickup instructions…"
-                }
-                value={noteDraft}
-                onChange={(e) => setNoteDraft(e.target.value)}
-              />
-              {acceptsSpecialRequests === false && (
-                <p className={styles.noteDisclaimer}>
-                  {SPECIAL_REQUESTS_DISCLAIMER}
+          {/* Pickup location — where the client collects a pickup order. Shown
+              once the cook's address loads with the menu sync. */}
+          {!isDelivery && pickupLocation && (
+            <section className={styles.formSection}>
+              <h2 className={styles.formTitle}>Pickup location</h2>
+              <div className={styles.addressSummary}>
+                <p className={styles.pickupAddressLine}>
+                  <MapPin
+                    size={16}
+                    className={styles.pickupAddressIcon}
+                    aria-hidden="true"
+                  />
+                  <span>{pickupLocation}</span>
                 </p>
-              )}
-            </div>
-          </section>
+              </div>
+              <p className={styles.fieldDisclaimer}>
+                Collect your order from {cookName ?? "the cook"} here during
+                your selected pickup window.
+              </p>
+            </section>
+          )}
 
           {/* Payment — only appears once the order total is locked in and a
               secure payment session exists (after "Continue to payment"), so
@@ -888,6 +1291,8 @@ export default function CheckoutPage() {
             </div>
 
             <div className={styles.submitBlock}>
+              <UnavailableMealsAlert items={unavailableItems} cookId={cookId} />
+
               {needsLogin && (
                 <div className={styles.guestBlock} role="alert">
                   <p className={styles.guestBlockMsg}>
@@ -911,18 +1316,29 @@ export default function CheckoutPage() {
                 className={styles.placeOrderBtn}
                 disabled={
                   placing ||
+                  checkingAvailability ||
+                  unavailableItems.length > 0 ||
                   (pendingPayment ? !paymentReady : false) ||
                   !agreedPolicy ||
-                  (isDelivery && deliveryOutOfRange)
+                  (isDelivery && deliveryOutOfRange) ||
+                  (!isLoggedIn && !pendingPayment && !emailVerified)
                 }
                 onClick={() => void placeOrder()}
               >
                 {placing
                   ? "Processing…"
-                  : pendingPayment
-                    ? `Pay $${formatCartMoney(grandTotal)}`
-                    : "Continue to payment"}
+                  : unavailableItems.length > 0
+                    ? "Update cart to continue"
+                    : pendingPayment
+                      ? `Pay $${formatCartMoney(grandTotal)}`
+                      : "Continue to payment"}
               </button>
+
+              {!isLoggedIn && !pendingPayment && !emailVerified && (
+                <p className={styles.ctaGateHint}>
+                  Verify your email above to continue to payment.
+                </p>
+              )}
 
               <p className={styles.terms}>
                 By placing your order you agree to our{" "}
@@ -931,6 +1347,11 @@ export default function CheckoutPage() {
                 </Link>
                 .
               </p>
+
+              <Link href="/app/cart" className={styles.backLink}>
+                <ArrowLeft size={16} aria-hidden />
+                Back to cart
+              </Link>
             </div>
           </section>
         </div>
@@ -963,6 +1384,14 @@ export default function CheckoutPage() {
                     </li>
                   ))}
                 </ul>
+                {notes && (
+                  <div className={styles.summaryNote}>
+                    <span className={styles.summaryNoteLabel}>
+                      Note for cook
+                    </span>
+                    <p className={styles.summaryNoteText}>{notes}</p>
+                  </div>
+                )}
               </div>
 
               <div className={styles.summarySheet}>
@@ -991,14 +1420,6 @@ export default function CheckoutPage() {
                     </span>
                     <span className={styles.summaryRowVal}>
                       −${formatCartMoney(discount.amount)}
-                    </span>
-                  </div>
-                )}
-                {tax > 0 && (
-                  <div className={styles.summaryRow}>
-                    <span className={styles.summaryRowLabel}>{taxLabel}</span>
-                    <span className={styles.summaryRowVal}>
-                      ${formatCartMoney(tax)}
                     </span>
                   </div>
                 )}

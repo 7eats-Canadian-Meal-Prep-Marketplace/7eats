@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import LeadTimeCutoffField from "@/app/components/LeadTimeCutoffField";
 import { AddressSearchInput } from "@/components/AddressSearchInput";
 import { normalizeProvinceCode } from "@/lib/address";
 import {
@@ -19,6 +20,10 @@ import {
   withDeliveryDefaults,
 } from "@/lib/delivery-pricing";
 import { useDirtyState } from "@/lib/forms/use-dirty";
+import {
+  DEFAULT_LEAD_TIME_CUTOFF,
+  formatDbLeadTimeCutoff,
+} from "@/lib/lead-time";
 import { isPriceKeystroke } from "@/lib/price";
 import { CardFormSkeleton } from "./_skeletons";
 import styles from "./page.module.css";
@@ -73,6 +78,7 @@ type LogisticsForm = {
   deliveryDays: (typeof DAYS)[number][];
   deliveryWindows: Record<string, DayWindow>;
   leadTime: string;
+  leadTimeCutoff: string;
   maxDeliveryKm: number | null;
   deliveryRatePerKm: number;
   freeDeliveryAbove: string;
@@ -138,6 +144,7 @@ export function LogisticsSection() {
     deliveryDays: [],
     deliveryWindows: {},
     leadTime: "",
+    leadTimeCutoff: DEFAULT_LEAD_TIME_CUTOFF,
     maxDeliveryKm: null,
     deliveryRatePerKm: defaultDeliveryRate(),
     freeDeliveryAbove: "",
@@ -186,6 +193,9 @@ export function LogisticsSection() {
           deliveryDays: delivery.days,
           deliveryWindows: delivery.windows,
           leadTime: avail?.leadTime ?? profile?.leadTime ?? "",
+          leadTimeCutoff: formatDbLeadTimeCutoff(
+            avail?.leadTimeCutoff ?? profile?.leadTimeCutoff,
+          ),
           maxDeliveryKm: deliveryZone?.maxDeliveryKm ?? null,
           deliveryRatePerKm:
             deliveryZone != null
@@ -279,6 +289,7 @@ export function LogisticsSection() {
         offersPickup: offersPickup,
         delivery,
         leadTime: form.leadTime || undefined,
+        leadTimeCutoff: form.leadTimeCutoff || undefined,
         pickupWindows: offersPickup
           ? windowsFromForm(form.pickupDays, form.pickupWindows)
           : [],
@@ -517,6 +528,16 @@ export function LogisticsSection() {
             ))}
           </select>
         </div>
+
+        <LeadTimeCutoffField
+          value={form.leadTimeCutoff}
+          leadTime={form.leadTime}
+          onChange={(value) =>
+            setForm((f) => ({ ...f, leadTimeCutoff: value }))
+          }
+          labelClassName={styles.formLabel}
+          hintClassName={styles.formHint}
+        />
 
         {offersDelivery && (
           <div className={styles.deliveryZone}>

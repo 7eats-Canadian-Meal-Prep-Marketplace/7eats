@@ -359,7 +359,7 @@
   }
 
   .content {
-    padding: 32px 20px 72px;
+    padding: 32px 20px calc(72px + env(safe-area-inset-bottom, 0px));
   }
 
   .stepHeader {

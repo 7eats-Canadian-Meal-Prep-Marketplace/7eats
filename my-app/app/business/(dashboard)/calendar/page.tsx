@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import {
   AlertTriangle,
@@ -12,51 +12,17 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import {
+  buildWeekFromData,
+  type CalendarOrder,
+  type DaySchedule,
+  endOfLocalDay,
+  type Fulfillment,
+  localDateKey,
+  startOfLocalDay,
+} from "@/lib/business-calendar";
 import { Skeleton } from "../_skeleton";
 import styles from "./page.module.css";
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-type Fulfillment = "pickup" | "delivery";
-
-type AvailabilityWindow = {
-  weekday: number; // 0=Sun … 6=Sat
-  kind: Fulfillment;
-  from: string; // "HH:MM"
-  to: string;
-};
-
-type CalendarOrder = {
-  id: string;
-  datetime: string;
-  kind: Fulfillment;
-  customerName: string;
-  listingTitle: string;
-  quantity: number;
-  pickupCodeVerifiedAt: string | null;
-};
-
-type WindowGroup = {
-  window: AvailabilityWindow;
-  orders: CalendarOrder[];
-};
-
-type DaySchedule = {
-  date: Date;
-  windows: WindowGroup[];
-};
-
-// ─── Date helpers ─────────────────────────────────────────────────────────────
-
-const DAY_NAMES = [
-  "sunday",
-  "monday",
-  "tuesday",
-  "wednesday",
-  "thursday",
-  "friday",
-  "saturday",
-];
 
 function mondayOf(d: Date): Date {
   const day = d.getDay();
@@ -93,94 +59,6 @@ function formatHM(hm: string): string {
     ? `${h12} ${period}`
     : `${h12}:${String(m ?? 0).padStart(2, "0")} ${period}`;
 }
-
-function toISODateLocal(d: Date): string {
-  const y = d.getFullYear();
-  const mo = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${mo}-${day}`;
-}
-
-// ─── Build week from availability + orders ────────────────────────────────────
-
-function buildWeekFromData(
-  weekStart: Date,
-  availability: {
-    pickupWindows: Array<{ day: string; from: string; to: string }>;
-    deliveryWindows: Array<{ day: string; from: string; to: string }>;
-    offersPickup: boolean;
-    delivery: string | null;
-  },
-  orders: CalendarOrder[],
-): DaySchedule[] {
-  const pickupMap = Object.fromEntries(
-    availability.pickupWindows.map((w) => [w.day, { from: w.from, to: w.to }]),
-  );
-  const deliveryMap = Object.fromEntries(
-    availability.deliveryWindows.map((w) => [
-      w.day,
-      { from: w.from, to: w.to },
-    ]),
-  );
-  const hasPickup = availability.offersPickup !== false;
-  const hasDelivery =
-    availability.delivery !== "none" && availability.delivery != null;
-
-  const days: DaySchedule[] = [];
-
-  for (let i = 0; i < 7; i++) {
-    const date = addDays(weekStart, i);
-    const dayName = DAY_NAMES[date.getDay()] ?? "";
-    const pickupWindow = pickupMap[dayName];
-    const deliveryWindow = deliveryMap[dayName];
-
-    const windows: WindowGroup[] = [];
-
-    if (hasPickup && pickupWindow) {
-      const pickupOrders = orders.filter((o) => {
-        if (o.kind !== "pickup") return false;
-        return sameDay(new Date(o.datetime), date);
-      });
-      windows.push({
-        window: {
-          weekday: date.getDay(),
-          kind: "pickup",
-          from: pickupWindow.from,
-          to: pickupWindow.to,
-        },
-        orders: pickupOrders.sort(
-          (a, b) =>
-            new Date(a.datetime).getTime() - new Date(b.datetime).getTime(),
-        ),
-      });
-    }
-
-    if (hasDelivery && deliveryWindow) {
-      const deliveryOrders = orders.filter((o) => {
-        if (o.kind !== "delivery") return false;
-        return sameDay(new Date(o.datetime), date);
-      });
-      windows.push({
-        window: {
-          weekday: date.getDay(),
-          kind: "delivery",
-          from: deliveryWindow.from,
-          to: deliveryWindow.to,
-        },
-        orders: deliveryOrders.sort(
-          (a, b) =>
-            new Date(a.datetime).getTime() - new Date(b.datetime).getTime(),
-        ),
-      });
-    }
-
-    days.push({ date, windows });
-  }
-
-  return days;
-}
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const WEEKDAYS_SHORT = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -229,7 +107,7 @@ const VERIFY_META: Record<
   missed: { label: "Not collected", Icon: AlertTriangle, cls: styles.missed },
 };
 
-// ─── Order row ────────────────────────────────────────────────────────────────
+// ΓöÇΓöÇΓöÇ Order row ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 
 function OrderRow({ order, now }: { order: CalendarOrder; now: number }) {
   const { label, Icon, cls } = VERIFY_META[verifyState(order, now)];
@@ -254,7 +132,7 @@ function OrderRow({ order, now }: { order: CalendarOrder; now: number }) {
   );
 }
 
-// ─── Agenda skeleton ──────────────────────────────────────────────────────────
+// ΓöÇΓöÇΓöÇ Agenda skeleton ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 
 // Mirrors a day section (header + a window block with a couple of order rows)
 // so the agenda holds its shape while the week loads.
@@ -300,7 +178,7 @@ function AgendaSkeleton() {
   );
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+// ΓöÇΓöÇΓöÇ Page ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 
 export default function CalendarPage() {
   const [weekStart, setWeekStart] = useState<Date>(currentWeekStart());
@@ -310,15 +188,24 @@ export default function CalendarPage() {
   const loadWeek = useCallback(async (ws: Date) => {
     setLoading(true);
     try {
-      const dateFrom = toISODateLocal(ws);
-      const dateTo = toISODateLocal(addDays(ws, 7));
+      const weekEnd = addDays(ws, 6);
+      const dateFrom = startOfLocalDay(ws).toISOString();
+      const dateTo = endOfLocalDay(weekEnd).toISOString();
 
       const [availRes, ordersRes] = await Promise.all([
         fetch("/api/business/dashboard/availability"),
         fetch(
-          `/api/business/dashboard/orders?dateFrom=${dateFrom}&dateTo=${dateTo}&limit=200`,
+          `/api/business/dashboard/orders?dateFrom=${encodeURIComponent(dateFrom)}&dateTo=${encodeURIComponent(dateTo)}&limit=100`,
         ),
       ]);
+
+      if (!ordersRes.ok) {
+        console.error(
+          "[calendar] orders fetch failed",
+          ordersRes.status,
+          await ordersRes.text(),
+        );
+      }
 
       const avail = availRes.ok ? (await availRes.json()).data : null;
       const ordersData = ordersRes.ok ? (await ordersRes.json()).data : [];
@@ -329,24 +216,29 @@ export default function CalendarPage() {
           status: string;
           pickupAt: string | null;
           fulfillmentWindowStart: string | null;
+          fulfillmentWindowEnd: string | null;
           fulfillmentMode: "pickup" | "delivery" | null;
           customerName: string | null;
           customerFirstName: string | null;
           listingTitle: string | null;
           quantity: number;
+          itemCount: number;
           pickupCodeVerifiedAt: string | null;
         }>
       )
         // A cancelled order has no handoff — keep it off the schedule.
         .filter((o) => o.status !== "cancelled")
         .map((o) => {
-          // Pickup orders never carry a `pickupAt`; both modes always have the
-          // scheduled window captured at placement, so prefer that for the day.
-          const datetime = o.pickupAt ?? o.fulfillmentWindowStart;
-          if (!datetime) return null;
+          const scheduleIso = o.fulfillmentWindowStart ?? o.pickupAt;
+          if (!scheduleIso) return null;
+          const displayIso =
+            o.pickupAt ?? o.fulfillmentWindowStart ?? scheduleIso;
           return {
             id: o.id,
-            datetime,
+            scheduleDay: localDateKey(new Date(scheduleIso)),
+            datetime: displayIso,
+            windowStart: o.fulfillmentWindowStart,
+            windowEnd: o.fulfillmentWindowEnd,
             kind: (o.fulfillmentMode === "delivery"
               ? "delivery"
               : "pickup") as Fulfillment,
@@ -354,7 +246,7 @@ export default function CalendarPage() {
               o.customerName ??
               (o.customerFirstName ? o.customerFirstName : "Customer"),
             listingTitle: o.listingTitle ?? "Order",
-            quantity: o.quantity,
+            quantity: o.itemCount || o.quantity || 0,
             pickupCodeVerifiedAt: o.pickupCodeVerifiedAt,
           };
         })

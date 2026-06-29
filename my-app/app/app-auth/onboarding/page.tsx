@@ -3,13 +3,14 @@
 import { Check } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
   CLIENT_PREFERENCE_QUESTIONS,
   type ClientPreferences,
   clearOnboardingStorage,
   EMPTY_CLIENT_PREFERENCES,
+  isClientPreferencesComplete,
   readOnboardingStorage,
   togglePreference,
   writeOnboardingStorage,
@@ -310,8 +311,13 @@ function PrefsStep({
   );
   const [isPending, setIsPending] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const prefsComplete = useMemo(
+    () => isClientPreferencesComplete(prefs),
+    [prefs],
+  );
 
   async function handleSubmit() {
+    if (!prefsComplete) return;
     setIsPending(true);
     setSubmitError("");
     try {
@@ -345,8 +351,8 @@ function PrefsStep({
           Set your <span className={styles.accent}>preferences</span>
         </h1>
         <p className={styles.stepDesc}>
-          Optional. Helps us surface the right cooks and meals. Change anytime
-          in settings.
+          Pick at least one option in each section so cooks know how to serve
+          you safely. You can update these anytime in settings.
         </p>
       </header>
 
@@ -397,7 +403,8 @@ function PrefsStep({
         type="button"
         className={`btn btn-primary ${styles.actionBtn}`}
         onClick={() => void handleSubmit()}
-        disabled={isPending}
+        disabled={isPending || !prefsComplete}
+        aria-disabled={isPending || !prefsComplete}
       >
         {isPending ? "Saving…" : "Finish"}
       </button>

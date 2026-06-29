@@ -50,6 +50,17 @@
   line-height: 1.55;
 }
 
+.callout {
+  margin: -6px 0 18px;
+  padding: 12px 14px;
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--grey-700);
+  line-height: 1.5;
+  background: var(--white);
+}
+
 .actions {
   display: flex;
   gap: 8px;
@@ -92,12 +103,34 @@
 }
 
 .confirmBtnDanger {
-  background: var(--red);
+  background: var(--white);
+  color: var(--red);
+  border: 1.5px solid var(--red);
 }
 
 .confirmBtnDanger:hover:not(:disabled) {
-  background: var(--red-deep);
+  border-color: var(--red-deep);
+  color: var(--red-deep);
   opacity: 1;
+}
+
+@media (max-width: 480px) {
+  .dialog {
+    width: calc(100vw - 24px);
+    padding: 20px 18px 16px;
+  }
+
+  .actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .cancelBtn,
+  .confirmBtn {
+    width: 100%;
+    justify-content: center;
+    min-height: 42px;
+  }
 }
 
 .cancelBtn:disabled,

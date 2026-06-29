@@ -16,9 +16,14 @@ vi.mock("@/lib/stripe", () => ({
   getStripe: vi.fn(),
 }));
 
+vi.mock("@/lib/payment-methods", () => ({
+  dedupeCustomerCardPaymentMethods: vi.fn().mockResolvedValue(undefined),
+}));
+
 import { POST } from "@/app/api/checkout/setup-intent/verify/route";
 import { db } from "@/db";
 import { auth } from "@/lib/auth";
+import { dedupeCustomerCardPaymentMethods } from "@/lib/payment-methods";
 import { getStripe } from "@/lib/stripe";
 
 const USER_ID = "user-uuid-1234";
@@ -77,5 +82,6 @@ describe("POST /api/checkout/setup-intent/verify", () => {
 
     expect(res.status).toBe(200);
     expect(json.succeeded).toBe(true);
+    expect(dedupeCustomerCardPaymentMethods).toHaveBeenCalledWith("cus_123");
   });
 });

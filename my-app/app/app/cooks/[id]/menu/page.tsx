@@ -2,6 +2,7 @@
 
 import {
   CalendarClock,
+  ChevronDown,
   MapPin,
   Minus,
   NotebookPen,
@@ -11,14 +12,14 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { openAddressEditor } from "@/lib/address-events";
-import { SPECIAL_REQUESTS_DISCLAIMER } from "@/lib/orders/special-requests-copy";
 import {
-  cancelByDate,
-  formatLeadTime,
-  LEAD_TIME_DAYS_MAP,
-} from "@/lib/refund-policy";
+  type FulfillmentWindow,
+  generateFulfillmentSlotIsos,
+} from "@/lib/lead-time";
+import { SPECIAL_REQUESTS_DISCLAIMER } from "@/lib/orders/special-requests-copy";
+import { cancelByDate, formatLeadTime } from "@/lib/refund-policy";
 import { buildCartItem, useCart } from "../../../_cart-context";
 import { useServiceAddress } from "../../../_service-address-context";
 import { Skeleton } from "../../../_skeleton";
@@ -43,41 +44,21 @@ const DAY_SHORT: Record<string, string> = {
   friday: "Fri",
   saturday: "Sat",
 };
-const SLOT_INTERVAL_MIN = 30;
-const PICKUP_DAYS_AHEAD = 14;
 
-type Window = { dayOfWeek: string; fromTime: string; toTime: string };
+type Window = FulfillmentWindow;
 
 function generateSlots(
   windows: Window[],
   leadTime: string | null,
+  leadTimeCutoff: string | null,
   now: Date,
 ): { iso: string; label: string }[] {
-  if (windows.length === 0) return [];
-  const leadDays = leadTime ? (LEAD_TIME_DAYS_MAP[leadTime] ?? 0) : 0;
-  const byDay = new Map(windows.map((w) => [w.dayOfWeek, w]));
-  const slots: { iso: string; label: string }[] = [];
-  for (let d = 0; d < PICKUP_DAYS_AHEAD; d++) {
-    if (d < leadDays) continue;
-    const day = new Date(now.getFullYear(), now.getMonth(), now.getDate() + d);
-    const win = byDay.get(DAY_NAMES[day.getDay()]);
-    if (!win) continue;
-    const [fh, fm] = win.fromTime.split(":").map(Number);
-    const [th, tm] = win.toTime.split(":").map(Number);
-    const start = new Date(day);
-    start.setHours(fh, fm, 0, 0);
-    const end = new Date(day);
-    end.setHours(th, tm, 0, 0);
-    for (
-      let t = start;
-      t < end;
-      t = new Date(t.getTime() + SLOT_INTERVAL_MIN * 60_000)
-    ) {
-      if (t <= now) continue;
-      slots.push({ iso: t.toISOString(), label: "" });
-    }
-  }
-  return slots;
+  const isos = generateFulfillmentSlotIsos(
+    windows,
+    { leadTime, leadTimeCutoff },
+    now,
+  );
+  return isos.map((iso) => ({ iso, label: "" }));
 }
 
 function fmtDay(d: Date): string {
@@ -168,6 +149,7 @@ type MenuData = {
     minOrderQty: number;
     maxOrderQty: number | null;
     leadTime: string | null;
+    leadTimeCutoff: string | null;
     offersPickup: boolean;
     delivery: "none" | "self" | null;
     cancellationAllowed: boolean;
@@ -207,6 +189,8 @@ export default function CookMenuPage() {
   const [notFound, setNotFound] = useState(false);
   const [openDish, setOpenDish] = useState<Dish | null>(null);
   const [noteOpen, setNoteOpen] = useState(false);
+  const [cookInfoOpen, setCookInfoOpen] = useState(false);
+  const [orderSheetOpen, setOrderSheetOpen] = useState(false);
   // A pending add from this cook while the cart still holds another cook's order.
   const [conflict, setConflict] = useState<{ dish: Dish; qty: number } | null>(
     null,
@@ -299,7 +283,12 @@ export default function CookMenuPage() {
       cart.fulfillmentMode === "delivery"
         ? data.cook.deliveryWindows
         : data.cook.pickupWindows;
-    return generateSlots(windows, data.cook.leadTime, new Date());
+    return generateSlots(
+      windows,
+      data.cook.leadTime,
+      data.cook.leadTimeCutoff,
+      new Date(),
+    );
   }, [data, cart.fulfillmentMode]);
 
   // Default the fulfillment mode to whatever the cook actually offers.
@@ -315,6 +304,15 @@ export default function CookMenuPage() {
       cart.setFulfillment("delivery");
     }
   }, [data, canPickup, canDeliver, cart.fulfillmentMode, cart.setFulfillment]);
+
+  useEffect(() => {
+    if (!orderSheetOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [orderSheetOpen]);
 
   function buildBase(dish: Dish, nextQty: number) {
     const promo = dish.promotion
@@ -336,6 +334,7 @@ export default function CookMenuPage() {
       minOrderQty: data?.cook.minOrderQty ?? 1,
       maxOrderQty: data?.cook.maxOrderQty ?? null,
       leadTime: data?.cook.leadTime ?? null,
+      leadTimeCutoff: data?.cook.leadTimeCutoff ?? null,
       cancellationAllowed: data?.cook.cancellationAllowed ?? false,
       item,
     };
@@ -401,25 +400,41 @@ export default function CookMenuPage() {
   const windowSummary = summarizeWindows(
     isDelivery ? cook.deliveryWindows : cook.pickupWindows,
   );
-  const cutoff = cancelByDate(slots[0]?.iso ?? null, cook.leadTime);
+  const cutoff = cancelByDate(
+    slots[0]?.iso ?? null,
+    cook.leadTime,
+    cook.leadTimeCutoff,
+  );
+
+  const checkoutLabel = noSlots
+    ? "Unavailable right now"
+    : totalQty === 0
+      ? "Add dishes to continue"
+      : !meetsMin
+        ? `Minimum ${cook.minOrderQty} plates`
+        : "Go to checkout";
+
+  const checkoutDisabled = !meetsMin || noSlots || totalQty === 0;
+
+  function goCheckout() {
+    router.push("/app/checkout");
+  }
 
   // "Order by X to pick up on Y" — derived from the next open slot and lead time.
   const leadBanner = (() => {
     if (slots.length === 0) return null;
     const fulfill = new Date(slots[0].iso);
-    const leadDays = cook.leadTime
-      ? (LEAD_TIME_DAYS_MAP[cook.leadTime] ?? 0)
-      : 0;
-    const orderBy = new Date(fulfill);
-    orderBy.setDate(orderBy.getDate() - leadDays);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const orderByMidnight = new Date(orderBy);
-    orderByMidnight.setHours(0, 0, 0, 0);
+    const orderBy = cancelByDate(
+      slots[0].iso,
+      cook.leadTime,
+      cook.leadTimeCutoff,
+    );
+    if (!orderBy) return null;
+    const now = new Date();
     const verb = isDelivery ? "get delivery" : "pick up";
     return {
-      soon: orderByMidnight <= today,
-      orderBy: fmtDay(orderBy),
+      soon: orderBy.getTime() - now.getTime() < 24 * 3600_000,
+      orderBy: fmtDateTime(orderBy),
       fulfill: fmtDay(fulfill),
       verb,
     };
@@ -430,6 +445,137 @@ export default function CookMenuPage() {
       <div className={styles.layout}>
         {/* Left — the menu */}
         <main className={styles.menuCol}>
+          {/* Mobile — kitchen info + fulfillment (scrolls with page) */}
+          <div className={styles.mobileChrome}>
+            <div className={styles.mobileCookPanel}>
+              <button
+                type="button"
+                className={styles.mobileCookToggle}
+                onClick={() => setCookInfoOpen((o) => !o)}
+                aria-expanded={cookInfoOpen}
+              >
+                <div className={styles.mobileCookAvatar}>
+                  {cook.photoUrl ? (
+                    <Image
+                      src={cook.photoUrl}
+                      alt=""
+                      fill
+                      className={styles.cookAvatarImg}
+                      sizes="40px"
+                    />
+                  ) : (
+                    <span>{kitchen.charAt(0)}</span>
+                  )}
+                </div>
+                <div className={styles.mobileCookTeaser}>
+                  <span className={styles.mobileCookName}>{kitchen}</span>
+                  <span className={styles.mobileCookMeta}>
+                    Min {cook.minOrderQty}
+                    {cook.maxOrderQty ? ` · Max ${cook.maxOrderQty}` : ""}
+                    {windowSummary ? ` · ${windowSummary}` : ""}
+                  </span>
+                </div>
+                <ChevronDown
+                  size={18}
+                  className={`${styles.mobileCookChevron} ${cookInfoOpen ? styles.mobileCookChevronOpen : ""}`}
+                  aria-hidden
+                />
+              </button>
+
+              <div
+                className={`${styles.mobileCookExpand} ${cookInfoOpen ? styles.mobileCookExpandOpen : ""}`}
+                aria-hidden={!cookInfoOpen}
+              >
+                <div className={styles.mobileCookExpandInner}>
+                  <div className={styles.mobileCookBody}>
+                    {showPerson && (
+                      <p className={styles.mobileCookBy}>by {person}</p>
+                    )}
+                    <div className={styles.mobileCookMetaRow}>
+                      {cook.pickupCity && (
+                        <span className={styles.cookCity}>
+                          <MapPin size={12} aria-hidden /> {cook.pickupCity}
+                        </span>
+                      )}
+                      <Link
+                        href={`/app/cooks/${cookId}`}
+                        className={styles.mobileProfileLink}
+                      >
+                        View profile
+                      </Link>
+                    </div>
+                    <dl className={styles.mobileCookFacts}>
+                      <div className={styles.fact}>
+                        <dt>Min order</dt>
+                        <dd>
+                          {cook.minOrderQty}{" "}
+                          {cook.minOrderQty === 1 ? "plate" : "plates"}
+                        </dd>
+                      </div>
+                      <div className={styles.fact}>
+                        <dt>Max order</dt>
+                        <dd>
+                          {cook.maxOrderQty
+                            ? `${cook.maxOrderQty} plates`
+                            : "No limit"}
+                        </dd>
+                      </div>
+                      {cook.leadTime && (
+                        <div className={styles.fact}>
+                          <dt>Order ahead</dt>
+                          <dd>{formatLeadTime(cook.leadTime)}</dd>
+                        </div>
+                      )}
+                      {windowSummary && (
+                        <div className={styles.fact}>
+                          <dt>{isDelivery ? "Delivery" : "Pickup"}</dt>
+                          <dd>{windowSummary}</dd>
+                        </div>
+                      )}
+                    </dl>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {canPickup && cookSelfDelivers && (
+              <fieldset
+                className={`${styles.segmented} ${styles.mobileSegmented}`}
+                aria-label="Fulfillment"
+              >
+                <button
+                  type="button"
+                  className={`${styles.segment} ${cart.fulfillmentMode === "pickup" ? styles.segmentActive : ""}`}
+                  onClick={() => cart.setFulfillment("pickup")}
+                >
+                  Pickup
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.segment} ${cart.fulfillmentMode === "delivery" ? styles.segmentActive : ""}`}
+                  onClick={() => cart.setFulfillment("delivery")}
+                  disabled={!canDeliver}
+                  aria-disabled={!canDeliver}
+                  title={
+                    canDeliver
+                      ? undefined
+                      : "Outside this kitchen's delivery area"
+                  }
+                >
+                  Delivery
+                </button>
+              </fieldset>
+            )}
+
+            {deliveryOutOfRange && deliveryCheck?.maxDeliveryKm != null && (
+              <p className={styles.mobileDeliveryNote}>
+                {canPickup
+                  ? `Pickup only — outside ${deliveryCheck.maxDeliveryKm} km delivery range.`
+                  : `Can't deliver to your address (${deliveryCheck.distanceKm} km away).`}
+              </p>
+            )}
+          </div>
+
           <header className={styles.menuHead}>
             <p className={styles.menuEyebrow}>Menu</p>
             <h1 className={styles.menuTitle}>{kitchen}</h1>
@@ -643,157 +789,107 @@ export default function CookMenuPage() {
               </div>
             </section>
 
-            <section className={styles.bill}>
-              <h2 className={styles.billTitle}>Your order</h2>
-
-              {totalQty === 0 ? (
-                <p className={styles.billEmpty}>
-                  Tap a dish to start your order.
-                </p>
-              ) : (
-                <>
-                  <ul className={styles.billItems}>
-                    {cart.items.map((i) => (
-                      <li key={i.dishId} className={styles.billItem}>
-                        <span className={styles.billQty}>{i.quantity}</span>
-                        <span className={styles.billItemName}>{i.name}</span>
-                        <span className={styles.billItemPrice}>
-                          ${i.lineTotal.toFixed(2)}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                  <div className={styles.billRow}>
-                    <span>Subtotal</span>
-                    <span className={styles.billSubtotal}>
-                      ${subtotal.toFixed(2)}
-                    </span>
-                  </div>
-                </>
-              )}
-
-              {canPickup && cookSelfDelivers && (
-                <fieldset className={styles.segmented} aria-label="Fulfillment">
-                  <button
-                    type="button"
-                    className={`${styles.segment} ${cart.fulfillmentMode === "pickup" ? styles.segmentActive : ""}`}
-                    onClick={() => cart.setFulfillment("pickup")}
-                  >
-                    Pickup
-                  </button>
-                  <button
-                    type="button"
-                    className={`${styles.segment} ${cart.fulfillmentMode === "delivery" ? styles.segmentActive : ""}`}
-                    onClick={() => cart.setFulfillment("delivery")}
-                    disabled={!canDeliver}
-                    aria-disabled={!canDeliver}
-                    title={
-                      canDeliver
-                        ? undefined
-                        : "Outside this kitchen's delivery area"
-                    }
-                  >
-                    Delivery
-                  </button>
-                </fieldset>
-              )}
-
-              {deliveryOutOfRange && deliveryCheck?.maxDeliveryKm != null && (
-                <p className={styles.deliveryNote}>
-                  {canPickup
-                    ? `Pickup only. You're ${deliveryCheck.distanceKm} km away, outside this kitchen's ${deliveryCheck.maxDeliveryKm} km delivery range.`
-                    : `This kitchen delivers within ${deliveryCheck.maxDeliveryKm} km and can't reach your address (${deliveryCheck.distanceKm} km away).`}
-                </p>
-              )}
-
-              <p className={styles.policy}>
-                {!cook.cancellationAllowed ? (
-                  <>
-                    All sales are final. No cancellations or{" "}
-                    <strong>refunds</strong>.
-                  </>
-                ) : cutoff ? (
-                  <>
-                    Cancel for a <strong>full refund</strong> until{" "}
-                    <strong>{fmtDateTime(cutoff)}</strong>. After that, the sale
-                    is final.
-                  </>
-                ) : (
-                  <>
-                    Cancel for a <strong>full refund</strong> up until this
-                    kitchen&apos;s lead time before{" "}
-                    {isDelivery ? "delivery" : "pickup"}.
-                  </>
-                )}
-              </p>
-
-              {totalQty > 0 && !meetsMin && (
-                <p className={styles.minNotice}>
-                  Add {remaining} more to reach the {cook.minOrderQty}-plate
-                  minimum.
-                </p>
-              )}
-              {noSlots && (
-                <p className={styles.minNotice}>
-                  This kitchen has no {cart.fulfillmentMode} times open right
-                  now.
-                </p>
-              )}
-
-              {activeForThisCook && (totalQty > 0 || cart.notes) && (
-                <div className={styles.note}>
-                  {cart.notes ? (
-                    <>
-                      <div className={styles.noteHead}>
-                        <span className={styles.noteLabel}>
-                          <NotebookPen size={13} /> Note for the cook
-                        </span>
-                        <button
-                          type="button"
-                          className={styles.noteEdit}
-                          onClick={() => setNoteOpen(true)}
-                        >
-                          Modify
-                        </button>
-                      </div>
-                      <p className={styles.noteText}>{cart.notes}</p>
-                    </>
-                  ) : (
-                    <button
-                      type="button"
-                      className={styles.noteAdd}
-                      onClick={() => setNoteOpen(true)}
-                    >
-                      <NotebookPen size={15} />
-                      Add a note for the cook
-                    </button>
-                  )}
-                  {!cook.acceptsSpecialRequests && (
-                    <p className={styles.noteDisclaimer}>
-                      {SPECIAL_REQUESTS_DISCLAIMER}
-                    </p>
-                  )}
-                </div>
-              )}
-
-              <button
-                type="button"
-                className={styles.checkoutBtn}
-                disabled={!meetsMin || noSlots || totalQty === 0}
-                onClick={() => router.push("/app/checkout")}
-              >
-                {noSlots
-                  ? "Unavailable right now"
-                  : totalQty === 0
-                    ? "Add dishes to continue"
-                    : !meetsMin
-                      ? `Minimum ${cook.minOrderQty} plates`
-                      : "Go to checkout"}
-              </button>
-            </section>
+            <OrderBillPanel
+              cook={cook}
+              cart={cart}
+              totalQty={totalQty}
+              subtotal={subtotal}
+              meetsMin={meetsMin}
+              remaining={remaining}
+              noSlots={noSlots}
+              canPickup={canPickup}
+              cookSelfDelivers={Boolean(cookSelfDelivers)}
+              canDeliver={canDeliver}
+              deliveryOutOfRange={deliveryOutOfRange}
+              deliveryCheck={deliveryCheck}
+              cutoff={cutoff}
+              isDelivery={isDelivery}
+              activeForThisCook={activeForThisCook}
+              checkoutDisabled={checkoutDisabled}
+              checkoutLabel={checkoutLabel}
+              onNoteOpen={() => setNoteOpen(true)}
+              onCheckout={goCheckout}
+            />
           </div>
         </aside>
       </div>
+
+      <div className={styles.mobileOrderDock}>
+        <div className={styles.orderDockMain}>
+          <button
+            type="button"
+            className={styles.orderDockSummary}
+            onClick={() => setOrderSheetOpen(true)}
+            aria-label="View order details"
+          >
+            {totalQty > 0 ? (
+              <>
+                <span className={styles.orderDockQty}>
+                  {totalQty} item{totalQty === 1 ? "" : "s"}
+                </span>
+                <span className={styles.orderDockSubtotal}>
+                  ${subtotal.toFixed(2)}
+                </span>
+              </>
+            ) : (
+              <span className={styles.orderDockEmpty}>Your order is empty</span>
+            )}
+          </button>
+          <button
+            type="button"
+            className={styles.orderDockCta}
+            disabled={checkoutDisabled}
+            onClick={() =>
+              !checkoutDisabled ? goCheckout() : setOrderSheetOpen(true)
+            }
+          >
+            {checkoutLabel}
+          </button>
+        </div>
+        {activeForThisCook && (totalQty > 0 || cart.notes) && (
+          <div className={styles.orderDockNoteWrap}>
+            <button
+              type="button"
+              className={`${styles.orderDockNoteBtn} ${cart.notes ? styles.orderDockNoteBtnActive : ""}`}
+              onClick={() => setNoteOpen(true)}
+            >
+              <NotebookPen size={15} aria-hidden />
+              {cart.notes ? "Edit note" : "Add note for the cook"}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {orderSheetOpen && (
+        <OrderSheet onClose={() => setOrderSheetOpen(false)}>
+          <OrderBillPanel
+            cook={cook}
+            cart={cart}
+            totalQty={totalQty}
+            subtotal={subtotal}
+            meetsMin={meetsMin}
+            remaining={remaining}
+            noSlots={noSlots}
+            canPickup={canPickup}
+            cookSelfDelivers={Boolean(cookSelfDelivers)}
+            canDeliver={canDeliver}
+            deliveryOutOfRange={deliveryOutOfRange}
+            deliveryCheck={deliveryCheck}
+            cutoff={cutoff}
+            isDelivery={isDelivery}
+            activeForThisCook={activeForThisCook}
+            checkoutDisabled={checkoutDisabled}
+            checkoutLabel={checkoutLabel}
+            onNoteOpen={() => setNoteOpen(true)}
+            onCheckout={() => {
+              setOrderSheetOpen(false);
+              goCheckout();
+            }}
+            showFulfillment={false}
+            inSheet
+          />
+        </OrderSheet>
+      )}
 
       {openDish && (
         <DishModal
@@ -821,6 +917,238 @@ export default function CookMenuPage() {
           onConfirm={confirmSwitch}
         />
       )}
+    </div>
+  );
+}
+
+// ── Shared order panel (desktop rail + mobile sheet) ───────────────────────────
+type OrderBillPanelProps = {
+  cook: MenuData["cook"];
+  cart: ReturnType<typeof useCart>;
+  totalQty: number;
+  subtotal: number;
+  meetsMin: boolean;
+  remaining: number;
+  noSlots: boolean;
+  canPickup: boolean;
+  cookSelfDelivers: boolean;
+  canDeliver: boolean;
+  deliveryOutOfRange: boolean;
+  deliveryCheck: {
+    available: boolean;
+    distanceKm: number;
+    maxDeliveryKm: number | null;
+  } | null;
+  cutoff: Date | null;
+  isDelivery: boolean;
+  activeForThisCook: boolean;
+  checkoutDisabled: boolean;
+  checkoutLabel: string;
+  onNoteOpen: () => void;
+  onCheckout: () => void;
+  /** Fulfillment toggle lives in mobile sticky chrome; hide in sheet/rail on mobile */
+  showFulfillment?: boolean;
+  /** Strip card chrome when rendered inside the bottom sheet */
+  inSheet?: boolean;
+};
+
+function OrderBillPanel({
+  cook,
+  cart,
+  totalQty,
+  subtotal,
+  meetsMin,
+  remaining,
+  noSlots,
+  canPickup,
+  cookSelfDelivers,
+  canDeliver,
+  deliveryOutOfRange,
+  deliveryCheck,
+  cutoff,
+  isDelivery,
+  activeForThisCook,
+  checkoutDisabled,
+  checkoutLabel,
+  onNoteOpen,
+  onCheckout,
+  showFulfillment = true,
+  inSheet = false,
+}: OrderBillPanelProps) {
+  return (
+    <section className={`${styles.bill} ${inSheet ? styles.billInSheet : ""}`}>
+      {!inSheet && <h2 className={styles.billTitle}>Your order</h2>}
+
+      {totalQty === 0 ? (
+        <p className={styles.billEmpty}>Tap a dish to start your order.</p>
+      ) : (
+        <>
+          <ul className={styles.billItems}>
+            {cart.items.map((i) => (
+              <li key={i.dishId} className={styles.billItem}>
+                <span className={styles.billQty}>{i.quantity}</span>
+                <span className={styles.billItemName}>{i.name}</span>
+                <span className={styles.billItemPrice}>
+                  ${i.lineTotal.toFixed(2)}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <div className={styles.billRow}>
+            <span>Subtotal</span>
+            <span className={styles.billSubtotal}>${subtotal.toFixed(2)}</span>
+          </div>
+        </>
+      )}
+
+      {showFulfillment && canPickup && cookSelfDelivers && (
+        <fieldset className={styles.segmented} aria-label="Fulfillment">
+          <button
+            type="button"
+            className={`${styles.segment} ${cart.fulfillmentMode === "pickup" ? styles.segmentActive : ""}`}
+            onClick={() => cart.setFulfillment("pickup")}
+          >
+            Pickup
+          </button>
+          <button
+            type="button"
+            className={`${styles.segment} ${cart.fulfillmentMode === "delivery" ? styles.segmentActive : ""}`}
+            onClick={() => cart.setFulfillment("delivery")}
+            disabled={!canDeliver}
+            aria-disabled={!canDeliver}
+            title={
+              canDeliver ? undefined : "Outside this kitchen's delivery area"
+            }
+          >
+            Delivery
+          </button>
+        </fieldset>
+      )}
+
+      {deliveryOutOfRange && deliveryCheck?.maxDeliveryKm != null && (
+        <p className={styles.deliveryNote}>
+          {canPickup
+            ? `Pickup only. You're ${deliveryCheck.distanceKm} km away, outside this kitchen's ${deliveryCheck.maxDeliveryKm} km delivery range.`
+            : `This kitchen delivers within ${deliveryCheck.maxDeliveryKm} km and can't reach your address (${deliveryCheck.distanceKm} km away).`}
+        </p>
+      )}
+
+      <p className={styles.policy}>
+        {!cook.cancellationAllowed ? (
+          <>
+            All sales are final. No cancellations or <strong>refunds</strong>.
+          </>
+        ) : cutoff ? (
+          <>
+            Cancel for a <strong>full refund</strong> until{" "}
+            <strong>{fmtDateTime(cutoff)}</strong>. After that, the sale is
+            final.
+          </>
+        ) : (
+          <>
+            Cancel for a <strong>full refund</strong> up until this
+            kitchen&apos;s lead time before {isDelivery ? "delivery" : "pickup"}
+            .
+          </>
+        )}
+      </p>
+
+      {totalQty > 0 && !meetsMin && (
+        <p className={styles.minNotice}>
+          Add {remaining} more to reach the {cook.minOrderQty}-plate minimum.
+        </p>
+      )}
+      {noSlots && (
+        <p className={styles.minNotice}>
+          This kitchen has no {cart.fulfillmentMode} times open right now.
+        </p>
+      )}
+
+      {activeForThisCook && (totalQty > 0 || cart.notes) && (
+        <div className={styles.note}>
+          {cart.notes ? (
+            <>
+              <div className={styles.noteHead}>
+                <span className={styles.noteLabel}>
+                  <NotebookPen size={13} /> Note for the cook
+                </span>
+                <button
+                  type="button"
+                  className={styles.noteEdit}
+                  onClick={onNoteOpen}
+                >
+                  Modify
+                </button>
+              </div>
+              <p className={styles.noteText}>{cart.notes}</p>
+            </>
+          ) : (
+            <button
+              type="button"
+              className={styles.noteAdd}
+              onClick={onNoteOpen}
+            >
+              <NotebookPen size={15} />
+              Add a note for the cook
+            </button>
+          )}
+          {!cook.acceptsSpecialRequests && (
+            <p className={styles.noteDisclaimer}>
+              {SPECIAL_REQUESTS_DISCLAIMER}
+            </p>
+          )}
+        </div>
+      )}
+
+      <button
+        type="button"
+        className={styles.checkoutBtn}
+        disabled={checkoutDisabled}
+        onClick={onCheckout}
+      >
+        {checkoutLabel}
+      </button>
+    </section>
+  );
+}
+
+function OrderSheet({
+  children,
+  onClose,
+}: {
+  children: ReactNode;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div className={styles.orderSheetOverlay}>
+      <button
+        type="button"
+        className={styles.orderSheetBackdrop}
+        aria-label="Close order"
+        onClick={onClose}
+      />
+      <div className={styles.orderSheet} role="dialog" aria-modal="true">
+        <div className={styles.orderSheetHead}>
+          <h2 className={styles.orderSheetTitle}>Your order</h2>
+          <button
+            type="button"
+            className={styles.orderSheetClose}
+            onClick={onClose}
+            aria-label="Close"
+          >
+            <X size={20} />
+          </button>
+        </div>
+        <div className={styles.orderSheetBody}>{children}</div>
+      </div>
     </div>
   );
 }

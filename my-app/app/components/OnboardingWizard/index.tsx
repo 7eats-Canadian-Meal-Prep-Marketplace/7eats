@@ -4,9 +4,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import DocumentDropzone from "@/app/components/DocumentDropzone";
 import ImageDropzone from "@/app/components/ImageDropzone";
+import LeadTimeCutoffField from "@/app/components/LeadTimeCutoffField";
 import SetupSidebar from "@/app/components/SetupSidebar";
 import StripeConnectPanel from "@/app/components/StripeConnectPanel";
 import { AddressSearchInput } from "@/components/AddressSearchInput";
+import { DEFAULT_LEAD_TIME_CUTOFF } from "@/lib/lead-time";
 import { isValidOptionalUrl } from "@/lib/url";
 import styles from "./OnboardingWizard.module.css";
 
@@ -109,6 +111,7 @@ type FormState = {
   deliveryDays: string[];
   fulfillment: FulfillmentType;
   leadTime: string;
+  leadTimeCutoff: string;
   acceptsSpecialRequests: boolean;
   cancellationAllowed: boolean;
   // Step 3
@@ -138,6 +141,7 @@ type InitialData = {
   pickupWindows: Array<{ day: string; from: string; to: string }>;
   deliveryWindows?: Array<{ day: string; from: string; to: string }>;
   leadTime: string;
+  leadTimeCutoff?: string;
   delivery: string;
   offersPickup?: boolean;
   acceptsSpecialRequests: boolean;
@@ -271,6 +275,7 @@ export default function OnboardingWizard({
       return offersDelivery ? "delivery" : "pickup";
     })(),
     leadTime: initialData?.leadTime ?? "",
+    leadTimeCutoff: initialData?.leadTimeCutoff ?? DEFAULT_LEAD_TIME_CUTOFF,
     acceptsSpecialRequests: initialData?.acceptsSpecialRequests ?? false,
     cancellationAllowed: initialData?.cancellationAllowed ?? false,
     certIdNumber: initialData?.certIdNumber ?? "",
@@ -471,6 +476,7 @@ export default function OnboardingWizard({
                 }))
               : [],
             leadTime: form.leadTime,
+            leadTimeCutoff: form.leadTimeCutoff,
             cancellationAllowed: form.cancellationAllowed,
             delivery: offersDelivery ? "self" : "none",
             acceptsSpecialRequests: form.acceptsSpecialRequests,
@@ -1050,6 +1056,16 @@ function Step2({
           </p>
         </div>
 
+        <LeadTimeCutoffField
+          value={form.leadTimeCutoff}
+          leadTime={form.leadTime}
+          onChange={(value) =>
+            setForm((f) => ({ ...f, leadTimeCutoff: value }))
+          }
+          hintClassName={styles.hint}
+          labelClassName={styles.label}
+        />
+
         <div className={styles.field}>
           <span className={styles.label}>Special requests</span>
           <label className={styles.checkRow}>
@@ -1086,8 +1102,10 @@ function Step2({
               }
             />
             <span className={styles.checkLabel}>
-              Allow customers to cancel for a full refund up until my lead time
-              before pickup. If left unchecked, all sales are final.
+              After I confirm an order, allow a full refund if the customer
+              cancels before my lead time. If unchecked, confirmed orders are
+              final. Customers can always cancel with a full refund before I
+              confirm.
             </span>
           </label>
         </div>

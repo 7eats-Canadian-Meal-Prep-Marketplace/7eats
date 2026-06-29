@@ -20,6 +20,7 @@ type CancelPolicyInput = {
   pickupAt: Date | string | null;
   fulfillmentWindowStart?: Date | string | null;
   cookLeadTime: string | null;
+  cookLeadTimeCutoff?: string | null;
   fulfillmentMode?: "pickup" | "delivery" | null;
   now?: Date;
 };
@@ -65,6 +66,10 @@ export function isClientOrderCancellable(order: { status: string }): boolean {
 
 export function isClientRefundEligible(order: CancelPolicyInput): boolean {
   if (!isClientOrderCancellable(order)) return false;
+
+  // Before the cook confirms, release the customer's payment in full.
+  if (order.status === "pending") return true;
+
   if (!order.cancellationAllowed) return false;
 
   const reference = refundReferenceAt(order);
@@ -75,6 +80,7 @@ export function isClientRefundEligible(order: CancelPolicyInput): boolean {
     order.cookLeadTime as Parameters<typeof isRefundEligible>[1],
     true,
     order.now ?? new Date(),
+    order.cookLeadTimeCutoff,
   );
 }
 
@@ -86,7 +92,7 @@ export function getClientCancelPolicy(
   const reference = refundReferenceAt(order);
   const referenceIso = reference ? reference.toISOString() : null;
   const deadline = referenceIso
-    ? cancelByDate(referenceIso, order.cookLeadTime)
+    ? cancelByDate(referenceIso, order.cookLeadTime, order.cookLeadTimeCutoff)
     : null;
   const refundDeadline = toIso(deadline);
   const refundDeadlineLabel = formatRefundDeadlineLabel(deadline);
@@ -102,6 +108,19 @@ export function getClientCancelPolicy(
       summary: "",
       detail: "",
       modalReminder: "",
+    };
+  }
+
+  if (order.status === "pending") {
+    return {
+      cancellable: true,
+      refundEligible: true,
+      refundDeadline: null,
+      refundDeadlineLabel: null,
+      summary:
+        "You'll receive a full refund. Your cook hasn't confirmed this order yet.",
+      detail: "",
+      modalReminder: "This cannot be undone.",
     };
   }
 

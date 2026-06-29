@@ -77,13 +77,28 @@ function mockCook(found: boolean) {
   return { from } as never;
 }
 
-function orderChain(status: string, pickupAt?: Date) {
+type OrderTiming = {
+  pickupAt?: Date | null;
+  fulfillmentWindowStart?: Date | null;
+  fulfillmentWindowEnd?: Date | null;
+  fulfillmentMode?: "pickup" | "delivery";
+  deliveryAddress?: object | null;
+};
+
+function orderChain(status: string, timing: OrderTiming = {}) {
   const limit = vi.fn().mockResolvedValue([
     {
       id: ORDER_ID,
       cookId: COOK_ID,
       status,
-      pickupAt: pickupAt ?? new Date(Date.now() + 2 * 3600_000),
+      pickupAt:
+        "pickupAt" in timing
+          ? timing.pickupAt
+          : new Date(Date.now() + 2 * 3600_000),
+      fulfillmentWindowStart: timing.fulfillmentWindowStart ?? null,
+      fulfillmentWindowEnd: timing.fulfillmentWindowEnd ?? null,
+      fulfillmentMode: timing.fulfillmentMode ?? "pickup",
+      deliveryAddress: timing.deliveryAddress ?? null,
     },
   ]);
   const where = vi.fn(() => ({ limit }));
@@ -197,7 +212,7 @@ function mockUpdate(row: object) {
  * 3. payment readiness guard lookup
  */
 function withOrderForReady(
-  pickupAt?: Date,
+  timing: OrderTiming = {},
   payments: Array<{ type: string; status: string }> = [
     { type: "full", status: "authorized" },
   ],
@@ -206,7 +221,7 @@ function withOrderForReady(
   vi.mocked(db.select).mockImplementation(() => {
     call++;
     if (call === 1) return mockCook(true);
-    if (call === 2) return orderChain("confirmed", pickupAt);
+    if (call === 2) return orderChain("confirmed", timing);
     if (call === 3) return readyPaymentsChain(payments);
     return emailLookupChain();
   });
@@ -381,17 +396,12 @@ describe("PATCH /api/business/dashboard/orders/[orderId]/status", () => {
     );
   });
 
-  it("sets expiry to at least 24h from now when transitioning to ready", async () => {
+  it("sets expiry to at least 24h from now when the schedule is in the past", async () => {
     const pickupAt = new Date(Date.now() - 2 * 3600_000); // pickup was 2h ago
-    withOrderForReady(pickupAt);
+    withOrderForReady({ pickupAt });
     const { set } = mockUpdate({ id: ORDER_ID, status: "ready" });
     const before = new Date(Date.now() + 24 * 3600_000 - 1000);
     await PATCH(makePatch({ status: "ready" }), { params });
-    expect(set).toHaveBeenCalledWith(
-      expect.objectContaining({
-        pickupCodeExpiresAt: expect.any(Date),
-      }),
-    );
     const callArgs = (set as ReturnType<typeof vi.fn>).mock
       .calls[0][0] as Record<string, unknown>;
     const expiry = callArgs.pickupCodeExpiresAt as Date;
@@ -399,21 +409,152 @@ describe("PATCH /api/business/dashboard/orders/[orderId]/status", () => {
     expect(expiry.getTime()).toBeLessThan(before.getTime() + 25 * 3_600_000);
   });
 
-  it("sets expiry to 6h after pickupAt when that is later than 24h from now", async () => {
-    const pickupAt = new Date(Date.now() + 30 * 3600_000); // pickup 30h from now
-    withOrderForReady(pickupAt);
+  it("sets expiry to 6h after the latest time in the fulfillment range", async () => {
+    // Order scheduled for tomorrow's window (allowed: today is the day before).
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date(2026, 5, 25, 10, 0, 0)); // Thu Jun 25, 10:00 local
+      const windowStart = new Date(2026, 5, 26, 11, 0, 0); // Fri 11:00
+      const windowEnd = new Date(2026, 5, 26, 14, 0, 0); // Fri 14:00
+      withOrderForReady({
+        pickupAt: null,
+        fulfillmentWindowStart: windowStart,
+        fulfillmentWindowEnd: windowEnd,
+      });
+      const { set } = mockUpdate({ id: ORDER_ID, status: "ready" });
+      await PATCH(makePatch({ status: "ready" }), { params });
+      const callArgs = (set as ReturnType<typeof vi.fn>).mock
+        .calls[0][0] as Record<string, unknown>;
+      const expiry = callArgs.pickupCodeExpiresAt as Date;
+      // Anchored to window END (latest in range), not the start.
+      const expected = new Date(windowEnd.getTime() + 6 * 3600_000);
+      expect(expiry.getTime()).toBe(expected.getTime());
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("rejects ready (400) when the order is scheduled more than a day out", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date(2026, 5, 25, 10, 0, 0)); // Thu Jun 25
+      const windowStart = new Date(2026, 5, 27, 11, 0, 0); // Sat — two days out
+      withOrderForReady({
+        pickupAt: null,
+        fulfillmentWindowStart: windowStart,
+        fulfillmentWindowEnd: new Date(2026, 5, 27, 14, 0, 0),
+      });
+      const { set } = mockUpdate({ id: ORDER_ID, status: "ready" });
+      const res = await PATCH(makePatch({ status: "ready" }), { params });
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toMatch(/day before/i);
+      expect(set).not.toHaveBeenCalled(); // never marked ready, no pickup code
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("allows ready on the calendar day before the scheduled window", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date(2026, 5, 25, 23, 30, 0)); // Thu 23:30 — day before
+      withOrderForReady({
+        pickupAt: null,
+        fulfillmentWindowStart: new Date(2026, 5, 26, 11, 0, 0), // Fri
+        fulfillmentWindowEnd: new Date(2026, 5, 26, 14, 0, 0),
+      });
+      const { set } = mockUpdate({ id: ORDER_ID, status: "ready" });
+      const res = await PATCH(makePatch({ status: "ready" }), { params });
+      expect(res.status).toBe(200);
+      expect(set).toHaveBeenCalledWith(
+        expect.objectContaining({ status: "ready" }),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // ─── Ready: delivery arrival time ─────────────────────────────────────────
+
+  // Window: Fri Jun 26 11:00–14:00, "now" = Thu Jun 25 10:00 — the day before,
+  // so the order is markable and the window-end expiry anchor (not the 24h
+  // floor) is what's exercised.
+  function deliveryReady(arrivalAt?: Date) {
+    withOrderForReady({
+      pickupAt: null,
+      fulfillmentMode: "delivery",
+      fulfillmentWindowStart: new Date(2026, 5, 26, 11, 0, 0),
+      fulfillmentWindowEnd: new Date(2026, 5, 26, 14, 0, 0),
+      deliveryAddress: { street: "1 Main St", city: "Toronto", province: "ON" },
+    });
+    const body: Record<string, unknown> = { status: "ready" };
+    if (arrivalAt) body.arrivalAt = arrivalAt.toISOString();
+    return body;
+  }
+
+  it("rejects delivery ready (400) when no arrival time is provided", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date(2026, 5, 25, 10, 0, 0));
+      const body = deliveryReady(); // no arrivalAt
+      const { set } = mockUpdate({ id: ORDER_ID, status: "ready" });
+      const res = await PATCH(makePatch(body), { params });
+      expect(res.status).toBe(400);
+      const json = await res.json();
+      expect(json.error).toMatch(/arrival time/i);
+      expect(set).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("rejects delivery ready (400) when arrival is outside the window", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date(2026, 5, 25, 10, 0, 0));
+      const body = deliveryReady(new Date(2026, 5, 26, 15, 0, 0)); // after end
+      const { set } = mockUpdate({ id: ORDER_ID, status: "ready" });
+      const res = await PATCH(makePatch(body), { params });
+      expect(res.status).toBe(400);
+      const json = await res.json();
+      expect(json.error).toMatch(/window/i);
+      expect(set).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("sets pickupAt to the chosen arrival time on a valid delivery ready", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date(2026, 5, 25, 10, 0, 0));
+      const arrival = new Date(2026, 5, 26, 12, 30, 0);
+      const body = deliveryReady(arrival);
+      const { set } = mockUpdate({ id: ORDER_ID, status: "ready" });
+      const res = await PATCH(makePatch(body), { params });
+      expect(res.status).toBe(200);
+      const callArgs = (set as ReturnType<typeof vi.fn>).mock
+        .calls[0][0] as Record<string, unknown>;
+      expect((callArgs.pickupAt as Date).getTime()).toBe(arrival.getTime());
+      // Expiry anchored to the window end + 6h (latest in range).
+      const expiry = callArgs.pickupCodeExpiresAt as Date;
+      expect(expiry.getTime()).toBe(
+        new Date(2026, 5, 26, 14, 0, 0).getTime() + 6 * 3600_000,
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not require an arrival time for pickup orders", async () => {
+    withOrderForReady({ fulfillmentMode: "pickup" });
     const { set } = mockUpdate({ id: ORDER_ID, status: "ready" });
-    await PATCH(makePatch({ status: "ready" }), { params });
+    const res = await PATCH(makePatch({ status: "ready" }), { params });
+    expect(res.status).toBe(200);
     expect(set).toHaveBeenCalledWith(
-      expect.objectContaining({
-        pickupCodeExpiresAt: expect.any(Date),
-      }),
+      expect.objectContaining({ status: "ready" }),
     );
-    const callArgs = (set as ReturnType<typeof vi.fn>).mock
-      .calls[0][0] as Record<string, unknown>;
-    const expiry = callArgs.pickupCodeExpiresAt as Date;
-    const expectedExpiry = new Date(pickupAt.getTime() + 6 * 3600_000);
-    expect(expiry.getTime()).toBeCloseTo(expectedExpiry.getTime(), -3);
   });
 
   // ─── Cancel: cook voluntary cancellation ──────────────────────────────────

@@ -41,6 +41,7 @@ type AddItemInput = {
   minOrderQty: number;
   maxOrderQty: number | null;
   leadTime: string | null;
+  leadTimeCutoff: string | null;
   cancellationAllowed: boolean;
   item: CartItem;
 };
@@ -53,11 +54,13 @@ type CartContextType = {
   minOrderQty: number;
   maxOrderQty: number | null;
   leadTime: string | null;
+  leadTimeCutoff: string | null;
   cancellationAllowed: boolean;
   items: CartItem[];
   fulfillmentMode: "pickup" | "delivery";
   deliveryAddress: DeliveryAddress | null;
   notes: string | null;
+  deliveryDetails: string | null;
   /** Total number of items across all dishes. */
   totalQuantity: number;
   /** Sum of all line totals. */
@@ -76,6 +79,7 @@ type CartContextType = {
   setFulfillment: (mode: "pickup" | "delivery") => void;
   setDeliveryAddress: (addr: DeliveryAddress | null) => void;
   setNotes: (notes: string | null) => void;
+  setDeliveryDetails: (details: string | null) => void;
 };
 
 /**
@@ -98,6 +102,7 @@ type PersistedCart = {
   fulfillmentMode: "pickup" | "delivery";
   deliveryAddress: DeliveryAddress | null;
   notes: string | null;
+  deliveryDetails: string | null;
   /** Epoch ms of the last write — used to expire stale carts. */
   savedAt?: number;
 };
@@ -125,6 +130,7 @@ function loadPersistedCart(): PersistedCart | null {
         parsed.fulfillmentMode === "delivery" ? "delivery" : "pickup",
       deliveryAddress: parsed.deliveryAddress ?? null,
       notes: parsed.notes ?? null,
+      deliveryDetails: parsed.deliveryDetails ?? null,
     };
   } catch {
     // Corrupt or unreadable storage — start with an empty cart.
@@ -147,6 +153,7 @@ type CookMeta = {
   minOrderQty: number;
   maxOrderQty: number | null;
   leadTime: string | null;
+  leadTimeCutoff: string | null;
   cancellationAllowed: boolean;
 };
 
@@ -159,6 +166,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [deliveryAddress, setDeliveryAddressState] =
     useState<DeliveryAddress | null>(null);
   const [notes, setNotesState] = useState<string | null>(null);
+  const [deliveryDetails, setDeliveryDetailsState] = useState<string | null>(
+    null,
+  );
 
   // Tracks whether we've hydrated from localStorage yet. This is reactive STATE,
   // not a ref: the persist effect below depends on it, so its first run on mount
@@ -181,6 +191,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       setFulfillmentMode(saved.fulfillmentMode);
       setDeliveryAddressState(saved.deliveryAddress);
       setNotesState(saved.notes);
+      setDeliveryDetailsState(saved.deliveryDetails);
     }
     setHydrated(true);
   }, []);
@@ -195,13 +206,22 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         fulfillmentMode,
         deliveryAddress,
         notes,
+        deliveryDetails,
         savedAt: Date.now(),
       };
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
     } catch {
       // Storage may be full or unavailable (private mode) — non-critical.
     }
-  }, [hydrated, cook, items, fulfillmentMode, deliveryAddress, notes]);
+  }, [
+    hydrated,
+    cook,
+    items,
+    fulfillmentMode,
+    deliveryAddress,
+    notes,
+    deliveryDetails,
+  ]);
 
   const upsert = useCallback((meta: CookMeta, item: CartItem) => {
     setCook(meta);
@@ -218,6 +238,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }
       if (cook && cook.cookId !== input.cookId) {
         setNotesState(null);
+        setDeliveryDetailsState(null);
       }
       upsert(
         {
@@ -227,6 +248,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           minOrderQty: input.minOrderQty,
           maxOrderQty: input.maxOrderQty,
           leadTime: input.leadTime,
+          leadTimeCutoff: input.leadTimeCutoff,
           cancellationAllowed: input.cancellationAllowed,
         },
         input.item,
@@ -240,6 +262,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     (input: AddItemInput) => {
       setItems([]);
       setNotesState(null);
+      setDeliveryDetailsState(null);
       upsert(
         {
           cookId: input.cookId,
@@ -248,6 +271,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           minOrderQty: input.minOrderQty,
           maxOrderQty: input.maxOrderQty,
           leadTime: input.leadTime,
+          leadTimeCutoff: input.leadTimeCutoff,
           cancellationAllowed: input.cancellationAllowed,
         },
         input.item,
@@ -265,6 +289,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setCook(null);
     setDeliveryAddressState(null);
     setNotesState(null);
+    setDeliveryDetailsState(null);
   }, []);
 
   const totalQuantity = useMemo(
@@ -289,11 +314,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     minOrderQty,
     maxOrderQty,
     leadTime: cook?.leadTime ?? null,
+    leadTimeCutoff: cook?.leadTimeCutoff ?? null,
     cancellationAllowed: cook?.cancellationAllowed ?? false,
     items,
     fulfillmentMode,
     deliveryAddress,
     notes,
+    deliveryDetails,
     totalQuantity,
     subtotal,
     meetsMinimum,
@@ -302,9 +329,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     clearAndAdd,
     removeItem,
     clearCart,
-    setFulfillment: setFulfillmentMode,
+    setFulfillment: (mode: "pickup" | "delivery") => {
+      setFulfillmentMode(mode);
+      if (mode === "pickup") setDeliveryDetailsState(null);
+    },
     setDeliveryAddress: setDeliveryAddressState,
     setNotes: setNotesState,
+    setDeliveryDetails: setDeliveryDetailsState,
   };
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

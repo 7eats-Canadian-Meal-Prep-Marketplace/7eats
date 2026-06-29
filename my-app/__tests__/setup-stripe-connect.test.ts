@@ -3,7 +3,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("@/lib/auth", () => ({ auth: { api: { getSession: vi.fn() } } }));
 vi.mock("@/db", () => ({ db: { select: vi.fn(), update: vi.fn() } }));
 vi.mock("@/db/schema", () => ({
-  cookProfiles: { userId: "userId", stripeAccountId: "stripeAccountId" },
+  cookProfiles: {
+    id: "id",
+    userId: "userId",
+    displayName: "displayName",
+    stripeAccountId: "stripeAccountId",
+  },
 }));
 vi.mock("@/lib/stripe", () => ({ getStripe: vi.fn() }));
 vi.mock("drizzle-orm", () => ({ eq: vi.fn() }));
@@ -50,6 +55,9 @@ describe("POST /api/setup/stripe-connect", () => {
     fromSpy = vi.fn(() => ({ where: whereSelectSpy }));
     whereSelectSpy.mockReturnValue({ limit: limitSpy });
     vi.mocked(db.select).mockReturnValue({ from: fromSpy } as never);
+    limitSpy.mockResolvedValue([
+      { id: "cook_profile_1", displayName: "Maria's Kitchen" },
+    ]);
 
     // Mock db.update() chain for storing stripe account
     whereSpy = vi.fn().mockResolvedValue(undefined);
@@ -93,10 +101,26 @@ describe("POST /api/setup/stripe-connect", () => {
     const userId = "user_abcdefghijkl";
     const mockAccountId = "acct_stripe123";
     mockSession("cook", userId);
-    mockStripeCreate({ id: mockAccountId });
+    const create = mockStripeCreate({ id: mockAccountId });
+    limitSpy.mockResolvedValue([
+      { id: "cook_profile_1", displayName: "Maria's Kitchen" },
+    ]);
+    vi.stubEnv("NEXT_PUBLIC_APP_URL", "https://www.7eats.ca");
 
     await POST(makeRequest());
 
+    expect(create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        defaults: expect.objectContaining({
+          profile: {
+            business_url: "https://www.7eats.ca/app/cooks/cook_profile_1",
+            doing_business_as: "Maria's Kitchen",
+            product_description:
+              "Maria's Kitchen sells homemade meals on 7eats.",
+          },
+        }),
+      }),
+    );
     expect(setSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         stripeAccountId: mockAccountId,
@@ -107,7 +131,13 @@ describe("POST /api/setup/stripe-connect", () => {
   it("returns 200 with success:true if account already exists", async () => {
     mockSession("cook");
     const existingAccountId = "acct_existing";
-    limitSpy.mockResolvedValue([{ stripeAccountId: existingAccountId }]);
+    limitSpy.mockResolvedValue([
+      {
+        id: "cook_profile_1",
+        displayName: "Maria's Kitchen",
+        stripeAccountId: existingAccountId,
+      },
+    ]);
 
     const res = await POST(makeRequest());
     const body = await res.json();

@@ -20,6 +20,11 @@
   --radius-pill: 999px;
   --maxw: 1240px;
   --app-maxw: 1600px;
+  --app-bottom-nav-content-h: 64px;
+  --app-bottom-nav-h: calc(
+    var(--app-bottom-nav-content-h) +
+    env(safe-area-inset-bottom, 0px)
+  );
   --pad-x: 24px;
   --shadow-md:
     0 4px 14px rgba(15, 15, 15, 0.04), 0 12px 32px rgba(15, 15, 15, 0.05);
@@ -43,6 +48,7 @@
 html {
   -webkit-text-size-adjust: 100%;
   scroll-behavior: smooth;
+  background: var(--white);
 }
 body {
   margin: 0;

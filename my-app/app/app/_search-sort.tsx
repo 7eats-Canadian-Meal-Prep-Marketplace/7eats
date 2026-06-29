@@ -43,8 +43,7 @@ export function SearchSortDropdown() {
     const params = new URLSearchParams(searchParams.toString());
     if (next === "nearest") params.delete("sort");
     else params.set("sort", next);
-    const qs = params.toString();
-    router.push(qs ? `/app/search?${qs}` : "/app/search");
+    router.push(`/app/search?${params.toString()}`);
   }
 
   return (

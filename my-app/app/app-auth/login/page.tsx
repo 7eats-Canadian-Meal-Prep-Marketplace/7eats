@@ -13,9 +13,13 @@ export const metadata: Metadata = {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ verified?: string; error?: string }>;
+  searchParams: Promise<{
+    verified?: string;
+    error?: string;
+    deleted?: string;
+  }>;
 }) {
-  const { verified, error } = await searchParams;
+  const { verified, error, deleted } = await searchParams;
 
   // A signed-in cook/admin can sign in here as a customer. Signing in swaps the
   // single session cookie, so warn them it logs them out of the cook account.
@@ -40,6 +44,11 @@ export default async function LoginPage({
       ) : null}
       {verified ? (
         <p className={styles.notice}>Email confirmed. You can now sign in.</p>
+      ) : null}
+      {deleted ? (
+        <p className={styles.plainNotice}>
+          Your account has been deleted. This is permanent and cannot be undone.
+        </p>
       ) : null}
       {verificationError ? (
         <p className={styles.errorNotice} role="alert">

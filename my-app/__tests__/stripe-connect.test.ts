@@ -1,6 +1,8 @@
 import type Stripe from "stripe";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  buildCookStripeProfileDefaults,
+  cookMarketplaceProfileUrl,
   isStripeFullyConnected,
   readStripeConnectAccountStatus,
 } from "@/lib/stripe-connect";
@@ -90,5 +92,24 @@ describe("stripe-connect (Accounts v2)", () => {
       requirements: [],
     });
     expect(isStripeFullyConnected(status)).toBe(false);
+  });
+
+  it("builds Stripe profile defaults from the cook's 7eats storefront URL", () => {
+    vi.stubEnv("NEXT_PUBLIC_APP_URL", "https://www.7eats.ca");
+
+    expect(cookMarketplaceProfileUrl("cook_abc")).toBe(
+      "https://www.7eats.ca/app/cooks/cook_abc",
+    );
+
+    expect(
+      buildCookStripeProfileDefaults({
+        cookProfileId: "cook_abc",
+        displayName: "Maria's Kitchen",
+      }),
+    ).toEqual({
+      business_url: "https://www.7eats.ca/app/cooks/cook_abc",
+      doing_business_as: "Maria's Kitchen",
+      product_description: "Maria's Kitchen sells homemade meals on 7eats.",
+    });
   });
 });

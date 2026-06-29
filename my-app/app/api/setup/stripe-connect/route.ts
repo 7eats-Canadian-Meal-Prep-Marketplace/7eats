@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { cookProfiles } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { getStripe } from "@/lib/stripe";
+import { buildCookStripeProfileDefaults } from "@/lib/stripe-connect";
 
 export async function POST(req: Request) {
   const session = await auth.api.getSession({ headers: req.headers });
@@ -15,12 +16,23 @@ export async function POST(req: Request) {
   }
 
   const [cook] = await db
-    .select({ stripeAccountId: cookProfiles.stripeAccountId })
+    .select({
+      id: cookProfiles.id,
+      displayName: cookProfiles.displayName,
+      stripeAccountId: cookProfiles.stripeAccountId,
+    })
     .from(cookProfiles)
     .where(eq(cookProfiles.userId, session.user.id))
     .limit(1);
 
-  if (cook?.stripeAccountId) {
+  if (!cook) {
+    return NextResponse.json(
+      { error: "Cook profile not found." },
+      { status: 404 },
+    );
+  }
+
+  if (cook.stripeAccountId) {
     return NextResponse.json({ success: true });
   }
 
@@ -49,6 +61,10 @@ export async function POST(req: Request) {
       },
       defaults: {
         currency: "cad",
+        profile: buildCookStripeProfileDefaults({
+          cookProfileId: cook.id,
+          displayName: cook.displayName,
+        }),
         responsibilities: {
           fees_collector: "application",
           losses_collector: "application",

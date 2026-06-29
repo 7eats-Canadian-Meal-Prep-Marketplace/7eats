@@ -13,6 +13,8 @@ import {
   dishTags,
   tags,
 } from "@/db/schema";
+import { formatPickupLocation } from "@/lib/address";
+import { formatDbLeadTimeCutoff } from "@/lib/lead-time";
 
 export async function GET(
   _req: NextRequest,
@@ -33,12 +35,16 @@ export async function GET(
         minOrderQty: cookProfiles.minOrderQty,
         maxOrderQty: cookProfiles.maxOrderQty,
         leadTime: cookProfiles.leadTime,
+        leadTimeCutoff: cookProfiles.leadTimeCutoff,
         offersPickup: cookProfiles.offersPickup,
         delivery: cookProfiles.delivery,
         cancellationAllowed: cookProfiles.cancellationAllowed,
         acceptsSpecialRequests: cookProfiles.acceptsSpecialRequests,
+        pickupStreet: cookProfiles.pickupStreet,
+        pickupUnit: cookProfiles.pickupUnit,
         pickupCity: cookProfiles.pickupCity,
         pickupProvince: cookProfiles.pickupProvince,
+        pickupPostal: cookProfiles.pickupPostal,
       })
       .from(cookProfiles)
       .innerJoin(authUser, eq(cookProfiles.userId, authUser.id))
@@ -252,13 +258,39 @@ export async function GET(
       };
     });
 
-    const { firstName, lastName, ...cookRest } = cook;
+    const {
+      firstName,
+      lastName,
+      // Raw street fields are composed into a single `pickupLocation` string
+      // below so the response never exposes more than the formatted address.
+      pickupStreet,
+      pickupUnit,
+      pickupPostal,
+      ...cookRest
+    } = cook;
     const cookName = [firstName, lastName].filter(Boolean).join(" ") || null;
+    // Shown to the client at checkout for pickup orders. Pickup-only.
+    const pickupLocation = cookRest.offersPickup
+      ? formatPickupLocation({
+          street: pickupStreet,
+          unit: pickupUnit,
+          city: cookRest.pickupCity,
+          province: cookRest.pickupProvince,
+          postal: pickupPostal,
+        })
+      : null;
 
     return NextResponse.json({
       success: true,
       data: {
-        cook: { ...cookRest, cookName, pickupWindows, deliveryWindows },
+        cook: {
+          ...cookRest,
+          leadTimeCutoff: formatDbLeadTimeCutoff(cook.leadTimeCutoff),
+          cookName,
+          pickupLocation,
+          pickupWindows,
+          deliveryWindows,
+        },
         dishes: assembled,
       },
     });

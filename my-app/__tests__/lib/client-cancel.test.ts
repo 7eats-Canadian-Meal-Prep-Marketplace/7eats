@@ -18,10 +18,21 @@ describe("isClientOrderCancellable", () => {
 });
 
 describe("isClientRefundEligible", () => {
-  it("never refunds when cook disallows cancellation", () => {
+  it("always refunds pending orders before cook confirmation", () => {
     expect(
       isClientRefundEligible({
         status: "pending",
+        cancellationAllowed: false,
+        pickupAt: null,
+        cookLeadTime: "3_days",
+      }),
+    ).toBe(true);
+  });
+
+  it("does not refund confirmed orders when cook disallows cancellation", () => {
+    expect(
+      isClientRefundEligible({
+        status: "confirmed",
         cancellationAllowed: false,
         pickupAt: null,
         cookLeadTime: "3_days",
@@ -45,9 +56,21 @@ describe("isClientRefundEligible", () => {
 });
 
 describe("getClientCancelPolicy", () => {
-  it("explains no refund when cook policy is final sale", () => {
+  it("promises a refund for pending orders even when cook policy is final sale", () => {
     const policy = getClientCancelPolicy({
       status: "pending",
+      cancellationAllowed: false,
+      pickupAt: null,
+      cookLeadTime: "3_days",
+    });
+    expect(policy.cancellable).toBe(true);
+    expect(policy.refundEligible).toBe(true);
+    expect(policy.summary).toContain("hasn't confirmed");
+  });
+
+  it("explains no refund when cook policy is final sale after confirmation", () => {
+    const policy = getClientCancelPolicy({
+      status: "confirmed",
       cancellationAllowed: false,
       pickupAt: null,
       cookLeadTime: "3_days",
@@ -60,7 +83,7 @@ describe("getClientCancelPolicy", () => {
   it("includes refund deadline label when eligible", () => {
     const now = new Date("2026-06-20T12:00:00");
     const policy = getClientCancelPolicy({
-      status: "pending",
+      status: "confirmed",
       cancellationAllowed: true,
       pickupAt: null,
       fulfillmentWindowStart: "2026-06-27T15:00:00.000Z",
@@ -78,7 +101,7 @@ describe("getClientCancelPolicy", () => {
   it("states no refund when past the deadline", () => {
     const now = new Date("2026-06-25T12:00:00");
     const policy = getClientCancelPolicy({
-      status: "pending",
+      status: "confirmed",
       cancellationAllowed: true,
       pickupAt: null,
       fulfillmentWindowStart: "2026-06-27T15:00:00.000Z",

@@ -4,9 +4,12 @@ import {
   type OrderNotifyClient,
 } from "@/lib/order-client-notifications";
 import { formatOrderTimingLabel } from "@/lib/order-timing-label";
+import { cancelByDate } from "@/lib/refund-policy";
 import {
+  bulletList,
   contactParagraph,
   contactTextLine,
+  escapeHtml,
   htmlEmail,
   orderDetailsTable,
   orderSummaryTable,
@@ -37,6 +40,12 @@ type OrderEmailData = {
   deliveryFee?: string | number | null;
   taxAmount?: string | number | null;
   taxLabel?: string | null;
+  // Cook's pickup address, shown to the client for pickup orders only. Composed
+  // upstream via formatPickupLocation(); null/absent for delivery or unknown.
+  pickupLocation?: string | null;
+  cancellationAllowed?: boolean;
+  cookLeadTime?: string | null;
+  cookLeadTimeCutoff?: string | null;
 };
 
 function fulfillmentLabel(mode: OrderEmailData["fulfillmentMode"]): string {
@@ -45,6 +54,17 @@ function fulfillmentLabel(mode: OrderEmailData["fulfillmentMode"]): string {
 
 function formatTiming(order: OrderEmailData): string {
   return formatOrderTimingLabel(order);
+}
+
+/** Short clock string for the cook's approximate delivery arrival, e.g. "5:30 p.m.". */
+function arrivalClock(value: Date | string | null | undefined): string | null {
+  if (!value) return null;
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleTimeString("en-CA", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
 /** Omit TBD — cancelled orders don't need a vague timing line. */
@@ -61,9 +81,58 @@ function emailTimingRow(
   return { label: fulfillmentLabel(order.fulfillmentMode), value: timing };
 }
 
+/**
+ * Pickup-address row for the order-details table. Pickup orders only — delivery
+ * has its own hand-off copy. Returns null when the mode is delivery or no
+ * address is known, so the row is simply omitted. The value is HTML-escaped
+ * because `orderDetailsTable` inserts it verbatim and addresses are cook-entered.
+ */
+function pickupLocationRow(
+  order: OrderEmailData,
+): { label: string; value: string } | null {
+  if (order.fulfillmentMode === "delivery") return null;
+  const location = order.pickupLocation?.trim();
+  if (!location) return null;
+  return { label: "Pickup location", value: escapeHtml(location) };
+}
+
+/** Plain-text counterpart of pickupLocationRow; raw (unescaped) for text email. */
+function pickupLocationTextLine(order: OrderEmailData): string | null {
+  if (order.fulfillmentMode === "delivery") return null;
+  const location = order.pickupLocation?.trim();
+  return location ? `Pickup location: ${location}` : null;
+}
+
 function cancellationScheduleClause(order: OrderEmailData): string {
   const timing = knownTimingLabel(order);
   return timing ? ` scheduled for ${timing}` : "";
+}
+
+function refundDeadlineRow(
+  order: OrderEmailData,
+): { label: string; value: string } | null {
+  if (!order.cancellationAllowed) return null;
+  const reference = order.fulfillmentWindowStart ?? order.pickupAt ?? null;
+  if (!reference) return null;
+  const deadline = cancelByDate(
+    reference instanceof Date ? reference.toISOString() : String(reference),
+    order.cookLeadTime ?? null,
+    order.cookLeadTimeCutoff,
+  );
+  if (!deadline) return null;
+  const value = deadline.toLocaleString("en-CA", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+  return { label: "Cancel for refund until", value };
+}
+
+function refundDeadlineTextLine(order: OrderEmailData): string | null {
+  const row = refundDeadlineRow(order);
+  return row ? `${row.label}: ${row.value}` : null;
 }
 
 function formatMoney(total: string, currency: string): string {
@@ -214,6 +283,10 @@ export async function sendOrderReceiptToClient(
     async () => {
       try {
         const timing = formatTiming(order);
+        const pickupRow = pickupLocationRow(order);
+        const pickupTextLine = pickupLocationTextLine(order);
+        const refundRow = refundDeadlineRow(order);
+        const refundTextLine = refundDeadlineTextLine(order);
         const subject = `Your 7eats order with ${cook.name} is confirmed`;
         const html = htmlEmail({
           title: subject,
@@ -230,6 +303,8 @@ export async function sendOrderReceiptToClient(
                 value: fulfillmentLabel(order.fulfillmentMode),
               },
               { label: "Timing", value: timing },
+              ...(pickupRow ? [pickupRow] : []),
+              ...(refundRow ? [refundRow] : []),
             ]) +
             paragraph(
               "You can track its status and pickup code any time from your orders.",
@@ -247,6 +322,8 @@ export async function sendOrderReceiptToClient(
           "",
           `Fulfillment: ${fulfillmentLabel(order.fulfillmentMode)}`,
           `Timing: ${timing}`,
+          ...(pickupTextLine ? [pickupTextLine] : []),
+          ...(refundTextLine ? [refundTextLine] : []),
           "",
           "Track it any time from your orders:",
           `${process.env.NEXT_PUBLIC_APP_URL}/app/orders/${order.id}`,
@@ -268,6 +345,10 @@ export async function sendGuestOrderReceiptToClient(
 ): Promise<void> {
   try {
     const timing = formatTiming(order);
+    const pickupRow = pickupLocationRow(order);
+    const pickupTextLine = pickupLocationTextLine(order);
+    const refundRow = refundDeadlineRow(order);
+    const refundTextLine = refundDeadlineTextLine(order);
     const receiptUrl = `${process.env.NEXT_PUBLIC_APP_URL}/app/checkout/guest-confirmation?token=${encodeURIComponent(guest.accessToken)}`;
     const cancelUrl = `${process.env.NEXT_PUBLIC_APP_URL}/app/guest/order/cancel?token=${encodeURIComponent(guest.accessToken)}`;
     const subject = `Order confirmed - ${guest.confirmationCode}`;
@@ -293,6 +374,8 @@ export async function sendGuestOrderReceiptToClient(
             value: fulfillmentLabel(order.fulfillmentMode),
           },
           { label: "Timing", value: timing },
+          ...(pickupRow ? [pickupRow] : []),
+          ...(refundRow ? [refundRow] : []),
         ]) +
         paragraph(
           "Save your confirmation code if you need to contact support.",
@@ -313,6 +396,8 @@ export async function sendGuestOrderReceiptToClient(
       `Confirmation code: ${guest.confirmationCode}`,
       `Fulfillment: ${fulfillmentLabel(order.fulfillmentMode)}`,
       `Timing: ${timing}`,
+      ...(pickupTextLine ? [pickupTextLine] : []),
+      ...(refundTextLine ? [refundTextLine] : []),
       "",
       "Save your confirmation code if you need to contact support.",
       "",
@@ -340,6 +425,8 @@ export async function sendOrderConfirmedEmailToClient(
     async () => {
       try {
         const timing = formatTiming(order);
+        const pickupRow = pickupLocationRow(order);
+        const pickupTextLine = pickupLocationTextLine(order);
         const subject = "Your order is confirmed";
         const html = htmlEmail({
           title: subject,
@@ -350,6 +437,7 @@ export async function sendOrderConfirmedEmailToClient(
             orderSummaryHtml(order) +
             orderDetailsTable([
               { label: fulfillmentLabel(order.fulfillmentMode), value: timing },
+              ...(pickupRow ? [pickupRow] : []),
             ]) +
             paragraph(
               "You'll get another email with your pickup code once the order is ready.",
@@ -364,6 +452,7 @@ export async function sendOrderConfirmedEmailToClient(
           ...orderSummaryText(order),
           "",
           `${fulfillmentLabel(order.fulfillmentMode)}: ${timing}`,
+          ...(pickupTextLine ? [pickupTextLine] : []),
           "",
           "You'll get another email with your pickup code once the order is ready.",
         ]);
@@ -386,6 +475,8 @@ export async function sendOrderNotReadyEmailToClient(
     async () => {
       try {
         const timingRow = emailTimingRow(order);
+        const pickupRow = pickupLocationRow(order);
+        const pickupTextLine = pickupLocationTextLine(order);
         const codeNoun =
           order.fulfillmentMode === "delivery"
             ? "delivery code"
@@ -402,6 +493,7 @@ export async function sendOrderNotReadyEmailToClient(
             orderDetailsTable([
               { label: "Order", value: order.listingTitle },
               ...(timingRow ? [timingRow] : []),
+              ...(pickupRow ? [pickupRow] : []),
             ]) +
             paragraph(
               `No need to do anything. We'll email you a fresh ${codeNoun} the moment it's ready. Thanks for your patience!`,
@@ -414,7 +506,9 @@ export async function sendOrderNotReadyEmailToClient(
           `Quick heads up. Your order from ${cook.name} is taking a little longer than expected. They're still hard at work on it and will have it ready as soon as they can.`,
           "",
           `Order: ${order.listingTitle}`,
-          ...(timingRow ? [`${timingRow.label}: ${timingRow.value}`, ""] : []),
+          ...(timingRow ? [`${timingRow.label}: ${timingRow.value}`] : []),
+          ...(pickupTextLine ? [pickupTextLine] : []),
+          "",
           `No need to do anything. We'll email you a fresh ${codeNoun} the moment it's ready. Thanks for your patience!`,
         ]);
         await sendMail({ to: client.email, subject, text, html });
@@ -434,38 +528,84 @@ export async function sendOrderReadyEmailToClient(
 ): Promise<void> {
   const isDelivery = order.fulfillmentMode === "delivery";
   const codeLabel = isDelivery ? "Delivery code" : "Pickup code";
+  const arrival = isDelivery ? arrivalClock(order.pickupAt) : null;
+
+  // Delivery hand-off guidance: an approximate ETA, and a person must be there
+  // to receive the order and hand over the code (it's never left at the door).
+  const deliveryTips = [
+    arrival
+      ? `Have someone available at the delivery address around ${arrival} to receive the order.`
+      : "Have someone available at the delivery address to receive the order.",
+    "Have your delivery code ready. Your cook needs it to confirm the hand-off.",
+    "This isn't a leave-at-door drop-off; a person must be there to collect it.",
+  ];
+  const deliveryTipsText = deliveryTips.map((t) => `• ${t}`);
+
   await deliverOrderClientUpdate(
     orderClientRecipient(client),
     async () => {
       try {
         const timingRow = emailTimingRow(order);
+        const pickupRow = pickupLocationRow(order);
+        const pickupTextLine = pickupLocationTextLine(order);
         const subject = `Your order is ready, ${isDelivery ? "delivery" : "pickup"} code ${pickupCode}`;
+
+        const introHtml = isDelivery
+          ? paragraph(
+              `Your order from <strong>${cook.name}</strong> is on its way!` +
+                (arrival
+                  ? ` Your cook is arriving <strong>around ${arrival}</strong>. The exact time may shift a little, like any delivery ETA.`
+                  : ""),
+            ) + paragraph("Show this code to your cook when they arrive:")
+          : paragraph(
+              `Your order from <strong>${cook.name}</strong> is ready. Show this code when you arrive:`,
+            );
+
+        const tipsHtml = isDelivery ? bulletList(deliveryTips) : "";
+        const closingHtml = isDelivery
+          ? ""
+          : paragraph("Show this code any time during your pickup window.");
+
         const html = htmlEmail({
           title: subject,
           preheader: `Your order from ${cook.name} is ready.`,
           bodyHtml:
             paragraph(greeting(client.firstName)) +
-            paragraph(
-              `Your order from <strong>${cook.name}</strong> is ready. Show this code when you arrive:`,
-            ) +
+            introHtml +
             pickupCodeBlock(pickupCode, codeLabel) +
+            tipsHtml +
             orderDetailsTable([
               { label: "Order", value: order.listingTitle },
               ...(timingRow ? [timingRow] : []),
+              ...(pickupRow ? [pickupRow] : []),
             ]) +
-            paragraph("This code expires 24 hours after it was issued.") +
+            closingHtml +
             contactParagraph(),
         });
+
+        const introText = isDelivery
+          ? `Your order from ${cook.name} is on its way!` +
+            (arrival
+              ? ` Your cook is arriving around ${arrival}. The exact time may shift a little, like any delivery ETA.`
+              : "") +
+            " Show this code to your cook when they arrive:"
+          : `Your order from ${cook.name} is ready. Show this code when you arrive:`;
+
         const text = textWithContact([
           greeting(client.firstName),
           "",
-          `Your order from ${cook.name} is ready. Show this code when you arrive:`,
+          introText,
           "",
           pickupCode,
           "",
+          ...(isDelivery ? [...deliveryTipsText, ""] : []),
           `Order: ${order.listingTitle}`,
-          ...(timingRow ? [`${timingRow.label}: ${timingRow.value}`, ""] : []),
-          "This code expires 24 hours after it was issued.",
+          ...(timingRow ? [`${timingRow.label}: ${timingRow.value}`] : []),
+          ...(pickupTextLine ? [pickupTextLine] : []),
+          "",
+          ...(isDelivery
+            ? []
+            : ["Show this code any time during your pickup window."]),
         ]);
         await sendMail({ to: client.email, subject, text, html });
       } catch (err) {
@@ -493,7 +633,7 @@ export async function sendOrderCompletedEmailToClient(
           bodyHtml:
             paragraph(greeting(client.firstName)) +
             paragraph(
-              `Your order from <strong>${cook.name}</strong> is all yours — we hope every bite is wonderful. Thanks for supporting a home cook in your neighbourhood.`,
+              `Your order from <strong>${cook.name}</strong> is all yours. We hope every bite is wonderful. Thanks for supporting a home cook in your neighbourhood.`,
             ) +
             orderSummaryHtml(order) +
             paragraph(
@@ -506,7 +646,7 @@ export async function sendOrderCompletedEmailToClient(
         const text = textWithContact([
           greeting(client.firstName),
           "",
-          `Your order from ${cook.name} is all yours — we hope every bite is wonderful. Thanks for supporting a home cook in your neighbourhood.`,
+          `Your order from ${cook.name} is all yours. We hope every bite is wonderful. Thanks for supporting a home cook in your neighbourhood.`,
           "",
           ...orderSummaryText(order),
           "",

@@ -188,7 +188,11 @@
   .inner {
     grid-template-columns: 1fr;
     flex-direction: column;
-    gap: 24px;
+    gap: 16px;
+  }
+
+  .rail {
+    order: -1;
   }
 
   .railInner {
@@ -200,6 +204,24 @@
     position: static;
     max-height: none;
     overflow: visible;
+    padding: 16px;
+    box-shadow: none;
+  }
+
+  .summaryLines {
+    gap: 8px;
+    padding-bottom: 12px;
+    margin-bottom: 12px;
+  }
+
+  .summarySheet {
+    gap: 8px;
+    padding-bottom: 12px;
+    margin-bottom: 12px;
+  }
+
+  .pageHeader {
+    margin-bottom: 16px;
   }
 }
 
@@ -325,6 +347,10 @@
   margin-bottom: 0;
 }
 
+.deliveryDetailsGroup {
+  margin-top: 18px;
+}
+
 .label {
   font-size: 12px;
   font-weight: 700;
@@ -367,7 +393,7 @@
   padding: 12px 14px;
   border: 1.5px solid var(--grey-200);
   border-radius: var(--radius-sm, 8px);
-  font-size: 15px;
+  font-size: 16px;
   font-family: inherit;
   color: var(--ink);
   background: var(--white);
@@ -377,11 +403,16 @@
   transition: border-color 0.15s;
 }
 
+.textarea::placeholder {
+  color: var(--grey-300);
+}
+
 .textarea:focus {
   border-color: var(--ink);
 }
 
-.noteDisclaimer {
+.noteDisclaimer,
+.fieldDisclaimer {
   margin: 8px 0 0;
   font-size: 12px;
   line-height: 1.45;
@@ -401,6 +432,24 @@
   font-size: 14px;
   line-height: 1.5;
   color: var(--ink);
+}
+
+/* Pickup address — same summary box as delivery, with a leading pin accent */
+.pickupAddressLine {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0;
+  padding: 14px 16px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.pickupAddressIcon {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--red);
 }
 
 .addressEditBlock {
@@ -532,10 +581,10 @@
 }
 
 .reassurance {
-  margin: 8px 0 0;
-  font-size: 13.5px;
-  font-weight: 600;
-  color: var(--grey-700);
+  margin: 6px 0 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--grey-600);
 }
 
 .discountHint {
@@ -546,17 +595,28 @@
 .backLink {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  margin-bottom: 20px;
-  font-size: 13.5px;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 11px 20px;
+  font-size: 14px;
   font-weight: 600;
-  color: var(--grey-700);
+  color: var(--red);
   text-decoration: none;
-  transition: color 0.12s;
+  border: 1px solid var(--red);
+  border-radius: var(--radius-pill);
+  transition:
+    background 0.12s,
+    color 0.12s;
 }
 
 .backLink:hover {
-  color: var(--ink);
+  background: var(--red);
+  color: var(--white);
+}
+
+.submitBlock .backLink {
+  width: 100%;
 }
 
 .input {
@@ -577,6 +637,255 @@
 
 .input:focus {
   border-color: var(--ink);
+}
+
+.input:disabled {
+  background: var(--grey-100);
+  color: var(--grey-700);
+  cursor: not-allowed;
+  opacity: 0.9;
+}
+
+/* Frozen contact note once the order is placed. */
+.contactLockNote {
+  margin: 0 0 14px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--grey-700);
+}
+
+/* Verified email — read-only confirmed row with an explicit Change action. */
+.verifiedEmailRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 14px;
+  background: #f4fbf6;
+  border: 1.5px solid #cfe9d8;
+  border-radius: var(--radius-sm, 8px);
+}
+
+.verifiedEmailMain {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.verifiedEmailMain svg {
+  flex-shrink: 0;
+  color: #1f7a44;
+}
+
+.verifiedEmailAddr {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.verifiedTag {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #1f7a44;
+  background: #dcf1e4;
+  border-radius: var(--radius-pill, 999px);
+}
+
+.changeEmailBtn {
+  flex-shrink: 0;
+  padding: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--red);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.changeEmailBtn:hover {
+  text-decoration: underline;
+}
+
+/* ─── Guest email verification (OTP) ───────────────────────────────────────── */
+.verifyIdle {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin-top: 10px;
+}
+
+.verifyHint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--grey-700);
+}
+
+.verifyHint svg {
+  flex-shrink: 0;
+  color: var(--red);
+}
+
+.verifySendBtn {
+  align-self: flex-start;
+  min-height: 40px;
+  padding: 9px 18px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--white);
+  background: var(--red);
+  border: none;
+  border-radius: var(--radius-sm, 8px);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.verifySendBtn:hover:not(:disabled) {
+  background: var(--red-deep);
+}
+
+.verifySendBtn:disabled {
+  background: var(--grey-200);
+  color: var(--grey-500);
+  cursor: not-allowed;
+}
+
+.verifyPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.verifySentTo {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--grey-700);
+}
+
+.verifySentTo strong {
+  color: var(--ink);
+}
+
+.verifyRow {
+  display: flex;
+  gap: 8px;
+}
+
+.verifyCodeInput {
+  flex: 1;
+  min-width: 0;
+  min-height: 46px;
+  padding: 10px 14px;
+  /* 16px+ avoids iOS auto-zoom; large + tracked reads as a code. */
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.4em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  background: var(--white);
+  border: 1.5px solid var(--grey-200);
+  border-radius: var(--radius-sm, 8px);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.verifyCodeInput:focus {
+  border-color: var(--ink);
+}
+
+.verifyCodeInput::placeholder {
+  color: var(--grey-300);
+}
+
+.verifyConfirmBtn {
+  flex-shrink: 0;
+  min-height: 46px;
+  padding: 0 20px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--white);
+  background: var(--red);
+  border: none;
+  border-radius: var(--radius-sm, 8px);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.verifyConfirmBtn:hover:not(:disabled) {
+  background: var(--red-deep);
+}
+
+.verifyConfirmBtn:disabled {
+  background: var(--grey-200);
+  color: var(--grey-500);
+  cursor: not-allowed;
+}
+
+.verifyResendBtn {
+  align-self: flex-start;
+  padding: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--red);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.verifyResendBtn:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
+.verifyResendBtn:disabled {
+  color: var(--grey-500);
+  cursor: default;
+}
+
+.verifyError {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--red-deep);
+}
+
+.verifyDone {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 10px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #1f7a44;
+  background: #eef7f0;
+  border: 1px solid #cfe9d8;
+  border-radius: var(--radius-sm, 8px);
+}
+
+.verifyDone svg {
+  color: #1f7a44;
+}
+
+.ctaGateHint {
+  margin: 10px 0 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  text-align: center;
+  color: var(--grey-700);
 }
 
 /* Pickup card */
@@ -854,6 +1163,29 @@
   letter-spacing: -0.01em;
 }
 
+.summaryNote {
+  padding-top: 12px;
+  border-top: 1px dashed var(--grey-200);
+}
+
+.summaryNoteLabel {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--grey-500);
+  margin-bottom: 6px;
+}
+
+.summaryNoteText {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--grey-700);
+  white-space: pre-wrap;
+}
+
 .summarySheet {
   display: flex;
   flex-direction: column;
@@ -898,7 +1230,7 @@
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  margin-bottom: 16px;
+  margin-bottom: 0;
 }
 
 .summaryTotal span:first-child {
@@ -940,8 +1272,11 @@
 }
 
 .placeOrderBtn:disabled {
-  opacity: 0.55;
+  background: var(--grey-300);
+  color: var(--grey-700);
+  opacity: 1;
   cursor: not-allowed;
+  box-shadow: none;
 }
 
 .stepActions .placeOrderBtn {
@@ -1191,7 +1526,40 @@
 
 @media (max-width: 768px) {
   .page {
-    padding: 20px 16px 80px;
+    /* Shell .main already reserves space for the bottom nav */
+    padding: 16px 16px 0;
+  }
+
+  .formSection {
+    padding: 18px 16px;
+    margin-bottom: 12px;
+    box-shadow: none;
+  }
+
+  .input,
+  .addressEditInput {
+    font-size: 16px;
+  }
+
+  .verifyRow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .verifyConfirmBtn {
+    width: 100%;
+  }
+
+  .verifiedEmailRow {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .changeEmailBtn {
+    align-self: flex-end;
+    min-height: 44px;
+    padding: 8px 4px;
   }
 
   /* Wallet rows: ensure minimum 44px tap target */
@@ -1202,6 +1570,12 @@
   /* Stepper: compact on mobile */
   .stepLabel {
     font-size: 12px;
+  }
+
+  .unavailableAlertTag {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 
@@ -1215,6 +1589,137 @@
 
 .submitBlock .guestBlock {
   margin-top: 0;
+}
+
+.unavailableAlert {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 18px;
+  background: var(--white);
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-sm, 8px);
+}
+
+.unavailableAlertHead {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.unavailableAlertIcon {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(214, 64, 69, 0.28);
+  color: var(--red);
+  background: transparent;
+}
+
+.unavailableAlertBody {
+  min-width: 0;
+}
+
+.unavailableAlertTitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+  line-height: 1.35;
+}
+
+.unavailableAlertTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.unavailableAlertTag {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 5px 10px;
+  border: 1px solid var(--grey-200);
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--white);
+  line-height: 1.2;
+}
+
+.unavailableAlertCopy {
+  margin: 12px 0 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--grey-700);
+}
+
+.unavailableAlertActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.unavailableAlertPrimary,
+.unavailableAlertSecondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  transition:
+    border-color 0.15s,
+    color 0.15s;
+}
+
+.unavailableAlertPrimary {
+  background: var(--white);
+  color: var(--red);
+  border: 1.5px solid var(--red);
+}
+
+.unavailableAlertPrimary:hover {
+  border-color: var(--red-deep);
+  color: var(--red-deep);
+}
+
+.unavailableAlertSecondary {
+  background: var(--white);
+  border: 1.5px solid var(--grey-200);
+  color: var(--ink);
+}
+
+.unavailableAlertSecondary:hover {
+  border-color: var(--ink);
+}
+
+@media (max-width: 559px) {
+  .unavailableAlert {
+    padding: 14px 16px;
+  }
+
+  .unavailableAlertActions {
+    flex-direction: column;
+  }
+
+  .unavailableAlertPrimary,
+  .unavailableAlertSecondary {
+    width: 100%;
+  }
 }
 
 .guestBlockMsg {

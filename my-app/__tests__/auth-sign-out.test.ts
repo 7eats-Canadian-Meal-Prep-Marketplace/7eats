@@ -41,14 +41,14 @@ describe("POST /api/auth/sign-out", () => {
     setAccount({ role: "client" });
   });
 
-  it("redirects a client to /app-auth/login", async () => {
+  it("redirects a client to /app/browse", async () => {
     setAccount({ role: "client" });
 
     const res = await POST(makeRequest());
     const body = await res.json();
 
     expect(res.status).toBe(200);
-    expect(body).toEqual({ redirect: "/app-auth/login" });
+    expect(body).toEqual({ redirect: "/app/browse" });
   });
 
   it("redirects a cook to /business-auth/login", async () => {
@@ -71,17 +71,17 @@ describe("POST /api/auth/sign-out", () => {
     expect(body).toEqual({ redirect: "/business-auth/login" });
   });
 
-  it("falls back to /app-auth/login when getSession returns null", async () => {
+  it("falls back to /app/browse when getSession returns null", async () => {
     vi.mocked(auth.api.getSession).mockResolvedValue(null as never);
 
     const res = await POST(makeRequest());
     const body = await res.json();
 
     expect(res.status).toBe(200);
-    expect(body).toEqual({ redirect: "/app-auth/login" });
+    expect(body).toEqual({ redirect: "/app/browse" });
   });
 
-  it("falls back to /app-auth/login when getSession throws", async () => {
+  it("falls back to /app/browse when getSession throws", async () => {
     vi.mocked(auth.api.getSession).mockRejectedValue(
       new Error("session error"),
     );
@@ -90,7 +90,7 @@ describe("POST /api/auth/sign-out", () => {
     const body = await res.json();
 
     expect(res.status).toBe(200);
-    expect(body).toEqual({ redirect: "/app-auth/login" });
+    expect(body).toEqual({ redirect: "/app/browse" });
   });
 
   it("always calls signOut regardless of session or role outcome", async () => {

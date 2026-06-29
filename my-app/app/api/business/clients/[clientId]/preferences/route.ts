@@ -3,7 +3,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getCookId, unauthorized } from "@/app/api/business/_lib/cook-auth";
 import { db } from "@/db";
-import { conversations, orders, userPreferences } from "@/db/schema";
+import { authUser, conversations, orders, userPreferences } from "@/db/schema";
 
 // ─── GET /api/business/clients/[clientId]/preferences ──────────────────────────
 // Read-only. Returns the client's onboarding preferences (dietary, allergies,
@@ -53,25 +53,44 @@ export async function GET(req: NextRequest, { params }: Params) {
       );
     }
 
-    const [prefs] = await db
-      .select({
-        dietary: userPreferences.dietary,
-        allergies: userPreferences.allergies,
-        goals: userPreferences.goals,
-        whyMealPrep: userPreferences.whyMealPrep,
-      })
-      .from(userPreferences)
-      .where(eq(userPreferences.userId, clientId))
-      .limit(1);
+    const [userRow, prefs] = await Promise.all([
+      db
+        .select({
+          status: authUser.status,
+          isGuestAccount: authUser.isGuestAccount,
+        })
+        .from(authUser)
+        .where(eq(authUser.id, clientId))
+        .limit(1),
+      db
+        .select({
+          dietary: userPreferences.dietary,
+          allergies: userPreferences.allergies,
+          goals: userPreferences.goals,
+          whyMealPrep: userPreferences.whyMealPrep,
+        })
+        .from(userPreferences)
+        .where(eq(userPreferences.userId, clientId))
+        .limit(1),
+    ]);
+
+    if (!userRow[0]) {
+      return NextResponse.json({ error: "Client not found." }, { status: 404 });
+    }
+
+    const client = userRow[0];
+    const prefRow = prefs[0];
 
     return NextResponse.json({
       success: true,
       data: {
-        dietary: prefs?.dietary ?? [],
-        allergies: prefs?.allergies ?? [],
-        goals: prefs?.goals ?? [],
-        whyMealPrep: prefs?.whyMealPrep ?? [],
-        hasPreferences: Boolean(prefs),
+        dietary: prefRow?.dietary ?? [],
+        allergies: prefRow?.allergies ?? [],
+        goals: prefRow?.goals ?? [],
+        whyMealPrep: prefRow?.whyMealPrep ?? [],
+        hasPreferences: Boolean(prefRow),
+        clientStatus: client.status,
+        isGuest: client.isGuestAccount,
       },
     });
   } catch (err) {

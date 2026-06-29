@@ -56,6 +56,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .statLabel {
@@ -88,16 +90,18 @@
 /* ─── Period toggle ──────────────────────────────────────────────────────────── */
 .toggle {
   display: flex;
+  flex-shrink: 0;
   background: #f0f0f3;
   border: 1px solid #e4e4e9;
   border-radius: 6px;
   padding: 2px;
-  gap: 1px;
+  gap: 2px;
 }
 
 .toggleBtn {
-  padding: 2px 8px;
-  font-size: 10.5px;
+  padding: 4px 10px;
+  min-height: 28px;
+  font-size: 11px;
   font-weight: 500;
   color: #8a8a96;
   background: transparent;
@@ -427,6 +431,12 @@
 @media (max-width: 767px) {
   .statsStrip {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .statCard:first-child .statTop {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
   }
 
   .columns {

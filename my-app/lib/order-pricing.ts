@@ -1,4 +1,13 @@
 import type { leadTimeEnum } from "@/db/schema";
+import {
+  LEAD_TIME_DAYS,
+  LEAD_TIME_HOURS,
+  type LeadTimeRules,
+  cancelByDate as leadCancelByDate,
+  earliestPickup as leadEarliestPickup,
+  isRefundEligible as leadIsRefundEligible,
+  refundCutoffExclusive as leadRefundCutoffExclusive,
+} from "@/lib/lead-time";
 
 export type PromoLike = { type: "percentage_off" | "fixed_off"; value: number };
 
@@ -32,69 +41,29 @@ export function computeLineTotal(
 
 type LeadTime = (typeof leadTimeEnum.enumValues)[number];
 
-/** Minimum hours between "now" and an allowed pickup time, per cook lead time. */
-export const LEAD_TIME_HOURS: Record<LeadTime, number> = {
-  same_day: 0,
-  "1_day": 24,
-  "2_days": 48,
-  "3_days": 72,
-  "4_days": 96,
-  "5_days": 120,
-};
+export { LEAD_TIME_HOURS, LEAD_TIME_DAYS };
 
-/** Whole days of notice a cook requires before a pickup, per lead time. */
-export const LEAD_TIME_DAYS: Record<LeadTime, number> = {
-  same_day: 0,
-  "1_day": 1,
-  "2_days": 2,
-  "3_days": 3,
-  "4_days": 4,
-  "5_days": 5,
-};
+function toRules(
+  leadTime: LeadTime | string | null,
+  leadTimeCutoff?: string | null,
+): LeadTimeRules {
+  return { leadTime, leadTimeCutoff };
+}
 
-/**
- * Earliest valid pickup Date given a lead time and a reference "now".
- *
- * Lead time is counted in whole calendar days, not rolling hours: a cook with a
- * 3-day lead who is ordered from on Monday can be picked up from on Thursday
- * (Monday + 3 days), regardless of the hour the order is placed. The floor is
- * the start of that calendar day, but never earlier than "now" (so a same-day
- * cook still can't be booked for a time already past).
- */
 export function earliestPickup(
   leadTime: LeadTime | null,
   now: Date = new Date(),
+  leadTimeCutoff?: string | null,
 ): Date {
-  const days = leadTime ? LEAD_TIME_DAYS[leadTime] : 0;
-  const dayFloor = new Date(
-    now.getFullYear(),
-    now.getMonth(),
-    now.getDate() + days,
-  );
-  return dayFloor.getTime() < now.getTime() ? now : dayFloor;
+  return leadEarliestPickup(toRules(leadTime, leadTimeCutoff), now);
 }
 
-/**
- * Exclusive upper bound for refund eligibility: start of the calendar day after
- * the last day a client may cancel. Pickup Thursday with a 3-day lead → eligible
- * through end of Monday (now < Tuesday 00:00 local).
- */
 export function refundCutoffExclusive(
   pickupAt: Date,
   leadTime: LeadTime | null,
+  leadTimeCutoff?: string | null,
 ): Date | null {
-  if (Number.isNaN(pickupAt.getTime())) return null;
-  const days = leadTime ? LEAD_TIME_DAYS[leadTime] : 0;
-  const pickupDay = new Date(
-    pickupAt.getFullYear(),
-    pickupAt.getMonth(),
-    pickupAt.getDate(),
-  );
-  return new Date(
-    pickupDay.getFullYear(),
-    pickupDay.getMonth(),
-    pickupDay.getDate() - days + 1,
-  );
+  return leadRefundCutoffExclusive(pickupAt, toRules(leadTime, leadTimeCutoff));
 }
 
 export function isRefundEligible(
@@ -102,8 +71,14 @@ export function isRefundEligible(
   leadTime: LeadTime | null,
   cancellationAllowed: boolean,
   now: Date = new Date(),
+  leadTimeCutoff?: string | null,
 ): boolean {
-  if (!cancellationAllowed || !pickupAt) return false;
-  const cutoff = refundCutoffExclusive(pickupAt, leadTime);
-  return cutoff != null && now < cutoff;
+  return leadIsRefundEligible(
+    pickupAt,
+    toRules(leadTime, leadTimeCutoff),
+    cancellationAllowed,
+    now,
+  );
 }
+
+export { leadCancelByDate as cancelByDateForRules };

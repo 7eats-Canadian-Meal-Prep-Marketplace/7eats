@@ -77,12 +77,36 @@ describe("GET /api/user/preferences", () => {
     const body = await res.json();
     expect(body.success).toBe(true);
     expect(body.data.dietary).toEqual(["Halal"]);
-    expect(body.data.allergies).toEqual(["None"]);
+    expect(body.data.allergies).toEqual(["No known allergies"]);
   });
 });
 
 describe("PATCH /api/user/preferences", () => {
   beforeEach(() => vi.clearAllMocks());
+
+  it("rejects incomplete preference sheets", async () => {
+    mockSession(USER_ID);
+    vi.mocked(db.select).mockImplementation(() =>
+      limitChain([{ role: "client" }]),
+    );
+
+    const res = await PATCH(
+      new NextRequest("http://localhost/api/user/preferences", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          dietary: ["Vegan"],
+          allergies: [],
+          goals: ["High protein"],
+          whyMealPrep: ["Eat healthier"],
+        }),
+      }),
+    );
+
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Pick at least one option in every section.");
+  });
 
   it("upserts preferences for the client", async () => {
     mockSession(USER_ID);
@@ -91,7 +115,7 @@ describe("PATCH /api/user/preferences", () => {
     );
     mockUpsertReturning({
       dietary: ["Vegan"],
-      allergies: [],
+      allergies: ["No known allergies"],
       goals: ["High protein"],
       whyMealPrep: ["Eat healthier"],
     });
@@ -102,7 +126,7 @@ describe("PATCH /api/user/preferences", () => {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           dietary: ["Vegan"],
-          allergies: [],
+          allergies: ["No known allergies"],
           goals: ["High protein"],
           whyMealPrep: ["Eat healthier"],
         }),

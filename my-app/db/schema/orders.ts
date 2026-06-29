@@ -9,6 +9,7 @@ import {
   pgPolicy,
   pgTable,
   text,
+  time,
   timestamp,
   uniqueIndex,
   uuid,
@@ -18,7 +19,7 @@ import { authUser } from "./auth";
 import { cookProfiles } from "./cooks";
 import { platformDiscounts } from "./discounts";
 import { dishes, dishPromotions } from "./dishes";
-import { lateCancelFeeTypeEnum, orderStatus } from "./enums";
+import { lateCancelFeeTypeEnum, leadTimeEnum, orderStatus } from "./enums";
 import { listings } from "./listings";
 
 const isAdmin = sql`auth.role() = 'admin'`;
@@ -59,6 +60,11 @@ export const orders = pgTable(
     cancellationAllowed: boolean("cancellation_allowed")
       .notNull()
       .default(false),
+    /** Lead time + cutoff frozen at checkout so later cook edits cannot move refund windows. */
+    leadTimeSnapshot: leadTimeEnum("lead_time_snapshot"),
+    leadTimeCutoffSnapshot: time("lead_time_cutoff_snapshot", {
+      precision: 0,
+    }),
     // total_price = unit_price * quantity - COALESCE(discount_amount, 0)
     totalPrice: numeric("total_price", { precision: 10, scale: 2 }).notNull(),
     currency: varchar("currency", { length: 3 }).notNull().default("CAD"),
@@ -86,6 +92,8 @@ export const orders = pgTable(
     }),
     lateCancelFee: numeric("late_cancel_fee", { precision: 10, scale: 2 }),
     notes: text("notes"),
+    /** Drop-off instructions from the customer (delivery only). */
+    deliveryDetails: text("delivery_details"),
     // Deprecated: subscriptions removed for launch. Plain uuid kept for history.
     subscriptionId: uuid("subscription_id"),
     pickupCodeHash: text("pickup_code_hash"),
@@ -286,6 +294,8 @@ export const reviews = pgTable(
     }),
     rating: integer("rating").notNull(),
     comment: text("comment"),
+    /** Snapshot at post time; kept after account deletion. */
+    reviewerDisplayName: varchar("reviewer_display_name", { length: 120 }),
     cookResponse: text("cook_response"),
     cookResponseAt: timestamp("cook_response_at"),
     isVisible: boolean("is_visible").notNull().default(true),

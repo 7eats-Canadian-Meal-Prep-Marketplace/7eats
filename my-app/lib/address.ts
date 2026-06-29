@@ -36,6 +36,33 @@ export function formatAddressLine(parts: {
     .join(", ");
 }
 
+/**
+ * Compose a cook's pickup address for display to the client (order detail page,
+ * checkout, and emails). Mirrors the delivery address order — street, unit,
+ * city, province, postal — includes the unit (which `formatAddressLine` omits),
+ * normalizes the province to a 2-letter code, and returns `null` when nothing
+ * is present so callers can suppress an empty "Location" row.
+ */
+export function formatPickupLocation(parts: {
+  street?: string | null;
+  unit?: string | null;
+  city?: string | null;
+  province?: string | null;
+  postal?: string | null;
+}): string | null {
+  const line = [
+    parts.street,
+    parts.unit,
+    parts.city,
+    parts.province ? normalizeProvinceCode(parts.province) : null,
+    parts.postal,
+  ]
+    .map((p) => p?.trim())
+    .filter(Boolean)
+    .join(", ");
+  return line.length > 0 ? line : null;
+}
+
 export function isGeocodedPickupAddress(input: {
   pickupStreet: string;
   pickupCity: string;

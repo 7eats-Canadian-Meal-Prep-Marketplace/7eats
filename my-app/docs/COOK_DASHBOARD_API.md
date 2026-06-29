@@ -379,7 +379,7 @@ Returns operational and notification settings for the cook.
     "lateCancelWindowHours": 24,
     "emailNotificationsNewOrder": true,
     "emailNotificationsNewReview": true,
-    "smsNotificationsNewOrder": false
+    "smsNotificationsNewOrder": true
   }
 }
 ```

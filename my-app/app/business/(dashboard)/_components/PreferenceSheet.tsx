@@ -2,6 +2,7 @@
 
 import { X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Skeleton } from "../_skeleton";
 import styles from "./PreferenceSheet.module.css";
 
 // Read-only client preference sheet. Opened from an order or a conversation; the
@@ -14,6 +15,8 @@ type Preferences = {
   goals: string[];
   whyMealPrep: string[];
   hasPreferences: boolean;
+  clientStatus: string;
+  isGuest: boolean;
 };
 
 type LoadState =
@@ -30,6 +33,50 @@ const SECTIONS: {
   { key: "goals", label: "Goals" },
   { key: "whyMealPrep", label: "Why they meal prep" },
 ];
+
+const SKELETON_SECTIONS = [
+  { id: "dietary", labelWidth: "28%", chips: [72, 88, 64] },
+  { id: "allergies", labelWidth: "34%", chips: [96, 80] },
+  { id: "goals", labelWidth: "28%", chips: [70, 84, 56] },
+  { id: "whyMealPrep", labelWidth: "34%", chips: [100, 76] },
+] as const;
+
+function PreferenceSheetSkeleton() {
+  return (
+    <>
+      {SKELETON_SECTIONS.map((section) => (
+        <section key={section.id} className={styles.section} aria-hidden="true">
+          <Skeleton width={section.labelWidth} height={11} radius={6} />
+          <div className={styles.chips}>
+            {section.chips.map((w) => (
+              <Skeleton key={w} width={w} height={30} radius={999} />
+            ))}
+          </div>
+        </section>
+      ))}
+    </>
+  );
+}
+
+function emptyPreferencesCopy(prefs: Preferences): string {
+  if (prefs.clientStatus === "deleted") {
+    return "This account has been deleted. Their preferences are no longer available.";
+  }
+  if (prefs.isGuest) {
+    return "This customer checked out as a guest and has not shared meal prep preferences.";
+  }
+  return "They haven't shared any preferences yet.";
+}
+
+function footnoteCopy(prefs: Preferences): string {
+  if (prefs.clientStatus === "deleted") {
+    return "Account deleted · preferences removed";
+  }
+  if (prefs.isGuest) {
+    return "Read-only · guest checkout";
+  }
+  return "Read-only · set by the client";
+}
 
 export function PreferenceSheet({
   clientId,
@@ -110,10 +157,8 @@ export function PreferenceSheet({
           </button>
         </header>
 
-        <div className={styles.body}>
-          {state.status === "loading" && (
-            <p className={styles.muted}>Loading preferences…</p>
-          )}
+        <div className={styles.body} aria-busy={state.status === "loading"}>
+          {state.status === "loading" && <PreferenceSheetSkeleton />}
 
           {state.status === "error" && (
             <p className={styles.error}>{state.message}</p>
@@ -122,7 +167,7 @@ export function PreferenceSheet({
           {state.status === "ready" &&
             (!state.prefs.hasPreferences ? (
               <p className={styles.muted}>
-                They haven&apos;t shared any preferences yet.
+                {emptyPreferencesCopy(state.prefs)}
               </p>
             ) : (
               SECTIONS.map(({ key, label }) => {
@@ -147,7 +192,9 @@ export function PreferenceSheet({
             ))}
         </div>
 
-        <p className={styles.footnote}>Read-only · set by the client</p>
+        {state.status === "ready" && (
+          <p className={styles.footnote}>{footnoteCopy(state.prefs)}</p>
+        )}
       </aside>
     </>
   );

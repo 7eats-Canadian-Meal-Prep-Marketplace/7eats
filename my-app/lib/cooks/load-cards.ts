@@ -9,6 +9,7 @@ import {
   reviews,
   tags,
 } from "@/db/schema";
+import { formatDbLeadTimeCutoff } from "@/lib/lead-time";
 
 export type CookCardData = {
   id: string;
@@ -21,6 +22,7 @@ export type CookCardData = {
   niches: { slug: string; label: string }[];
   cuisines: { slug: string; label: string }[];
   leadTime: string | null;
+  leadTimeCutoff: string | null;
   delivery: string | null;
   offersPickup: boolean;
   pickupCity: string | null;
@@ -76,6 +78,7 @@ export async function loadCookCards(
       bannerUrl: cookProfiles.bannerUrl,
       bio: cookProfiles.bio,
       leadTime: cookProfiles.leadTime,
+      leadTimeCutoff: cookProfiles.leadTimeCutoff,
       delivery: cookProfiles.delivery,
       offersPickup: cookProfiles.offersPickup,
       pickupCity: cookProfiles.pickupCity,
@@ -110,6 +113,7 @@ export async function loadCookCards(
       cookProfiles.bannerUrl,
       cookProfiles.bio,
       cookProfiles.leadTime,
+      cookProfiles.leadTimeCutoff,
       cookProfiles.delivery,
       cookProfiles.offersPickup,
       cookProfiles.pickupCity,
@@ -206,6 +210,7 @@ export async function loadCookCards(
         .filter((t) => t.category === "cuisine")
         .map(stripCategory),
       leadTime: row.leadTime ?? null,
+      leadTimeCutoff: formatDbLeadTimeCutoff(row.leadTimeCutoff),
       delivery: row.delivery ?? null,
       offersPickup: row.offersPickup !== false,
       pickupCity: row.pickupCity ?? null,

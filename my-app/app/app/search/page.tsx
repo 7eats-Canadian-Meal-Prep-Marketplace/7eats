@@ -1,6 +1,6 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { parseCookSort, sortCooks } from "@/lib/cook-sort";
 import { useApp } from "../_app-context";
@@ -9,6 +9,7 @@ import {
   CookGrid,
   normalizeBrowseCook,
 } from "../_cook-card";
+import { DiscoveryFilterBar } from "../_discovery-bar";
 import { SearchSortDropdown } from "../_search-sort";
 import { useServiceAddress } from "../_service-address-context";
 import { Skeleton } from "../_skeleton";
@@ -18,6 +19,7 @@ import searchStyles from "./page.module.css";
 
 function SearchContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const qParam = searchParams.get("q") ?? "";
   const cuisineParam = searchParams.get("cuisine") ?? "";
   const allParam = searchParams.get("all") === "1";
@@ -46,6 +48,12 @@ function SearchContent() {
     : allParam
       ? "all"
       : "none";
+
+  // Bare /app/search with no params → list all kitchens (same as nav Search tab).
+  useEffect(() => {
+    if (qParam.trim() || cuisineParam.trim() || allParam) return;
+    router.replace("/app/search?all=1");
+  }, [qParam, cuisineParam, allParam, router]);
 
   useEffect(() => {
     if (!ready) return;
@@ -108,6 +116,8 @@ function SearchContent() {
 
   return (
     <div className={browseStyles.page}>
+      <DiscoveryFilterBar showMobileSearch />
+
       <div className={browseStyles.content}>
         {hasFilter && !loading && (
           <p className={browseStyles.searchSummary}>{filterLabel}</p>
@@ -151,7 +161,7 @@ function SearchContent() {
           <div className={browseStyles.emptyState}>
             <p className={browseStyles.emptyTitle}>Search for a craving</p>
             <p className={browseStyles.emptyDesc}>
-              Try a dish, cuisine, or meal prep service in the bar above.
+              Try a dish, cuisine, or meal prep service below.
             </p>
           </div>
         ) : results.length === 0 ? (

@@ -35,6 +35,22 @@ const COLOR = {
 export const CONTACT_EMAIL = "team@7eats.ca";
 export const NOREPLY_FROM = "noreply@7eats.ca";
 
+/** Resend From header display names — same mailbox, different inbox label. */
+export type EmailSenderProfile = "noreply" | "team";
+
+const SENDER_DISPLAY_NAMES: Record<EmailSenderProfile, string> = {
+  noreply: "noreply",
+  team: "7eats Team",
+};
+
+/** Builds a Resend-compatible From value, e.g. `noreply <noreply@7eats.ca>`. */
+export function formatEmailFrom(
+  profile: EmailSenderProfile = "noreply",
+  email = process.env.RESEND_FROM_EMAIL ?? NOREPLY_FROM,
+): string {
+  return `${SENDER_DISPLAY_NAMES[profile]} <${email}>`;
+}
+
 // The brand wordmark, served as a PNG (email clients don't render SVG). Built
 // from public/7eats-logo.svg via scripts/make-email-logo.mjs; intrinsic 113x64.
 // Email clients must fetch images from the public internet, so local app URLs
@@ -58,9 +74,10 @@ function emailAssetOrigin(): string {
 
 const LOGO_URL = `${emailAssetOrigin()}/7eats-logo-email.png`;
 
-// Minimal HTML escaping for untrusted, plain-text values (names, dish titles)
-// that get dropped into a markup context such as the headline.
-function escapeHtml(value: string): string {
+// Minimal HTML escaping for untrusted, plain-text values (names, dish titles,
+// cook-entered addresses) that get dropped into a markup context such as the
+// headline or a details-table value.
+export function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -252,7 +269,7 @@ export function orderSummaryTable(opts: {
     const totalText =
       opts.total != null && opts.total !== ""
         ? `${money(Number(opts.total))} ${currency}`
-        : "—";
+        : "-";
 
     totalsRows =
       lineRow("Subtotal", money(subtotal), { border: true }) +
@@ -266,6 +283,18 @@ export function orderSummaryTable(opts: {
 
 export function paragraph(text: string): string {
   return `<p style="margin:0 0 16px;font-family:${FONT_STACK};font-size:15px;line-height:1.65;color:${COLOR.ink};">${text}</p>`;
+}
+
+// Compact bullet list for short bits of guidance (e.g. delivery hand-off tips).
+// Kept tight so a few pointers don't feel cluttered.
+export function bulletList(items: string[]): string {
+  const lis = items
+    .map(
+      (item) =>
+        `<li style="margin:0 0 8px;font-family:${FONT_STACK};font-size:15px;line-height:1.6;color:${COLOR.ink};">${item}</li>`,
+    )
+    .join("");
+  return `<ul style="margin:0 0 16px;padding:0 0 0 22px;">${lis}</ul>`;
 }
 
 export function pickupCodeBlock(code: string, label = "Pickup code"): string {

@@ -4,7 +4,7 @@ import ResetPasswordForm from "@/app/components/ResetPasswordForm";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
-  title: "Reset password | 7eats",
+  title: "Reset password - 7eats",
 };
 
 export default async function ResetPasswordPage({

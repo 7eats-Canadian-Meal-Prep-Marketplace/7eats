@@ -3,7 +3,14 @@ import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getCookId, unauthorized } from "@/app/api/business/_lib/cook-auth";
 import { db } from "@/db";
-import { authUser, listings, orderDishes, orders } from "@/db/schema";
+import {
+  authUser,
+  listings,
+  orderDishes,
+  orderPayments,
+  orders,
+} from "@/db/schema";
+import { orderHasPlacedPaymentFilter } from "@/lib/orders/abandoned-checkout";
 
 const querySchema = z.object({
   status: z
@@ -32,7 +39,7 @@ export async function GET(req: NextRequest) {
   const { status, listingId, dateFrom, dateTo, page, limit } = parsed.data;
   const offset = (page - 1) * limit;
 
-  const conditions = [eq(orders.cookId, cookId)];
+  const conditions = [eq(orders.cookId, cookId), orderHasPlacedPaymentFilter()];
   if (status) conditions.push(eq(orders.status, status));
   if (listingId) conditions.push(eq(orders.listingId, listingId));
   // Date range filters the *scheduled* day. `pickupAt` is only ever set for
@@ -66,6 +73,8 @@ export async function GET(req: NextRequest) {
             WHERE ${orderDishes.orderId} = ${orders.id}
           )`,
           totalPrice: orders.totalPrice,
+          taxAmount: orders.taxAmount,
+          deliveryFeeSnapshot: orders.deliveryFeeSnapshot,
           pickupAt: orders.pickupAt,
           fulfillmentWindowStart: orders.fulfillmentWindowStart,
           fulfillmentWindowEnd: orders.fulfillmentWindowEnd,
@@ -73,6 +82,7 @@ export async function GET(req: NextRequest) {
           fulfilledAt: orders.fulfilledAt,
           cancelledAt: orders.cancelledAt,
           notes: orders.notes,
+          deliveryDetails: orders.deliveryDetails,
           createdAt: orders.createdAt,
           pickupCodeExpiresAt: orders.pickupCodeExpiresAt,
           pickupCodeVerifiedAt: orders.pickupCodeVerifiedAt,
@@ -86,10 +96,23 @@ export async function GET(req: NextRequest) {
           customerName: authUser.name,
           customerFirstName: authUser.firstName,
           customerLastName: authUser.lastName,
+          clientAccountStatus: authUser.status,
+          isGuestCheckout: orders.isGuestCheckout,
+          clientIsGuestAccount: authUser.isGuestAccount,
+          platformFeePct: orderPayments.platformFeePct,
+          platformFeeAmount: orderPayments.platformFeeAmount,
+          cookPayoutAmount: orderPayments.cookPayoutAmount,
         })
         .from(orders)
         .leftJoin(listings, eq(orders.listingId, listings.id))
         .leftJoin(authUser, eq(orders.clientId, authUser.id))
+        .leftJoin(
+          orderPayments,
+          and(
+            eq(orderPayments.orderId, orders.id),
+            eq(orderPayments.type, "full"),
+          ),
+        )
         .where(where)
         .orderBy(desc(orders.createdAt))
         .limit(limit)

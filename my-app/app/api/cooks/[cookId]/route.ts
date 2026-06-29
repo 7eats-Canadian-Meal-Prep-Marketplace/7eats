@@ -10,6 +10,7 @@ import {
   reviews,
   tags,
 } from "@/db/schema";
+import { formatDbLeadTimeCutoff } from "@/lib/lead-time";
 
 export async function GET(
   _req: NextRequest,
@@ -33,6 +34,7 @@ export async function GET(
         neighborhood: authUser.neighborhood,
         pickupCity: cookProfiles.pickupCity,
         leadTime: cookProfiles.leadTime,
+        leadTimeCutoff: cookProfiles.leadTimeCutoff,
         offersPickup: cookProfiles.offersPickup,
         delivery: cookProfiles.delivery,
         minOrderQty: cookProfiles.minOrderQty,
@@ -121,7 +123,10 @@ export async function GET(
       [row.firstName, row.lastName].filter(Boolean).join(" ") || "Unknown Cook";
 
     const memberSince = row.createdAt
-      ? String(new Date(row.createdAt).getFullYear())
+      ? new Date(row.createdAt).toLocaleDateString("en-US", {
+          month: "short",
+          year: "numeric",
+        })
       : null;
 
     const rating = avgRating != null ? parseFloat(String(avgRating)) : null;
@@ -151,6 +156,7 @@ export async function GET(
         memberSince,
         ordersCompleted: Number(ordersCompleted),
         leadTime: row.leadTime ?? null,
+        leadTimeCutoff: formatDbLeadTimeCutoff(row.leadTimeCutoff),
         offersPickup: row.offersPickup,
         delivery: row.delivery ?? null,
         pickupWindows,
