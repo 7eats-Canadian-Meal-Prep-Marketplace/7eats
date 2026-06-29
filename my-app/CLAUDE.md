@@ -173,3 +173,15 @@ If proxy changes act weird after deleting `middleware.ts`, stop dev and remove
   especially API routes, validation, rate limits, and schema safeguards.
 - **Formatting:** Run Biome on touched files after edits. Avoid unrelated
   formatting churn.
+
+## Writing Style (MANDATORY)
+
+- **Never use em dashes (`—`) in any writing.** This applies to all
+  user-facing copy (UI text, emails, notifications), code comments, commit
+  messages, PR descriptions, and chat responses. Em dashes read as an AI tell.
+- Rewrite instead with a period, comma, colon, semicolon, or parentheses,
+  whichever fits. For example, "7eats covers this. It comes from our fee, not
+  your cut." rather than joining the clauses with an em dash.
+- En dashes for numeric ranges (`1–10`) and the minus sign for negative
+  amounts (`−$4.00`) are fine; the rule is specifically about the em dash as
+  prose punctuation.

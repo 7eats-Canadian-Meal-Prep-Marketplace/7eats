@@ -64,7 +64,7 @@ type Order = CookClientOrderFields & {
   taxAmount: string | null;
   deliveryFeeSnapshot: string | null;
   // Platform-funded discount applied to the customer's total. Does NOT reduce
-  // the cook's payout — shown on the receipt so the customer total reconciles.
+  // the cook's payout; shown on the receipt so the customer total reconciles.
   platformDiscountAmount?: string | null;
   // Money breakdown from order_payments (list + detail).
   platformFeePct?: string | null;
@@ -831,7 +831,8 @@ function OrderDetail({
           </div>
           {platformDiscount > 0 && (
             <p className={styles.receiptDiscountNote}>
-              7eats funded this discount — your payout below is unaffected.
+              7eats covers this discount. It comes out of our platform fee, not
+              your cut, so your payout is the same as a full-price order.
             </p>
           )}
           {cookEarns != null && (
