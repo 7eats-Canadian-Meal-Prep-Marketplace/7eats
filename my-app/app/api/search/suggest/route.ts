@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/db";
-import { kitchenDisplayName } from "@/lib/cook-display";
+import { kitchenDisplayName } from "@/lib/cooks/display";
 import { loadCookCards } from "@/lib/cooks/load-cards";
 import { SUGGEST_LIMIT } from "@/lib/search/config";
 import { normalizeQuery } from "@/lib/search/normalize";

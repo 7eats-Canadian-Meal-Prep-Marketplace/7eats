@@ -4,7 +4,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { authUser } from "@/db/schema";
 import { auth } from "@/lib/auth";
-import { detachCustomerPaymentMethod } from "@/lib/payment-methods";
+import { detachCustomerPaymentMethod } from "@/lib/stripe/payment-methods";
 
 export type Params = { params: Promise<{ pmId: string }> };
 

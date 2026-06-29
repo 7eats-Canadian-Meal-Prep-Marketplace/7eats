@@ -14,7 +14,7 @@ import {
   readOnboardingStorage,
   togglePreference,
   writeOnboardingStorage,
-} from "@/lib/client-preferences";
+} from "@/lib/client/preferences";
 import { isAtLeast16 } from "@/lib/onboarding-validation";
 import {
   formatPhoneDisplay,

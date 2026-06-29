@@ -14,11 +14,11 @@ vi.mock("@/lib/rate-limit", () => ({
 }));
 vi.mock("@/db", () => ({ db: { select: vi.fn() } }));
 vi.mock("@/db/schema", () => ({ orders: {} }));
-vi.mock("@/lib/guest-client", () => ({
+vi.mock("@/lib/guest/client", () => ({
   resolveGuestClient: resolveGuestClientMock,
   ensureStripeCustomer: vi.fn().mockResolvedValue("cus_test"),
 }));
-vi.mock("@/lib/guest-order-access", () => ({
+vi.mock("@/lib/guest/order-access", () => ({
   generateConfirmationCode: vi.fn(() => "7E-AAAA"),
   generateGuestAccessToken: vi.fn(() => "tok"),
   hashGuestAccessToken: vi.fn(() => "hash"),
@@ -38,7 +38,7 @@ import { POST as placeGuestOrder } from "@/app/api/orders/guest/route";
 import {
   buildVerifiedEmailCookie,
   GUEST_EMAIL_VERIFIED_COOKIE,
-} from "@/lib/guest-email-otp";
+} from "@/lib/guest/email-otp";
 
 const EMAIL = "guest@example.com";
 

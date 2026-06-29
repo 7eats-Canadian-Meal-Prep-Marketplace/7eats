@@ -25,7 +25,7 @@ import {
   AddressSearchInput,
   type ResolvedAddress,
 } from "@/components/AddressSearchInput";
-import { OPEN_ADDRESS_EVENT } from "@/lib/address-events";
+import { OPEN_ADDRESS_EVENT } from "@/lib/address/events";
 import {
   addressesMatch,
   GuestAddressProvider,

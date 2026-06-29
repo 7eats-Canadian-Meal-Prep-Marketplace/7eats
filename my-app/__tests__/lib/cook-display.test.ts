@@ -3,7 +3,7 @@ import {
   cookPersonName,
   kitchenDisplayName,
   shouldShowKitchenSubtitle,
-} from "@/lib/cook-display";
+} from "@/lib/cooks/display";
 
 describe("cook-display", () => {
   it("prefers cook name for spotlight person label", () => {

@@ -8,17 +8,22 @@ describe("formatEmailFrom", () => {
     vi.unstubAllEnvs();
   });
 
-  it("defaults to noreply display name", () => {
-    expect(formatEmailFrom()).toBe("noreply <noreply@7eats.ca>");
+  it("defaults to the no-reply display name and mailbox", () => {
+    expect(formatEmailFrom()).toBe("7eats NoReply <noreply@7eats.ca>");
   });
 
-  it("uses team display name for onboarding mail", () => {
-    expect(formatEmailFrom("team")).toBe("7eats Team <noreply@7eats.ca>");
+  it("uses the team display name and mailbox for human mail", () => {
+    expect(formatEmailFrom("team")).toBe("7eats Team <team@7eats.ca>");
   });
 
-  it("respects RESEND_FROM_EMAIL for the mailbox address", () => {
+  it("respects RESEND_FROM_EMAIL for the no-reply mailbox address", () => {
     vi.stubEnv("RESEND_FROM_EMAIL", "mail@7eats.ca");
-    expect(formatEmailFrom("noreply")).toBe("noreply <mail@7eats.ca>");
+    expect(formatEmailFrom("noreply")).toBe("7eats NoReply <mail@7eats.ca>");
+  });
+
+  it("ignores RESEND_FROM_EMAIL for the team mailbox", () => {
+    vi.stubEnv("RESEND_FROM_EMAIL", "mail@7eats.ca");
+    expect(formatEmailFrom("team")).toBe("7eats Team <team@7eats.ca>");
   });
 });
 
@@ -104,6 +109,31 @@ describe("orderSummaryTable", () => {
     expect(withExtras).toContain("$5.00");
     expect(withExtras).toContain("HST");
     expect(withExtras).toContain("$2.50");
+  });
+
+  it("renders a platform discount as a negative line, between delivery and tax", () => {
+    const html = orderSummaryTable({
+      items,
+      deliveryFee: 5,
+      platformDiscount: 4,
+      tax: 2.5,
+      taxLabel: "HST",
+      total: "36.50",
+    });
+    // The discount is shown as a −$ line so the breakdown reconciles:
+    // 33 subtotal + 5 delivery − 4 discount + 2.5 tax = 36.50.
+    expect(html).toContain("Discount");
+    expect(html).toContain("&minus;$4.00");
+    expect(html).toContain("$36.50 CAD");
+    // Ordering: discount sits after Delivery and before the tax label.
+    const discountIdx = html.indexOf("Discount");
+    expect(html.indexOf("Delivery")).toBeLessThan(discountIdx);
+    expect(discountIdx).toBeLessThan(html.indexOf("HST"));
+  });
+
+  it("omits the discount row when there is no platform discount", () => {
+    const html = orderSummaryTable({ items, total: "33.00" });
+    expect(html).not.toContain("Discount");
   });
 
   it("omits the totals block when showTotals is false", () => {

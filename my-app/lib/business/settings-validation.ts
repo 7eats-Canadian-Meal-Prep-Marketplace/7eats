@@ -6,7 +6,7 @@ import {
   DELIVERY_RATE_MIN,
   FREE_DELIVERY_ABOVE_MAX,
   withDeliveryDefaults,
-} from "@/lib/delivery-pricing";
+} from "@/lib/delivery/pricing";
 import { isValidPrice } from "@/lib/price";
 import { isValidOptionalUrl } from "@/lib/url";
 

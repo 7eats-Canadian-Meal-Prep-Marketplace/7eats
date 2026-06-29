@@ -75,6 +75,7 @@ export async function GET(req: NextRequest) {
           totalPrice: orders.totalPrice,
           taxAmount: orders.taxAmount,
           deliveryFeeSnapshot: orders.deliveryFeeSnapshot,
+          platformDiscountAmount: orders.platformDiscountAmount,
           pickupAt: orders.pickupAt,
           fulfillmentWindowStart: orders.fulfillmentWindowStart,
           fulfillmentWindowEnd: orders.fulfillmentWindowEnd,

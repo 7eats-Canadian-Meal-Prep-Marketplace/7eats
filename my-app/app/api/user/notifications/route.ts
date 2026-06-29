@@ -4,7 +4,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { authUser, authUserTable } from "@/db/schema";
 import { auth } from "@/lib/auth";
-import { normalizeClientNotificationPrefs } from "@/lib/client-notification-preferences";
+import { normalizeClientNotificationPrefs } from "@/lib/client/notification-preferences";
 
 export async function GET(req: NextRequest) {
   const session = await auth.api.getSession({ headers: req.headers });

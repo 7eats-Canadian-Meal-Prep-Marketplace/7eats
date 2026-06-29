@@ -21,7 +21,7 @@ vi.mock("@/lib/emails/order-events", () => ({
   sendOrderPlacedEmailToCook: vi.fn(),
   sendOrderReceiptToClient: vi.fn(),
 }));
-vi.mock("@/lib/guest-order-access", () => ({
+vi.mock("@/lib/guest/order-access", () => ({
   guestAccessTokensMatch: vi.fn(),
 }));
 

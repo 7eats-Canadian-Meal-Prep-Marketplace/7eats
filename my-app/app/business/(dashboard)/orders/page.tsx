@@ -10,14 +10,14 @@ import {
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { DELETED_ACCOUNT_DISPLAY_NAME } from "@/lib/client-account-deletion-policy";
-import { arrivalSlots } from "@/lib/delivery-arrival";
-import { canMarkReady, readyAvailableFrom } from "@/lib/order-readiness";
+import { DELETED_ACCOUNT_DISPLAY_NAME } from "@/lib/client/account-deletion-policy";
+import { arrivalSlots } from "@/lib/delivery/arrival";
 import {
   type CookClientOrderFields,
   cookClientDisplayName,
   isCookClientDeleted,
 } from "@/lib/orders/cook-client-display";
+import { canMarkReady, readyAvailableFrom } from "@/lib/orders/readiness";
 import { PreferenceSheet } from "../_components/PreferenceSheet";
 import { Skeleton } from "../_skeleton";
 import styles from "./page.module.css";
@@ -63,6 +63,9 @@ type Order = CookClientOrderFields & {
   totalPrice: string;
   taxAmount: string | null;
   deliveryFeeSnapshot: string | null;
+  // Platform-funded discount applied to the customer's total. Does NOT reduce
+  // the cook's payout; shown on the receipt so the customer total reconciles.
+  platformDiscountAmount?: string | null;
   // Money breakdown from order_payments (list + detail).
   platformFeePct?: string | null;
   platformFeeAmount?: string | null;
@@ -621,6 +624,9 @@ function OrderDetail({
   const hasDishes = !!order.dishes && order.dishes.length > 0;
   const subtotal = dishesSubtotal(order.dishes);
   const deliveryFee = Number.parseFloat(order.deliveryFeeSnapshot ?? "0");
+  const platformDiscount = Number.parseFloat(
+    order.platformDiscountAmount ?? "0",
+  );
   const tax = Number.parseFloat(order.taxAmount ?? "0");
   const total = Number.parseFloat(order.totalPrice ?? "0");
   const platformFee = Number.parseFloat(order.platformFeeAmount ?? "0");
@@ -805,6 +811,12 @@ function OrderDetail({
               <span>{money(deliveryFee)}</span>
             </div>
           )}
+          {platformDiscount > 0 && (
+            <div className={styles.receiptTotalRow}>
+              <span>Platform discount</span>
+              <span>&minus;{money(platformDiscount)}</span>
+            </div>
+          )}
           {tax > 0 && (
             <div className={styles.receiptTotalRow}>
               <span>Tax</span>
@@ -817,6 +829,12 @@ function OrderDetail({
             <span>Customer total</span>
             <span>{money(order.totalPrice)}</span>
           </div>
+          {platformDiscount > 0 && (
+            <p className={styles.receiptDiscountNote}>
+              7eats covers this discount. It comes out of our platform fee, not
+              your cut, so your payout is the same as a full-price order.
+            </p>
+          )}
           {cookEarns != null && (
             <>
               {showEarnBreakdown && (

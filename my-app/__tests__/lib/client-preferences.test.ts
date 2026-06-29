@@ -7,7 +7,7 @@ import {
   isClientPreferencesComplete,
   normalizeClientPreferences,
   togglePreference,
-} from "@/lib/client-preferences";
+} from "@/lib/client/preferences";
 
 const COMPLETE_PREFS = {
   dietary: ["Halal"],

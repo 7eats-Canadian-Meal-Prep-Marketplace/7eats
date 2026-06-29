@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   formatUnavailableDishesMessage,
   openOrdersArchiveError,
-} from "@/lib/dish-lifecycle-messages";
+} from "@/lib/dishes/lifecycle-messages";
 
 describe("openOrdersArchiveError", () => {
   it("uses singular copy for one open order", () => {

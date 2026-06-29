@@ -15,15 +15,15 @@ import { AddressSearchInput } from "@/components/AddressSearchInput";
 import {
   type FulfillmentWindow,
   nextFulfillmentSlotIso,
-} from "@/lib/cook-card-schedule";
+} from "@/lib/cooks/card-schedule";
 import { useGuestAddress } from "@/lib/hooks/use-guest-address";
 import { DELIVERY_HANDOFF_DISCLAIMER } from "@/lib/orders/delivery-details-copy";
+import { refundPolicyText } from "@/lib/orders/refund-policy";
 import {
   formatPhoneDisplay,
   isValidNorthAmericanPhone,
   phoneDigits,
 } from "@/lib/phone";
-import { refundPolicyText } from "@/lib/refund-policy";
 import type { NormalizedAddress } from "@/lib/types/address";
 import { useApp } from "../_app-context";
 import { type DeliveryAddress, useCart } from "../_cart-context";

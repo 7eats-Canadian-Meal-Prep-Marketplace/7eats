@@ -14,7 +14,7 @@ import {
 import {
   guestAccessTokensMatch,
   hashGuestAccessToken,
-} from "@/lib/guest-order-access";
+} from "@/lib/guest/order-access";
 import { resolveOrderLeadTimeRules } from "@/lib/lead-time";
 import {
   isClientOrderCancellable,
@@ -26,7 +26,7 @@ import {
   capturePaymentIntent,
   refundPaymentIntent,
   reverseCookSubsidyTransfer,
-} from "@/lib/stripe-payments";
+} from "@/lib/stripe/payments";
 
 export type CancelOrderResult =
   | { ok: true; refunded: boolean }
@@ -52,6 +52,7 @@ export async function cancelClientOrder(
       totalPrice: orders.totalPrice,
       currency: orders.currency,
       deliveryFeeSnapshot: orders.deliveryFeeSnapshot,
+      platformDiscountAmount: orders.platformDiscountAmount,
       taxAmount: orders.taxAmount,
       pickupAt: orders.pickupAt,
       fulfillmentWindowStart: orders.fulfillmentWindowStart,
@@ -96,6 +97,7 @@ export async function cancelGuestOrderByToken(
       totalPrice: orders.totalPrice,
       currency: orders.currency,
       deliveryFeeSnapshot: orders.deliveryFeeSnapshot,
+      platformDiscountAmount: orders.platformDiscountAmount,
       taxAmount: orders.taxAmount,
       pickupAt: orders.pickupAt,
       fulfillmentWindowStart: orders.fulfillmentWindowStart,
@@ -137,6 +139,7 @@ async function executeCancellation(
     totalPrice: string;
     currency: string;
     deliveryFeeSnapshot: string | null;
+    platformDiscountAmount: string | null;
     taxAmount: string | null;
     pickupAt: Date | null;
     fulfillmentWindowStart: Date | null;
@@ -280,6 +283,7 @@ async function notifyOfClientCancellation(
     totalPrice: string;
     currency: string;
     deliveryFeeSnapshot: string | null;
+    platformDiscountAmount: string | null;
     taxAmount: string | null;
     pickupAt: Date | null;
     fulfillmentWindowStart: Date | null;
@@ -356,6 +360,7 @@ async function notifyOfClientCancellation(
       discountAmount: d.discountAmount,
     })),
     deliveryFee: order.deliveryFeeSnapshot,
+    platformDiscount: order.platformDiscountAmount,
     taxAmount: order.taxAmount,
   };
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { INTERVAL_MAP } from "./stripe-subscriptions";
+import { INTERVAL_MAP } from "@/lib/stripe/subscriptions";
 
 describe("INTERVAL_MAP", () => {
   it("maps weekly to Stripe week/1", () => {

@@ -1,5 +1,5 @@
-import type { ClientNotificationPrefs } from "@/lib/client-notification-preferences";
-import { normalizeClientNotificationPrefs } from "@/lib/client-notification-preferences";
+import type { ClientNotificationPrefs } from "@/lib/client/notification-preferences";
+import { normalizeClientNotificationPrefs } from "@/lib/client/notification-preferences";
 import { sendSms } from "@/lib/sms";
 
 export type OrderNotifyClient = {

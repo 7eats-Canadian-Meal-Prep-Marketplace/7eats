@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DELETED_ACCOUNT_DISPLAY_NAME } from "@/lib/client-account-deletion-policy";
+import { DELETED_ACCOUNT_DISPLAY_NAME } from "@/lib/client/account-deletion-policy";
 import {
   cookClientDisplayName,
   isCookClientDeleted,

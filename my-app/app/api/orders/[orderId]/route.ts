@@ -12,17 +12,17 @@ import {
 import { formatPickupLocation } from "@/lib/address";
 import { auth } from "@/lib/auth";
 import { resolveOrderLeadTimeRules } from "@/lib/lead-time";
-import {
-  formatOrderTimingDate,
-  formatOrderTimingWindow,
-} from "@/lib/order-timing";
-import { formatClientOrderTiming } from "@/lib/order-timing-label";
 import { orderHasPlacedPaymentFilter } from "@/lib/orders/abandoned-checkout";
 import {
   cancelClientOrder,
   getClientCancelPolicy,
 } from "@/lib/orders/cancel-order";
 import { resolveOrderCookFields } from "@/lib/orders/cook-order-fields";
+import {
+  formatOrderTimingDate,
+  formatOrderTimingWindow,
+} from "@/lib/orders/timing";
+import { formatClientOrderTiming } from "@/lib/orders/timing-label";
 import { getTaxLabel } from "@/lib/tax";
 
 export type Params = { params: Promise<{ orderId: string }> };
@@ -62,6 +62,7 @@ export async function GET(req: NextRequest, { params }: Params) {
         fulfillmentMode: orders.fulfillmentMode,
         deliveryAddress: orders.deliveryAddress,
         deliveryFeeSnapshot: orders.deliveryFeeSnapshot,
+        platformDiscountAmount: orders.platformDiscountAmount,
         cancellationAllowed: orders.cancellationAllowed,
         cancelledAt: orders.cancelledAt,
         leadTimeSnapshot: orders.leadTimeSnapshot,
@@ -213,6 +214,7 @@ export async function GET(req: NextRequest, { params }: Params) {
       ...cookFields,
       fulfillmentMode: row.fulfillmentMode,
       deliveryFeeSnapshot: row.deliveryFeeSnapshot,
+      platformDiscountAmount: row.platformDiscountAmount,
       cancellationAllowed: row.cancellationAllowed,
       cancellable: cancelPolicy.cancellable,
       refundEligible: cancelPolicy.refundEligible,

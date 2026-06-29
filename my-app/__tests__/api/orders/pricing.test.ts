@@ -6,8 +6,8 @@ import {
   LEAD_TIME_DAYS,
   LEAD_TIME_HOURS,
   refundCutoffExclusive,
-} from "@/lib/order-pricing";
-import { computeOrderChargeBreakdown } from "@/lib/order-totals";
+} from "@/lib/orders/pricing";
+import { computeOrderChargeBreakdown } from "@/lib/orders/totals";
 
 describe("computeOrderChargeBreakdown (tax collection enabled)", () => {
   const prev = process.env.NEXT_PUBLIC_TAX_COLLECTION_ENABLED;

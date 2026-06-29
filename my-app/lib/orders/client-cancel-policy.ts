@@ -1,5 +1,5 @@
-import { isRefundEligible } from "@/lib/order-pricing";
-import { cancelByDate, formatLeadTime } from "@/lib/refund-policy";
+import { isRefundEligible } from "@/lib/orders/pricing";
+import { cancelByDate, formatLeadTime } from "@/lib/orders/refund-policy";
 
 const CANCELLABLE_STATUSES = ["pending", "confirmed"] as const;
 

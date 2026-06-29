@@ -3,7 +3,7 @@
 import { MoreHorizontal, Plus, Utensils } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { openOrdersArchiveError } from "@/lib/dish-lifecycle-messages";
+import { openOrdersArchiveError } from "@/lib/dishes/lifecycle-messages";
 import { mealToastError, mealToastSuccess } from "@/lib/meal-toast";
 import { ConfirmDialog } from "../_components/ConfirmDialog";
 import { Skeleton } from "../_skeleton";

@@ -19,7 +19,7 @@ import { toast } from "sonner";
 import {
   type ClientOrderStatus,
   clientOrderTrackerSteps,
-} from "@/lib/client-order-status";
+} from "@/lib/client/order-status";
 import { Skeleton } from "../../_skeleton";
 import { OrderCookHero } from "../_cook-visual";
 import styles from "./page.module.css";
@@ -46,6 +46,7 @@ type ApiOrder = {
   taxProvince: string | null;
   taxLabel: string | null;
   deliveryFeeSnapshot: string | null;
+  platformDiscountAmount: string | null;
   currency: string | null;
   pickupAt: string | null;
   pickupDate: string | null;
@@ -684,6 +685,7 @@ export default function OrderDetailPage({
               0,
             );
             const deliveryFee = Number(order.deliveryFeeSnapshot ?? 0);
+            const platformDiscount = Number(order.platformDiscountAmount ?? 0);
             const taxAmount = Number(order.taxAmount ?? 0);
             return (
               <>
@@ -700,6 +702,15 @@ export default function OrderDetailPage({
                     <span className={styles.totalLabel}>Delivery</span>
                     <span className={styles.totalVal}>
                       ${deliveryFee.toFixed(2)}
+                    </span>
+                  </div>
+                )}
+                {platformDiscount > 0 && (
+                  <div className={styles.dishRow}>
+                    <span className={styles.dishQty} />
+                    <span className={styles.totalLabel}>Discount</span>
+                    <span className={styles.totalVal}>
+                      −${platformDiscount.toFixed(2)}
                     </span>
                   </div>
                 )}

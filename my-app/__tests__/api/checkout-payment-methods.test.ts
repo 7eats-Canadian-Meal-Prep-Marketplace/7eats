@@ -12,7 +12,7 @@ vi.mock("@/db/schema", () => ({
   authUser: {},
 }));
 
-vi.mock("@/lib/payment-methods", () => ({
+vi.mock("@/lib/stripe/payment-methods", () => ({
   detachCustomerPaymentMethod: vi.fn(),
 }));
 
@@ -20,7 +20,7 @@ import { NextRequest } from "next/server";
 import { DELETE } from "@/app/api/checkout/payment-methods/[pmId]/route";
 import { db } from "@/db";
 import { auth } from "@/lib/auth";
-import { detachCustomerPaymentMethod } from "@/lib/payment-methods";
+import { detachCustomerPaymentMethod } from "@/lib/stripe/payment-methods";
 
 const USER_ID = "user-uuid-1234";
 const PM_ID = "pm_1234567890";

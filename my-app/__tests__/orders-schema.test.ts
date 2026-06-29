@@ -23,16 +23,16 @@ vi.mock("drizzle-orm", () => ({
   sql: Object.assign(vi.fn(), { join: vi.fn() }),
 }));
 
-vi.mock("@/lib/stripe-payments", () => ({
+vi.mock("@/lib/stripe/payments", () => ({
   cancelPaymentIntent: vi.fn(),
   createCheckoutPaymentIntent: vi.fn(),
 }));
 
-vi.mock("@/lib/delivery-fee", () => ({
+vi.mock("@/lib/delivery/fee", () => ({
   calcDeliveryFee: vi.fn(),
 }));
 
-vi.mock("@/lib/mapbox-directions", () => ({
+vi.mock("@/lib/delivery/mapbox-directions", () => ({
   getDrivingDistanceKm: vi.fn(),
 }));
 

@@ -23,7 +23,7 @@ vi.mock("drizzle-orm", () => ({
   ne: vi.fn(),
   sql: vi.fn(() => ({ as: vi.fn((alias: string) => alias) })),
 }));
-vi.mock("@/lib/dish-lifecycle", () => ({
+vi.mock("@/lib/dishes/lifecycle", () => ({
   getDishLifecycleInfo: vi.fn().mockResolvedValue({
     totalOrders: 0,
     openOrderCount: 0,

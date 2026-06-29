@@ -16,19 +16,19 @@ vi.mock("@/lib/rate-limit", () => ({
   logAndCheckRateLimit: vi.fn().mockResolvedValue(true),
 }));
 
-vi.mock("@/lib/mapbox-directions", () => ({
+vi.mock("@/lib/delivery/mapbox-directions", () => ({
   getDrivingDistanceKm: vi.fn(),
 }));
 
-vi.mock("@/lib/delivery-fee", () => ({
+vi.mock("@/lib/delivery/fee", () => ({
   calcDeliveryFee: vi.fn(),
 }));
 
 import { NextRequest } from "next/server";
 import { POST } from "@/app/api/delivery/distance/route";
 import { db } from "@/db";
-import { calcDeliveryFee } from "@/lib/delivery-fee";
-import { getDrivingDistanceKm } from "@/lib/mapbox-directions";
+import { calcDeliveryFee } from "@/lib/delivery/fee";
+import { getDrivingDistanceKm } from "@/lib/delivery/mapbox-directions";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 

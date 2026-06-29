@@ -17,7 +17,7 @@ vi.mock("drizzle-orm", () => ({
   eq: vi.fn(),
   and: vi.fn(),
 }));
-vi.mock("@/lib/stripe-payments", () => ({
+vi.mock("@/lib/stripe/payments", () => ({
   capturePaymentIntent: vi.fn().mockResolvedValue(undefined),
   cancelPaymentIntent: vi.fn().mockResolvedValue(undefined),
   partialCapturePaymentIntent: vi.fn().mockResolvedValue(undefined),
@@ -44,7 +44,7 @@ import {
   cancelPaymentIntent,
   capturePaymentIntent,
   refundPaymentIntent,
-} from "@/lib/stripe-payments";
+} from "@/lib/stripe/payments";
 
 const COOK_ID = "cook-uuid";
 const USER_ID = "user-uuid";

@@ -6,7 +6,7 @@ import { loadCookCards } from "@/lib/cooks/load-cards";
 import {
   DEFAULT_MAX_DELIVERY_KM,
   DELIVERY_MAX_KM_MAX,
-} from "@/lib/delivery-pricing";
+} from "@/lib/delivery/pricing";
 import { SEARCH_PICKUP_MAX_KM } from "@/lib/search/config";
 import { boundingBox } from "@/lib/search/normalize";
 

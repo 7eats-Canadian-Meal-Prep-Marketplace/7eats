@@ -1,4 +1,4 @@
-import { DELETED_ACCOUNT_DISPLAY_NAME } from "@/lib/client-account-deletion-policy";
+import { DELETED_ACCOUNT_DISPLAY_NAME } from "@/lib/client/account-deletion-policy";
 
 export type CookClientOrderFields = {
   customerFirstName?: string | null;

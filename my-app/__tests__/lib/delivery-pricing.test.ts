@@ -4,7 +4,7 @@ import {
   defaultDeliveryRate,
   defaultMaxDeliveryKm,
   withDeliveryDefaults,
-} from "@/lib/delivery-pricing";
+} from "@/lib/delivery/pricing";
 
 describe("delivery defaults", () => {
   it("uses 30 km and $0.50/km when unset", () => {

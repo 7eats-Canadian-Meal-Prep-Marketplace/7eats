@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   clientOrderStatusLabel,
   clientOrderTrackerSteps,
-} from "@/lib/client-order-status";
+} from "@/lib/client/order-status";
 
 describe("clientOrderTrackerSteps", () => {
   it("maps pending to placed only", () => {

@@ -8,7 +8,7 @@ import {
   deliverOrderClientUpdate,
   sendOrderUpdateSms,
   shouldSendOrderUpdateSms,
-} from "@/lib/order-client-notifications";
+} from "@/lib/orders/client-notifications";
 import { sendSms } from "@/lib/sms";
 
 const client = {

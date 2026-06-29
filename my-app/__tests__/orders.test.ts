@@ -67,11 +67,11 @@ vi.mock("drizzle-orm", () => ({
   sql: Object.assign(vi.fn(), { join: vi.fn() }),
 }));
 
-vi.mock("@/lib/stripe-payments", () => ({
+vi.mock("@/lib/stripe/payments", () => ({
   createCheckoutPaymentIntent: createPiMock,
   cancelPaymentIntent: cancelPiMock,
 }));
-vi.mock("@/lib/guest-client", () => ({
+vi.mock("@/lib/guest/client", () => ({
   ensureStripeCustomer: ensureStripeMock,
 }));
 vi.mock("@/lib/orders/place-order", () => ({
@@ -98,8 +98,10 @@ vi.mock("@/lib/emails/order-events", () => ({
   sendOrderPlacedEmailToCook: vi.fn().mockResolvedValue(undefined),
   sendOrderReceiptToClient: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock("@/lib/delivery-fee", () => ({ calcDeliveryFee: vi.fn() }));
-vi.mock("@/lib/mapbox-directions", () => ({ getDrivingDistanceKm: vi.fn() }));
+vi.mock("@/lib/delivery/fee", () => ({ calcDeliveryFee: vi.fn() }));
+vi.mock("@/lib/delivery/mapbox-directions", () => ({
+  getDrivingDistanceKm: vi.fn(),
+}));
 
 import { NextRequest } from "next/server";
 import { POST } from "@/app/api/orders/route";

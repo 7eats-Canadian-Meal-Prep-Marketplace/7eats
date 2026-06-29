@@ -6,7 +6,7 @@ import {
   orderPayments,
   orders,
 } from "@/db/schema";
-import { cancelPaymentIntent } from "@/lib/stripe-payments";
+import { cancelPaymentIntent } from "@/lib/stripe/payments";
 
 /** Unpaid checkout sessions older than this are treated as abandoned. */
 export const ABANDONED_CHECKOUT_TTL_MS = 30 * 60 * 1000;

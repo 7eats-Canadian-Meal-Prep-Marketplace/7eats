@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   cardPaymentMethodDedupeKey,
   dedupeCardPaymentMethods,
-} from "@/lib/payment-methods";
+} from "@/lib/stripe/payment-methods";
 
 function cardPm(
   id: string,

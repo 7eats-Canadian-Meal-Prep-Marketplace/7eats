@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { arrivalSlots, isArrivalWithinWindow } from "@/lib/delivery-arrival";
+import { arrivalSlots, isArrivalWithinWindow } from "@/lib/delivery/arrival";
 
 // Local-time construction matches the app's runtime-local window convention.
 const at = (h: number, m = 0) => new Date(2026, 5, 26, h, m, 0, 0); // Fri Jun 26

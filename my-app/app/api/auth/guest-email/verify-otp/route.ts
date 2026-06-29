@@ -7,7 +7,7 @@ import {
   normalizeEmail,
   VERIFIED_TTL_MS,
   verifyPendingOtp,
-} from "@/lib/guest-email-otp";
+} from "@/lib/guest/email-otp";
 import { logAndCheckRateLimit } from "@/lib/rate-limit";
 
 const schema = z.object({

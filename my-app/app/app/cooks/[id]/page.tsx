@@ -21,7 +21,7 @@ import {
   describeCancellationPolicy,
   describeLeadTimePolicy,
   formatLeadTime,
-} from "@/lib/refund-policy";
+} from "@/lib/orders/refund-policy";
 import { useApp } from "../../_app-context";
 import { Skeleton } from "../../_skeleton";
 import styles from "./page.module.css";

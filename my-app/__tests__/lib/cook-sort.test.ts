@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { BrowseCookCard } from "@/app/app/_cook-card";
-import { sortCooks } from "@/lib/cook-sort";
+import { sortCooks } from "@/lib/cooks/sort";
 
 function cook(overrides: Partial<BrowseCookCard> = {}): BrowseCookCard {
   return {

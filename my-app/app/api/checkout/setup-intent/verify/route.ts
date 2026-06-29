@@ -3,8 +3,8 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { authUser } from "@/db/schema";
 import { auth } from "@/lib/auth";
-import { dedupeCustomerCardPaymentMethods } from "@/lib/payment-methods";
 import { getStripe } from "@/lib/stripe";
+import { dedupeCustomerCardPaymentMethods } from "@/lib/stripe/payment-methods";
 import { setupIntentIdFromClientSecret } from "@/lib/stripe/setup-intent";
 
 /**

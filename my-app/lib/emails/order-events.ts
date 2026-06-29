@@ -2,9 +2,9 @@ import { sendMail } from "@/lib/email";
 import {
   deliverOrderClientUpdate,
   type OrderNotifyClient,
-} from "@/lib/order-client-notifications";
-import { formatOrderTimingLabel } from "@/lib/order-timing-label";
-import { cancelByDate } from "@/lib/refund-policy";
+} from "@/lib/orders/client-notifications";
+import { cancelByDate } from "@/lib/orders/refund-policy";
+import { formatOrderTimingLabel } from "@/lib/orders/timing-label";
 import {
   bulletList,
   contactParagraph,
@@ -38,6 +38,9 @@ type OrderEmailData = {
   // fall back to the flat `listingTitle` + `totalPrice` rows.
   items?: OrderEmailItem[];
   deliveryFee?: string | number | null;
+  // Platform-funded discount applied to the order, rendered as a −$ line in the
+  // itemised summary. Absent/0 when the order had no platform discount.
+  platformDiscount?: string | number | null;
   taxAmount?: string | number | null;
   taxLabel?: string | null;
   // Cook's pickup address, shown to the client for pickup orders only. Composed
@@ -155,6 +158,8 @@ function orderSummaryHtml(order: OrderEmailData): string {
     return orderSummaryTable({
       items: order.items,
       deliveryFee: order.deliveryFee != null ? Number(order.deliveryFee) : 0,
+      platformDiscount:
+        order.platformDiscount != null ? Number(order.platformDiscount) : 0,
       tax: order.taxAmount != null ? Number(order.taxAmount) : 0,
       taxLabel: order.taxLabel,
       total: order.totalPrice,
@@ -186,12 +191,17 @@ function orderSummaryText(order: OrderEmailData): string[] {
     0,
   );
   const deliveryFee = order.deliveryFee != null ? Number(order.deliveryFee) : 0;
+  const platformDiscount =
+    order.platformDiscount != null ? Number(order.platformDiscount) : 0;
   const tax = order.taxAmount != null ? Number(order.taxAmount) : 0;
   return [
     "Items:",
     ...itemLines,
     `Subtotal: $${subtotal.toFixed(2)}`,
     ...(deliveryFee > 0 ? [`Delivery: $${deliveryFee.toFixed(2)}`] : []),
+    ...(platformDiscount > 0
+      ? [`Discount: -$${platformDiscount.toFixed(2)}`]
+      : []),
     ...(tax > 0 ? [`${order.taxLabel ?? "Tax"}: $${tax.toFixed(2)}`] : []),
     `Total: ${formatMoney(order.totalPrice, order.currency)}`,
   ];

@@ -17,6 +17,12 @@ commands from `my-app/` unless a task explicitly targets repo-level tooling.
     └── public/           # Static assets
 ```
 
+## Linked Repos
+
+**Admin 7eats repo:** `F:\Coding_Projects\Personal\7eats-admin` — the
+logic app lives in its `7eats-admin/` subfolder (`F:\Coding_Projects\Personal\7eats-admin\7eats-admin`). View this repo
+if ever additional context is needed .
+
 ## UI / Frontend Design Work (MANDATORY)
 
 Any time you do UI work — building new components/pages, restyling, layout
@@ -167,3 +173,15 @@ If proxy changes act weird after deleting `middleware.ts`, stop dev and remove
   especially API routes, validation, rate limits, and schema safeguards.
 - **Formatting:** Run Biome on touched files after edits. Avoid unrelated
   formatting churn.
+
+## Writing Style (MANDATORY)
+
+- **Never use em dashes (`—`) in any writing.** This applies to all
+  user-facing copy (UI text, emails, notifications), code comments, commit
+  messages, PR descriptions, and chat responses. Em dashes read as an AI tell.
+- Rewrite instead with a period, comma, colon, semicolon, or parentheses,
+  whichever fits. For example, "7eats covers this. It comes from our fee, not
+  your cut." rather than joining the clauses with an em dash.
+- En dashes for numeric ranges (`1–10`) and the minus sign for negative
+  amounts (`−$4.00`) are fine; the rule is specifically about the em dash as
+  prose punctuation.

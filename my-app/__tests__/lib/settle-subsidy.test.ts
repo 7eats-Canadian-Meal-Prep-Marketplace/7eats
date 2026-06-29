@@ -12,7 +12,7 @@ vi.mock("@/db/schema", () => ({
   cookProfiles: {},
 }));
 vi.mock("drizzle-orm", () => ({ eq: vi.fn(), and: vi.fn() }));
-vi.mock("@/lib/stripe-payments", () => ({
+vi.mock("@/lib/stripe/payments", () => ({
   createCookSubsidyTransfer: createSubsidyMock,
 }));
 

@@ -7,7 +7,7 @@ import {
   COOK_SORT_OPTIONS,
   type CookSortKey,
   parseCookSort,
-} from "@/lib/cook-sort";
+} from "@/lib/cooks/sort";
 import styles from "./search/page.module.css";
 
 export function SearchSortDropdown() {

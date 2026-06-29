@@ -8,13 +8,13 @@ import {
   orders,
 } from "@/db/schema";
 import { formatPickupLocation } from "@/lib/address";
-import { sendCookNewOrderSms } from "@/lib/cook-order-notifications";
+import { sendCookNewOrderSms } from "@/lib/cooks/order-notifications";
 import {
   sendGuestOrderReceiptToClient,
   sendOrderPlacedEmailToCook,
   sendOrderReceiptToClient,
 } from "@/lib/emails/order-events";
-import { guestAccessTokensMatch } from "@/lib/guest-order-access";
+import { guestAccessTokensMatch } from "@/lib/guest/order-access";
 import { resolveOrderLeadTimeRules } from "@/lib/lead-time";
 import { getStripe } from "@/lib/stripe";
 
@@ -32,6 +32,7 @@ async function sendOrderConfirmationEmails(
       totalPrice: orders.totalPrice,
       currency: orders.currency,
       deliveryFeeSnapshot: orders.deliveryFeeSnapshot,
+      platformDiscountAmount: orders.platformDiscountAmount,
       taxAmount: orders.taxAmount,
       pickupAt: orders.pickupAt,
       fulfillmentMode: orders.fulfillmentMode,
@@ -142,6 +143,7 @@ async function sendOrderConfirmationEmails(
       discountAmount: d.discountAmount,
     })),
     deliveryFee: orderRow.deliveryFeeSnapshot,
+    platformDiscount: orderRow.platformDiscountAmount,
     taxAmount: orderRow.taxAmount,
     cancellationAllowed: orderRow.cancellationAllowed,
     cookLeadTime: leadTimeRules.leadTime,

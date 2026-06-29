@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   formatClientOrderTiming,
   formatOrderTimingLabel,
-} from "@/lib/order-timing-label";
+} from "@/lib/orders/timing-label";
 
 describe("formatClientOrderTiming", () => {
   it("uses fulfillment window when pickupAt is unset", () => {

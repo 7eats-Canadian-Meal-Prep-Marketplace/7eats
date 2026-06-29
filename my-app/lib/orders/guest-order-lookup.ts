@@ -4,10 +4,10 @@ import { authUser, cookProfiles, orderDishes, orders } from "@/db/schema";
 import {
   guestAccessTokensMatch,
   hashGuestAccessToken,
-} from "@/lib/guest-order-access";
+} from "@/lib/guest/order-access";
 import { resolveOrderLeadTimeRules } from "@/lib/lead-time";
-import { formatOrderTimingLabel } from "@/lib/order-timing-label";
 import { getClientCancelPolicy } from "@/lib/orders/client-cancel-policy";
+import { formatOrderTimingLabel } from "@/lib/orders/timing-label";
 import { getTaxLabel } from "@/lib/tax";
 
 export type GuestOrderView = {
@@ -16,6 +16,7 @@ export type GuestOrderView = {
   status: string;
   subtotal: string;
   deliveryFee: string | null;
+  platformDiscountAmount: string | null;
   taxAmount: string | null;
   taxLabel: string | null;
   totalPrice: string;
@@ -59,6 +60,7 @@ export async function getGuestOrderByToken(
       fulfillmentWindowStart: orders.fulfillmentWindowStart,
       fulfillmentWindowEnd: orders.fulfillmentWindowEnd,
       deliveryFeeSnapshot: orders.deliveryFeeSnapshot,
+      platformDiscountAmount: orders.platformDiscountAmount,
       taxAmount: orders.taxAmount,
       taxProvince: orders.taxProvince,
       notes: orders.notes,
@@ -137,6 +139,9 @@ export async function getGuestOrderByToken(
 
   const totalPrice = Number.parseFloat(row.totalPrice);
   const taxAmountNum = row.taxAmount ? Number.parseFloat(row.taxAmount) : 0;
+  const platformDiscountNum = row.platformDiscountAmount
+    ? Number.parseFloat(row.platformDiscountAmount)
+    : 0;
   let deliveryFee = row.deliveryFeeSnapshot;
   if (
     fulfillmentMode === "delivery" &&
@@ -145,9 +150,13 @@ export async function getGuestOrderByToken(
     Number.isFinite(totalPrice) &&
     totalPrice > 0
   ) {
+    // total = subtotal + delivery − discount + tax, so back out delivery by
+    // adding the discount in again.
     const derived = Math.max(
       0,
-      Math.round((totalPrice - taxAmountNum - subtotal) * 100) / 100,
+      Math.round(
+        (totalPrice + platformDiscountNum - taxAmountNum - subtotal) * 100,
+      ) / 100,
     );
     if (derived > 0) deliveryFee = derived.toFixed(2);
   }
@@ -165,6 +174,7 @@ export async function getGuestOrderByToken(
     status: row.status,
     subtotal: subtotal.toFixed(2),
     deliveryFee,
+    platformDiscountAmount: row.platformDiscountAmount,
     taxAmount: row.taxAmount,
     taxLabel: row.taxProvince ? getTaxLabel(row.taxProvince) : null,
     totalPrice: row.totalPrice,

@@ -14,7 +14,7 @@ import {
   DELIVERY_RATE_MAX,
   DELIVERY_RATE_MIN,
   FREE_DELIVERY_ABOVE_MAX,
-} from "@/lib/delivery-pricing";
+} from "@/lib/delivery/pricing";
 import { rebuildCookSearchIndexSafe } from "@/lib/search/index-builder";
 
 const PROFILE_FIELDS = {

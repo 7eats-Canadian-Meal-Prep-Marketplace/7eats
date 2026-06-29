@@ -3,7 +3,7 @@
 import { MapPin } from "lucide-react";
 import { type FormEvent, useState } from "react";
 import { toast } from "sonner";
-import { openAddressEditor } from "@/lib/address-events";
+import { openAddressEditor } from "@/lib/address/events";
 import { classifyRegion } from "@/lib/service-areas";
 import type { NormalizedAddress } from "@/lib/types/address";
 import styles from "./page.module.css";

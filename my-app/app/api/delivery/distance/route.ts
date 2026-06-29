@@ -3,9 +3,9 @@ import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/db";
 import { cookProfiles } from "@/db/schema";
-import { calcDeliveryFee } from "@/lib/delivery-fee";
+import { calcDeliveryFee } from "@/lib/delivery/fee";
+import { getDrivingDistanceKm } from "@/lib/delivery/mapbox-directions";
 import { hashIp } from "@/lib/hash";
-import { getDrivingDistanceKm } from "@/lib/mapbox-directions";
 import { logAndCheckRateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/request-ip";
 

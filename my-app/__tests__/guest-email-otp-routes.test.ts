@@ -23,7 +23,7 @@ import {
   GUEST_OTP_COOKIE,
   isEmailVerified,
   verifyPendingOtp,
-} from "@/lib/guest-email-otp";
+} from "@/lib/guest/email-otp";
 
 const EMAIL = "guest@example.com";
 

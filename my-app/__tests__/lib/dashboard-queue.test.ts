@@ -3,7 +3,7 @@ import {
   nextPickupDayOrders,
   type QueueScheduleOrder,
   queueScheduleIso,
-} from "@/lib/dashboard-queue";
+} from "@/lib/cooks/dashboard-queue";
 
 const iso = (y: number, mo: number, d: number, h = 12) =>
   new Date(y, mo - 1, d, h, 0, 0, 0).toISOString();

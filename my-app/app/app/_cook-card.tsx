@@ -2,8 +2,8 @@
 
 import { Star } from "lucide-react";
 import Link from "next/link";
-import { cookCardSchedule } from "@/lib/cook-card-schedule";
-import { kitchenDisplayName } from "@/lib/cook-display";
+import { cookCardSchedule } from "@/lib/cooks/card-schedule";
+import { kitchenDisplayName } from "@/lib/cooks/display";
 import styles from "./browse/page.module.css";
 
 export type BrowseCookCard = {

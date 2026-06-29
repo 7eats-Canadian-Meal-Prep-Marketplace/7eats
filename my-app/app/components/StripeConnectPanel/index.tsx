@@ -2,7 +2,7 @@
 
 import { ExternalLink } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { isStripeFullyConnected } from "@/lib/stripe-connect";
+import { isStripeFullyConnected } from "@/lib/stripe/connect";
 import styles from "./StripeConnectPanel.module.css";
 
 type StripeStatusData = {

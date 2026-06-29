@@ -9,7 +9,7 @@ import {
   dishStatusFilter,
   mapDishStatusForDb,
   normalizeDishStatus,
-} from "@/lib/dish-status";
+} from "@/lib/dishes/status";
 import { rebuildCookSearchIndexSafe } from "@/lib/search/index-builder";
 
 const VALID_STATUSES = ["active", "inactive"] as const;

@@ -134,7 +134,7 @@ describe("GET /api/business/dashboard/orders", () => {
 
 describe("calendar buildWeekFromData (outlying orders)", () => {
   it("adds a delivery window on a day no longer in logistics when orders exist", async () => {
-    const { buildWeekFromData } = await import("@/lib/business-calendar");
+    const { buildWeekFromData } = await import("@/lib/business/calendar");
     const saturday = new Date(2026, 5, 27, 12, 30, 0, 0);
     const monday = new Date(2026, 5, 22, 0, 0, 0, 0);
 

@@ -10,7 +10,7 @@ import {
   clientNotificationPrefsEqual,
   DEFAULT_CLIENT_NOTIFICATION_PREFS,
   normalizeClientNotificationPrefs,
-} from "@/lib/client-notification-preferences";
+} from "@/lib/client/notification-preferences";
 import {
   CLIENT_PREFERENCE_QUESTIONS,
   type ClientPreferenceKey,
@@ -20,7 +20,7 @@ import {
   isClientPreferencesComplete,
   normalizeClientPreferences,
   togglePreference,
-} from "@/lib/client-preferences";
+} from "@/lib/client/preferences";
 import {
   formatPhoneDisplay,
   isValidNorthAmericanPhone,

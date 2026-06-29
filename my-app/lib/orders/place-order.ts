@@ -11,21 +11,21 @@ import {
   orderPayments,
   orders,
 } from "@/db/schema";
-import { earliestFulfillmentWindow } from "@/lib/cook-card-schedule";
-import { calcDeliveryFee } from "@/lib/delivery-fee";
-import { resolveUnavailableOrderDishes } from "@/lib/dish-lifecycle";
+import { earliestFulfillmentWindow } from "@/lib/cooks/card-schedule";
+import { calcDeliveryFee } from "@/lib/delivery/fee";
+import { getDrivingDistanceKm } from "@/lib/delivery/mapbox-directions";
+import { resolveUnavailableOrderDishes } from "@/lib/dishes/lifecycle";
 import {
   formatUnavailableDishesMessage,
   type UnavailableOrderDish,
-} from "@/lib/dish-lifecycle-messages";
+} from "@/lib/dishes/lifecycle-messages";
 import { formatDbLeadTimeCutoff } from "@/lib/lead-time";
-import { getDrivingDistanceKm } from "@/lib/mapbox-directions";
-import { computeLineTotal } from "@/lib/order-pricing";
-import { computeOrderChargeBreakdown } from "@/lib/order-totals";
+import { computeLineTotal } from "@/lib/orders/pricing";
+import { computeOrderChargeBreakdown } from "@/lib/orders/totals";
 import {
   cancelPaymentIntent,
   createCheckoutPaymentIntent,
-} from "@/lib/stripe-payments";
+} from "@/lib/stripe/payments";
 import { orderCandidatesByValue } from "./platform-discount";
 import {
   fetchActiveDiscounts,

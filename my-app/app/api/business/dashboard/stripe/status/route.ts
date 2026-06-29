@@ -4,8 +4,8 @@ import { getCookId, unauthorized } from "@/app/api/business/_lib/cook-auth";
 import { db } from "@/db";
 import { cookProfiles } from "@/db/schema";
 import { getStripe } from "@/lib/stripe";
-import { getCachedStripeAccount } from "@/lib/stripe-account-cache";
-import { readStripeConnectAccountStatus } from "@/lib/stripe-connect";
+import { getCachedStripeAccount } from "@/lib/stripe/account-cache";
+import { readStripeConnectAccountStatus } from "@/lib/stripe/connect";
 
 export async function GET(req: NextRequest) {
   const cookId = await getCookId(req.headers);

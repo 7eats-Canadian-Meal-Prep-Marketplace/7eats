@@ -4,7 +4,7 @@ import { authUser, authUserTable, legalAcceptances } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { hashIp } from "@/lib/hash";
 import { GUEST_CHECKOUT_DOCS, LEGAL_VERSION } from "@/lib/legal";
-import { getOrCreateStripeCustomer } from "@/lib/stripe-subscriptions";
+import { getOrCreateStripeCustomer } from "@/lib/stripe/subscriptions";
 
 export type ResolveGuestClientInput = {
   firstName: string;

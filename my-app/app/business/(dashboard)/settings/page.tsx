@@ -9,7 +9,7 @@ import {
   validateAccountSettings,
   validateKitchenSettings,
   validateOrderRules,
-} from "@/lib/business-settings-validation";
+} from "@/lib/business/settings-validation";
 import { useDirtyState } from "@/lib/forms/use-dirty";
 import {
   formatPhoneDisplay,

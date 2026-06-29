@@ -16,15 +16,15 @@ vi.mock("@/lib/stripe", () => ({
   getStripe: vi.fn(),
 }));
 
-vi.mock("@/lib/payment-methods", () => ({
+vi.mock("@/lib/stripe/payment-methods", () => ({
   dedupeCustomerCardPaymentMethods: vi.fn().mockResolvedValue(undefined),
 }));
 
 import { POST } from "@/app/api/checkout/setup-intent/verify/route";
 import { db } from "@/db";
 import { auth } from "@/lib/auth";
-import { dedupeCustomerCardPaymentMethods } from "@/lib/payment-methods";
 import { getStripe } from "@/lib/stripe";
+import { dedupeCustomerCardPaymentMethods } from "@/lib/stripe/payment-methods";
 
 const USER_ID = "user-uuid-1234";
 const CLIENT_SECRET = "seti_abc_secret_xyz";

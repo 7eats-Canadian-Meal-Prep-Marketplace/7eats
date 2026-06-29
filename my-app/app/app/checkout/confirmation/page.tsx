@@ -8,7 +8,7 @@ import {
   INTERVAL_LABELS,
   INTERVAL_RECURRENCE_PHRASES,
   type SubscriptionInterval,
-} from "@/lib/subscription-schedule";
+} from "@/lib/stripe/subscription-schedule";
 import styles from "./page.module.css";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
