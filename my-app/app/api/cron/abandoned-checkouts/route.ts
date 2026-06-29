@@ -2,8 +2,9 @@ import { type NextRequest, NextResponse } from "next/server";
 import { cancelStaleAbandonedCheckouts } from "@/lib/orders/abandoned-checkout";
 
 /**
- * Cancels unpaid checkout orders that were abandoned before payment completed.
- * Protect with CRON_SECRET (same as /api/cron/reconcile).
+ * Manual trigger for unpaid checkout cleanup. Scheduled runs use
+ * `/api/cron/reconcile` (Vercel Hobby allows one daily cron only).
+ * Protect with CRON_SECRET.
  */
 export async function GET(req: NextRequest) {
   const secret = process.env.CRON_SECRET;

@@ -15,8 +15,11 @@
 - **Delays launch?** **No** — but do it on launch day. Without the DSN you launch blind to runtime errors; with it, it's a 10-minute setup.
 
 ### B2. Payment reconciliation cron
-- **Status:** Route is **built** — `GET /api/cron/reconcile`, protected by a `CRON_SECRET` bearer token. It flags `authorized` payments older than 48h (stuck holds / abandoned checkouts) and emails `RESEND_TEAM_EMAIL` a summary.
-- **You do:** set `CRON_SECRET`, then add a schedule. For Vercel, add to `vercel.json`:
+- **Status:** Route is **built** — `GET /api/cron/reconcile`, protected by a `CRON_SECRET` bearer token. Each daily run:
+  1. **Abandoned checkout cleanup** — cancels unpaid `pending` orders (and their Stripe PIs) older than 30 minutes.
+  2. **Stuck authorized payments** — flags `authorized` payments older than 48h and emails `RESEND_TEAM_EMAIL` a summary.
+- **Schedule:** one daily job in `vercel.json` (`0 9 * * *`). **Vercel Hobby only allows daily crons**, so abandoned-checkout cleanup is merged here instead of a separate 15-minute job. For more frequent sweeps later, call `GET /api/cron/abandoned-checkouts` manually or from an external scheduler (e.g. GitHub Actions), or upgrade to Vercel Pro.
+- **You do:** set `CRON_SECRET`. Cron entry is already in `vercel.json`:
   ```json
   { "crons": [{ "path": "/api/cron/reconcile", "schedule": "0 9 * * *" }] }
   ```
@@ -54,7 +57,7 @@
 ## Known accepted gaps (documented, not blocking)
 
 - **Platform fee:** **7.5%** per order (`cook_profiles.platform_fee_pct` default). Customer-facing FAQ and cook onboarding copy reflect this rate.
-- **Abandoned orders:** an order row in `pending` whose Stripe PI was never completed persists; the reconcile job (B2) surfaces stuck *authorized* payments, and Stripe auto-expires uncaptured PIs. A cleanup job is post-launch.
+- **Abandoned orders:** unpaid checkouts are cancelled by the daily reconcile job (B2) once they are older than 30 minutes; worst case they linger until the next 9:00 UTC run. Stuck *authorized* payments are surfaced in the same job. Stripe webhooks also clean up when a PI is cancelled. For sub-daily cleanup on Hobby, trigger `GET /api/cron/abandoned-checkouts` manually or use an external scheduler.
 - **Delivery out-of-zone at checkout:** the cart shows "Outside delivery zone," but checkout currently still allows submitting; the server snapshots a 0 fee rather than hard-blocking. Tighten if delivery becomes common.
 - **Deep Stripe↔DB amount reconciliation:** B2 checks DB-side staleness; per-PI amount/status verification against the Stripe API can be layered onto the same cron later.
 - **Playwright e2e:** not run in-session (you're handling e2e). Build + 510 unit/integration tests + lint are green.

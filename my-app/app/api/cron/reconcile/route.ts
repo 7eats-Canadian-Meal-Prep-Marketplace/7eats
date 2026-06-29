@@ -3,14 +3,13 @@ import { type NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { orderPayments, orders } from "@/db/schema";
 import { sendMail } from "@/lib/email";
+import { cancelStaleAbandonedCheckouts } from "@/lib/orders/abandoned-checkout";
 
 /**
- * Payment reconciliation job (run on a schedule, e.g. Vercel Cron).
+ * Daily payment housekeeping (Vercel Cron on Hobby: once per day only).
  *
- * Flags `authorized` payments that have sat for more than 48 hours — these are
- * stuck holds (order never confirmed/captured or abandoned mid-checkout) that
- * should be reviewed and either captured or cancelled before the Stripe
- * authorization expires. Emails a summary to the team when any are found.
+ * 1. Cancels unpaid checkout orders older than the abandoned-checkout TTL.
+ * 2. Flags `authorized` payments older than 48h and emails the team.
  *
  * Protect with a CRON_SECRET so only the scheduler can trigger it.
  */
@@ -24,6 +23,8 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    const abandoned = await cancelStaleAbandonedCheckouts();
+
     const cutoff = new Date(Date.now() - STALE_HOURS * 3600_000);
 
     const stuck = await db
@@ -69,6 +70,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       success: true,
       checkedAt: new Date().toISOString(),
+      abandonedCheckouts: abandoned,
       stuckCount: stuck.length,
       stuck,
     });
