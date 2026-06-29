@@ -21,15 +21,15 @@ vi.mock("@/lib/emails/order-events", () => ({
   sendOrderPlacedEmailToCook: vi.fn().mockResolvedValue(undefined),
   sendOrderReceiptToClient: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock("@/lib/cook-order-notifications", () => ({
+vi.mock("@/lib/cooks/order-notifications", () => ({
   sendCookNewOrderSms: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock("@/lib/guest-order-access", () => ({
+vi.mock("@/lib/guest/order-access", () => ({
   guestAccessTokensMatch: vi.fn(),
 }));
 
 import { db } from "@/db";
-import { sendCookNewOrderSms } from "@/lib/cook-order-notifications";
+import { sendCookNewOrderSms } from "@/lib/cooks/order-notifications";
 import { markOrderPaymentAuthorized } from "@/lib/orders/confirm-order-payment";
 
 const PI_ID = "pi_test_sms";

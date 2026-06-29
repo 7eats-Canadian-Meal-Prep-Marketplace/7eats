@@ -3,7 +3,7 @@ import {
   clientNotificationPrefsEqual,
   DEFAULT_CLIENT_NOTIFICATION_PREFS,
   normalizeClientNotificationPrefs,
-} from "@/lib/client-notification-preferences";
+} from "@/lib/client/notification-preferences";
 
 describe("normalizeClientNotificationPrefs", () => {
   it("defaults order_updates and marketing to true", () => {

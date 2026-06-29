@@ -18,13 +18,13 @@ vi.mock("@/db/schema", () => ({
 }));
 vi.mock("drizzle-orm", () => ({ eq: vi.fn(), and: vi.fn() }));
 
-vi.mock("@/lib/stripe-payments", () => ({
+vi.mock("@/lib/stripe/payments", () => ({
   cancelPaymentIntent: cancelPiMock,
   refundPaymentIntent: refundPiMock,
   capturePaymentIntent: captureMock,
 }));
-vi.mock("@/lib/order-pricing", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/lib/order-pricing")>();
+vi.mock("@/lib/orders/pricing", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/orders/pricing")>();
   return { ...actual };
 });
 vi.mock("@/lib/auth", () => ({ auth: { api: { getSession: vi.fn() } } }));

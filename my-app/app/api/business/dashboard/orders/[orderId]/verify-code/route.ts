@@ -17,7 +17,7 @@ import { settleCookSubsidy } from "@/lib/orders/settle-subsidy";
 import {
   capturePaymentIntent,
   createSubscriptionTransfer,
-} from "@/lib/stripe-payments";
+} from "@/lib/stripe/payments";
 
 export type Params = { params: Promise<{ orderId: string }> };
 

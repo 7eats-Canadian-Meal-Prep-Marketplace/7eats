@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { cookProfiles, orderPayments } from "@/db/schema";
-import { createCookSubsidyTransfer } from "@/lib/stripe-payments";
+import { createCookSubsidyTransfer } from "@/lib/stripe/payments";
 
 /**
  * Pay the platform-funded discount top-up to the cook AFTER the full payment has

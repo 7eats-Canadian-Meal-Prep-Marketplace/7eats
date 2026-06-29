@@ -4,10 +4,10 @@ import { authUser, cookProfiles, orderDishes, orders } from "@/db/schema";
 import {
   guestAccessTokensMatch,
   hashGuestAccessToken,
-} from "@/lib/guest-order-access";
+} from "@/lib/guest/order-access";
 import { resolveOrderLeadTimeRules } from "@/lib/lead-time";
-import { formatOrderTimingLabel } from "@/lib/order-timing-label";
 import { getClientCancelPolicy } from "@/lib/orders/client-cancel-policy";
+import { formatOrderTimingLabel } from "@/lib/orders/timing-label";
 import { getTaxLabel } from "@/lib/tax";
 
 export type GuestOrderView = {

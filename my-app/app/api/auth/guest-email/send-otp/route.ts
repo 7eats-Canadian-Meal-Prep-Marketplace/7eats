@@ -7,7 +7,7 @@ import {
   generateOtpCode,
   normalizeEmail,
   OTP_TTL_MS,
-} from "@/lib/guest-email-otp";
+} from "@/lib/guest/email-otp";
 import { hashIp } from "@/lib/hash";
 import { logAndCheckRateLimit } from "@/lib/rate-limit";
 

@@ -8,7 +8,7 @@ import {
   formatCookNewOrderSmsBody,
   sendCookNewOrderSms,
   shouldSendCookNewOrderSms,
-} from "@/lib/cook-order-notifications";
+} from "@/lib/cooks/order-notifications";
 import { sendSms } from "@/lib/sms";
 
 describe("shouldSendCookNewOrderSms", () => {

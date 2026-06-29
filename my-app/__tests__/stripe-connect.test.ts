@@ -5,7 +5,7 @@ import {
   cookMarketplaceProfileUrl,
   isStripeFullyConnected,
   readStripeConnectAccountStatus,
-} from "@/lib/stripe-connect";
+} from "@/lib/stripe/connect";
 
 function v2Account(
   overrides: Partial<{

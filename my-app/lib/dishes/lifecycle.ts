@@ -3,10 +3,10 @@ import "server-only";
 import { and, eq, inArray, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { dishes, orderDishes, orders } from "@/db/schema";
-import type { UnavailableOrderDish } from "@/lib/dish-lifecycle-messages";
-import { isDishPaused } from "@/lib/dish-status-core";
+import type { UnavailableOrderDish } from "@/lib/dishes/lifecycle-messages";
+import { isDishPaused } from "@/lib/dishes/status-core";
 
-export type { UnavailableOrderDish } from "@/lib/dish-lifecycle-messages";
+export type { UnavailableOrderDish } from "@/lib/dishes/lifecycle-messages";
 
 /** Orders that must finish before a meal can be paused. */
 export const DISH_BLOCKING_ORDER_STATUSES = [

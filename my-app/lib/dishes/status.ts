@@ -3,10 +3,10 @@ import "server-only";
 import { and, eq, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { dishes } from "@/db/schema";
-import { type DishStatus, normalizeDishStatus } from "@/lib/dish-status-core";
+import { type DishStatus, normalizeDishStatus } from "@/lib/dishes/status-core";
 
-export type { DishStatus } from "@/lib/dish-status-core";
-export { isDishPaused, normalizeDishStatus } from "@/lib/dish-status-core";
+export type { DishStatus } from "@/lib/dishes/status-core";
+export { isDishPaused, normalizeDishStatus } from "@/lib/dishes/status-core";
 
 let pausedDbLabel: "inactive" | "archived" | null = null;
 

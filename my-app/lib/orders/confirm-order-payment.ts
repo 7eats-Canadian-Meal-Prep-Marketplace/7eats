@@ -8,13 +8,13 @@ import {
   orders,
 } from "@/db/schema";
 import { formatPickupLocation } from "@/lib/address";
-import { sendCookNewOrderSms } from "@/lib/cook-order-notifications";
+import { sendCookNewOrderSms } from "@/lib/cooks/order-notifications";
 import {
   sendGuestOrderReceiptToClient,
   sendOrderPlacedEmailToCook,
   sendOrderReceiptToClient,
 } from "@/lib/emails/order-events";
-import { guestAccessTokensMatch } from "@/lib/guest-order-access";
+import { guestAccessTokensMatch } from "@/lib/guest/order-access";
 import { resolveOrderLeadTimeRules } from "@/lib/lead-time";
 import { getStripe } from "@/lib/stripe";
 

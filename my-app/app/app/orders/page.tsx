@@ -7,7 +7,7 @@ import { Suspense, useEffect, useState } from "react";
 import {
   type ClientOrderStatus,
   clientOrderStatusLabel,
-} from "@/lib/client-order-status";
+} from "@/lib/client/order-status";
 import { Skeleton } from "../_skeleton";
 import { OrderCookCover } from "./_cook-visual";
 import styles from "./page.module.css";

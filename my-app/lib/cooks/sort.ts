@@ -1,5 +1,5 @@
 import type { BrowseCookCard } from "@/app/app/_cook-card";
-import { firstSlotTimestamp } from "@/lib/cook-card-schedule";
+import { firstSlotTimestamp } from "@/lib/cooks/card-schedule";
 
 export const COOK_SORT_KEYS = [
   "nearest",

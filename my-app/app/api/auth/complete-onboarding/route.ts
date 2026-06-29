@@ -7,7 +7,7 @@ import { auth } from "@/lib/auth";
 import {
   clientPreferencesValidationError,
   normalizeClientPreferences,
-} from "@/lib/client-preferences";
+} from "@/lib/client/preferences";
 import { validateDateOfBirth16 } from "@/lib/onboarding-validation";
 
 const schema = z.object({

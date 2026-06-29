@@ -14,7 +14,7 @@ import {
 import {
   guestAccessTokensMatch,
   hashGuestAccessToken,
-} from "@/lib/guest-order-access";
+} from "@/lib/guest/order-access";
 import { resolveOrderLeadTimeRules } from "@/lib/lead-time";
 import {
   isClientOrderCancellable,
@@ -26,7 +26,7 @@ import {
   capturePaymentIntent,
   refundPaymentIntent,
   reverseCookSubsidyTransfer,
-} from "@/lib/stripe-payments";
+} from "@/lib/stripe/payments";
 
 export type CancelOrderResult =
   | { ok: true; refunded: boolean }

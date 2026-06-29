@@ -7,7 +7,7 @@ import { normalizeProvinceCode } from "@/lib/address";
 import {
   formatAddressQuery,
   validateLogisticsSettings,
-} from "@/lib/business-settings-validation";
+} from "@/lib/business/settings-validation";
 import {
   clampDeliveryRate,
   DELIVERY_MAX_KM_MAX,
@@ -18,7 +18,7 @@ import {
   defaultDeliveryRate,
   defaultMaxDeliveryKm,
   withDeliveryDefaults,
-} from "@/lib/delivery-pricing";
+} from "@/lib/delivery/pricing";
 import { useDirtyState } from "@/lib/forms/use-dirty";
 import {
   DEFAULT_LEAD_TIME_CUTOFF,

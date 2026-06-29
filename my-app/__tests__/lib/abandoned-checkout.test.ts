@@ -39,7 +39,7 @@ vi.mock("drizzle-orm", () => ({
   sql: vi.fn((strings: TemplateStringsArray) => strings.join("")),
 }));
 
-vi.mock("@/lib/stripe-payments", () => ({
+vi.mock("@/lib/stripe/payments", () => ({
   cancelPaymentIntent: cancelPiMock,
 }));
 

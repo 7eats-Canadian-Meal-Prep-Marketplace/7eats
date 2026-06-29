@@ -12,7 +12,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   type FulfillmentWindow,
   nextFulfillmentWindowLabel,
-} from "@/lib/cook-card-schedule";
+} from "@/lib/cooks/card-schedule";
 import { useCart } from "../_cart-context";
 import { calcTax, formatCartMoney, getTaxLabel } from "./_cart-tax";
 import styles from "./page.module.css";

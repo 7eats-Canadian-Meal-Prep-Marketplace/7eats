@@ -10,14 +10,14 @@ import {
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { DELETED_ACCOUNT_DISPLAY_NAME } from "@/lib/client-account-deletion-policy";
-import { arrivalSlots } from "@/lib/delivery-arrival";
-import { canMarkReady, readyAvailableFrom } from "@/lib/order-readiness";
+import { DELETED_ACCOUNT_DISPLAY_NAME } from "@/lib/client/account-deletion-policy";
+import { arrivalSlots } from "@/lib/delivery/arrival";
 import {
   type CookClientOrderFields,
   cookClientDisplayName,
   isCookClientDeleted,
 } from "@/lib/orders/cook-client-display";
+import { canMarkReady, readyAvailableFrom } from "@/lib/orders/readiness";
 import { PreferenceSheet } from "../_components/PreferenceSheet";
 import { Skeleton } from "../_skeleton";
 import styles from "./page.module.css";

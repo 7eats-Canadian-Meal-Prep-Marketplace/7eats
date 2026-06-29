@@ -20,7 +20,7 @@ import { NextRequest } from "next/server";
 import { GET, PATCH } from "@/app/api/business/profile/route";
 import { db } from "@/db";
 import { auth } from "@/lib/auth";
-import { DELIVERY_MAX_KM_MAX } from "@/lib/delivery-pricing";
+import { DELIVERY_MAX_KM_MAX } from "@/lib/delivery/pricing";
 
 const COOK_ID = "cook-uuid";
 const USER_ID = "user-uuid";

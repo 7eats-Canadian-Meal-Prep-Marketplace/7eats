@@ -16,20 +16,20 @@ import { auth } from "@/lib/auth";
 import {
   BLOCKING_ORDER_STATUSES,
   tombstoneEmail,
-} from "@/lib/client-account-deletion-policy";
+} from "@/lib/client/account-deletion-policy";
 import { sendAccountDeletedEmail } from "@/lib/emails/account-deletion";
+import { formatReviewerDisplayName } from "@/lib/reviews/display-name";
+import { avatarKeyFromUrl, deleteAvatar } from "@/lib/storage/avatars";
 import {
   detachCustomerPaymentMethod,
   listCustomerCards,
-} from "@/lib/payment-methods";
-import { formatReviewerDisplayName } from "@/lib/reviews/display-name";
-import { avatarKeyFromUrl, deleteAvatar } from "@/lib/storage/avatars";
+} from "@/lib/stripe/payment-methods";
 
 export {
   BLOCKING_ORDER_STATUSES,
   DELETED_ACCOUNT_DISPLAY_NAME,
   tombstoneEmail,
-} from "@/lib/client-account-deletion-policy";
+} from "@/lib/client/account-deletion-policy";
 
 export type DeleteEligibility = {
   eligible: boolean;

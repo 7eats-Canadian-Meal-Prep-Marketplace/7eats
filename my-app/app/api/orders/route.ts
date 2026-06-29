@@ -3,18 +3,18 @@ import { type NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { authUser, cookProfiles, orderDishes, orders } from "@/db/schema";
 import { auth } from "@/lib/auth";
-import { ensureStripeCustomer } from "@/lib/guest-client";
-import {
-  formatOrderTimingDate,
-  formatOrderTimingWindow,
-} from "@/lib/order-timing";
-import { formatClientOrderTiming } from "@/lib/order-timing-label";
+import { ensureStripeCustomer } from "@/lib/guest/client";
 import { orderHasPlacedPaymentFilter } from "@/lib/orders/abandoned-checkout";
 import { resolveOrderCookFields } from "@/lib/orders/cook-order-fields";
 import {
   createOrderBodySchema,
   placeClientOrder,
 } from "@/lib/orders/place-order";
+import {
+  formatOrderTimingDate,
+  formatOrderTimingWindow,
+} from "@/lib/orders/timing";
+import { formatClientOrderTiming } from "@/lib/orders/timing-label";
 import { logAndCheckRateLimit } from "@/lib/rate-limit";
 
 const VALID_ORDER_STATUSES = [

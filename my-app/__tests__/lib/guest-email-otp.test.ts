@@ -13,7 +13,7 @@ import {
   OTP_TTL_MS,
   VERIFIED_TTL_MS,
   verifyPendingOtp,
-} from "@/lib/guest-email-otp";
+} from "@/lib/guest/email-otp";
 
 const EMAIL = "Guest@Example.com";
 const CODE = "123456";

@@ -21,7 +21,7 @@ vi.mock("drizzle-orm", () => ({
   and: vi.fn(),
   sql: vi.fn(),
 }));
-vi.mock("@/lib/stripe-payments", () => ({
+vi.mock("@/lib/stripe/payments", () => ({
   capturePaymentIntent: captureMock,
   createSubscriptionTransfer: vi.fn().mockResolvedValue("tr_test"),
 }));

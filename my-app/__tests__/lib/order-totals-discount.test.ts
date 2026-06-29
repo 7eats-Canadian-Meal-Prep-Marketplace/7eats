@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeOrderChargeBreakdown } from "@/lib/order-totals";
+import { computeOrderChargeBreakdown } from "@/lib/orders/totals";
 
 // Taxes are disabled in the test environment (NEXT_PUBLIC_TAX_COLLECTION_ENABLED
 // unset), so calcTax returns 0 and these assertions are tax-free.

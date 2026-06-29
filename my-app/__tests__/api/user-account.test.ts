@@ -8,7 +8,7 @@ vi.mock("@/db", () => ({
   db: { select: vi.fn() },
 }));
 
-vi.mock("@/lib/client-account-deletion", () => ({
+vi.mock("@/lib/client/account-deletion", () => ({
   getClientDeleteEligibility: vi.fn(),
   verifyClientPassword: vi.fn(),
   deleteClientAccount: vi.fn(),
@@ -34,7 +34,7 @@ import {
   deleteClientAccount,
   getClientDeleteEligibility,
   verifyClientPassword,
-} from "@/lib/client-account-deletion";
+} from "@/lib/client/account-deletion";
 
 const USER_ID = "client-user-1";
 

@@ -4,7 +4,7 @@ import { db } from "@/db";
 import { authUser, authUserTable } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { getStripe } from "@/lib/stripe";
-import { getOrCreateStripeCustomer } from "@/lib/stripe-subscriptions";
+import { getOrCreateStripeCustomer } from "@/lib/stripe/subscriptions";
 
 /**
  * Creates a Stripe SetupIntent for Credential-on-File card vaulting.

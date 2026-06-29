@@ -8,7 +8,7 @@ import {
   deleteClientAccount,
   getClientDeleteEligibility,
   verifyClientPassword,
-} from "@/lib/client-account-deletion";
+} from "@/lib/client/account-deletion";
 import { hashIp } from "@/lib/hash";
 import { logAndCheckRateLimit } from "@/lib/rate-limit";
 

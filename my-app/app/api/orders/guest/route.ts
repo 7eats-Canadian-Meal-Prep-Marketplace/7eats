@@ -3,16 +3,16 @@ import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/db";
 import { orders } from "@/db/schema";
-import { ensureStripeCustomer, resolveGuestClient } from "@/lib/guest-client";
+import { ensureStripeCustomer, resolveGuestClient } from "@/lib/guest/client";
 import {
   GUEST_EMAIL_VERIFIED_COOKIE,
   isEmailVerified,
-} from "@/lib/guest-email-otp";
+} from "@/lib/guest/email-otp";
 import {
   generateConfirmationCode,
   generateGuestAccessToken,
   hashGuestAccessToken,
-} from "@/lib/guest-order-access";
+} from "@/lib/guest/order-access";
 import { hashIp } from "@/lib/hash";
 import { getGuestOrderByToken } from "@/lib/orders/guest-order-lookup";
 import {

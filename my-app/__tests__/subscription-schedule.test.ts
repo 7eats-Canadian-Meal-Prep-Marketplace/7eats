@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   getNextFulfillmentDate,
   getNextPickupDate,
-} from "@/lib/subscription-schedule";
+} from "@/lib/stripe/subscription-schedule";
 
 describe("getNextPickupDate", () => {
   it("returns the same day when it is a pickup day", () => {

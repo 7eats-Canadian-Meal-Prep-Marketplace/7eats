@@ -20,7 +20,7 @@ import {
   type Fulfillment,
   localDateKey,
   startOfLocalDay,
-} from "@/lib/business-calendar";
+} from "@/lib/business/calendar";
 import { Skeleton } from "../_skeleton";
 import styles from "./page.module.css";
 

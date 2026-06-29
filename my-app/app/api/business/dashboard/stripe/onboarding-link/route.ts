@@ -4,7 +4,7 @@ import { getCookId, unauthorized } from "@/app/api/business/_lib/cook-auth";
 import { db } from "@/db";
 import { cookProfiles } from "@/db/schema";
 import { getStripe } from "@/lib/stripe";
-import { syncCookStripeProfileToAccount } from "@/lib/stripe-connect";
+import { syncCookStripeProfileToAccount } from "@/lib/stripe/connect";
 
 export async function POST(req: NextRequest) {
   const cookId = await getCookId(req.headers);

@@ -2,9 +2,9 @@ import { sendMail } from "@/lib/email";
 import {
   deliverOrderClientUpdate,
   type OrderNotifyClient,
-} from "@/lib/order-client-notifications";
-import { formatOrderTimingLabel } from "@/lib/order-timing-label";
-import { cancelByDate } from "@/lib/refund-policy";
+} from "@/lib/orders/client-notifications";
+import { cancelByDate } from "@/lib/orders/refund-policy";
+import { formatOrderTimingLabel } from "@/lib/orders/timing-label";
 import {
   bulletList,
   contactParagraph,

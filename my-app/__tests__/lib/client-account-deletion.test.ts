@@ -3,7 +3,7 @@ import {
   BLOCKING_ORDER_STATUSES,
   DELETED_ACCOUNT_DISPLAY_NAME,
   tombstoneEmail,
-} from "@/lib/client-account-deletion-policy";
+} from "@/lib/client/account-deletion-policy";
 
 describe("client-account-deletion helpers", () => {
   it("blocks pending, confirmed, and ready orders only", () => {

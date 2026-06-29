@@ -12,8 +12,8 @@ vi.mock("@/db", () => ({
   },
   dbPool: { transaction: vi.fn() },
 }));
-vi.mock("@/lib/dish-status", async (importOriginal) => {
-  const mod = await importOriginal<typeof import("@/lib/dish-status")>();
+vi.mock("@/lib/dishes/status", async (importOriginal) => {
+  const mod = await importOriginal<typeof import("@/lib/dishes/status")>();
   return {
     ...mod,
     mapDishStatusForDb: vi.fn(async (status: "active" | "inactive") =>

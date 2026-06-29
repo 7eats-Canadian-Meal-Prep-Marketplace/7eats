@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canMarkReady, readyAvailableFrom } from "@/lib/order-readiness";
+import { canMarkReady, readyAvailableFrom } from "@/lib/orders/readiness";
 
 // All dates are constructed with local-time fields to match the app's
 // runtime-local convention for fulfillment windows (see cook-card-schedule.ts).

@@ -13,13 +13,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
-import { openAddressEditor } from "@/lib/address-events";
+import { openAddressEditor } from "@/lib/address/events";
 import {
   type FulfillmentWindow,
   generateFulfillmentSlotIsos,
 } from "@/lib/lead-time";
+import { cancelByDate, formatLeadTime } from "@/lib/orders/refund-policy";
 import { SPECIAL_REQUESTS_DISCLAIMER } from "@/lib/orders/special-requests-copy";
-import { cancelByDate, formatLeadTime } from "@/lib/refund-policy";
 import { buildCartItem, useCart } from "../../../_cart-context";
 import { useServiceAddress } from "../../../_service-address-context";
 import { Skeleton } from "../../../_skeleton";

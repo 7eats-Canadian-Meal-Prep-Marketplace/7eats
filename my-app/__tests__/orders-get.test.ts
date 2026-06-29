@@ -30,12 +30,12 @@ vi.mock("drizzle-orm", () => ({
   sql: vi.fn((strings: TemplateStringsArray) => strings.join("")),
 }));
 
-vi.mock("@/lib/stripe-payments", () => ({
+vi.mock("@/lib/stripe/payments", () => ({
   createFullPaymentIntent: vi.fn(),
   cancelPaymentIntent: vi.fn(),
 }));
 
-vi.mock("@/lib/stripe-subscriptions", () => ({
+vi.mock("@/lib/stripe/subscriptions", () => ({
   getOrCreateStripeCustomer: vi.fn(),
 }));
 

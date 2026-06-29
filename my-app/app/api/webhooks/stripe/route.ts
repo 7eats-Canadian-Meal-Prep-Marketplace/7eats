@@ -20,8 +20,8 @@ import { getStripe } from "@/lib/stripe";
 import {
   isStripeFullyConnected,
   readStripeConnectAccountStatus,
-} from "@/lib/stripe-connect";
-import { reverseCookSubsidyTransfer } from "@/lib/stripe-payments";
+} from "@/lib/stripe/connect";
+import { reverseCookSubsidyTransfer } from "@/lib/stripe/payments";
 
 export async function POST(req: NextRequest) {
   const rawBody = await req.arrayBuffer();

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calcDeliveryFee } from "@/lib/delivery-fee";
+import { calcDeliveryFee } from "@/lib/delivery/fee";
 
 describe("calcDeliveryFee", () => {
   const base = {

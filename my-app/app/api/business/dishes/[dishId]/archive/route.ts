@@ -7,9 +7,9 @@ import {
 } from "@/app/api/business/_lib/cook-auth";
 import { db } from "@/db";
 import { dishes } from "@/db/schema";
-import { getDishLifecycleInfo } from "@/lib/dish-lifecycle";
-import { openOrdersArchiveError } from "@/lib/dish-lifecycle-messages";
-import { isDishPaused, setDishPaused } from "@/lib/dish-status";
+import { getDishLifecycleInfo } from "@/lib/dishes/lifecycle";
+import { openOrdersArchiveError } from "@/lib/dishes/lifecycle-messages";
+import { isDishPaused, setDishPaused } from "@/lib/dishes/status";
 import { rebuildCookSearchIndexSafe } from "@/lib/search/index-builder";
 
 export type Params = { params: Promise<{ dishId: string }> };

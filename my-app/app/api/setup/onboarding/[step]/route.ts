@@ -9,7 +9,7 @@ import {
   tags,
 } from "@/db/schema";
 import { auth } from "@/lib/auth";
-import { withDeliveryDefaults } from "@/lib/delivery-pricing";
+import { withDeliveryDefaults } from "@/lib/delivery/pricing";
 import {
   isValidLeadTimeCutoff,
   normalizeLeadTimeCutoff,
@@ -21,7 +21,7 @@ import { getStripe } from "@/lib/stripe";
 import {
   isStripeFullyConnected,
   readStripeConnectAccountStatus,
-} from "@/lib/stripe-connect";
+} from "@/lib/stripe/connect";
 import { sniffFileType } from "@/lib/upload-validation";
 import { normalizeUrl } from "@/lib/url";
 

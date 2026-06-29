@@ -3,7 +3,7 @@ import {
   computeDiscountValue,
   orderCandidatesByValue,
   type PlatformDiscountRow,
-} from "./platform-discount";
+} from "@/lib/orders/platform-discount";
 
 function mk(p: Partial<PlatformDiscountRow>): PlatformDiscountRow {
   return {

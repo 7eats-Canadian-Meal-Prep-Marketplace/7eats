@@ -8,7 +8,7 @@ import {
   useMemo,
   useState,
 } from "react";
-import { computeLineTotal } from "@/lib/order-pricing";
+import { computeLineTotal } from "@/lib/orders/pricing";
 
 /** A single dish line in the cart. */
 export type CartItem = {

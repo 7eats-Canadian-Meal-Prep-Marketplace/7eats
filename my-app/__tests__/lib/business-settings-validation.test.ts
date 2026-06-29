@@ -4,7 +4,7 @@ import {
   validateAccountSettings,
   validateKitchenSettings,
   validateLogisticsSettings,
-} from "@/lib/business-settings-validation";
+} from "@/lib/business/settings-validation";
 
 describe("validateKitchenSettings", () => {
   it("requires kitchen name", () => {

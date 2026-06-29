@@ -3,7 +3,7 @@ import {
   earliestFulfillmentWindow,
   type FulfillmentWindow,
   nextFulfillmentWindowLabel,
-} from "@/lib/cook-card-schedule";
+} from "@/lib/cooks/card-schedule";
 
 const pickupWindows: FulfillmentWindow[] = [
   { dayOfWeek: "friday", fromTime: "11:00:00", toTime: "14:00:00" },

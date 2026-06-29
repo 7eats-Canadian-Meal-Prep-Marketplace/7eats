@@ -22,10 +22,10 @@ vi.mock("drizzle-orm", () => ({
   eq: vi.fn(),
   and: vi.fn(),
 }));
-vi.mock("@/lib/dish-lifecycle", () => ({
+vi.mock("@/lib/dishes/lifecycle", () => ({
   getDishLifecycleInfo: vi.fn(),
 }));
-vi.mock("@/lib/dish-status", () => ({
+vi.mock("@/lib/dishes/status", () => ({
   isDishPaused: vi.fn((status: string) => status !== "active"),
   setDishPaused: vi.fn(),
 }));
@@ -37,8 +37,8 @@ import { NextRequest } from "next/server";
 import { POST } from "@/app/api/business/dishes/[dishId]/archive/route";
 import { db } from "@/db";
 import { auth } from "@/lib/auth";
-import { getDishLifecycleInfo } from "@/lib/dish-lifecycle";
-import { setDishPaused } from "@/lib/dish-status";
+import { getDishLifecycleInfo } from "@/lib/dishes/lifecycle";
+import { setDishPaused } from "@/lib/dishes/status";
 
 const COOK_ID = "cook-uuid";
 const USER_ID = "user-uuid";

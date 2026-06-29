@@ -16,8 +16,8 @@ import {
   orderDishes,
   tags,
 } from "@/db/schema";
-import { getDishLifecycleInfo } from "@/lib/dish-lifecycle";
-import { mapDishStatusForDb, normalizeDishStatus } from "@/lib/dish-status";
+import { getDishLifecycleInfo } from "@/lib/dishes/lifecycle";
+import { mapDishStatusForDb, normalizeDishStatus } from "@/lib/dishes/status";
 import { rebuildCookSearchIndexSafe } from "@/lib/search/index-builder";
 
 export type Params = { params: Promise<{ dishId: string }> };

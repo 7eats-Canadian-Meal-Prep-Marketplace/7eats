@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
-import { parseCookSort, sortCooks } from "@/lib/cook-sort";
+import { parseCookSort, sortCooks } from "@/lib/cooks/sort";
 import { useApp } from "../_app-context";
 import {
   type BrowseCookCard,

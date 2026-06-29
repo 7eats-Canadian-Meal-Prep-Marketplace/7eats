@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { authUser } from "@/db/schema";
 import { auth } from "@/lib/auth";
-import { listCustomerCards } from "@/lib/payment-methods";
+import { listCustomerCards } from "@/lib/stripe/payment-methods";
 
 /**
  * Returns the logged-in customer's saved Stripe payment methods (cards only).

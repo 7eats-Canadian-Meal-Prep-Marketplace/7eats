@@ -4,7 +4,7 @@ import { db } from "@/db";
 import { cookProfiles } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { getStripe } from "@/lib/stripe";
-import { buildCookStripeProfileDefaults } from "@/lib/stripe-connect";
+import { buildCookStripeProfileDefaults } from "@/lib/stripe/connect";
 
 export async function POST(req: Request) {
   const session = await auth.api.getSession({ headers: req.headers });

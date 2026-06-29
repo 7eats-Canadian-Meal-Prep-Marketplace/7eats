@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { getDrivingDistanceKm } from "@/lib/mapbox-directions";
+import { getDrivingDistanceKm } from "@/lib/delivery/mapbox-directions";
 
 describe("getDrivingDistanceKm", () => {
   beforeEach(() => {

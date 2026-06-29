@@ -19,7 +19,7 @@ import { toast } from "sonner";
 import {
   type ClientOrderStatus,
   clientOrderTrackerSteps,
-} from "@/lib/client-order-status";
+} from "@/lib/client/order-status";
 import { Skeleton } from "../../_skeleton";
 import { OrderCookHero } from "../_cook-visual";
 import styles from "./page.module.css";

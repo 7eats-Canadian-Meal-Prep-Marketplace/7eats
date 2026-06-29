@@ -7,7 +7,7 @@ import { auth } from "@/lib/auth";
 import {
   clientPreferencesValidationError,
   normalizeClientPreferences,
-} from "@/lib/client-preferences";
+} from "@/lib/client/preferences";
 
 const preferencesSchema = z.object({
   dietary: z.array(z.string()),

@@ -1,7 +1,7 @@
 import {
   INTERVAL_RECURRENCE_PHRASES,
   type SubscriptionInterval,
-} from "@/lib/subscription-schedule";
+} from "@/lib/stripe/subscription-schedule";
 
 /** Charge disclaimer shown on listing, cart, and checkout pages. */
 export function getChargeDisclaimer(interval: SubscriptionInterval): string {
