@@ -34,21 +34,38 @@ const COLOR = {
 
 export const CONTACT_EMAIL = "team@7eats.ca";
 export const NOREPLY_FROM = "noreply@7eats.ca";
+export const TEAM_FROM = "team@7eats.ca";
 
-/** Resend From header display names — same mailbox, different inbox label. */
+/**
+ * Resend From header profiles. Each profile pairs a human-friendly display
+ * name with its own mailbox so inboxes show a recognizable sender, e.g.
+ * `7eats NoReply <noreply@7eats.ca>`, never a bare address.
+ */
 export type EmailSenderProfile = "noreply" | "team";
 
-const SENDER_DISPLAY_NAMES: Record<EmailSenderProfile, string> = {
-  noreply: "noreply",
-  team: "7eats Team",
+const SENDER_PROFILES: Record<
+  EmailSenderProfile,
+  { name: string; email: string }
+> = {
+  noreply: { name: "7eats NoReply", email: NOREPLY_FROM },
+  team: { name: "7eats Team", email: TEAM_FROM },
 };
 
-/** Builds a Resend-compatible From value, e.g. `noreply <noreply@7eats.ca>`. */
+/**
+ * Builds a Resend-compatible From value, e.g. `7eats NoReply
+ * <noreply@7eats.ca>`. RESEND_FROM_EMAIL overrides the no-reply mailbox only
+ * (the deployment's sending domain). The team profile always sends from its
+ * monitored mailbox so replies reach a person.
+ */
 export function formatEmailFrom(
   profile: EmailSenderProfile = "noreply",
-  email = process.env.RESEND_FROM_EMAIL ?? NOREPLY_FROM,
 ): string {
-  return `${SENDER_DISPLAY_NAMES[profile]} <${email}>`;
+  const { name, email } = SENDER_PROFILES[profile];
+  const mailbox =
+    profile === "noreply"
+      ? process.env.RESEND_FROM_EMAIL?.trim() || email
+      : email;
+  return `${name} <${mailbox}>`;
 }
 
 // The brand wordmark, served as a PNG (email clients don't render SVG). Built

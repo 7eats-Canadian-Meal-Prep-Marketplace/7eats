@@ -8,17 +8,22 @@ describe("formatEmailFrom", () => {
     vi.unstubAllEnvs();
   });
 
-  it("defaults to noreply display name", () => {
-    expect(formatEmailFrom()).toBe("noreply <noreply@7eats.ca>");
+  it("defaults to the no-reply display name and mailbox", () => {
+    expect(formatEmailFrom()).toBe("7eats NoReply <noreply@7eats.ca>");
   });
 
-  it("uses team display name for onboarding mail", () => {
-    expect(formatEmailFrom("team")).toBe("7eats Team <noreply@7eats.ca>");
+  it("uses the team display name and mailbox for human mail", () => {
+    expect(formatEmailFrom("team")).toBe("7eats Team <team@7eats.ca>");
   });
 
-  it("respects RESEND_FROM_EMAIL for the mailbox address", () => {
+  it("respects RESEND_FROM_EMAIL for the no-reply mailbox address", () => {
     vi.stubEnv("RESEND_FROM_EMAIL", "mail@7eats.ca");
-    expect(formatEmailFrom("noreply")).toBe("noreply <mail@7eats.ca>");
+    expect(formatEmailFrom("noreply")).toBe("7eats NoReply <mail@7eats.ca>");
+  });
+
+  it("ignores RESEND_FROM_EMAIL for the team mailbox", () => {
+    vi.stubEnv("RESEND_FROM_EMAIL", "mail@7eats.ca");
+    expect(formatEmailFrom("team")).toBe("7eats Team <team@7eats.ca>");
   });
 });
 
