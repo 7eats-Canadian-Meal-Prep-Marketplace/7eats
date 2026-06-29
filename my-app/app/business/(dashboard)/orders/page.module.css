@@ -492,6 +492,14 @@
   font-weight: 800;
 }
 
+.receiptDiscountNote {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  font-weight: 500;
+  color: #6e6e7a;
+}
+
 .cookEarnRow {
   margin-top: 6px;
   padding-top: 12px;

@@ -14,6 +14,7 @@ type GuestOrder = {
   status: string;
   subtotal: string;
   deliveryFee: string | null;
+  platformDiscountAmount: string | null;
   taxAmount: string | null;
   taxLabel: string | null;
   totalPrice: string;
@@ -49,6 +50,7 @@ function receiptTotals(order: GuestOrder) {
   );
   const subtotal = fromLines > 0 ? fromLines : parseAmount(order.subtotal);
   const tax = parseAmount(order.taxAmount);
+  const discount = parseAmount(order.platformDiscountAmount);
   const total = parseAmount(order.totalPrice);
   let delivery = parseAmount(order.deliveryFee);
   if (
@@ -57,9 +59,13 @@ function receiptTotals(order: GuestOrder) {
     subtotal > 0 &&
     total > 0
   ) {
-    delivery = Math.max(0, Math.round((total - tax - subtotal) * 100) / 100);
+    // total = subtotal + delivery − discount + tax → add the discount back in.
+    delivery = Math.max(
+      0,
+      Math.round((total + discount - tax - subtotal) * 100) / 100,
+    );
   }
-  return { subtotal, delivery, tax, total };
+  return { subtotal, delivery, discount, tax, total };
 }
 
 function GuestConfirmationInner() {
@@ -160,7 +166,7 @@ function GuestConfirmationInner() {
 
   const fulfillmentLabel =
     order.fulfillmentMode === "delivery" ? "Delivery" : "Pickup";
-  const { subtotal, delivery, tax, total } = receiptTotals(order);
+  const { subtotal, delivery, discount, tax, total } = receiptTotals(order);
   const cancelHref = `/app/guest/order/cancel?token=${encodeURIComponent(token)}`;
 
   return (
@@ -217,6 +223,14 @@ function GuestConfirmationInner() {
                 <span className={styles.totalLabel}>Delivery</span>
                 <span className={styles.totalValue}>
                   {delivery > 0 ? `$${formatCartMoney(delivery)}` : "Free"}
+                </span>
+              </div>
+            )}
+            {discount > 0 && (
+              <div className={styles.totalRow}>
+                <span className={styles.totalLabel}>Discount</span>
+                <span className={styles.totalValue}>
+                  −${formatCartMoney(discount)}
                 </span>
               </div>
             )}

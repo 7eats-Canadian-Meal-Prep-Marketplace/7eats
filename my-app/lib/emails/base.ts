@@ -211,6 +211,8 @@ type OrderSummaryItem = {
 export function orderSummaryTable(opts: {
   items: OrderSummaryItem[];
   deliveryFee?: number;
+  /** Platform-funded discount applied to the order. Rendered as a −$ line. */
+  platformDiscount?: number;
   tax?: number;
   taxLabel?: string | null;
   total?: string | number | null;
@@ -246,6 +248,7 @@ export function orderSummaryTable(opts: {
       0,
     );
     const deliveryFee = opts.deliveryFee ?? 0;
+    const platformDiscount = opts.platformDiscount ?? 0;
     const tax = opts.tax ?? 0;
 
     const lineRow = (
@@ -274,6 +277,9 @@ export function orderSummaryTable(opts: {
     totalsRows =
       lineRow("Subtotal", money(subtotal), { border: true }) +
       (deliveryFee > 0 ? lineRow("Delivery", money(deliveryFee)) : "") +
+      (platformDiscount > 0
+        ? lineRow("Discount", `&minus;${money(platformDiscount)}`)
+        : "") +
       (tax > 0 ? lineRow(opts.taxLabel ?? "Tax", money(tax)) : "") +
       lineRow("Total", totalText, { strong: true, border: true });
   }

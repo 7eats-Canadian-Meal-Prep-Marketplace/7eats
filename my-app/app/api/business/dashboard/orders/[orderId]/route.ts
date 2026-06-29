@@ -43,6 +43,7 @@ export async function GET(req: NextRequest, { params }: Params) {
           discountAmount: orders.discountAmount,
           taxAmount: orders.taxAmount,
           deliveryFeeSnapshot: orders.deliveryFeeSnapshot,
+          platformDiscountAmount: orders.platformDiscountAmount,
           currency: orders.currency,
           fulfillmentMode: orders.fulfillmentMode,
           deliveryAddress: orders.deliveryAddress,

@@ -17,6 +17,12 @@ commands from `my-app/` unless a task explicitly targets repo-level tooling.
     └── public/           # Static assets
 ```
 
+## Linked Repos
+
+**Admin 7eats repo:** `F:\Coding_Projects\Personal\7eats-admin` — the
+logic app lives in its `7eats-admin/` subfolder (`F:\Coding_Projects\Personal\7eats-admin\7eats-admin`). View this repo
+if ever additional context is needed .
+
 ## UI / Frontend Design Work (MANDATORY)
 
 Any time you do UI work — building new components/pages, restyling, layout
