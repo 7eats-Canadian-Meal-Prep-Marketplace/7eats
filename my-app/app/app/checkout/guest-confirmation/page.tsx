@@ -227,9 +227,9 @@ function GuestConfirmationInner() {
               </div>
             )}
             {discount > 0 && (
-              <div className={styles.totalRow}>
-                <span className={styles.totalLabel}>Discount</span>
-                <span className={styles.totalValue}>
+              <div className={`${styles.totalRow} ${styles.discountRow}`}>
+                <span className={styles.discountLabel}>Discount</span>
+                <span className={styles.discountValue}>
                   −${formatCartMoney(discount)}
                 </span>
               </div>

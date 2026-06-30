@@ -1,9 +1,10 @@
-import { and, eq, lt } from "drizzle-orm";
+import { and, eq, gt, isNotNull, isNull, lt } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { orderPayments, orders } from "@/db/schema";
 import { sendMail } from "@/lib/email";
 import { cancelStaleAbandonedCheckouts } from "@/lib/orders/abandoned-checkout";
+import { settleCookSubsidy } from "@/lib/orders/settle-subsidy";
 
 /**
  * Daily payment housekeeping (Vercel Cron on Hobby: once per day only).
@@ -24,6 +25,25 @@ export async function GET(req: NextRequest) {
 
   try {
     const abandoned = await cancelStaleAbandonedCheckouts();
+
+    const subsidyRetries = await db
+      .select({ orderId: orderPayments.orderId })
+      .from(orderPayments)
+      .where(
+        and(
+          eq(orderPayments.type, "full"),
+          eq(orderPayments.status, "released"),
+          isNotNull(orderPayments.platformSubsidyAmount),
+          gt(orderPayments.platformSubsidyAmount, "0"),
+          isNull(orderPayments.stripeTopupTransferId),
+        ),
+      );
+
+    let subsidiesSettled = 0;
+    for (const { orderId } of subsidyRetries) {
+      await settleCookSubsidy(orderId);
+      subsidiesSettled += 1;
+    }
 
     const cutoff = new Date(Date.now() - STALE_HOURS * 3600_000);
 
@@ -71,6 +91,7 @@ export async function GET(req: NextRequest) {
       success: true,
       checkedAt: new Date().toISOString(),
       abandonedCheckouts: abandoned,
+      subsidyRetries: subsidiesSettled,
       stuckCount: stuck.length,
       stuck,
     });

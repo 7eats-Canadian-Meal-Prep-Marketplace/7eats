@@ -414,6 +414,10 @@
   border-bottom: 1px solid var(--grey-200);
 }
 
+.discountPrompt {
+  margin: 0 0 12px;
+}
+
 .summaryRow {
   display: flex;
   justify-content: space-between;

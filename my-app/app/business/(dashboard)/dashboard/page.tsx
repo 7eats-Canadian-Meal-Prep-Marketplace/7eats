@@ -3,6 +3,7 @@
 import { Calendar, ChevronRight, Plus, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { toast } from "sonner";
 import {
   nextPickupDayOrders,
   queueScheduleIso,
@@ -21,7 +22,9 @@ type QueueOrder = {
   customerName: string | null;
   customerFirstName: string | null;
   listingTitle: string | null;
+  orderSummary: string | null;
   quantity: number;
+  itemCount: number;
   totalPrice: string;
   // Null until a cook pins an exact delivery minute (always null for pickup),
   // so the schedule falls back to the fulfillment window below.
@@ -100,6 +103,16 @@ function displayName(order: QueueOrder): string {
   return "Customer";
 }
 
+function orderLineSummary(order: QueueOrder): string {
+  const title = order.orderSummary ?? order.listingTitle;
+  const qty = order.itemCount > 0 ? order.itemCount : order.quantity;
+  const parts: string[] = [];
+  if (title) parts.push(title);
+  parts.push(scheduleLabel(order));
+  if (qty > 0) parts.push(`×${qty}`);
+  return parts.join(" · ");
+}
+
 function formatMoney(cents: number): string {
   return cents.toLocaleString("en-CA", {
     minimumFractionDigits: 2,
@@ -114,10 +127,7 @@ function PickupRow({ order }: { order: QueueOrder }) {
     <div className={styles.pickupRow}>
       <div className={styles.pickupInfo}>
         <span className={styles.pickupCustomer}>{displayName(order)}</span>
-        <span className={styles.pickupMeta}>
-          {order.listingTitle} &middot; {scheduleLabel(order)} &middot;{" "}
-          <span className={styles.metaQty}>&times;{order.quantity}</span>
-        </span>
+        <span className={styles.pickupMeta}>{orderLineSummary(order)}</span>
       </div>
       <div className={styles.pickupRight}>
         <span className={styles.pickupTotal}>${order.totalPrice}</span>
@@ -148,7 +158,15 @@ function RequestRow({
           body: JSON.stringify({ status: "confirmed" }),
         },
       );
-      if (res.ok) onConfirm(order.id);
+      if (res.ok) {
+        onConfirm(order.id);
+      } else {
+        const json = await res.json().catch(() => ({}));
+        toast.error(
+          (json as { error?: string }).error ??
+            "Could not confirm this order. Try again.",
+        );
+      }
     } finally {
       setConfirming(false);
     }
@@ -158,10 +176,7 @@ function RequestRow({
     <div className={styles.requestRow}>
       <div className={styles.requestInfo}>
         <span className={styles.requestCustomer}>{displayName(order)}</span>
-        <span className={styles.requestMeta}>
-          {order.listingTitle} &middot; {scheduleLabel(order)} &middot;{" "}
-          <span className={styles.metaQty}>&times;{order.quantity}</span>
-        </span>
+        <span className={styles.requestMeta}>{orderLineSummary(order)}</span>
       </div>
       <div className={styles.requestRight}>
         <span className={styles.requestTotal}>${order.totalPrice}</span>

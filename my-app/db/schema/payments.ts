@@ -12,6 +12,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { authUser } from "./auth";
 import { cookProfiles } from "./cooks";
+import { platformDiscounts } from "./discounts";
 import { paymentStatus, paymentTypeEnum, payoutStatus } from "./enums";
 import { orders } from "./orders";
 
@@ -109,6 +110,15 @@ export const orderPayments = pgTable(
     stripeChargeId: text("stripe_charge_id"),
     stripeTransferId: text("stripe_transfer_id"),
     stripeRefundId: text("stripe_refund_id"),
+    // Reserved at checkout placement; copied to orders when payment is authorized.
+    pendingPlatformDiscountId: uuid("pending_platform_discount_id").references(
+      () => platformDiscounts.id,
+      { onDelete: "set null" },
+    ),
+    pendingPlatformDiscountAmount: numeric("pending_platform_discount_amount", {
+      precision: 10,
+      scale: 2,
+    }),
     // Platform-funded discount top-up: amount the platform pays the cook from its
     // own balance so the cook is whole when a platform discount exceeds the fee.
     platformSubsidyAmount: numeric("platform_subsidy_amount", {

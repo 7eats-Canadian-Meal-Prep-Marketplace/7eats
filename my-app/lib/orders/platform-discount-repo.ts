@@ -6,9 +6,109 @@ import { db as defaultDb } from "@/db";
 import { platformDiscounts } from "@/db/schema/discounts";
 import type * as schema from "@/db/schema/index";
 import { orders } from "@/db/schema/orders";
+import { orderPayments } from "@/db/schema/payments";
+import { platformDiscountRedemptionFilter } from "@/lib/orders/abandoned-checkout";
 import type { PlatformDiscountRow } from "./platform-discount";
 
 type DefaultDb = typeof defaultDb;
+
+type PlacementTx = PgTransaction<
+  NeonQueryResultHKT,
+  typeof schema,
+  ExtractTablesWithRelations<typeof schema>
+>;
+
+/** HTTP or pool transaction — both can run discount reservation queries. */
+export type OrderDbTx = Parameters<
+  Parameters<typeof defaultDb.transaction>[0]
+>[0];
+
+type DiscountDb = DefaultDb | PlacementTx | OrderDbTx;
+
+/** Unpaid checkouts that reserved a per-user platform promo on the payment row. */
+export async function countPendingPlatformDiscountReservations(
+  dbClient: DiscountDb,
+  userId: string,
+  discountId: string,
+): Promise<number> {
+  const [{ pending }] = await dbClient
+    .select({ pending: count() })
+    .from(orderPayments)
+    .innerJoin(orders, eq(orderPayments.orderId, orders.id))
+    .where(
+      and(
+        eq(orderPayments.pendingPlatformDiscountId, discountId),
+        eq(orderPayments.clientId, userId),
+        eq(orderPayments.type, "full"),
+        eq(orderPayments.status, "pending"),
+        ne(orders.status, "cancelled"),
+      ),
+    );
+  return Number(pending);
+}
+
+/** Paid orders that consumed a per-user platform promo. */
+export async function countRedeemedPlatformDiscounts(
+  dbClient: DiscountDb,
+  userId: string,
+  discountId: string,
+): Promise<number> {
+  const [{ used }] = await dbClient
+    .select({ used: count() })
+    .from(orders)
+    .where(
+      and(
+        eq(orders.platformDiscountId, discountId),
+        eq(orders.clientId, userId),
+        platformDiscountRedemptionFilter(),
+      ),
+    );
+  return Number(used);
+}
+
+export type PlatformDiscountBlockReason = "already_used" | "pending_checkout";
+
+/** Best candidate the user can still reserve or redeem (preview; non-binding). */
+export async function previewPlatformDiscountForUser(
+  dbClient: DefaultDb,
+  userId: string,
+  candidates: Array<{ discount: PlatformDiscountRow; amount: number }>,
+): Promise<
+  | { amount: number; name: string | null }
+  | { amount: 0; blocked: true; reason: PlatformDiscountBlockReason }
+  | { amount: 0 }
+> {
+  for (const cand of candidates) {
+    const redeemed = await countRedeemedPlatformDiscounts(
+      dbClient,
+      userId,
+      cand.discount.id,
+    );
+    if (redeemed >= cand.discount.perUserLimit) {
+      continue;
+    }
+    const pending = await countPendingPlatformDiscountReservations(
+      dbClient,
+      userId,
+      cand.discount.id,
+    );
+    if (pending > 0) {
+      return { amount: 0, blocked: true, reason: "pending_checkout" };
+    }
+    if (redeemed + pending < cand.discount.perUserLimit) {
+      const [row] = await dbClient
+        .select({ name: platformDiscounts.name })
+        .from(platformDiscounts)
+        .where(eq(platformDiscounts.id, cand.discount.id))
+        .limit(1);
+      return { amount: cand.amount, name: row?.name ?? null };
+    }
+  }
+  const hadCandidate = candidates.length > 0;
+  return hadCandidate
+    ? { amount: 0, blocked: true, reason: "already_used" }
+    : { amount: 0 };
+}
 
 /** Active, in-window discounts, parsed into PlatformDiscountRow. */
 export async function fetchActiveDiscounts(
@@ -51,12 +151,6 @@ export async function fetchActiveDiscounts(
  * inside a dbPool.transaction so the lock + count share one session, and the
  * lock is held until the order insert commits.
  */
-type PlacementTx = PgTransaction<
-  NeonQueryResultHKT,
-  typeof schema,
-  ExtractTablesWithRelations<typeof schema>
->;
-
 export async function resolvePlatformDiscount(
   tx: PlacementTx,
   userId: string,
@@ -65,19 +159,46 @@ export async function resolvePlatformDiscount(
   for (const cand of candidates) {
     const key = `pd:${cand.discount.id}:${userId}`;
     await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${key}))`);
-    const [{ used }] = await tx
-      .select({ used: count() })
-      .from(orders)
-      .where(
-        and(
-          eq(orders.platformDiscountId, cand.discount.id),
-          eq(orders.clientId, userId),
-          ne(orders.status, "cancelled"),
-        ),
-      );
-    if (Number(used) < cand.discount.perUserLimit) {
+    const redeemed = await countRedeemedPlatformDiscounts(
+      tx,
+      userId,
+      cand.discount.id,
+    );
+    const pending = await countPendingPlatformDiscountReservations(
+      tx,
+      userId,
+      cand.discount.id,
+    );
+    if (redeemed + pending < cand.discount.perUserLimit) {
       return { discountId: cand.discount.id, amount: cand.amount };
     }
   }
   return null;
+}
+
+/** Copy a checkout reservation onto the order once payment is authorized. */
+export async function commitPendingPlatformDiscount(
+  tx: OrderDbTx,
+  orderId: string,
+): Promise<void> {
+  const [payment] = await tx
+    .select({
+      pendingId: orderPayments.pendingPlatformDiscountId,
+      pendingAmount: orderPayments.pendingPlatformDiscountAmount,
+    })
+    .from(orderPayments)
+    .where(
+      and(eq(orderPayments.orderId, orderId), eq(orderPayments.type, "full")),
+    )
+    .limit(1);
+
+  if (!payment?.pendingId || !payment.pendingAmount) return;
+
+  await tx
+    .update(orders)
+    .set({
+      platformDiscountId: payment.pendingId,
+      platformDiscountAmount: payment.pendingAmount,
+    })
+    .where(eq(orders.id, orderId));
 }

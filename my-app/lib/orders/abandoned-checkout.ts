@@ -1,4 +1,5 @@
-import { and, eq, lt, sql } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
+import { and, eq, lt, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
   dishPromotions,
@@ -28,6 +29,14 @@ export function orderHasPlacedPaymentFilter() {
       AND ${orderPayments.type} = 'full'
       AND ${orderPayments.status} <> 'pending'
   )`;
+}
+
+/** Paid (or authorized) orders that consumed a per-user platform promo. */
+export function platformDiscountRedemptionFilter(): SQL {
+  return and(
+    ne(orders.status, "cancelled"),
+    orderHasPlacedPaymentFilter(),
+  ) as SQL;
 }
 
 type CancelAbandonedResult =
@@ -94,11 +103,21 @@ export async function cancelAbandonedCheckoutOrder(
   }
 
   await db
+    .update(orderPayments)
+    .set({
+      pendingPlatformDiscountId: null,
+      pendingPlatformDiscountAmount: null,
+    })
+    .where(eq(orderPayments.orderId, orderId));
+
+  await db
     .update(orders)
     .set({
       status: "cancelled",
       cancelledAt: new Date(),
       cancelledBy: null,
+      platformDiscountId: null,
+      platformDiscountAmount: null,
     })
     .where(eq(orders.id, orderId));
 

@@ -107,6 +107,15 @@ export default function StripeConnectPanel({
 
   async function handleStripeAction() {
     setLinkLoading(true);
+    // An already-connected cook opens the Stripe Express dashboard, which is an
+    // external reference with no return_url round-trip, so it opens in a new tab
+    // and keeps their 7eats page intact. The tab must be opened synchronously
+    // inside the click handler (the link URL is fetched async below) or popup
+    // blockers suppress it. Onboarding/account links stay same-tab so Stripe can
+    // redirect back via return_url.
+    const dashboardTab = isConnected
+      ? window.open("about:blank", "_blank")
+      : null;
     try {
       let current = status;
 
@@ -141,11 +150,21 @@ export default function StripeConnectPanel({
       });
       const json = await res.json();
       if (json.success && json.data?.url) {
-        // Same-tab navigation so Stripe's return_url lands back here, not in a popup.
-        window.location.assign(json.data.url);
+        if (dashboardTab) {
+          // Sever the opener reference to prevent reverse tabnabbing, then send
+          // the pre-opened tab to the Stripe dashboard.
+          dashboardTab.opener = null;
+          dashboardTab.location.replace(json.data.url);
+        } else {
+          // Same-tab navigation so Stripe's return_url lands back here.
+          window.location.assign(json.data.url);
+        }
         return;
       }
+      // Link request failed: discard the blank tab we optimistically opened.
+      dashboardTab?.close();
     } catch (err) {
+      dashboardTab?.close();
       console.error("[StripeConnectPanel]", err);
     } finally {
       setLinkLoading(false);

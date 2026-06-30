@@ -8,6 +8,21 @@ vi.mock("@/db/schema", () => ({
 vi.mock("@/lib/cookie", () => ({
   generateSignedValue: vi.fn(() => "signed-cookie-value"),
 }));
+vi.mock("@/lib/cook-application-conflicts", () => ({
+  findCookApplicationConflict: vi.fn().mockResolvedValue(null),
+  cookApplicationConflictMessage: vi.fn((conflict: { kind: string }) => {
+    if (conflict.kind === "application_filed") {
+      return "You've already filed an application with this email. Our team will reach out within 2 business days. Contact us if you need to update your details.";
+    }
+    if (conflict.kind === "cook_account") {
+      return "This email is already linked to a cook account. Sign in to manage your kitchen, or contact us if you need help.";
+    }
+    return "Conflict";
+  }),
+}));
+vi.mock("@/lib/phone-availability", () => ({
+  isUniqueViolation: vi.fn(() => false),
+}));
 vi.mock("@/lib/rate-limit", () => ({
   logAndCheckRateLimit: vi.fn().mockResolvedValue(true),
 }));
@@ -20,6 +35,8 @@ vi.mock("resend", () => ({
 import { POST } from "@/app/api/business/application/route";
 import { db } from "@/db";
 import { cookApplications } from "@/db/schema";
+import { findCookApplicationConflict } from "@/lib/cook-application-conflicts";
+import { isUniqueViolation } from "@/lib/phone-availability";
 
 function makeRequest(body: unknown): Request {
   return new Request("http://localhost/api/business/application", {
@@ -53,6 +70,8 @@ let returningSpy: ReturnType<typeof vi.fn>;
 describe("POST /api/business/application", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(findCookApplicationConflict).mockResolvedValue(null);
+    vi.mocked(isUniqueViolation).mockReturnValue(false);
     returningSpy = vi.fn().mockResolvedValue([{ id: "application_123" }]);
     valuesSpy = vi.fn(() => ({
       returning: returningSpy,
@@ -147,12 +166,39 @@ describe("POST /api/business/application", () => {
       code: "23505",
     });
     returningSpy.mockRejectedValue(uniqueViolation);
+    vi.mocked(isUniqueViolation).mockReturnValue(true);
 
     const res = await POST(makeRequest(validBody));
     const body = await res.json();
 
     expect(res.status).toBe(409);
-    expect(body.error).toContain("An application with this email");
+    expect(body.error).toContain("already filed an application");
+  });
+
+  it("returns 409 when an application is already on file for the email", async () => {
+    vi.mocked(findCookApplicationConflict).mockResolvedValueOnce({
+      kind: "application_filed",
+    });
+
+    const res = await POST(makeRequest(validBody));
+    const body = await res.json();
+
+    expect(res.status).toBe(409);
+    expect(body.error).toContain("already filed an application");
+    expect(valuesSpy).not.toHaveBeenCalled();
+  });
+
+  it("returns 409 when the email is already linked to a cook account", async () => {
+    vi.mocked(findCookApplicationConflict).mockResolvedValueOnce({
+      kind: "cook_account",
+    });
+
+    const res = await POST(makeRequest(validBody));
+    const body = await res.json();
+
+    expect(res.status).toBe(409);
+    expect(body.error).toContain("cook account");
+    expect(valuesSpy).not.toHaveBeenCalled();
   });
 
   it("returns 500 on an unexpected DB error", async () => {

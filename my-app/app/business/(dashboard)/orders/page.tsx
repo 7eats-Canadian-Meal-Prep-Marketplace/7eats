@@ -10,6 +10,7 @@ import {
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { toast } from "sonner";
 import { DELETED_ACCOUNT_DISPLAY_NAME } from "@/lib/client/account-deletion-policy";
 import { arrivalSlots } from "@/lib/delivery/arrival";
 import {
@@ -334,7 +335,18 @@ const CONFETTI = [
   { id: "c14", left: "77%", delay: "200ms", color: "#0f0f0f", rot: "-12deg" },
 ] as const;
 
-function OrderComplete({ customerName }: { customerName: string }) {
+function OrderComplete({
+  customerName,
+  fulfillmentMode,
+}: {
+  customerName: string;
+  fulfillmentMode: string | null;
+}) {
+  // "picked up" only fits pickup orders; a delivery is received, not collected.
+  const handoffLine =
+    fulfillmentMode === "delivery"
+      ? `${customerName} received their order. Nicely done.`
+      : `${customerName} picked up their order. Nicely done.`;
   return (
     <div className={styles.complete} aria-live="polite" aria-atomic="true">
       <div className={styles.confetti} aria-hidden="true">
@@ -376,9 +388,7 @@ function OrderComplete({ customerName }: { customerName: string }) {
       </div>
 
       <h3 className={styles.completeTitle}>Order complete!</h3>
-      <p className={styles.completeText}>
-        {customerName} picked up their order. Nicely done.
-      </p>
+      <p className={styles.completeText}>{handoffLine}</p>
       <p className={styles.completePayout}>
         Payment is on its way to your account.
       </p>
@@ -661,7 +671,15 @@ function OrderDetail({
           body: JSON.stringify(arrivalAt ? { status, arrivalAt } : { status }),
         },
       );
-      if (res.ok) onStatusChange(order.id, status);
+      if (res.ok) {
+        onStatusChange(order.id, status);
+      } else {
+        const json = await res.json().catch(() => ({}));
+        toast.error(
+          (json as { error?: string }).error ??
+            "Could not update this order. Try again.",
+        );
+      }
     } finally {
       setMutating(false);
     }
@@ -984,7 +1002,10 @@ function OrderDetail({
 
       {order.status === "fulfilled" &&
         (justFulfilled ? (
-          <OrderComplete customerName={cookClientDisplayName(order)} />
+          <OrderComplete
+            customerName={cookClientDisplayName(order)}
+            fulfillmentMode={order.fulfillmentMode}
+          />
         ) : (
           <div className={styles.completedCalm}>
             <CheckCircle2 size={16} aria-hidden="true" />

@@ -141,6 +141,13 @@
       "when": 1783800000000,
       "tag": "0019_order_lead_time_snapshot",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1783900000000,
+      "tag": "0020_pending_platform_discount",
+      "breakpoints": true
     }
   ]
 }

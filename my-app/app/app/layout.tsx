@@ -12,6 +12,7 @@ export default async function AppLayout({
   children: React.ReactNode;
 }) {
   let isLoggedIn = false;
+  let isGuestAccount = false;
   let userInitials = "";
   let userName = "";
   let userEmail = "";
@@ -29,10 +30,13 @@ export default async function AppLayout({
           name: authUser.name,
           firstName: authUser.firstName,
           lastName: authUser.lastName,
+          isGuestAccount: authUser.isGuestAccount,
         })
         .from(authUser)
         .where(eq(authUser.id, session.user.id))
         .limit(1);
+
+      isGuestAccount = row?.isGuestAccount ?? false;
 
       const first = row?.firstName ?? undefined;
       const last = row?.lastName ?? undefined;
@@ -48,6 +52,7 @@ export default async function AppLayout({
   return (
     <AppShell
       isLoggedIn={isLoggedIn}
+      isGuestAccount={isGuestAccount}
       userInitials={userInitials}
       userName={userName}
       userEmail={userEmail}

@@ -297,18 +297,137 @@ export function formatOrderLeftLabel(deadline: Date, now: Date): string | null {
   return days === 1 ? "1 day left to order" : `${days} days left to order`;
 }
 
+export type LeadTimeExampleOptions = {
+  fulfillmentMode?: "pickup" | "delivery" | "both";
+  pickupWindows?: FulfillmentWindow[];
+  deliveryWindows?: FulfillmentWindow[];
+};
+
+const WEEKDAY_SORT_ORDER = [
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+  "sunday",
+] as const;
+
+function weekdaySortIndex(dayOfWeek: string): number {
+  const idx = WEEKDAY_SORT_ORDER.indexOf(
+    normalizeDay(dayOfWeek) as (typeof WEEKDAY_SORT_ORDER)[number],
+  );
+  return idx >= 0 ? idx : 99;
+}
+
+function formatWeekday(date: Date): string {
+  return date.toLocaleDateString("en-CA", { weekday: "long" });
+}
+
+function formatSlotTime(time: string): string {
+  const { hours, minutes } = parseCutoffParts(
+    time.length === 5 ? `${time}:00` : time,
+  );
+  const d = new Date(2000, 0, 1, hours, minutes, 0);
+  return d.toLocaleTimeString("en-CA", {
+    hour: "numeric",
+    minute: minutes === 0 ? undefined : "2-digit",
+  });
+}
+
+function pickExampleWindow(
+  options?: LeadTimeExampleOptions,
+): { window: FulfillmentWindow; kind: "pickup" | "delivery" } | null {
+  if (!options) return null;
+
+  const pickup = options.pickupWindows ?? [];
+  const delivery = options.deliveryWindows ?? [];
+  const mode = options.fulfillmentMode ?? "pickup";
+
+  let candidates: { window: FulfillmentWindow; kind: "pickup" | "delivery" }[] =
+    [];
+  if (mode === "pickup") {
+    candidates = pickup.map((window) => ({ window, kind: "pickup" }));
+  } else if (mode === "delivery") {
+    candidates = delivery.map((window) => ({ window, kind: "delivery" }));
+  } else {
+    const source = pickup.length > 0 ? pickup : delivery;
+    const kind = pickup.length > 0 ? "pickup" : "delivery";
+    candidates = source.map((window) => ({ window, kind }));
+  }
+
+  if (candidates.length === 0) return null;
+
+  candidates.sort(
+    (a, b) =>
+      weekdaySortIndex(a.window.dayOfWeek) -
+      weekdaySortIndex(b.window.dayOfWeek),
+  );
+  return candidates[0] ?? null;
+}
+
+function exampleFulfillmentDay(dayOfWeek: string, leadDays: number): Date {
+  const target = DAY_NAMES.indexOf(
+    normalizeDay(dayOfWeek) as (typeof DAY_NAMES)[number],
+  );
+  const anchor = new Date();
+  anchor.setHours(12, 0, 0, 0);
+  const minOffset = Math.max(leadDays + 1, 1);
+
+  for (let offset = minOffset; offset < minOffset + 14; offset++) {
+    const day = new Date(
+      anchor.getFullYear(),
+      anchor.getMonth(),
+      anchor.getDate() + offset,
+    );
+    if (day.getDay() === target) return day;
+  }
+
+  return new Date(
+    anchor.getFullYear(),
+    anchor.getMonth(),
+    anchor.getDate() + 7,
+  );
+}
+
+function fulfillmentDayLabel(mode?: LeadTimeExampleOptions["fulfillmentMode"]) {
+  if (mode === "delivery") return "delivery day";
+  if (mode === "both") return "pickup or delivery day";
+  return "pickup day";
+}
+
 export function leadTimeExampleText(
   leadTime: string,
   cutoffTime: string,
+  options?: LeadTimeExampleOptions,
 ): string {
   const days = leadTimeDays(leadTime);
   const cutoffLabel = formatLeadTimeCutoffLabel(cutoffTime);
+  const picked = pickExampleWindow(options);
+  const fulfillmentKind =
+    picked?.kind ??
+    (options?.fulfillmentMode === "delivery" ? "delivery" : "pickup");
+  const fulfillmentWord =
+    fulfillmentKind === "delivery" ? "delivery" : "pickup";
+  const dayLabel = fulfillmentDayLabel(options?.fulfillmentMode);
+
+  if (picked) {
+    const fulfillmentDay = exampleFulfillmentDay(picked.window.dayOfWeek, days);
+    const fulfillmentDayName = formatWeekday(fulfillmentDay);
+    const slotTime = formatSlotTime(picked.window.fromTime);
+    const orderBy = orderDeadlineForPickupDay(fulfillmentDay, days, cutoffTime);
+    const orderByDayName = formatWeekday(orderBy);
+    const cutoffDisplay = cutoffLabel.replace(/\.$/, "");
+
+    return `Example: for ${fulfillmentDayName} ${fulfillmentWord} at ${slotTime}, orders close ${orderByDayName} at ${cutoffDisplay}.`;
+  }
+
   const leadLabel = formatLeadTime(leadTime) ?? `${days} days`;
   if (days === 0) {
-    return `Same-day orders close at ${cutoffLabel} on the pickup day.`;
+    return `Same-day orders close at ${cutoffLabel} on the ${dayLabel}. Add your ${fulfillmentWord} days above to see a concrete example.`;
   }
-  const dayWord = days === 1 ? "day" : "days";
-  return `${leadLabel} before pickup, closing at ${cutoffLabel}. Example: for Saturday pickup, orders close ${days} ${dayWord} earlier at ${cutoffLabel}.`;
+
+  return `${leadLabel} before ${fulfillmentWord}. Orders close on the order-by day at ${cutoffLabel}. Add your ${fulfillmentWord} days above to see a concrete example.`;
 }
 
 export function formatDbLeadTimeCutoff(value: unknown): string {

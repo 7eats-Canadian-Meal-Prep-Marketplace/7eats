@@ -106,6 +106,29 @@ function pickupLocationTextLine(order: OrderEmailData): string | null {
   return location ? `Pickup location: ${location}` : null;
 }
 
+/**
+ * Order line for the compact details table: item names prefixed with their
+ * quantity, e.g. "2× Spring Rolls, 1× General Tao". Falls back to the plain
+ * listing title when no itemised breakdown is available. `html` controls
+ * HTML-escaping (and the × glyph) for the markup variant; the plain-text
+ * variant passes false.
+ */
+function orderItemsLabel(
+  order: OrderEmailData,
+  opts: { html: boolean },
+): string {
+  if (!hasItemizedSummary(order)) {
+    return opts.html ? escapeHtml(order.listingTitle) : order.listingTitle;
+  }
+  const times = opts.html ? "&times;" : "×";
+  return order.items
+    .map(
+      (it) =>
+        `${it.quantity}${times} ${opts.html ? escapeHtml(it.name) : it.name}`,
+    )
+    .join(", ");
+}
+
 function cancellationScheduleClause(order: OrderEmailData): string {
   const timing = knownTimingLabel(order);
   return timing ? ` scheduled for ${timing}` : "";
@@ -585,7 +608,7 @@ export async function sendOrderReadyEmailToClient(
             pickupCodeBlock(pickupCode, codeLabel) +
             tipsHtml +
             orderDetailsTable([
-              { label: "Order", value: order.listingTitle },
+              { label: "Order", value: orderItemsLabel(order, { html: true }) },
               ...(timingRow ? [timingRow] : []),
               ...(pickupRow ? [pickupRow] : []),
             ]) +
@@ -609,7 +632,7 @@ export async function sendOrderReadyEmailToClient(
           pickupCode,
           "",
           ...(isDelivery ? [...deliveryTipsText, ""] : []),
-          `Order: ${order.listingTitle}`,
+          `Order: ${orderItemsLabel(order, { html: false })}`,
           ...(timingRow ? [`${timingRow.label}: ${timingRow.value}`] : []),
           ...(pickupTextLine ? [pickupTextLine] : []),
           "",

@@ -1062,6 +1062,31 @@ function Step2({
           onChange={(value) =>
             setForm((f) => ({ ...f, leadTimeCutoff: value }))
           }
+          fulfillmentMode={form.fulfillment}
+          pickupWindows={form.pickupDays.map((d) => {
+            const dayOfWeek = DAY_FULL[d] ?? d.toLowerCase();
+            const win = form.pickupWindows[dayOfWeek] ?? {
+              from: "11:00",
+              to: "14:00",
+            };
+            return {
+              dayOfWeek,
+              fromTime: win.from,
+              toTime: win.to,
+            };
+          })}
+          deliveryWindows={form.deliveryDays.map((d) => {
+            const dayOfWeek = DAY_FULL[d] ?? d.toLowerCase();
+            const win = form.deliveryWindows[dayOfWeek] ?? {
+              from: "11:00",
+              to: "14:00",
+            };
+            return {
+              dayOfWeek,
+              fromTime: win.from,
+              toTime: win.to,
+            };
+          })}
           hintClassName={styles.hint}
           labelClassName={styles.label}
         />

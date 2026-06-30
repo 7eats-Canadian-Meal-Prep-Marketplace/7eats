@@ -2,7 +2,7 @@ import { and, asc, eq, gte, inArray, sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { getCookId, unauthorized } from "@/app/api/business/_lib/cook-auth";
 import { db } from "@/db";
-import { authUser, listings, orders } from "@/db/schema";
+import { authUser, listings, orderDishes, orders } from "@/db/schema";
 import { orderHasPlacedPaymentFilter } from "@/lib/orders/abandoned-checkout";
 
 export async function GET(req: NextRequest) {
@@ -27,6 +27,19 @@ export async function GET(req: NextRequest) {
         listingId: orders.listingId,
         status: orders.status,
         quantity: orders.quantity,
+        itemCount: sql<number>`(
+          SELECT COALESCE(SUM(${orderDishes.quantity}), 0)::int
+          FROM ${orderDishes}
+          WHERE ${orderDishes.orderId} = ${orders.id}
+        )`,
+        orderSummary: sql<string | null>`(
+          SELECT NULLIF(
+            string_agg(${orderDishes.dishName}, ', ' ORDER BY ${orderDishes.sortOrder}),
+            ''
+          )
+          FROM ${orderDishes}
+          WHERE ${orderDishes.orderId} = ${orders.id}
+        )`,
         unitPrice: orders.unitPrice,
         totalPrice: orders.totalPrice,
         pickupAt: orders.pickupAt,

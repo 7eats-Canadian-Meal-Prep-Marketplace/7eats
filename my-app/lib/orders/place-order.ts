@@ -389,14 +389,10 @@ export async function placeClientOrder(
 
   try {
     await dbPool.transaction(async (tx) => {
-      // Acquire the per-(discount,user) advisory lock and pick the best
-      // candidate the user is still entitled to. Held until commit so a
-      // concurrent placement for the same user cannot double-redeem.
-      const resolved = await resolvePlatformDiscount(
-        tx,
-        client.id,
-        discountCandidates,
-      );
+      // Platform promos are for full accounts only — never guest checkout.
+      const resolved = isGuestCheckout
+        ? null
+        : await resolvePlatformDiscount(tx, client.id, discountCandidates);
       const platformDiscount = resolved?.amount ?? 0;
       const charges = computeOrderChargeBreakdown({
         subtotal,
@@ -470,9 +466,8 @@ export async function placeClientOrder(
         cancellationAllowed: cook.cancellationAllowed,
         leadTimeSnapshot: cook.leadTime,
         leadTimeCutoffSnapshot: formatDbLeadTimeCutoff(cook.leadTimeCutoff),
-        platformDiscountId: resolved?.discountId ?? null,
-        platformDiscountAmount:
-          platformDiscount > 0 ? String(platformDiscount.toFixed(2)) : null,
+        platformDiscountId: null,
+        platformDiscountAmount: null,
         totalPrice: String(charges.totalPrice.toFixed(2)),
         currency: "CAD",
         taxAmount: String(charges.taxAmount.toFixed(2)),
@@ -526,6 +521,9 @@ export async function placeClientOrder(
           charges.subsidyTopUpCents > 0
             ? String((charges.subsidyTopUpCents / 100).toFixed(2))
             : null,
+        pendingPlatformDiscountId: resolved?.discountId ?? null,
+        pendingPlatformDiscountAmount:
+          platformDiscount > 0 ? String(platformDiscount.toFixed(2)) : null,
         currency: "CAD",
         stripePaymentIntentId: piId,
       });

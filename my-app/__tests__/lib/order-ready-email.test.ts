@@ -104,6 +104,26 @@ describe("order ready email — pickup", () => {
     expect(text.toLowerCase()).not.toContain("around");
   });
 
+  it("shows each dish quantity in the order line", async () => {
+    await sendOrderReadyEmailToClient(
+      client,
+      cook,
+      {
+        ...pickupOrder,
+        items: [
+          { name: "General Tao", quantity: 2, lineTotal: "24.00" },
+          { name: "Spring Rolls", quantity: 3, lineTotal: "9.00" },
+        ],
+      },
+      "654321",
+    );
+    const { text, html } = sendMailMock.mock.calls[0][0];
+    expect(text).toContain("Order: 2× General Tao, 3× Spring Rolls");
+    expect(html).toContain("General Tao");
+    expect(html).toContain("2&times; General Tao");
+    expect(html).toContain("3&times; Spring Rolls");
+  });
+
   it("shows the cook's pickup location to the client", async () => {
     await sendOrderReadyEmailToClient(
       client,

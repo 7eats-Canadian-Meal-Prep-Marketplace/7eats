@@ -535,6 +535,23 @@ export function LogisticsSection() {
           onChange={(value) =>
             setForm((f) => ({ ...f, leadTimeCutoff: value }))
           }
+          fulfillmentMode={form.fulfillment}
+          pickupWindows={windowsFromForm(
+            form.pickupDays,
+            form.pickupWindows,
+          ).map(({ day, from, to }) => ({
+            dayOfWeek: day,
+            fromTime: from,
+            toTime: to,
+          }))}
+          deliveryWindows={windowsFromForm(
+            form.deliveryDays,
+            form.deliveryWindows,
+          ).map(({ day, from, to }) => ({
+            dayOfWeek: day,
+            fromTime: from,
+            toTime: to,
+          }))}
           labelClassName={styles.formLabel}
           hintClassName={styles.formHint}
         />

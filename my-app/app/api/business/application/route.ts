@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/db";
 import { cookApplications, legalAcceptances } from "@/db/schema";
+import {
+  cookApplicationConflictMessage,
+  findCookApplicationConflict,
+} from "@/lib/cook-application-conflicts";
 import { generateSignedValue } from "@/lib/cookie";
 import { sendMail } from "@/lib/email";
 import {
@@ -12,6 +16,7 @@ import {
 } from "@/lib/emails/base";
 import { hashIp } from "@/lib/hash";
 import { COOK_APPLICATION_DOCS, LEGAL_VERSION } from "@/lib/legal";
+import { isUniqueViolation } from "@/lib/phone-availability";
 import { logAndCheckRateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/request-ip";
 
@@ -94,6 +99,17 @@ export async function POST(req: Request) {
 
   const v = parsed.data;
 
+  const conflict = await findCookApplicationConflict(
+    v.contactEmail,
+    v.businessEmail,
+  );
+  if (conflict) {
+    return NextResponse.json(
+      { error: cookApplicationConflictMessage(conflict) },
+      { status: 409 },
+    );
+  }
+
   try {
     const [application] = await db
       .insert(cookApplications)
@@ -131,11 +147,10 @@ export async function POST(req: Request) {
       console.error("[application] legal acceptance record failed:", err);
     }
   } catch (err) {
-    if ((err as { code?: string }).code === "23505") {
+    if (isUniqueViolation(err)) {
       return NextResponse.json(
         {
-          error:
-            "An application with this email already exists. Contact us if you need help.",
+          error: cookApplicationConflictMessage({ kind: "application_filed" }),
         },
         { status: 409 },
       );

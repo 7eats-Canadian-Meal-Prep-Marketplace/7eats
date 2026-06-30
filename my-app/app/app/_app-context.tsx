@@ -12,6 +12,10 @@ export type FulfillmentMode = "pickup" | "delivery";
 
 type AppContextType = {
   isLoggedIn: boolean;
+  /** Shadow guest rows from checkout — not eligible for platform promos. */
+  isGuestAccount: boolean;
+  /** Full signed-in client eligible for platform promos. */
+  platformDiscountEligible: boolean;
   userName: string;
   setUserName: (name: string) => void;
   userEmail: string;
@@ -36,6 +40,7 @@ export function useApp(): AppContextType {
 
 export function AppProvider({
   isLoggedIn,
+  isGuestAccount = false,
   userName: initialUserName = "",
   userEmail = "",
   userInitials: initialUserInitials = "?",
@@ -43,6 +48,7 @@ export function AppProvider({
   children,
 }: {
   isLoggedIn: boolean;
+  isGuestAccount?: boolean;
   userName?: string;
   userEmail?: string;
   userInitials?: string;
@@ -64,6 +70,8 @@ export function AppProvider({
   const value = useMemo(
     () => ({
       isLoggedIn,
+      isGuestAccount,
+      platformDiscountEligible: isLoggedIn && !isGuestAccount,
       userName,
       setUserName,
       userEmail,
@@ -78,6 +86,7 @@ export function AppProvider({
     }),
     [
       isLoggedIn,
+      isGuestAccount,
       userName,
       userEmail,
       userInitials,

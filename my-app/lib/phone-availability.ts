@@ -44,16 +44,32 @@ export function phoneTakenMessage(role: PhoneOwnerRole): string {
 }
 
 /**
+ * Walks the error cause chain (Neon/Drizzle often nest Postgres errors) and
+ * returns a SQLSTATE code when present.
+ */
+export function getPostgresErrorCode(err: unknown): string | null {
+  let current: unknown = err;
+  const seen = new Set<unknown>();
+
+  while (current && typeof current === "object" && !seen.has(current)) {
+    seen.add(current);
+    if ("code" in current) {
+      const code = (current as { code?: unknown }).code;
+      if (typeof code === "string") return code;
+    }
+    current =
+      "cause" in current ? (current as { cause?: unknown }).cause : undefined;
+  }
+
+  return null;
+}
+
+/**
  * Detects a Postgres unique-constraint violation (SQLSTATE 23505). Used as a
  * race-safe backstop: if two requests pass the pre-check concurrently, the
  * partial unique index rejects the second write and we surface the same
  * friendly error instead of a 500.
  */
 export function isUniqueViolation(err: unknown): boolean {
-  return (
-    typeof err === "object" &&
-    err !== null &&
-    "code" in err &&
-    (err as { code?: unknown }).code === "23505"
-  );
+  return getPostgresErrorCode(err) === "23505";
 }

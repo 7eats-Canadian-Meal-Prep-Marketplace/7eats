@@ -49,10 +49,7 @@ export default function BrowsePage() {
     params.set("lat", String(currentAddress.lat));
     params.set("lng", String(currentAddress.lng));
     params.set("mode", mode ?? "pickup");
-    const qs = params.toString();
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
-    const path = `/api/cooks?${qs}`;
-    const url = baseUrl ? `${baseUrl}${path}` : path;
+    const url = `/api/cooks?${params.toString()}`;
 
     fetch(url, { cache: "no-store" })
       .then((r) => r.json())

@@ -7,6 +7,7 @@ import {
   isPickupDayBookable,
   isRefundEligible,
   LEAD_TIME_CUTOFF_PRESETS,
+  leadTimeExampleText,
   orderDeadlineForPickupDay,
   resolveOrderLeadTimeRules,
 } from "@/lib/lead-time";
@@ -112,5 +113,36 @@ describe("lead-time cutoff", () => {
     });
     expect(rules.leadTime).toBe("2_days");
     expect(rules.leadTimeCutoff).toBe("22:00:00");
+  });
+
+  it("builds cutoff examples from enabled pickup windows", () => {
+    const text = leadTimeExampleText("2_days", "22:00:00", {
+      fulfillmentMode: "pickup",
+      pickupWindows: [
+        {
+          dayOfWeek: "saturday",
+          fromTime: "11:00",
+          toTime: "14:00",
+        },
+      ],
+    });
+    expect(text).toContain("Saturday pickup at 11 a.m.");
+    expect(text).toContain("orders close Thursday at 10 p.m.");
+    expect(text).not.toContain("2 days earlier");
+  });
+
+  it("builds cutoff examples from enabled delivery windows", () => {
+    const text = leadTimeExampleText("1_day", "23:59:59", {
+      fulfillmentMode: "delivery",
+      deliveryWindows: [
+        {
+          dayOfWeek: "friday",
+          fromTime: "17:30",
+          toTime: "20:00",
+        },
+      ],
+    });
+    expect(text).toContain("Friday delivery at 5:30 p.m.");
+    expect(text).toContain("orders close Thursday at midnight");
   });
 });

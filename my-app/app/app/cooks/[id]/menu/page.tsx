@@ -12,7 +12,15 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { type ReactNode, useEffect, useMemo, useState } from "react";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import PlatformDiscountSignupPrompt from "@/app/components/PlatformDiscountSignupPrompt";
 import { openAddressEditor } from "@/lib/address/events";
 import {
   type FulfillmentWindow,
@@ -20,6 +28,7 @@ import {
 } from "@/lib/lead-time";
 import { cancelByDate, formatLeadTime } from "@/lib/orders/refund-policy";
 import { SPECIAL_REQUESTS_DISCLAIMER } from "@/lib/orders/special-requests-copy";
+import { useApp } from "../../../_app-context";
 import { buildCartItem, useCart } from "../../../_cart-context";
 import { useServiceAddress } from "../../../_service-address-context";
 import { Skeleton } from "../../../_skeleton";
@@ -182,6 +191,7 @@ export default function CookMenuPage() {
   const cookId = params.id;
   const router = useRouter();
   const cart = useCart();
+  const { platformDiscountEligible } = useApp();
   const { ready, currentAddress } = useServiceAddress();
 
   const [data, setData] = useState<MenuData | null>(null);
@@ -304,15 +314,6 @@ export default function CookMenuPage() {
       cart.setFulfillment("delivery");
     }
   }, [data, canPickup, canDeliver, cart.fulfillmentMode, cart.setFulfillment]);
-
-  useEffect(() => {
-    if (!orderSheetOpen) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [orderSheetOpen]);
 
   function buildBase(dish: Dish, nextQty: number) {
     const promo = dish.promotion
@@ -809,12 +810,21 @@ export default function CookMenuPage() {
               checkoutLabel={checkoutLabel}
               onNoteOpen={() => setNoteOpen(true)}
               onCheckout={goCheckout}
+              platformDiscountPromptEnabled={!platformDiscountEligible}
             />
           </div>
         </aside>
       </div>
 
       <div className={styles.mobileOrderDock}>
+        <button
+          type="button"
+          className={styles.orderDockHandle}
+          onClick={() => setOrderSheetOpen(true)}
+          aria-label="View order details"
+        >
+          <span className={styles.orderDockGrab} aria-hidden />
+        </button>
         <div className={styles.orderDockMain}>
           <button
             type="button"
@@ -860,36 +870,35 @@ export default function CookMenuPage() {
         )}
       </div>
 
-      {orderSheetOpen && (
-        <OrderSheet onClose={() => setOrderSheetOpen(false)}>
-          <OrderBillPanel
-            cook={cook}
-            cart={cart}
-            totalQty={totalQty}
-            subtotal={subtotal}
-            meetsMin={meetsMin}
-            remaining={remaining}
-            noSlots={noSlots}
-            canPickup={canPickup}
-            cookSelfDelivers={Boolean(cookSelfDelivers)}
-            canDeliver={canDeliver}
-            deliveryOutOfRange={deliveryOutOfRange}
-            deliveryCheck={deliveryCheck}
-            cutoff={cutoff}
-            isDelivery={isDelivery}
-            activeForThisCook={activeForThisCook}
-            checkoutDisabled={checkoutDisabled}
-            checkoutLabel={checkoutLabel}
-            onNoteOpen={() => setNoteOpen(true)}
-            onCheckout={() => {
-              setOrderSheetOpen(false);
-              goCheckout();
-            }}
-            showFulfillment={false}
-            inSheet
-          />
-        </OrderSheet>
-      )}
+      <OrderSheet open={orderSheetOpen} onOpenChange={setOrderSheetOpen}>
+        <OrderBillPanel
+          cook={cook}
+          cart={cart}
+          totalQty={totalQty}
+          subtotal={subtotal}
+          meetsMin={meetsMin}
+          remaining={remaining}
+          noSlots={noSlots}
+          canPickup={canPickup}
+          cookSelfDelivers={Boolean(cookSelfDelivers)}
+          canDeliver={canDeliver}
+          deliveryOutOfRange={deliveryOutOfRange}
+          deliveryCheck={deliveryCheck}
+          cutoff={cutoff}
+          isDelivery={isDelivery}
+          activeForThisCook={activeForThisCook}
+          checkoutDisabled={checkoutDisabled}
+          checkoutLabel={checkoutLabel}
+          onNoteOpen={() => setNoteOpen(true)}
+          onCheckout={() => {
+            setOrderSheetOpen(false);
+            goCheckout();
+          }}
+          showFulfillment={false}
+          inSheet
+          platformDiscountPromptEnabled={!platformDiscountEligible}
+        />
+      </OrderSheet>
 
       {openDish && (
         <DishModal
@@ -950,6 +959,7 @@ type OrderBillPanelProps = {
   showFulfillment?: boolean;
   /** Strip card chrome when rendered inside the bottom sheet */
   inSheet?: boolean;
+  platformDiscountPromptEnabled?: boolean;
 };
 
 function OrderBillPanel({
@@ -974,10 +984,17 @@ function OrderBillPanel({
   onCheckout,
   showFulfillment = true,
   inSheet = false,
+  platformDiscountPromptEnabled = false,
 }: OrderBillPanelProps) {
   return (
     <section className={`${styles.bill} ${inSheet ? styles.billInSheet : ""}`}>
       {!inSheet && <h2 className={styles.billTitle}>Your order</h2>}
+
+      <PlatformDiscountSignupPrompt
+        enabled={platformDiscountPromptEnabled}
+        subtotal={subtotal > 0 ? subtotal : undefined}
+        className={styles.discountPrompt}
+      />
 
       {totalQty === 0 ? (
         <p className={styles.billEmpty}>Tap a dish to start your order.</p>
@@ -1113,35 +1130,93 @@ function OrderBillPanel({
 }
 
 function OrderSheet({
+  open,
+  onOpenChange,
   children,
-  onClose,
 }: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   children: ReactNode;
-  onClose: () => void;
 }) {
+  const [visible, setVisible] = useState(open);
+  const [closing, setClosing] = useState(false);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const requestClose = useCallback(() => {
+    if (closing) return;
+    onOpenChange(false);
+  }, [closing, onOpenChange]);
+
   useEffect(() => {
+    if (open) {
+      if (closeTimer.current) {
+        clearTimeout(closeTimer.current);
+        closeTimer.current = null;
+      }
+      setVisible(true);
+      setClosing(false);
+      return;
+    }
+
+    if (!visible) return;
+
+    setClosing(true);
+    closeTimer.current = setTimeout(() => {
+      setVisible(false);
+      setClosing(false);
+      closeTimer.current = null;
+    }, 280);
+
+    return () => {
+      if (closeTimer.current) {
+        clearTimeout(closeTimer.current);
+        closeTimer.current = null;
+      }
+    };
+  }, [open, visible]);
+
+  useEffect(() => {
+    if (!visible) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [visible]);
+
+  useEffect(() => {
+    if (!visible) return;
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") requestClose();
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, [visible, requestClose]);
+
+  if (!visible) return null;
 
   return (
-    <div className={styles.orderSheetOverlay}>
+    <div
+      className={`${styles.orderSheetOverlay} ${closing ? styles.orderSheetOverlayOut : styles.orderSheetOverlayIn}`}
+    >
       <button
         type="button"
         className={styles.orderSheetBackdrop}
         aria-label="Close order"
-        onClick={onClose}
+        onClick={requestClose}
       />
-      <div className={styles.orderSheet} role="dialog" aria-modal="true">
+      <div
+        role="dialog"
+        aria-modal="true"
+        className={`${styles.orderSheet} ${closing ? styles.orderSheetOut : styles.orderSheetIn}`}
+      >
+        <span className={styles.orderSheetGrab} aria-hidden />
         <div className={styles.orderSheetHead}>
           <h2 className={styles.orderSheetTitle}>Your order</h2>
           <button
             type="button"
             className={styles.orderSheetClose}
-            onClick={onClose}
+            onClick={requestClose}
             aria-label="Close"
           >
             <X size={20} />

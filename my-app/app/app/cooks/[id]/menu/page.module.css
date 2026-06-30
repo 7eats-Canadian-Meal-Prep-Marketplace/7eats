@@ -557,6 +557,10 @@
   margin-bottom: 14px;
 }
 
+.discountPrompt {
+  margin: 4px 0 18px;
+}
+
 .billEmpty {
   font-size: 13.5px;
   color: var(--grey-500);
@@ -1461,12 +1465,30 @@
     box-shadow: 0 -6px 20px rgba(15, 15, 15, 0.05);
   }
 
+  .orderDockHandle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 8px 16px 6px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  .orderDockGrab {
+    width: 36px;
+    height: 4px;
+    border-radius: 999px;
+    background: var(--grey-300);
+  }
+
   .orderDockMain {
     display: flex;
     align-items: center;
     gap: 12px;
     width: 100%;
-    padding: 10px 16px;
+    padding: 0 16px 10px;
   }
 
   .orderDockSummary {
@@ -1580,7 +1602,14 @@
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  animation: menuFade 0.15s ease both;
+}
+
+.orderSheetOverlayIn {
+  animation: orderSheetOverlayIn 0.32s cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+
+.orderSheetOverlayOut {
+  animation: orderSheetOverlayOut 0.28s cubic-bezier(0.32, 0.72, 0, 1) forwards;
 }
 
 .orderSheetBackdrop {
@@ -1589,6 +1618,7 @@
   border: none;
   background: rgba(15, 12, 10, 0.52);
   cursor: pointer;
+  transition: opacity 0.28s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 .orderSheet {
@@ -1600,8 +1630,26 @@
   border-radius: 18px 18px 0 0;
   display: flex;
   flex-direction: column;
-  animation: orderSheetUp 0.22s ease both;
   padding-bottom: env(safe-area-inset-bottom, 0px);
+  will-change: transform;
+}
+
+.orderSheetIn {
+  animation: orderSheetUp 0.32s cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+
+.orderSheetOut {
+  animation: orderSheetDown 0.28s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+}
+
+.orderSheetGrab {
+  display: block;
+  width: 36px;
+  height: 4px;
+  margin: 8px auto 0;
+  border-radius: 999px;
+  background: var(--grey-300);
+  flex-shrink: 0;
 }
 
 .orderSheetHead {
@@ -1609,7 +1657,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 16px 18px 12px;
+  padding: 10px 18px 12px;
   border-bottom: 1px solid var(--grey-200);
   flex-shrink: 0;
 }
@@ -1649,12 +1697,37 @@
 
 @keyframes orderSheetUp {
   from {
-    opacity: 0;
     transform: translateY(100%);
   }
   to {
-    opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes orderSheetDown {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes orderSheetOverlayIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes orderSheetOverlayOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
   }
 }
 
@@ -1664,6 +1737,11 @@
   .modalOverlay,
   .orderSheet,
   .orderSheetOverlay,
+  .orderSheetOverlayIn,
+  .orderSheetOverlayOut,
+  .orderSheetIn,
+  .orderSheetOut,
+  .orderSheetBackdrop,
   .addCircle,
   .mobileCookExpand,
   .mobileCookBody,

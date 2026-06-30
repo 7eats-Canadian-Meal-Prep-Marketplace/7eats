@@ -10,6 +10,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import PlatformDiscountSignupPrompt from "@/app/components/PlatformDiscountSignupPrompt";
 import type { ResolvedAddress } from "@/components/AddressSearchInput";
 import { AddressSearchInput } from "@/components/AddressSearchInput";
 import {
@@ -355,7 +356,13 @@ function UnavailableMealsAlert({
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { isLoggedIn, userName, userEmail, setProvince } = useApp();
+  const {
+    isLoggedIn,
+    platformDiscountEligible,
+    userName,
+    userEmail,
+    setProvince,
+  } = useApp();
   const {
     currentAddress,
     ready: addressReady,
@@ -409,6 +416,8 @@ export default function CheckoutPage() {
   const [discount, setDiscount] = useState<{
     amount: number;
     name: string | null;
+    blocked?: boolean;
+    reason?: "pending_checkout" | "already_used";
   }>({ amount: 0, name: null });
   const [pickupWindows, setPickupWindows] = useState<FulfillmentWindow[]>([]);
   const [deliveryWindows, setDeliveryWindows] = useState<FulfillmentWindow[]>(
@@ -564,23 +573,36 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     let cancelled = false;
-    if (subtotal <= 0) {
+    if (!platformDiscountEligible || subtotal <= 0) {
       setDiscount({ amount: 0, name: null });
       return;
     }
     fetch(`/api/discounts/preview?subtotal=${subtotal}`)
       .then((r) => r.json())
-      .then((j: { amount?: number; name?: string | null }) => {
-        if (!cancelled)
-          setDiscount({ amount: j.amount ?? 0, name: j.name ?? null });
-      })
+      .then(
+        (j: {
+          amount?: number;
+          name?: string | null;
+          blocked?: boolean;
+          reason?: "pending_checkout" | "already_used";
+        }) => {
+          if (!cancelled) {
+            setDiscount({
+              amount: j.amount ?? 0,
+              name: j.name ?? null,
+              blocked: j.blocked,
+              reason: j.reason,
+            });
+          }
+        },
+      )
       .catch(() => {
         if (!cancelled) setDiscount({ amount: 0, name: null });
       });
     return () => {
       cancelled = true;
     };
-  }, [subtotal]);
+  }, [platformDiscountEligible, subtotal]);
 
   const grandTotal = useMemo(() => {
     const taxAmount =
@@ -1413,12 +1435,30 @@ export default function CheckoutPage() {
                       : "Free (pickup)"}
                   </span>
                 </div>
+                <PlatformDiscountSignupPrompt
+                  enabled={!platformDiscountEligible}
+                  subtotal={subtotal}
+                  className={styles.summaryDiscountPrompt}
+                />
+                {platformDiscountEligible && discount.blocked && (
+                  <p className={styles.discountGuard}>
+                    {discount.reason === "pending_checkout"
+                      ? "This promo is reserved on another checkout. Finish or cancel that order first."
+                      : "You've already used this member discount."}
+                  </p>
+                )}
                 {discount.amount > 0 && (
-                  <div className={styles.summaryRow}>
-                    <span className={styles.summaryRowLabel}>
+                  <div
+                    className={`${styles.summaryRow} ${styles.summaryDiscountRow}`}
+                  >
+                    <span
+                      className={`${styles.summaryRowLabel} ${styles.summaryDiscountLabel}`}
+                    >
                       {discount.name ?? "Discount"}
                     </span>
-                    <span className={styles.summaryRowVal}>
+                    <span
+                      className={`${styles.summaryRowVal} ${styles.summaryDiscountVal}`}
+                    >
                       −${formatCartMoney(discount.amount)}
                     </span>
                   </div>

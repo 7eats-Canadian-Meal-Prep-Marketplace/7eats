@@ -16,6 +16,7 @@ import {
 } from "@/lib/emails/order-events";
 import { guestAccessTokensMatch } from "@/lib/guest/order-access";
 import { resolveOrderLeadTimeRules } from "@/lib/lead-time";
+import { commitPendingPlatformDiscount } from "@/lib/orders/platform-discount-repo";
 import { getStripe } from "@/lib/stripe";
 
 export type ConfirmPaymentResult =
@@ -232,16 +233,23 @@ export async function markOrderPaymentAuthorized(
       ? pi.latest_charge
       : (pi.latest_charge?.id ?? null);
 
-  const updated = await db
-    .update(orderPayments)
-    .set({ status: "authorized", authorizedAt: new Date(), stripeChargeId })
-    .where(
-      and(
-        eq(orderPayments.id, payment.id),
-        eq(orderPayments.status, "pending"),
-      ),
-    )
-    .returning({ id: orderPayments.id });
+  const updated = await db.transaction(async (tx) => {
+    const rows = await tx
+      .update(orderPayments)
+      .set({ status: "authorized", authorizedAt: new Date(), stripeChargeId })
+      .where(
+        and(
+          eq(orderPayments.id, payment.id),
+          eq(orderPayments.status, "pending"),
+        ),
+      )
+      .returning({ id: orderPayments.id });
+
+    if (rows.length === 0) return [];
+
+    await commitPendingPlatformDiscount(tx, payment.orderId);
+    return rows;
+  });
 
   if (updated.length === 0) {
     return { ok: true, alreadyAuthorized: true };

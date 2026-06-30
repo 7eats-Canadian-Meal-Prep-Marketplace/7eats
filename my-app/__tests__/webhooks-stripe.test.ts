@@ -5,8 +5,17 @@ const { constructEventMock } = vi.hoisted(() => ({
 }));
 
 vi.mock("@/db", () => ({
-  db: { select: vi.fn(), insert: vi.fn(), update: vi.fn(), delete: vi.fn() },
+  db: {
+    select: vi.fn(),
+    insert: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+    transaction: vi.fn(),
+  },
   dbPool: { transaction: vi.fn() },
+}));
+vi.mock("@/lib/orders/platform-discount-repo", () => ({
+  commitPendingPlatformDiscount: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock("@/db/schema", () => ({
   clientSubscriptions: {},

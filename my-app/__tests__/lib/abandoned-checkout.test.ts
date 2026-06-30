@@ -50,6 +50,7 @@ import {
   isOrderPaymentPlaced,
   isUnpaidCheckoutPayment,
   orderHasPlacedPaymentFilter,
+  platformDiscountRedemptionFilter,
 } from "@/lib/orders/abandoned-checkout";
 
 function selectChain(final: unknown) {
@@ -89,6 +90,11 @@ describe("abandoned-checkout helpers", () => {
     expect(String(filter)).toContain("EXISTS");
   });
 
+  it("builds a platform discount redemption filter", () => {
+    const filter = platformDiscountRedemptionFilter();
+    expect(String(filter)).toBeTruthy();
+  });
+
   it("uses a 30-minute checkout TTL", () => {
     expect(ABANDONED_CHECKOUT_TTL_MS).toBe(30 * 60 * 1000);
   });
@@ -118,7 +124,14 @@ describe("cancelAbandonedCheckoutOrder", () => {
 
     expect(result).toEqual({ ok: true, cancelled: true, orderId: "order-1" });
     expect(cancelPiMock).toHaveBeenCalledWith("pi_123", "abandon-order-1");
-    expect(db.update).toHaveBeenCalled();
+    const setMock = vi.mocked(db.update).mock.results.at(-1)?.value.set;
+    expect(setMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: "cancelled",
+        platformDiscountId: null,
+        platformDiscountAmount: null,
+      }),
+    );
   });
 
   it("is idempotent when the order is already cancelled", async () => {

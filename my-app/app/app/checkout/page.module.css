@@ -1226,6 +1226,44 @@
   letter-spacing: -0.01em;
 }
 
+.summaryDiscountPrompt {
+  margin-top: 4px;
+}
+
+.discountGuard {
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 12px;
+  line-height: 1.45;
+  font-weight: 600;
+  color: var(--grey-800);
+  background: color-mix(in srgb, var(--gold, #c9a227) 12%, white);
+  border: 1px solid color-mix(in srgb, var(--gold, #c9a227) 35%, transparent);
+}
+
+.summaryDiscountRow {
+  margin-top: 2px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--red) 10%, transparent);
+  border: 1.5px solid color-mix(in srgb, var(--red) 28%, transparent);
+}
+
+.summaryDiscountLabel {
+  font-weight: 800;
+  color: var(--red);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.summaryDiscountVal {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--red);
+  letter-spacing: -0.02em;
+}
+
 .summaryTotal {
   display: flex;
   justify-content: space-between;

@@ -9,10 +9,12 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import PlatformDiscountSignupPrompt from "@/app/components/PlatformDiscountSignupPrompt";
 import {
   type FulfillmentWindow,
   nextFulfillmentWindowLabel,
 } from "@/lib/cooks/card-schedule";
+import { useApp } from "../_app-context";
 import { useCart } from "../_cart-context";
 import { calcTax, formatCartMoney, getTaxLabel } from "./_cart-tax";
 import styles from "./page.module.css";
@@ -51,6 +53,7 @@ function NotePreview({ notes }: { notes: string }) {
 }
 
 export default function CartPage() {
+  const { platformDiscountEligible } = useApp();
   const {
     cookId,
     cookName,
@@ -266,6 +269,12 @@ export default function CartPage() {
                   </div>
                 )}
               </div>
+
+              <PlatformDiscountSignupPrompt
+                enabled={!platformDiscountEligible}
+                subtotal={subtotal}
+                className={styles.discountPrompt}
+              />
 
               {isDelivery && (
                 <p className={styles.deliveryHint}>

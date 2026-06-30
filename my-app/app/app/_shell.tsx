@@ -47,19 +47,19 @@ import {
 import styles from "./_shell.module.css";
 
 export function FulfillmentToggle({ className = "" }: { className?: string }) {
-  const { fulfillment, setFulfillment } = useApp();
+  const { fulfillmentMode, setFulfillment } = useCart();
   return (
     <div className={`${styles.segmented} ${className}`}>
       <button
         type="button"
-        className={`${styles.segment} ${fulfillment === "pickup" ? styles.segmentActive : ""}`}
+        className={`${styles.segment} ${fulfillmentMode === "pickup" ? styles.segmentActive : ""}`}
         onClick={() => setFulfillment("pickup")}
       >
         Pickup
       </button>
       <button
         type="button"
-        className={`${styles.segment} ${fulfillment === "delivery" ? styles.segmentActive : ""}`}
+        className={`${styles.segment} ${fulfillmentMode === "delivery" ? styles.segmentActive : ""}`}
         onClick={() => setFulfillment("delivery")}
       >
         Delivery
@@ -668,6 +668,7 @@ function ShellInner({
 export default function AppShell({
   children,
   isLoggedIn,
+  isGuestAccount = false,
   userInitials = "",
   userName = "",
   userEmail = "",
@@ -675,6 +676,7 @@ export default function AppShell({
 }: {
   children: React.ReactNode;
   isLoggedIn: boolean;
+  isGuestAccount?: boolean;
   userInitials?: string;
   userName?: string;
   userEmail?: string;
@@ -683,6 +685,7 @@ export default function AppShell({
   return (
     <AppProvider
       isLoggedIn={isLoggedIn}
+      isGuestAccount={isGuestAccount}
       userName={userName}
       userEmail={userEmail}
       userInitials={userInitials}

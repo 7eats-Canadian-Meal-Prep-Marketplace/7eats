@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const { retrieveMock } = vi.hoisted(() => ({ retrieveMock: vi.fn() }));
 
 vi.mock("@/db", () => ({
-  db: { select: vi.fn(), update: vi.fn() },
+  db: { select: vi.fn(), update: vi.fn(), transaction: vi.fn() },
 }));
 vi.mock("@/db/schema", () => ({
   authUser: {},
@@ -11,6 +11,9 @@ vi.mock("@/db/schema", () => ({
   orderDishes: {},
   orderPayments: {},
   orders: {},
+}));
+vi.mock("@/lib/orders/platform-discount-repo", () => ({
+  commitPendingPlatformDiscount: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock("drizzle-orm", () => ({ eq: vi.fn(), and: vi.fn() }));
 vi.mock("@/lib/stripe", () => ({
@@ -121,7 +124,10 @@ function mockUpdate() {
   const returning = vi.fn().mockResolvedValue([{ id: "pay-1" }]);
   const where = vi.fn(() => ({ returning }));
   const set = vi.fn(() => ({ where }));
-  vi.mocked(db.update).mockReturnValue({ set } as never);
+  const update = vi.fn(() => ({ set }));
+  vi.mocked(db.transaction).mockImplementation(async (fn) =>
+    fn({ update } as never),
+  );
 }
 
 describe("markOrderPaymentAuthorized — cook new-order SMS", () => {

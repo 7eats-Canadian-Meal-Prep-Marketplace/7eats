@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import { computeLineTotal } from "@/lib/orders/pricing";
+import { useApp } from "./_app-context";
 
 /** A single dish line in the cart. */
 export type CartItem = {
@@ -158,6 +159,7 @@ type CookMeta = {
 };
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
+  const { setFulfillment: setAppFulfillment } = useApp();
   const [cook, setCook] = useState<CookMeta | null>(null);
   const [items, setItems] = useState<CartItem[]>([]);
   const [fulfillmentMode, setFulfillmentMode] = useState<"pickup" | "delivery">(
@@ -195,6 +197,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
     setHydrated(true);
   }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    setAppFulfillment(fulfillmentMode);
+  }, [hydrated, fulfillmentMode, setAppFulfillment]);
 
   // Persist whenever any cart field changes (after hydration).
   useEffect(() => {
@@ -331,6 +338,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     clearCart,
     setFulfillment: (mode: "pickup" | "delivery") => {
       setFulfillmentMode(mode);
+      setAppFulfillment(mode);
       if (mode === "pickup") setDeliveryDetailsState(null);
     },
     setDeliveryAddress: setDeliveryAddressState,

@@ -69,6 +69,7 @@ function SearchContent() {
         ? `/api/cooks?${new URLSearchParams({
             lat: String(currentAddress.lat),
             lng: String(currentAddress.lng),
+            mode: fulfillmentMode,
           }).toString()}`
         : `/api/search?${new URLSearchParams({
             q: effectiveQuery,
