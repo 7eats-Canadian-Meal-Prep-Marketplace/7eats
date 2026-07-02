@@ -5,7 +5,7 @@ import { SITE_ORIGIN } from "@/lib/seo-routes";
 // IndexNow, but Bing powers ChatGPT search and Copilot, so this feeds our
 // AI-visibility track. The key is public by design: it is served at
 // /<key>.txt so search engines can verify ownership.
-export const INDEXNOW_KEY = "5f03697890561d4869a4fb61d1a0b798";
+export const INDEXNOW_KEY = "93dc9722736049baac59fb67fd2c7886";
 
 const HOST = "www.7eats.ca";
 const ENDPOINT = "https://api.indexnow.org/indexnow";
