@@ -9,6 +9,11 @@ import { auth } from "@/lib/auth";
 // via /api/auth/complete-onboarding and re-issue it on every sign-in.
 const SESSION_COOKIE = "better-auth.session_token";
 const ONBOARDED_COOKIE = "7eats-onboarded";
+// Set once a guest has visited the marketplace app. On their next hit to "/",
+// returning guests skip straight to /app/browse to cut ordering friction, while
+// first-time visitors and crawlers (no cookie) still get the indexable homepage.
+const RETURNING_VISITOR_COOKIE = "7eats-returning";
+const RETURNING_VISITOR_MAX_AGE = 60 * 60 * 24 * 180; // 180 days
 
 // ─── Client route classification ──────────────────────────────────────────────
 
@@ -71,6 +76,17 @@ function redirectToClientLogin(req: NextRequest, nextPath?: string) {
 
 function redirectToBusinessLogin(req: NextRequest) {
   return NextResponse.redirect(new URL("/business-auth/login", req.url));
+}
+
+/** Mark this visitor as a returning guest so future "/" hits go straight to browse. */
+function markReturningVisitor(res: NextResponse): NextResponse {
+  res.cookies.set(RETURNING_VISITOR_COOKIE, "1", {
+    maxAge: RETURNING_VISITOR_MAX_AGE,
+    path: "/",
+    sameSite: "lax",
+    httpOnly: true,
+  });
+  return res;
 }
 
 type AppSession = NonNullable<Awaited<ReturnType<typeof getSession>>>;
@@ -180,7 +196,18 @@ export async function proxy(req: NextRequest) {
     ) {
       return NextResponse.redirect(new URL("/business/dashboard", req.url));
     }
-    return NextResponse.redirect(new URL("/app", req.url));
+    if (session) {
+      // Signed-in client: straight into the app.
+      return NextResponse.redirect(new URL("/app", req.url));
+    }
+    // Guest. Returning visitors skip to browse to reduce ordering friction;
+    // first-time visitors and crawlers (no cookie) get the indexable marketing
+    // homepage rendered at "/". This branches on a cookie, never the user-agent,
+    // so it is not cloaking: Googlebot has no cookie and always sees the page.
+    if (req.cookies.get(RETURNING_VISITOR_COOKIE)?.value === "1") {
+      return NextResponse.redirect(new URL("/app/browse", req.url));
+    }
+    return NextResponse.next();
   }
 
   // ── Legacy listing routes → browse ───────────────────────────────────────
@@ -269,7 +296,7 @@ export async function proxy(req: NextRequest) {
     if (await shouldRedirectToClientOnboarding(req)) {
       return NextResponse.redirect(new URL("/app-auth/onboarding", req.url));
     }
-    return NextResponse.next();
+    return markReturningVisitor(NextResponse.next());
   }
 
   // ── Client protected routes ───────────────────────────────────────────────
@@ -289,7 +316,7 @@ export async function proxy(req: NextRequest) {
     if (await shouldRedirectToClientOnboarding(req)) {
       return NextResponse.redirect(new URL("/app-auth/onboarding", req.url));
     }
-    return NextResponse.next();
+    return markReturningVisitor(NextResponse.next());
   }
 
   // ── Client auth catch-all (forgot-password, reset-password, etc.) ─────────
