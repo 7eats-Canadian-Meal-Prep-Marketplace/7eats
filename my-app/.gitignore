@@ -9,12 +9,13 @@
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions
+.playwright-mcp/
 
 # testing
 /coverage
 
 # next.js
-/.next/
+.next/
 /out/
 
 # production
@@ -43,3 +44,6 @@ next-env.d.ts
 bun.lock
 
 .claude/
+
+# Sentry Config File
+.env.sentry-build-plugin

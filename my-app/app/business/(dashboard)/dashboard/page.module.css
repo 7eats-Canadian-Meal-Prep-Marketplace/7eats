@@ -1,0 +1,460 @@
+/* ─── Page ─────────────────────────────────────────────────────────────────── */
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
+}
+
+/* ─── Welcome header ─────────────────────────────────────────────────────────── */
+.welcome {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.welcomeTitle {
+  font-size: 30px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.03em;
+  margin: 0;
+}
+
+.welcomeSub {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--grey-700);
+  margin: 0;
+}
+
+/* ─── Stats strip ────────────────────────────────────────────────────────────── */
+.statsStrip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.statCard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 13px 15px;
+  background: var(--white);
+  border: 1px solid #e8e8ec;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.statTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.statLabel {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8a8a96;
+}
+
+.statValue {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.04em;
+  font-feature-settings: "tnum";
+  line-height: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.statSub {
+  font-size: 11px;
+  font-weight: 400;
+  color: #8a8a96;
+  letter-spacing: 0;
+}
+
+/* ─── Period toggle ──────────────────────────────────────────────────────────── */
+.toggle {
+  display: flex;
+  flex-shrink: 0;
+  background: #f0f0f3;
+  border: 1px solid #e4e4e9;
+  border-radius: 6px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.toggleBtn {
+  padding: 4px 10px;
+  min-height: 28px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #8a8a96;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: color 0.12s;
+}
+
+.toggleBtnActive {
+  background: var(--white);
+  color: var(--ink);
+  font-weight: 600;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.1),
+    0 0 0 0.5px rgba(0, 0, 0, 0.04);
+}
+
+/* ─── Two columns ────────────────────────────────────────────────────────────── */
+.columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 28px;
+  align-items: stretch;
+}
+
+.col {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #e8e8ec;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.colHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 13px 14px 12px;
+  border-bottom: 1px solid #ebebef;
+  background: var(--white);
+}
+
+.colBody {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.colLabel {
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink);
+  flex: 1;
+}
+
+.colCount {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.colEmpty {
+  padding: 28px 16px;
+  font-size: 13px;
+  color: #b0b0ba;
+  text-align: center;
+}
+
+/* ─── Pickup row ─────────────────────────────────────────────────────────────── */
+.pickupRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  background: var(--white);
+  border-bottom: 1px solid #f0f0f3;
+  transition: background 0.1s;
+}
+
+.pickupRow:last-of-type {
+  border-bottom: none;
+}
+
+.pickupRow:hover {
+  background: var(--grey-100);
+}
+
+.pickupInfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.pickupCustomer {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pickupMeta {
+  font-size: 11.5px;
+  color: #8a8a96;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.metaQty {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.pickupRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+
+.pickupTotal {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink);
+  font-feature-settings: "tnum";
+}
+
+/* ─── Request row ────────────────────────────────────────────────────────────── */
+.requestRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  background: var(--white);
+  border-bottom: 1px solid #f0f0f3;
+  transition: background 0.1s;
+}
+
+.requestRow:last-of-type {
+  border-bottom: none;
+}
+
+.requestRow:hover {
+  background: var(--grey-100);
+}
+
+.requestInfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.requestCustomer {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.requestMeta {
+  font-size: 11.5px;
+  color: #8a8a96;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.requestRight {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex: none;
+}
+
+.requestTotal {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink);
+  font-feature-settings: "tnum";
+}
+
+/* ─── Confirm button ─────────────────────────────────────────────────────────── */
+.confirmBtn {
+  padding: 5px 13px;
+  background: #111111;
+  color: var(--white);
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  cursor: pointer;
+  flex: none;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transition: opacity 0.12s;
+}
+
+.confirmBtn:hover {
+  opacity: 0.82;
+}
+
+/* ─── View more ──────────────────────────────────────────────────────────────── */
+.viewMore {
+  width: 100%;
+  padding: 12px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--white);
+  background: var(--ink);
+  border: none;
+  border-top: 1px solid #ebebef;
+  text-align: center;
+  cursor: pointer;
+  transition: opacity 0.12s;
+}
+
+.viewMore:hover {
+  opacity: 0.82;
+}
+
+/* ─── Quick actions ──────────────────────────────────────────────────────────── */
+.quickSection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.quickLabel {
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.quickGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.quickCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 15px;
+  background: var(--white);
+  border: 1px solid #e8e8ec;
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  color: inherit;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  transition:
+    border-color 0.12s,
+    box-shadow 0.12s;
+}
+
+.quickCard:hover {
+  border-color: #c8c8d0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.07);
+}
+
+.quickIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-sm);
+  background: #f2f2f5;
+  color: var(--ink);
+  flex: none;
+}
+
+.quickText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.quickTitle {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.quickDesc {
+  font-size: 11.5px;
+  color: #8a8a96;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.quickArrow {
+  color: #c0c0c8;
+  flex: none;
+  transition: color 0.12s;
+}
+
+.quickCard:hover .quickArrow {
+  color: var(--ink);
+}
+
+/* ─── Tablet ─────────────────────────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .quickGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ─── Mobile ─────────────────────────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  .statsStrip {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .statCard:first-child .statTop {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .columns {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .quickGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .statsStrip {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .statValue {
+    font-size: 22px;
+  }
+}

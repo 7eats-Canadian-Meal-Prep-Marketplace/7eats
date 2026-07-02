@@ -1,0 +1,99 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("@aws-sdk/client-s3", () => ({
+  S3Client: vi.fn(),
+  PutObjectCommand: vi.fn(function mockPutObjectCommand(
+    this: { input: unknown },
+    args: unknown,
+  ) {
+    this.input = args;
+  }),
+  GetObjectCommand: vi.fn(function mockGetObjectCommand(
+    this: { input: unknown },
+    args: unknown,
+  ) {
+    this.input = args;
+  }),
+}));
+
+vi.mock("@aws-sdk/s3-request-presigner", () => ({
+  getSignedUrl: vi.fn(),
+}));
+
+const { mockClient } = vi.hoisted(() => ({
+  mockClient: { send: vi.fn() },
+}));
+
+vi.mock("@/lib/storage/client", () => ({
+  getR2Client: () => mockClient,
+}));
+
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { getSignedCertUrl, uploadCert } from "@/lib/storage/certs";
+
+describe("certs", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe("uploadCert", () => {
+    it("sends a PutObjectCommand to the certs bucket and returns a key", async () => {
+      vi.mocked(mockClient.send).mockResolvedValue({} as never);
+
+      const key = await uploadCert(
+        "cook-123",
+        "cert.pdf",
+        Buffer.from("data"),
+        "application/pdf",
+      );
+
+      expect(mockClient.send).toHaveBeenCalledOnce();
+      const [command] = vi.mocked(mockClient.send).mock.calls[0];
+      expect((command as { input: { Bucket: string } }).input.Bucket).toBe(
+        "homecook-certs-private",
+      );
+      expect(key).toMatch(/^certs\/cook-123\//);
+      expect(key).toContain("cert.pdf");
+    });
+  });
+
+  describe("getSignedCertUrl", () => {
+    it("returns a signed URL with the default 900s expiry", async () => {
+      vi.mocked(getSignedUrl).mockResolvedValue("https://signed.example.com");
+
+      const url = await getSignedCertUrl("certs/cook-123/cert.pdf");
+
+      expect(getSignedUrl).toHaveBeenCalledWith(
+        mockClient,
+        expect.objectContaining({
+          input: {
+            Bucket: "homecook-certs-private",
+            Key: "certs/cook-123/cert.pdf",
+          },
+        }),
+        { expiresIn: 900 },
+      );
+      expect(url).toBe("https://signed.example.com");
+    });
+
+    it("clamps expiresIn to 3600s when a larger value is passed", async () => {
+      vi.mocked(getSignedUrl).mockResolvedValue("https://signed.example.com");
+
+      await getSignedCertUrl("certs/cook-123/cert.pdf", 9999);
+
+      expect(getSignedUrl).toHaveBeenCalledWith(mockClient, expect.anything(), {
+        expiresIn: 3600,
+      });
+    });
+
+    it("passes a custom expiresIn when within the 3600s limit", async () => {
+      vi.mocked(getSignedUrl).mockResolvedValue("https://signed.example.com");
+
+      await getSignedCertUrl("certs/cook-123/cert.pdf", 1800);
+
+      expect(getSignedUrl).toHaveBeenCalledWith(mockClient, expect.anything(), {
+        expiresIn: 1800,
+      });
+    });
+  });
+});

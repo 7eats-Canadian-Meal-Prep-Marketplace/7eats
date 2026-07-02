@@ -1,0 +1,1826 @@
+/* ─── Empty ──────────────────────────────────────────────────────────────────── */
+.emptyPage {
+  text-align: center;
+  padding: 80px var(--pad-x);
+  min-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.browseBtn {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 16px;
+  padding: 13px 28px;
+  background: var(--red);
+  color: var(--white);
+  font-weight: 700;
+  border-radius: 8px;
+  text-decoration: none;
+  transition:
+    background 0.15s,
+    box-shadow 0.15s;
+}
+
+.browseBtn:hover {
+  background: var(--red-deep);
+  box-shadow: 0 6px 20px rgba(214, 64, 69, 0.3);
+}
+
+/* ─── Page ──────────────────────────────────────────────────────────────────── */
+.page {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 24px 20px 72px;
+}
+
+/* ─── Header ────────────────────────────────────────────────────────────────── */
+.checkoutHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 32px;
+}
+
+.backBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--grey-700);
+  text-decoration: none;
+  transition: color 0.12s;
+}
+
+.backBtn:hover {
+  color: var(--ink);
+}
+
+.secureTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--grey-500);
+  letter-spacing: 0.01em;
+}
+
+/* ─── Stepper ───────────────────────────────────────────────────────────────── */
+.stepper {
+  display: flex;
+  gap: 0;
+  margin-bottom: 32px;
+  border: 1px solid var(--grey-200);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.step {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  background: var(--white);
+  color: var(--grey-500);
+  border-right: 1px solid var(--grey-200);
+}
+
+.step:last-child {
+  border-right: none;
+}
+
+.stepActive {
+  background: var(--grey-100);
+  color: var(--ink);
+}
+
+.stepDone {
+  color: var(--ink);
+}
+
+.stepNum {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  background: var(--grey-200);
+  color: var(--grey-700);
+  flex-shrink: 0;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.stepActive .stepNum {
+  background: var(--ink);
+  color: var(--white);
+}
+
+.stepDone .stepNum {
+  background: var(--ink);
+  color: var(--white);
+}
+
+.stepLabel {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+@media (max-width: 479px) {
+  .stepper {
+    flex-direction: column;
+    border-radius: 8px;
+  }
+
+  .step {
+    border-right: none;
+    border-bottom: 1px solid var(--grey-200);
+  }
+
+  .step:last-child {
+    border-bottom: none;
+  }
+}
+
+/* ─── Layout ────────────────────────────────────────────────────────────────── */
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 36px;
+  align-items: start;
+}
+
+.formSide {
+  flex: 1;
+  min-width: 0;
+}
+
+.rail {
+  min-width: 0;
+  align-self: stretch;
+}
+
+.railInner {
+  position: sticky;
+  top: calc(72px + 16px);
+  z-index: 1;
+}
+
+.inner {
+  display: flex;
+  gap: 40px;
+  align-items: flex-start;
+}
+
+@media (max-width: 820px) {
+  .layout,
+  .inner {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .rail {
+    order: -1;
+  }
+
+  .railInner {
+    position: static;
+  }
+
+  .summary {
+    width: 100%;
+    position: static;
+    max-height: none;
+    overflow: visible;
+    padding: 16px;
+    box-shadow: none;
+  }
+
+  .summaryLines {
+    gap: 8px;
+    padding-bottom: 12px;
+    margin-bottom: 12px;
+  }
+
+  .summarySheet {
+    gap: 8px;
+    padding-bottom: 12px;
+    margin-bottom: 12px;
+  }
+
+  .pageHeader {
+    margin-bottom: 16px;
+  }
+}
+
+/* ─── Form sections ─────────────────────────────────────────────────────────── */
+.formSection {
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-md, 14px);
+  padding: 24px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow-md);
+  background: var(--white);
+}
+
+/* "Edit address" row — sits at the bottom of the read-only summary box */
+.addressEditRow {
+  display: block;
+  width: 100%;
+  padding: 10px 14px;
+  border: none;
+  border-top: 1px solid var(--grey-200);
+  background: transparent;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--grey-500);
+  cursor: pointer;
+  font-family: inherit;
+  text-align: center;
+  transition: color 0.12s;
+  border-radius: 0 0 8px 8px;
+}
+
+.addressEditRow:hover {
+  color: var(--ink);
+}
+
+/* "Save" — confirms address edit and collapses back to summary */
+.cancelEditBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin-top: 12px;
+  padding: 11px 20px;
+  background: var(--ink);
+  color: var(--white);
+  border: none;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity 0.15s;
+}
+
+.cancelEditBtn:hover {
+  opacity: 0.85;
+}
+
+.formTitle {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.02em;
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ─── Logged-in contact summary (read-only) ─────────────────────────────────── */
+.contactSummary {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid var(--grey-200);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.contactRow {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--grey-200);
+}
+
+.contactRow:last-child {
+  border-bottom: none;
+}
+
+.contactLabel {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--grey-500);
+  flex-shrink: 0;
+  width: 48px;
+}
+
+.contactValue {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.sectionLead {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--grey-500);
+  margin: -10px 0 18px;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.formGroup:last-child {
+  margin-bottom: 0;
+}
+
+.deliveryDetailsGroup {
+  margin-top: 18px;
+}
+
+.label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--grey-500);
+}
+
+.contactFields {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.nameRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 520px) {
+  .nameRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+.orderingAs {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--grey-700);
+}
+
+.orderingAs strong {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.textarea {
+  padding: 12px 14px;
+  border: 1.5px solid var(--grey-200);
+  border-radius: var(--radius-sm, 8px);
+  font-size: 16px;
+  font-family: inherit;
+  color: var(--ink);
+  background: var(--white);
+  outline: none;
+  resize: vertical;
+  min-height: 88px;
+  transition: border-color 0.15s;
+}
+
+.textarea::placeholder {
+  color: var(--grey-300);
+}
+
+.textarea:focus {
+  border-color: var(--ink);
+}
+
+.noteDisclaimer,
+.fieldDisclaimer {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--grey-600);
+}
+
+.addressSummary {
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-sm, 8px);
+  overflow: hidden;
+  background: var(--white);
+}
+
+.addressLine {
+  margin: 0;
+  padding: 14px 16px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+/* Pickup address — same summary box as delivery, with a leading pin accent */
+.pickupAddressLine {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0;
+  padding: 14px 16px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.pickupAddressIcon {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--red);
+}
+
+.addressEditBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.addressEditBlock mapbox-address-autofill {
+  display: block;
+  width: 100%;
+}
+
+.addressEditBlock .formGroup {
+  margin-bottom: 0;
+}
+
+.addressEditInput {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 14px 16px;
+  min-height: 48px;
+  border: 1.5px solid var(--grey-200);
+  border-radius: var(--radius-sm, 8px);
+  font-size: 15px;
+  line-height: 1.4;
+  font-family: inherit;
+  color: var(--ink);
+  background: var(--white);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.addressEditInput::placeholder {
+  color: var(--grey-500);
+}
+
+.addressEditInput:focus {
+  border-color: var(--ink);
+}
+
+.addressEditHint {
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--grey-500);
+}
+
+.addressEditActions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 4px;
+}
+
+.addressEditCancelBtn {
+  padding: 10px 20px;
+  border: 1.5px solid var(--grey-200);
+  border-radius: var(--radius-sm, 8px);
+  background: var(--white);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--grey-700);
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    border-color 0.12s,
+    color 0.12s,
+    background 0.12s;
+}
+
+.addressEditCancelBtn:hover {
+  border-color: var(--grey-300);
+  color: var(--ink);
+  background: var(--grey-100);
+}
+
+.policyBox {
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-sm, 8px);
+  padding: 14px 16px;
+  background: var(--white);
+}
+
+.policyText {
+  margin: 0 0 12px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--grey-700);
+}
+
+.policyConsent {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+  margin: 0;
+}
+
+.inputInvalid {
+  border-color: var(--red);
+}
+
+.inputInvalid:focus {
+  border-color: var(--red);
+}
+
+.fieldErrorInline {
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--red);
+}
+
+.deliveryOutOfRange {
+  margin: 12px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--red);
+}
+
+.submitBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 4px;
+}
+
+.reassurance {
+  margin: 6px 0 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--grey-600);
+}
+
+.discountHint {
+  color: var(--grey-500);
+  font-weight: 500;
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 11px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--red);
+  text-decoration: none;
+  border: 1px solid var(--red);
+  border-radius: var(--radius-pill);
+  transition:
+    background 0.12s,
+    color 0.12s;
+}
+
+.backLink:hover {
+  background: var(--red);
+  color: var(--white);
+}
+
+.submitBlock .backLink {
+  width: 100%;
+}
+
+.input {
+  padding: 12px 14px;
+  border: 1.5px solid var(--grey-200);
+  border-radius: var(--radius-sm, 8px);
+  font-size: 15px;
+  font-family: inherit;
+  color: var(--ink);
+  background: var(--white);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.input::placeholder {
+  color: var(--grey-500);
+}
+
+.input:focus {
+  border-color: var(--ink);
+}
+
+.input:disabled {
+  background: var(--grey-100);
+  color: var(--grey-700);
+  cursor: not-allowed;
+  opacity: 0.9;
+}
+
+/* Frozen contact note once the order is placed. */
+.contactLockNote {
+  margin: 0 0 14px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--grey-700);
+}
+
+/* Verified email — read-only confirmed row with an explicit Change action. */
+.verifiedEmailRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 14px;
+  background: #f4fbf6;
+  border: 1.5px solid #cfe9d8;
+  border-radius: var(--radius-sm, 8px);
+}
+
+.verifiedEmailMain {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.verifiedEmailMain svg {
+  flex-shrink: 0;
+  color: #1f7a44;
+}
+
+.verifiedEmailAddr {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.verifiedTag {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #1f7a44;
+  background: #dcf1e4;
+  border-radius: var(--radius-pill, 999px);
+}
+
+.changeEmailBtn {
+  flex-shrink: 0;
+  padding: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--red);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.changeEmailBtn:hover {
+  text-decoration: underline;
+}
+
+/* ─── Guest email verification (OTP) ───────────────────────────────────────── */
+.verifyIdle {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin-top: 10px;
+}
+
+.verifyHint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--grey-700);
+}
+
+.verifyHint svg {
+  flex-shrink: 0;
+  color: var(--red);
+}
+
+.verifySendBtn {
+  align-self: flex-start;
+  min-height: 40px;
+  padding: 9px 18px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--white);
+  background: var(--red);
+  border: none;
+  border-radius: var(--radius-sm, 8px);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.verifySendBtn:hover:not(:disabled) {
+  background: var(--red-deep);
+}
+
+.verifySendBtn:disabled {
+  background: var(--grey-200);
+  color: var(--grey-500);
+  cursor: not-allowed;
+}
+
+.verifyPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.verifySentTo {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--grey-700);
+}
+
+.verifySentTo strong {
+  color: var(--ink);
+}
+
+.verifyRow {
+  display: flex;
+  gap: 8px;
+}
+
+.verifyCodeInput {
+  flex: 1;
+  min-width: 0;
+  min-height: 46px;
+  padding: 10px 14px;
+  /* 16px+ avoids iOS auto-zoom; large + tracked reads as a code. */
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.4em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  background: var(--white);
+  border: 1.5px solid var(--grey-200);
+  border-radius: var(--radius-sm, 8px);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.verifyCodeInput:focus {
+  border-color: var(--ink);
+}
+
+.verifyCodeInput::placeholder {
+  color: var(--grey-300);
+}
+
+.verifyConfirmBtn {
+  flex-shrink: 0;
+  min-height: 46px;
+  padding: 0 20px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--white);
+  background: var(--red);
+  border: none;
+  border-radius: var(--radius-sm, 8px);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.verifyConfirmBtn:hover:not(:disabled) {
+  background: var(--red-deep);
+}
+
+.verifyConfirmBtn:disabled {
+  background: var(--grey-200);
+  color: var(--grey-500);
+  cursor: not-allowed;
+}
+
+.verifyResendBtn {
+  align-self: flex-start;
+  padding: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--red);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.verifyResendBtn:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
+.verifyResendBtn:disabled {
+  color: var(--grey-500);
+  cursor: default;
+}
+
+.verifyError {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--red-deep);
+}
+
+.verifyDone {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 10px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #1f7a44;
+  background: #eef7f0;
+  border: 1px solid #cfe9d8;
+  border-radius: var(--radius-sm, 8px);
+}
+
+.verifyDone svg {
+  color: #1f7a44;
+}
+
+.ctaGateHint {
+  margin: 10px 0 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  text-align: center;
+  color: var(--grey-700);
+}
+
+/* Pickup card */
+.pickupCard {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid var(--grey-200);
+  border-radius: 8px;
+  margin-bottom: 12px;
+  background: var(--white);
+}
+
+.pickupCard:last-child {
+  margin-bottom: 0;
+}
+
+.pickupAvatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--white);
+  flex-shrink: 0;
+}
+
+.pickupCook {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+
+.pickupListing {
+  font-size: 13px;
+  color: var(--grey-700);
+  margin-top: 2px;
+}
+
+.pickupMeta {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-top: 3px;
+}
+
+.pickupMetaSub {
+  font-size: 11.5px;
+  color: var(--grey-500);
+  margin-top: 2px;
+}
+
+/* ─── Choice cards ──────────────────────────────────────────────────────────── */
+.choiceCard {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 18px 20px;
+  margin-bottom: 10px;
+  border: 1.5px solid var(--grey-200);
+  border-radius: 8px;
+  background: var(--white);
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+
+.choiceCard:hover {
+  border-color: var(--grey-700);
+  box-shadow: var(--shadow-md);
+}
+
+.choiceCardActive {
+  border-color: var(--ink);
+  background: var(--grey-100);
+}
+
+.choiceIcon {
+  display: inline-flex;
+  margin-bottom: 10px;
+  color: var(--grey-700);
+}
+
+.choiceTitle {
+  display: block;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.015em;
+  margin-bottom: 4px;
+}
+
+.choiceDesc {
+  display: block;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--grey-500);
+}
+
+/* ─── Misc actions ──────────────────────────────────────────────────────────── */
+.primaryBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 15px 24px;
+  background: var(--red);
+  color: var(--white);
+  font-size: 15px;
+  font-weight: 800;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    background 0.15s,
+    box-shadow 0.15s;
+}
+
+.primaryBtn:hover {
+  background: var(--red-deep);
+  box-shadow: 0 6px 20px rgba(214, 64, 69, 0.3);
+}
+
+.textBtn {
+  margin-top: 12px;
+  padding: 8px 0;
+  background: none;
+  border: none;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--grey-700);
+  cursor: pointer;
+  font-family: inherit;
+  transition: color 0.12s;
+}
+
+.textBtn:hover {
+  color: var(--ink);
+}
+
+.guestBanner {
+  padding: 13px 16px;
+  margin-bottom: 16px;
+  background: var(--grey-100);
+  border: 1px solid var(--grey-200);
+  border-radius: 8px;
+  font-size: 13.5px;
+  color: var(--grey-700);
+}
+
+.inlineLink {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 700;
+  color: var(--red);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.stepActions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ─── Summary sidebar ───────────────────────────────────────────────────────── */
+.summary {
+  width: 100%;
+  flex-shrink: 0;
+  padding: 20px;
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-md, 14px);
+  background: var(--white);
+  box-shadow: var(--shadow-md);
+  max-height: calc(100svh - 72px - 32px);
+  overflow-y: auto;
+}
+
+.summaryEyebrow {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--grey-500);
+  margin: 0 0 6px;
+}
+
+.summaryTitle {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.025em;
+  margin: 0 0 16px;
+  line-height: 1.15;
+}
+
+.summaryLines {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--grey-200);
+}
+
+.summaryGroup {
+  min-width: 0;
+}
+
+.summaryGroupHead {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 8px;
+}
+
+.summaryGroupTitle {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.summaryGroupCook {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--grey-500);
+}
+
+.summaryGroupList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.summaryLine {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.summaryLineName {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--grey-700);
+  line-height: 1.35;
+}
+
+.summaryLinePrice {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  flex-shrink: 0;
+  letter-spacing: -0.01em;
+}
+
+.summaryNote {
+  padding-top: 12px;
+  border-top: 1px dashed var(--grey-200);
+}
+
+.summaryNoteLabel {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--grey-500);
+  margin-bottom: 6px;
+}
+
+.summaryNoteText {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--grey-700);
+  white-space: pre-wrap;
+}
+
+.summarySheet {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--grey-200);
+}
+
+.summaryRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.summaryRowLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--grey-700);
+}
+
+.taxNote {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--grey-500);
+  letter-spacing: 0.02em;
+}
+
+.summaryRowVal {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  flex-shrink: 0;
+  letter-spacing: -0.01em;
+}
+
+.summaryDiscountPrompt {
+  margin-top: 4px;
+}
+
+.discountGuard {
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 12px;
+  line-height: 1.45;
+  font-weight: 600;
+  color: var(--grey-800);
+  background: color-mix(in srgb, var(--gold, #c9a227) 12%, white);
+  border: 1px solid color-mix(in srgb, var(--gold, #c9a227) 35%, transparent);
+}
+
+.summaryDiscountRow {
+  margin-top: 2px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--red) 10%, transparent);
+  border: 1.5px solid color-mix(in srgb, var(--red) 28%, transparent);
+}
+
+.summaryDiscountLabel {
+  font-weight: 800;
+  color: var(--red);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.summaryDiscountVal {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--red);
+  letter-spacing: -0.02em;
+}
+
+.summaryTotal {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 0;
+}
+
+.summaryTotal span:first-child {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--grey-700);
+}
+
+.summaryTotal span:last-child {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.02em;
+}
+
+.placeOrderBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 15px 24px;
+  background: var(--red);
+  color: var(--white);
+  font-size: 15px;
+  font-weight: 800;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    background 0.15s,
+    box-shadow 0.15s;
+  margin-bottom: 12px;
+}
+
+.placeOrderBtn:hover:not(:disabled) {
+  background: var(--red-deep);
+  box-shadow: 0 6px 20px rgba(214, 64, 69, 0.3);
+}
+
+.placeOrderBtn:disabled {
+  background: var(--grey-300);
+  color: var(--grey-700);
+  opacity: 1;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.stepActions .placeOrderBtn {
+  margin-bottom: 0;
+}
+
+.submitBlock .placeOrderBtn {
+  margin-bottom: 0;
+}
+
+.terms {
+  font-size: 11.5px;
+  color: var(--grey-500);
+  line-height: 1.55;
+  margin: 0;
+}
+
+.submitBlock .terms {
+  margin-top: 0;
+}
+
+.termsLink {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* ─── Subscription account notice ───────────────────────────────────────────── */
+.subAccountNotice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+  background: #fff8f0;
+  border: 1px solid #fed7aa;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #7c4a1e;
+  line-height: 1.5;
+}
+
+/* ─── Wallet (logged-in payment methods) ─────────────────────────────────────── */
+
+.walletList {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--grey-200);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.walletRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 13px 16px;
+  border: none;
+  border-bottom: 1px solid var(--grey-200);
+  background: var(--white);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--ink);
+  text-align: left;
+  transition: background 0.12s;
+}
+
+.walletRow:last-child {
+  border-bottom: none;
+}
+
+.walletRow:hover {
+  border-color: var(--grey-300);
+}
+
+.walletRowActive {
+  background: var(--white);
+  box-shadow: inset 3px 0 0 var(--red);
+}
+
+.walletRadio {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1.5px solid var(--grey-300);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.12s;
+}
+
+.walletRowActive .walletRadio {
+  border-color: var(--red);
+}
+
+.walletRadioDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--red);
+}
+
+.walletCardBrand {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--ink);
+  min-width: 90px;
+}
+
+.walletCardNum {
+  font-size: 13.5px;
+  color: var(--grey-700);
+  flex: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.walletCardExp {
+  font-size: 12px;
+  color: var(--grey-500);
+  font-variant-numeric: tabular-nums;
+}
+
+.walletRowAdd {
+  color: var(--grey-600, #6b6b6b);
+}
+
+.walletAddIcon {
+  color: var(--grey-500);
+  flex-shrink: 0;
+}
+
+.walletAddLabel {
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+/* New card form — expands inside wallet list */
+.newCardForm {
+  border-top: 1px solid var(--grey-200);
+  padding: 16px;
+  background: var(--white);
+}
+
+/* ─── New card form ──────────────────────────────────────────────────────────── */
+
+/* Stripe CardElement host — gives it the same look as our <input> fields */
+.stripeCardWrapper {
+  padding: 12px 14px;
+  border: 1.5px solid var(--grey-200);
+  border-radius: 8px;
+  background: var(--white);
+  transition: border-color 0.15s;
+}
+
+.stripeCardWrapper:focus-within {
+  border-color: var(--ink);
+}
+
+.paymentHint {
+  margin: 0 0 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--grey-700);
+}
+
+/* ─── Subscription consent ──────────────────────────────────────────────────── */
+.consentBox {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+  border: 1.5px solid var(--grey-200);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.12s;
+}
+
+.consentBox:hover {
+  border-color: var(--grey-500);
+}
+
+.consentBoxUnchecked {
+  border-color: var(--red);
+  background: rgba(214, 64, 69, 0.03);
+}
+
+.consentCheckbox {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  cursor: pointer;
+  accent-color: var(--red);
+  margin-top: 1px;
+}
+
+.policyConsent .consentCheckbox {
+  margin-top: 2px;
+}
+
+.consentText {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--grey-700);
+}
+
+/* ─── Subscription summary indicator ────────────────────────────────────────── */
+.subscriptionBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--red);
+  margin-top: 3px;
+}
+
+/* ─── Recurring note in summary ─────────────────────────────────────────────── */
+.recurringNote {
+  font-size: 11.5px;
+  color: var(--red);
+  line-height: 1.5;
+  padding: 10px 12px;
+  background: rgba(214, 64, 69, 0.04);
+  border: 1px solid rgba(214, 64, 69, 0.18);
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+
+/* ─── Place order error ──────────────────────────────────────────────────────── */
+.placeError {
+  font-size: 13px;
+  color: var(--red);
+  padding: 10px 14px;
+  background: rgba(214, 64, 69, 0.06);
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+
+.submitBlock .placeError {
+  margin-bottom: 0;
+}
+
+@media (max-width: 768px) {
+  .page {
+    /* Shell .main already reserves space for the bottom nav */
+    padding: 16px 16px 0;
+  }
+
+  .formSection {
+    padding: 18px 16px;
+    margin-bottom: 12px;
+    box-shadow: none;
+  }
+
+  .input,
+  .addressEditInput {
+    font-size: 16px;
+  }
+
+  .verifyRow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .verifyConfirmBtn {
+    width: 100%;
+  }
+
+  .verifiedEmailRow {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .changeEmailBtn {
+    align-self: flex-end;
+    min-height: 44px;
+    padding: 8px 4px;
+  }
+
+  /* Wallet rows: ensure minimum 44px tap target */
+  .walletRow {
+    min-height: 44px;
+  }
+
+  /* Stepper: compact on mobile */
+  .stepLabel {
+    font-size: 12px;
+  }
+
+  .unavailableAlertTag {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.guestBlock {
+  padding: 14px 16px;
+  margin-top: 14px;
+  background: var(--white);
+  border-radius: var(--radius-sm, 8px);
+  border: 1px solid var(--grey-200);
+}
+
+.submitBlock .guestBlock {
+  margin-top: 0;
+}
+
+.unavailableAlert {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 18px;
+  background: var(--white);
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-sm, 8px);
+}
+
+.unavailableAlertHead {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.unavailableAlertIcon {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(214, 64, 69, 0.28);
+  color: var(--red);
+  background: transparent;
+}
+
+.unavailableAlertBody {
+  min-width: 0;
+}
+
+.unavailableAlertTitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+  line-height: 1.35;
+}
+
+.unavailableAlertTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.unavailableAlertTag {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 5px 10px;
+  border: 1px solid var(--grey-200);
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--white);
+  line-height: 1.2;
+}
+
+.unavailableAlertCopy {
+  margin: 12px 0 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--grey-700);
+}
+
+.unavailableAlertActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.unavailableAlertPrimary,
+.unavailableAlertSecondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  transition:
+    border-color 0.15s,
+    color 0.15s;
+}
+
+.unavailableAlertPrimary {
+  background: var(--white);
+  color: var(--red);
+  border: 1.5px solid var(--red);
+}
+
+.unavailableAlertPrimary:hover {
+  border-color: var(--red-deep);
+  color: var(--red-deep);
+}
+
+.unavailableAlertSecondary {
+  background: var(--white);
+  border: 1.5px solid var(--grey-200);
+  color: var(--ink);
+}
+
+.unavailableAlertSecondary:hover {
+  border-color: var(--ink);
+}
+
+@media (max-width: 559px) {
+  .unavailableAlert {
+    padding: 14px 16px;
+  }
+
+  .unavailableAlertActions {
+    flex-direction: column;
+  }
+
+  .unavailableAlertPrimary,
+  .unavailableAlertSecondary {
+    width: 100%;
+  }
+}
+
+.guestBlockMsg {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--grey-700);
+}
+
+.guestBlockLink {
+  color: var(--red);
+  text-decoration: underline;
+}
+
+.guestNote {
+  font-size: 0.8125rem;
+  color: var(--grey-700);
+  margin: 4px 0 0;
+}
+
+/* ── Dishes checkout layout (listings→dishes redesign) ───────── */
+.pageHeader {
+  margin-bottom: 24px;
+}
+.heading {
+  font-size: clamp(24px, 3vw, 32px);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+  margin: 0;
+  line-height: 1.1;
+}
+.subheading {
+  font-size: 14px;
+  color: var(--grey-700);
+  margin: 6px 0 0;
+}
+.mainCol {
+  flex: 1;
+  min-width: 0;
+}
+.sectionTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 24px 0 12px;
+}
+.itemList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+}
+.item {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14px;
+  color: var(--grey-700, #374151);
+}
+.fieldError {
+  color: var(--red);
+  font-size: 14px;
+  margin: 8px 0 0;
+}

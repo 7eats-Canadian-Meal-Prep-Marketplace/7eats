@@ -1,0 +1,395 @@
+/* ─── Page shell ───────────────────────────────────────────────────────────── */
+.page {
+  min-height: 100svh;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+}
+
+.topBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 32px;
+  border-bottom: 1px solid var(--grey-200);
+  flex-shrink: 0;
+}
+
+.topBarStep {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--grey-500);
+}
+
+.progressBar {
+  height: 3px;
+  background: var(--grey-100);
+  flex-shrink: 0;
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--red);
+  transition: width 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.content {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  justify-content: center;
+  padding: 48px 32px 96px;
+}
+
+.stepContent {
+  width: 100%;
+  max-width: 560px;
+  animation: fadeUp 0.24s ease both;
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ─── Step header ──────────────────────────────────────────────────────────── */
+.stepHeader {
+  margin-bottom: 40px;
+}
+
+.stepTag {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--grey-500);
+  margin: 0 0 10px;
+}
+
+.stepHeading {
+  font-size: clamp(28px, 4.5vw, 40px);
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.035em;
+  line-height: 1.08;
+  margin: 0 0 12px;
+}
+
+.accent {
+  color: var(--red);
+}
+
+.stepDesc {
+  font-size: 15px;
+  color: var(--grey-700);
+  line-height: 1.65;
+  margin: 0;
+  max-width: 46ch;
+}
+
+/* ─── Form fields (matches client auth underline style) ────────────────────── */
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.label {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--grey-700);
+}
+
+.hint {
+  font-size: 12.5px;
+  color: var(--grey-500);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1.5px solid var(--grey-300);
+  border-radius: 0;
+  padding: 10px 0;
+  font-family: var(--font);
+  font-size: 16px;
+  color: var(--ink);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.input::placeholder {
+  color: var(--grey-300);
+}
+
+.input:focus {
+  border-color: var(--ink);
+}
+
+.input:disabled {
+  color: var(--grey-700);
+  border-color: var(--grey-200);
+}
+
+.input[type="date"] {
+  appearance: none;
+  min-height: 42px;
+  color-scheme: light;
+}
+
+.input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 0.45;
+  cursor: pointer;
+}
+
+.otpInput {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1.5px solid var(--grey-300);
+  border-radius: 0;
+  padding: 12px 0;
+  font-family: var(--font);
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  color: var(--ink);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.otpInput::placeholder {
+  color: var(--grey-200);
+  font-weight: 400;
+  font-size: 15px;
+  letter-spacing: 0.02em;
+}
+
+.otpInput:focus {
+  border-color: var(--red);
+}
+
+.fieldError {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--red);
+  margin: -4px 0 0;
+}
+
+.verifiedNote {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: -4px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--grey-700);
+}
+
+.verifiedNote svg {
+  flex-shrink: 0;
+  color: var(--red);
+}
+
+.actionBtn {
+  width: 100%;
+  margin-top: 4px;
+}
+
+.actionsRow {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.actionsRow .actionBtn {
+  flex: 1;
+  min-width: 140px;
+  margin-top: 0;
+}
+
+/* ─── Preferences ──────────────────────────────────────────────────────────── */
+.prefSections {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  margin-bottom: 36px;
+}
+
+.prefGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 32px;
+  border-top: 1px solid var(--grey-200);
+}
+
+.prefGroup:first-child {
+  padding-top: 0;
+  border-top: none;
+}
+
+.prefHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.prefLabel {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--grey-700);
+  margin: 0;
+}
+
+.prefHint {
+  font-size: 12.5px;
+  color: var(--grey-500);
+  margin: 0;
+}
+
+.optionGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 152px), 1fr));
+  gap: 10px;
+}
+
+.optionGridWide {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+  gap: 10px;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 50px;
+  padding: 12px 14px;
+  border: 1.5px solid var(--grey-200);
+  border-radius: var(--radius-sm);
+  background: #ffffff;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink);
+  cursor: pointer;
+  font-family: var(--font);
+  text-align: left;
+  line-height: 1.35;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.12s ease;
+}
+
+.option:hover {
+  border-color: var(--grey-300);
+}
+
+.option:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: 2px;
+}
+
+.optionSelected {
+  border-color: var(--red);
+  background: #ffffff;
+  box-shadow: 0 0 0 1px rgba(214, 64, 69, 0.12);
+}
+
+.optionSelected:hover {
+  border-color: var(--red-deep);
+}
+
+.optionLabel {
+  flex: 1;
+  min-width: 0;
+}
+
+.optionMark {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1.5px solid var(--grey-300);
+  color: transparent;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.optionSelected .optionMark {
+  border-color: var(--red);
+  background: var(--red);
+  color: var(--white);
+}
+
+/* ─── Responsive ───────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .topBar {
+    padding: 16px 20px;
+  }
+
+  .content {
+    padding: 32px 20px calc(72px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .stepHeader {
+    margin-bottom: 32px;
+  }
+
+  .optionGridWide {
+    grid-template-columns: 1fr;
+  }
+
+  .actionsRow {
+    flex-direction: column;
+  }
+
+  .actionsRow .actionBtn {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stepContent {
+    animation: none;
+  }
+
+  .option {
+    transition: none;
+  }
+
+  .optionMark {
+    transition: none;
+  }
+}

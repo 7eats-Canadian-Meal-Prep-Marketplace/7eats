@@ -1,0 +1,981 @@
+/* ─── Page ─────────────────────────────────────────────────────────────────── */
+.page {
+  display: flex;
+  flex-direction: column;
+  max-width: 1100px;
+  width: 100%;
+  min-width: 0;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 40px;
+}
+
+/* Mobile-only top back link. On desktop the back control lives in the sticky
+   right rail (.navBack) so it stays reachable on scroll without floating over
+   the content; the rail is hidden on mobile, so this takes over there. */
+.back {
+  align-self: flex-start;
+  display: none;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  margin-bottom: 18px;
+  touch-action: manipulation;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--grey-700);
+  text-decoration: none;
+  width: fit-content;
+  transition: color 0.12s;
+}
+
+.back:hover {
+  color: var(--ink);
+}
+
+.back:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .back {
+    transition: none;
+  }
+}
+
+.title {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--ink);
+  margin: 0;
+}
+
+/* ─── Two-column layout ────────────────────────────────────────────────────── */
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 160px;
+  gap: 64px;
+  align-items: start;
+  min-width: 0;
+}
+
+/* ─── Sections (left column) ───────────────────────────────────────────────── */
+.sections {
+  display: flex;
+  flex-direction: column;
+  gap: 52px;
+  padding-bottom: 120px;
+  min-width: 0;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  scroll-margin-top: 32px;
+  min-width: 0;
+}
+
+.sectionTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+/* ─── Card ──────────────────────────────────────────────────────────────────── */
+.card {
+  background: var(--white);
+  border: 1px solid #e4e4e7;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  overflow: hidden;
+  min-width: 0;
+}
+
+.cardForm {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 20px 24px;
+}
+
+.cardFooter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 24px;
+  border-top: 1px solid #f0f0f3;
+  background: #fafafa;
+}
+
+/* ─── Form primitives ──────────────────────────────────────────────────────── */
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.formGroupNarrow {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 200px;
+}
+
+.formGroupFull {
+  grid-column: 1 / -1;
+}
+
+.phoneChangeBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid #f0f0f3;
+}
+
+.phoneMetaRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.phoneBadge {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--red, #e23744);
+  background: var(--white);
+  padding: 5px 10px;
+  border: 1px solid var(--red, #e23744);
+  border-radius: var(--radius-sm);
+}
+
+.phoneVerifyPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid #e4e4e7;
+  border-radius: var(--radius-sm);
+  background: #fafafa;
+}
+
+.phoneChangeActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.linkBtn {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.linkBtn:hover {
+  opacity: 0.7;
+}
+
+.linkBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.fieldError {
+  margin: 0;
+  font-size: 13px;
+  color: var(--red, #e23744);
+}
+
+.formLabel {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #444444;
+  letter-spacing: 0.005em;
+}
+
+.formLabelOptional {
+  font-weight: 400;
+  color: #a0a0aa;
+}
+
+.formHint {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: #8a8a96;
+}
+
+.inlineLink {
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.deliveryZone {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding-top: 20px;
+  border-top: 1px solid #ececf0;
+}
+
+.deliveryRateHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.deliveryRateValue {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+  font-feature-settings: "tnum";
+}
+
+.deliveryRateSlider {
+  width: 100%;
+  margin-top: 4px;
+  accent-color: var(--red);
+}
+
+.deliveryRateLabels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 11.5px;
+  color: #8a8a96;
+  font-feature-settings: "tnum";
+}
+
+.fulfillmentGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fulfillmentCard {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid #e4e4e7;
+  border-radius: var(--radius-sm);
+  background: var(--white);
+  cursor: pointer;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--ink);
+  transition:
+    border-color 0.12s,
+    background 0.12s;
+}
+
+.fulfillmentCard:hover {
+  border-color: #c0c0c8;
+}
+
+.fulfillmentCardActive {
+  border-color: var(--ink);
+  background: #fafafa;
+}
+
+.fulfillmentInput {
+  accent-color: var(--red);
+}
+
+.dayPillGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.dayPill {
+  padding: 6px 11px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid #e4e4e7;
+  border-radius: var(--radius-pill);
+  background: var(--white);
+  color: #666670;
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    border-color 0.12s,
+    background 0.12s,
+    color 0.12s;
+}
+
+.dayPill:hover {
+  border-color: #a0a0aa;
+  color: var(--ink);
+}
+
+.dayPillActive {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--white);
+}
+
+.dayPillActive:hover {
+  color: var(--white);
+}
+
+.perDayWindows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.perDayRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.perDayName {
+  width: 36px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #666670;
+  flex-shrink: 0;
+}
+
+.timeRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+
+.timeSep {
+  font-size: 12px;
+  color: #8a8a96;
+  flex-shrink: 0;
+}
+
+.formInput {
+  padding: 9px 12px;
+  font-size: 13.5px;
+  color: var(--ink);
+  background: var(--white);
+  border: 1px solid #e4e4e7;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.12s;
+  width: 100%;
+}
+
+.formInput:focus {
+  border-color: #a0a0aa;
+}
+
+.pwInputWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.pwInputWrap .formInput {
+  padding-right: 36px;
+}
+
+.pwEyeBtn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  padding: 2px;
+  cursor: pointer;
+  color: #8a8a96;
+  display: flex;
+  align-items: center;
+  line-height: 1;
+  transition: color 0.12s;
+}
+
+.pwEyeBtn:hover {
+  color: var(--ink);
+}
+
+.formSelect {
+  padding: 9px 32px 9px 12px;
+  font-size: 13.5px;
+  color: var(--ink);
+  background: var(--white);
+  border: 1px solid #e4e4e7;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.12s;
+  width: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238a8a96' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  cursor: pointer;
+}
+
+.formSelect:focus {
+  border-color: #a0a0aa;
+}
+
+.formTextarea {
+  padding: 9px 12px;
+  font-size: 13.5px;
+  color: var(--ink);
+  background: var(--white);
+  border: 1px solid #e4e4e7;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.12s;
+  width: 100%;
+  resize: vertical;
+  line-height: 1.55;
+}
+
+.formTextarea:focus {
+  border-color: #a0a0aa;
+}
+
+.formRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.formRow3 {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 14px;
+}
+
+.formDivider {
+  border: none;
+  border-top: 1px solid #f0f0f3;
+  margin: 2px 0;
+}
+
+/* ─── Read-only value ──────────────────────────────────────────────────────── */
+.readonlyVal {
+  font-size: 13.5px;
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.readonlyNote {
+  margin-left: 6px;
+  font-size: 12px;
+  color: #a0a0aa;
+  font-weight: 400;
+}
+
+/* ─── Buttons ──────────────────────────────────────────────────────────────── */
+.saveBtn {
+  padding: 9px 20px;
+  background: var(--ink);
+  color: var(--white);
+  font-size: 13px;
+  font-weight: 700;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transition: opacity 0.12s;
+}
+
+.saveBtn:hover:not(:disabled) {
+  opacity: 0.82;
+}
+
+.saveBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.outlineBtn {
+  padding: 8px 16px;
+  background: none;
+  color: #444444;
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid #d0d0d8;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  align-self: flex-start;
+  transition:
+    border-color 0.12s,
+    color 0.12s;
+}
+
+.outlineBtn:hover {
+  border-color: #a0a0aa;
+  color: var(--ink);
+}
+
+.cancelBtn {
+  padding: 4px 0;
+  background: none;
+  color: #8a8a96;
+  font-size: 12.5px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  align-self: flex-start;
+  transition: color 0.12s;
+}
+
+.cancelBtn:hover {
+  color: var(--ink);
+}
+
+/* ─── Photo dropzone ────────────────────────────────────────────────────────── */
+.dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 28px 24px;
+  border: 2px dashed #d8d8de;
+  border-radius: var(--radius-sm);
+  background: #fafafa;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+  text-align: center;
+}
+
+.dropzone:hover {
+  border-color: #b0b0ba;
+  background: #f5f5f7;
+}
+
+.dropzoneIcon {
+  color: #b0b0ba;
+  flex: none;
+}
+
+.dropzoneText {
+  font-size: 13px;
+  font-weight: 500;
+  color: #555560;
+  line-height: 1.4;
+}
+
+.dropzoneBrowse {
+  color: var(--ink);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.dropzoneSub {
+  font-size: 11.5px;
+  color: #a0a0aa;
+}
+
+/* ─── Password sub-form ────────────────────────────────────────────────────── */
+.pwForm {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid #e4e4e7;
+  border-radius: var(--radius-sm);
+  background: #fafafa;
+}
+
+/* ─── Stripe billing ─────────────────────────────────────────────────────────── */
+.stripeStatus {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.stripeInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.stripeBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  align-self: flex-start;
+}
+
+.stripeBadgeConnected {
+  background: rgba(34, 197, 94, 0.1);
+  color: #166534;
+}
+
+.stripeBadgePending {
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.stripeDetails {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.stripeBank {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.stripeAccount {
+  font-size: 12.5px;
+  color: #8a8a96;
+  font-feature-settings: "tnum";
+}
+
+.stripeBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 14px;
+  background: none;
+  color: #444444;
+  font-size: 12.5px;
+  font-weight: 500;
+  border: 1px solid #d0d0d8;
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  flex: none;
+  transition:
+    border-color 0.12s,
+    color 0.12s;
+}
+
+.stripeBtn:hover {
+  border-color: #a0a0aa;
+  color: var(--ink);
+}
+
+/* ─── Notifications ────────────────────────────────────────────────────────── */
+.notifGroupHeader {
+  padding: 12px 24px 8px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #a0a0aa;
+}
+
+.notifGroupDivider {
+  border: none;
+  border-top: 1px solid #e4e4e7;
+  margin: 4px 0;
+}
+
+.notifRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 14px 24px;
+}
+
+.notifRowBorder {
+  border-bottom: 1px solid #f0f0f3;
+}
+
+.notifInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.notifLabel {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.notifDesc {
+  font-size: 12.5px;
+  color: #8a8a96;
+  line-height: 1.4;
+}
+
+/* ─── Toggle switch ────────────────────────────────────────────────────────── */
+.toggleSwitch {
+  width: 36px;
+  height: 20px;
+  border-radius: var(--radius-pill);
+  background: #d8d8de;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.2s;
+  flex: none;
+}
+
+.toggleSwitchOn {
+  background: var(--ink);
+}
+
+.toggleKnob {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--white);
+  top: 3px;
+  left: 3px;
+  transition: transform 0.18s;
+}
+
+.toggleSwitchOn .toggleKnob {
+  transform: translateX(16px);
+}
+
+/* ─── Danger zone ──────────────────────────────────────────────────────────── */
+.dangerCard {
+  border-color: rgba(214, 64, 69, 0.22);
+}
+
+.dangerRow {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  padding: 20px 24px;
+}
+
+.dangerInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.dangerTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.dangerDesc {
+  font-size: 13px;
+  color: #8a8a96;
+  line-height: 1.55;
+  max-width: none;
+}
+
+.deleteBtn {
+  padding: 9px 18px;
+  background: none;
+  color: var(--red);
+  font-size: 13px;
+  font-weight: 600;
+  border: 1.5px solid var(--red);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  flex: none;
+  transition:
+    background 0.12s,
+    color 0.12s;
+}
+
+.deleteBtn:hover {
+  background: var(--red);
+  color: var(--white);
+}
+
+/* ─── Sticky right nav ─────────────────────────────────────────────────────── */
+.sideNav {
+  position: sticky;
+  top: 32px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Sticky back control, sitting above the section nav in the right rail. */
+.navBack {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--grey-200);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--grey-700);
+  text-decoration: none;
+  transition: color 0.12s;
+}
+
+.navBack:hover {
+  color: var(--ink);
+}
+
+.navItem {
+  display: block;
+  width: 100%;
+  padding: 7px 0 7px 16px;
+  border: none;
+  box-shadow: inset 2px 0 0 #e8e8ec;
+  background: none;
+  font-size: 13px;
+  font-weight: 500;
+  color: #8a8a96;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  transition:
+    color 0.12s,
+    box-shadow 0.12s;
+}
+
+.navItem:hover {
+  color: var(--ink);
+  box-shadow: inset 2px 0 0 #c0c0c8;
+}
+
+.navItemActive {
+  box-shadow: inset 3px 0 0 var(--ink);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* ─── Mobile ───────────────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .sideNav {
+    display: none;
+  }
+
+  .header {
+    margin-bottom: 28px;
+  }
+
+  .sections {
+    gap: 40px;
+    padding-bottom: 80px;
+  }
+
+  .formRow,
+  .formRow3 {
+    grid-template-columns: 1fr;
+  }
+
+  .cardForm {
+    padding: 16px 18px;
+  }
+
+  .cardFooter {
+    padding: 12px 18px;
+  }
+
+  .notifRow {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+  }
+
+  .perDayRow {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .timeRow {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  .formInput {
+    min-width: 0;
+  }
+
+  /* Rail is hidden on mobile — fall back to the top back link. */
+  .back {
+    display: inline-flex;
+    min-height: 44px;
+    padding: 6px 12px;
+    margin: 0 0 4px 0;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  .back:hover {
+    background: var(--grey-100);
+  }
+}
+
+@media (max-width: 640px) {
+  .formRow,
+  .formRow3 {
+    grid-template-columns: 1fr;
+  }
+
+  .formGroupNarrow {
+    max-width: 100%;
+  }
+
+  .dangerRow {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  /* stripeStatus is the actual class used in the component */
+  .stripeRow,
+  .stripeStatus {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+}

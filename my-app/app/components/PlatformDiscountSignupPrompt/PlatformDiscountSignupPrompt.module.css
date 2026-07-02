@@ -1,0 +1,122 @@
+/* Compact coupon-style promo shown to signed-out shoppers in the order card.
+   White card + red outline (no flooded fill). Text is all ink; hierarchy comes
+   from weight, not colour. One high-contrast CTA drives signups. */
+.card {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 12px 13px;
+  border-radius: 13px;
+  border: 1.5px solid color-mix(in srgb, var(--red) 55%, white);
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(15, 15, 15, 0.04);
+}
+
+/* Solid red plate + white glyph, matching the CTA button. */
+.icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  color: white;
+  background: var(--red);
+}
+
+.body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.headline {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+/* Same ink colour as the headline, lighter weight so the offer still leads. */
+.subline {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--ink);
+}
+
+/* Single primary action. Pill + arrow signals "go" and converts harder than a
+   text link. Sized below the page's checkout CTA so hierarchy stays clear. */
+.cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  padding: 8px 15px;
+  border-radius: 999px;
+  background: var(--red);
+  color: white;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--red) 26%, transparent);
+  transition:
+    background 0.14s ease,
+    transform 0.14s ease,
+    box-shadow 0.14s ease;
+}
+
+.cta:hover {
+  background: var(--red-deep);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 13px color-mix(in srgb, var(--red) 34%, transparent);
+}
+
+.cta:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--red) 26%, transparent);
+}
+
+.cta:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: 2px;
+}
+
+.cta svg {
+  transition: transform 0.14s ease;
+}
+
+.cta:hover svg {
+  transform: translateX(2px);
+}
+
+/* Narrow cards: let the CTA drop to its own full-width row instead of crushing
+   the reward text. */
+@media (max-width: 360px) {
+  .card {
+    flex-wrap: wrap;
+  }
+
+  .cta {
+    flex-basis: 100%;
+    justify-content: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cta,
+  .cta svg {
+    transition: none;
+  }
+
+  .cta:hover {
+    transform: none;
+  }
+
+  .cta:hover svg {
+    transform: none;
+  }
+}

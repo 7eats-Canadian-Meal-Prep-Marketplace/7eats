@@ -1,0 +1,973 @@
+/* ─── Page ─────────────────────────────────────────────────────────────────── */
+.page {
+  /* Filled surface tint — a near-white cool off-white, close to the page bg */
+  --surface: #fafbfc;
+  /* "Drop here / go" affordance — green reads as success, not error */
+  --drag-ok: #16a34a;
+  --drag-ok-soft: rgba(22, 163, 74, 0.06);
+  display: flex;
+  flex-direction: column;
+  max-width: 820px;
+  width: 100%;
+  min-width: 0;
+  margin: 0 auto;
+}
+
+/* ─── Tab row ──────────────────────────────────────────────────────────────── */
+.tabRow {
+  display: flex;
+  border-bottom: 1px solid var(--grey-200);
+  margin-bottom: 24px;
+}
+
+.tab {
+  position: relative;
+  bottom: -1px;
+  padding: 0 4px 11px;
+  margin-right: 24px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--grey-500);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: color 0.12s;
+  white-space: nowrap;
+}
+
+.tab:hover {
+  color: var(--ink);
+}
+
+.tab:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+.tabActive {
+  color: var(--ink);
+  font-weight: 600;
+  border-bottom-color: var(--ink);
+}
+
+/* ─── Content animation ────────────────────────────────────────────────────── */
+.content {
+  animation: fadeUp 0.14s ease both;
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ─── Tab bodies ───────────────────────────────────────────────────────────── */
+.detailsTab,
+.nutritionTab,
+.promoTab {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ─── Cards ────────────────────────────────────────────────────────────────── */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 22px;
+  background: var(--white);
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-md);
+  box-shadow: 0 1px 2px rgba(15, 15, 15, 0.03);
+}
+
+.cardHead {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.cardTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.cardDesc {
+  font-size: 12.5px;
+  color: var(--grey-700);
+  line-height: 1.45;
+  margin: 0;
+}
+
+/* ─── Stats strip ──────────────────────────────────────────────────────────── */
+.statsRow {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.statCard {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 13px 16px;
+  background: var(--surface);
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-md);
+}
+
+.statLabel {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--grey-500);
+}
+
+.statVal {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.03em;
+  font-feature-settings: "tnum";
+  line-height: 1;
+}
+
+/* ─── Shared form primitives ───────────────────────────────────────────────── */
+.formGrid {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 14px;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+}
+
+.formLabel {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--grey-900);
+  letter-spacing: 0.005em;
+}
+
+.required {
+  color: var(--red);
+}
+
+.formInput,
+.formTextarea {
+  padding: 10px 12px;
+  font-size: 13.5px;
+  color: var(--ink);
+  background: var(--white);
+  border: 1px solid var(--grey-300);
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  outline: none;
+  transition:
+    border-color 0.12s,
+    box-shadow 0.12s;
+  width: 100%;
+}
+
+.formInput::placeholder,
+.formTextarea::placeholder {
+  color: var(--grey-500);
+}
+
+.formInput:hover,
+.formTextarea:hover {
+  border-color: var(--grey-500);
+}
+
+.formInput:focus,
+.formTextarea:focus {
+  border-color: var(--red);
+  box-shadow: 0 0 0 3px rgba(214, 64, 69, 0.12);
+}
+
+.formInput:disabled,
+.formTextarea:disabled {
+  background: var(--grey-100);
+  color: var(--grey-500);
+  cursor: not-allowed;
+}
+
+.formTextarea {
+  resize: vertical;
+  line-height: 1.55;
+  min-height: 110px;
+}
+
+/* Character counter pinned to the textarea's bottom-right */
+.textareaWrap {
+  position: relative;
+}
+
+.textareaWrap .formTextarea {
+  padding-bottom: 28px;
+}
+
+.charCount {
+  position: absolute;
+  right: 12px;
+  bottom: 9px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--grey-500);
+  font-feature-settings: "tnum";
+  pointer-events: none;
+}
+
+.charCountLimit {
+  color: var(--red);
+}
+
+/* Input adornment (unit suffix inside the field) */
+.adorn {
+  position: relative;
+}
+
+.adorn .formInput {
+  padding-right: 44px;
+}
+
+.adornUnit {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--grey-500);
+  pointer-events: none;
+}
+
+/* Leading adornment (e.g. a "$" prefix) */
+.adornLead {
+  position: relative;
+}
+
+.adornLead .formInput {
+  padding-left: 26px;
+}
+
+.adornLeadUnit {
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  transform: translateY(-50%);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--grey-700);
+  pointer-events: none;
+}
+
+/* ─── Photos ───────────────────────────────────────────────────────────────── */
+.photoLabelRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.photoCount {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--grey-500);
+  font-feature-settings: "tnum";
+}
+
+.photoStrip {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+  border-radius: var(--radius-sm);
+  transition: box-shadow 0.12s;
+}
+
+/* Highlight the whole strip while dragging files in from the desktop */
+.photoStripDropActive {
+  box-shadow: 0 0 0 2px var(--drag-ok);
+  background: var(--drag-ok-soft);
+}
+
+.photoThumb {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--grey-200);
+  background: var(--surface);
+  cursor: grab;
+  touch-action: none;
+}
+
+.photoThumb:active {
+  cursor: grabbing;
+}
+
+.photoThumbDragging {
+  opacity: 0.35;
+}
+
+/* Drop indicator on the thumbnail a dragged photo will land before */
+.photoThumbDropTarget {
+  box-shadow: inset 0 0 0 2px var(--drag-ok);
+}
+
+.photoImg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.coverTag {
+  position: absolute;
+  top: 7px;
+  left: 7px;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--white);
+  background: rgba(15, 15, 15, 0.62);
+  border-radius: var(--radius-pill);
+}
+
+.photoRemove {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 15, 15, 0.55);
+  border: none;
+  border-radius: 50%;
+  color: var(--white);
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.photoRemove:hover {
+  background: rgba(15, 15, 15, 0.85);
+}
+
+.photoRemove:focus-visible {
+  outline: 2px solid var(--white);
+  outline-offset: -2px;
+}
+
+.photoAdd {
+  aspect-ratio: 4 / 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 2px dashed var(--grey-300);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  cursor: pointer;
+  color: var(--grey-700);
+  font-size: 12.5px;
+  font-weight: 500;
+  font-family: inherit;
+  transition:
+    border-color 0.15s,
+    background 0.15s,
+    color 0.15s;
+}
+
+.photoAdd:hover {
+  border-color: var(--grey-500);
+  background: var(--grey-200);
+  color: var(--ink);
+}
+
+.photoAddIcon {
+  flex: none;
+}
+
+/* ─── Ingredients ──────────────────────────────────────────────────────────── */
+.ingList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ingRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ingRow .formInput {
+  flex: 1;
+  min-width: 0;
+}
+
+.ingRemove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex: none;
+  background: none;
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-sm);
+  color: var(--grey-500);
+  cursor: pointer;
+  transition:
+    color 0.12s,
+    border-color 0.12s,
+    background 0.12s;
+}
+
+.ingRemove:hover {
+  color: var(--red);
+  border-color: var(--red);
+  background: rgba(214, 64, 69, 0.06);
+}
+
+.ingRemove:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: 2px;
+}
+
+.addIngBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: none;
+  color: var(--grey-900);
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid var(--grey-300);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  align-self: flex-start;
+  font-family: inherit;
+  transition:
+    border-color 0.12s,
+    color 0.12s,
+    background 0.12s;
+}
+
+.addIngBtn:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+  background: var(--grey-100);
+}
+
+/* ─── Macro grid ───────────────────────────────────────────────────────────── */
+.macroGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+/* ─── Allergens (pill chips) ───────────────────────────────────────────────── */
+.allergenList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.allergenChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 13px;
+  border: 1px solid var(--grey-300);
+  border-radius: var(--radius-pill);
+  font-size: 12.5px;
+  color: var(--grey-700);
+  cursor: pointer;
+  user-select: none;
+  transition:
+    border-color 0.12s,
+    background 0.12s,
+    color 0.12s;
+}
+
+.allergenChip:hover {
+  border-color: var(--grey-500);
+  color: var(--ink);
+}
+
+.allergenChip:has(.allergenCheck:checked) {
+  border-color: var(--red);
+  background: rgba(214, 64, 69, 0.06);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.allergenChip:has(.allergenCheck:disabled) {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.allergenChip:has(.allergenCheck:focus-visible) {
+  outline: 2px solid var(--red);
+  outline-offset: 2px;
+}
+
+.allergenCheck {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  accent-color: var(--red);
+  cursor: pointer;
+}
+
+.otherInput {
+  margin-top: 4px;
+  max-width: 300px;
+}
+
+/* ─── Empty state ──────────────────────────────────────────────────────────── */
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 26px 20px;
+  text-align: center;
+  border: 1px dashed var(--grey-300);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.emptyIcon {
+  color: var(--grey-500);
+}
+
+.emptyText {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--grey-900);
+  margin: 0;
+}
+
+.emptySub {
+  font-size: 12px;
+  color: var(--grey-500);
+  margin: 0;
+  max-width: 36ch;
+  line-height: 1.45;
+}
+
+.loadingNote {
+  font-size: 13px;
+  color: var(--grey-500);
+  margin: 0;
+  padding: 8px 0;
+}
+
+/* ─── Action footer ────────────────────────────────────────────────────────── */
+/* Static, at the strict bottom of the form. Not sticky: a lingering transform
+   on the animated .content ancestor breaks position:sticky and made the bar
+   float over the form. A plain block at the end can never overlap anything. */
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+  padding: 18px 0 4px;
+  background: var(--white);
+  border-top: 1px solid var(--grey-200);
+}
+
+.footerHint {
+  font-size: 12px;
+  color: var(--grey-500);
+  min-width: 0;
+}
+
+.footerHintError {
+  color: var(--red);
+}
+
+.footerBtns {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+  margin-left: auto;
+}
+
+/* Non-sticky actions row inside a card */
+.cardActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 4px;
+}
+
+/* ─── Buttons ──────────────────────────────────────────────────────────────── */
+.saveBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 130px;
+  padding: 11px 22px;
+  background: var(--ink);
+  color: var(--white);
+  font-size: 13px;
+  font-weight: 700;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-family: inherit;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transition:
+    background 0.12s,
+    opacity 0.12s;
+}
+
+.saveBtn:hover:not(:disabled) {
+  background: var(--grey-900);
+}
+
+.saveBtn:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.saveBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.cancelBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 11px 18px;
+  background: var(--white);
+  color: var(--grey-900);
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid var(--grey-300);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    border-color 0.12s,
+    color 0.12s,
+    background 0.12s;
+}
+
+.cancelBtn:hover:not(:disabled) {
+  border-color: var(--ink);
+  color: var(--ink);
+  background: var(--grey-100);
+}
+
+.cancelBtn:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.cancelBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.addPromoBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 150px;
+  padding: 11px 18px;
+  background: var(--red);
+  color: var(--white);
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-family: inherit;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+  transition:
+    background 0.12s,
+    opacity 0.12s;
+}
+
+.addPromoBtn:hover:not(:disabled) {
+  background: var(--red-deep);
+}
+
+.addPromoBtn:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: 2px;
+}
+
+.addPromoBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.spinner {
+  width: 15px;
+  height: 15px;
+  flex: none;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: var(--white);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ─── Promotions: segmented control ────────────────────────────────────────── */
+.segControl {
+  display: inline-flex;
+  align-self: flex-start;
+  gap: 2px;
+  padding: 3px;
+  background: var(--grey-100);
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-sm);
+}
+
+.segBtn {
+  padding: 6px 16px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--grey-700);
+  background: transparent;
+  border: none;
+  border-radius: calc(var(--radius-sm) - 2px);
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  transition:
+    background 0.12s,
+    color 0.12s,
+    box-shadow 0.12s;
+}
+
+.segBtn:hover {
+  color: var(--ink);
+}
+
+.segBtn:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: 1px;
+}
+
+.segBtnActive,
+.segBtnActive:hover {
+  color: var(--ink);
+  font-weight: 600;
+  background: var(--white);
+  box-shadow:
+    0 1px 3px rgba(15, 15, 15, 0.1),
+    0 0 0 0.5px rgba(15, 15, 15, 0.06);
+}
+
+/* ─── Promotions: callout ──────────────────────────────────────────────────── */
+.callout {
+  display: flex;
+  gap: 10px;
+  padding: 11px 14px;
+  border: 1px solid var(--grey-200);
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+}
+
+.calloutIcon {
+  flex: none;
+  margin-top: 1px;
+  color: var(--grey-700);
+}
+
+.calloutText {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--grey-700);
+}
+
+.calloutText strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* ─── Promotions: list ─────────────────────────────────────────────────────── */
+.promoList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.promoCard {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-sm);
+  background: var(--white);
+  overflow: hidden;
+}
+
+/* Live promotion gets a red accent bar + tint for extra visual weight */
+.promoCardActive {
+  border-color: rgba(214, 64, 69, 0.45);
+  background: rgba(214, 64, 69, 0.035);
+  box-shadow: 0 1px 3px rgba(214, 64, 69, 0.12);
+}
+
+.promoCardActive::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--red);
+}
+
+.promoCardInactive {
+  background: var(--surface);
+}
+
+.promoMain {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.promoAmount {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+
+.promoLimit {
+  font-size: 12px;
+  color: var(--grey-700);
+}
+
+.promoBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-pill);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--grey-700);
+  background: var(--white);
+}
+
+.promoBadgeActive {
+  border-color: rgba(214, 64, 69, 0.4);
+  color: var(--red-deep);
+  background: var(--white);
+}
+
+.promoDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.promoDotActive {
+  background: var(--red);
+}
+
+.promoDotInactive {
+  background: var(--grey-300);
+}
+
+/* ─── Responsive ───────────────────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  .tabRow {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: 20px;
+  }
+
+  .formGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .macroGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .card {
+    padding: 16px 16px;
+  }
+}
+
+@media (max-width: 420px) {
+  .footerBtns {
+    width: 100%;
+  }
+
+  .footer {
+    flex-wrap: wrap;
+  }
+
+  .saveBtn {
+    flex: 1;
+  }
+}
+
+/* ─── Reduced motion ───────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .content {
+    animation: none;
+  }
+
+  .spinner {
+    animation-duration: 1.4s;
+  }
+}

@@ -2,23 +2,34 @@ import { and, eq, gt, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { rateLimitLog } from "@/db/schema";
 
-const WINDOW_MINUTES = Number(process.env.RATE_LIMIT_WINDOW_MINUTES ?? "60");
-const MAX_ATTEMPTS = Number(process.env.RATE_LIMIT_MAX_ATTEMPTS ?? "3");
+const DEFAULT_WINDOW_MINUTES = Number(
+  process.env.RATE_LIMIT_WINDOW_MINUTES ?? "60",
+);
+const DEFAULT_MAX_ATTEMPTS = Number(process.env.RATE_LIMIT_MAX_ATTEMPTS ?? "3");
 
-export async function logAndCheckRateLimit(ipHash: string): Promise<boolean> {
-  await db.insert(rateLimitLog).values({ ipHash });
+export async function logAndCheckRateLimit(
+  key: string,
+  opts?: { windowMinutes?: number; maxAttempts?: number },
+): Promise<boolean> {
+  const windowMinutes = opts?.windowMinutes ?? DEFAULT_WINDOW_MINUTES;
+  const maxAttempts = opts?.maxAttempts ?? DEFAULT_MAX_ATTEMPTS;
 
-  const windowStart = new Date(Date.now() - WINDOW_MINUTES * 60 * 1000);
+  const windowStart = new Date(Date.now() - windowMinutes * 60 * 1000);
 
   const result = await db
     .select({ count: sql<number>`cast(count(*) as int)` })
     .from(rateLimitLog)
     .where(
       and(
-        eq(rateLimitLog.ipHash, ipHash),
+        eq(rateLimitLog.ipHash, key),
         gt(rateLimitLog.attemptedAt, windowStart),
       ),
     );
 
-  return result[0].count <= MAX_ATTEMPTS;
+  if (result[0].count >= maxAttempts) {
+    return false;
+  }
+
+  await db.insert(rateLimitLog).values({ ipHash: key });
+  return true;
 }

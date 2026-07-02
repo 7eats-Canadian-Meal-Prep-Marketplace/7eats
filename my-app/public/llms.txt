@@ -1,0 +1,38 @@
+# 7eats
+
+> 7eats is the Canadian marketplace connecting meal prep businesses with customers. Home cooks and professional meal preppers in Toronto can list their meals, manage orders, and get paid — while customers discover and order fresh, homemade meal prep delivered locally.
+
+## About 7eats
+
+- [Home](https://www.7eats.ca) — The meal prep marketplace for Canada. Discover local meal prep businesses and order fresh, homemade meals.
+
+## For Customers
+
+- [Browse Meal Prep](https://www.7eats.ca/app/browse) — Browse local meal prep listings, view menus, and place orders from home cooks and businesses near you.
+- [Join the Waitlist](https://www.7eats.ca/public/waitlist) — Get early access to the 7eats marketplace in your area.
+
+## For Meal Prep Businesses & Cooks
+
+- [Cook Platform](https://www.7eats.ca/business/home) — List your meal prep business on 7eats, manage your menu and orders, and reach new customers without the admin overhead.
+- [Apply to Join](https://www.7eats.ca/business/application) — Apply to become a 7eats cook. First 30 cooks get 0% platform fee for 90 days.
+
+## How It Works
+
+- Cooks create a profile and list their meal prep offerings with pricing, availability, photos, and dietary tags (halal, vegan, high-protein, etc.).
+- Customers browse local listings, place orders, and pay securely through the platform.
+- Customers choose a 15-minute pickup window; 7eats staggers windows so cooks aren't flooded.
+- 7eats handles payments and order management so cooks focus on cooking.
+- Payouts to cooks every Tuesday via Stripe.
+
+## Team
+
+- [Meet the Team](https://www.7eats.ca/public/team) — The three co-founders behind 7eats: Hendrik Tebeng (Toronto), Mohamad Addasi (Montreal), and Adnane Bejja (Laval). All software engineering students at Concordia University with experience at CIBC, Autodesk, and Intact Financial Corporation.
+
+## Legal & Policies
+
+- [Terms of Service](https://www.7eats.ca/terms) — The rules that apply when customers and cooks use the 7eats marketplace, covering accounts, orders, subscriptions, payments, and platform responsibilities.
+- [Cook Terms](https://www.7eats.ca/cook-terms) — Marketplace terms for cooks and meal prep businesses: independent-business status, eligibility and compliance, listing accuracy, food safety duties, payouts via Stripe Connect, and insurance.
+- [Privacy Policy](https://www.7eats.ca/privacy) — How 7eats collects, uses, shares, and protects personal information under Canada's PIPEDA and CASL, including the third-party services used (Vercel, Neon, Better Auth, Stripe, Twilio, Resend, Sentry, Cloudflare R2, Mapbox, Calendly).
+- [Food Safety and Allergen Policy](https://www.7eats.ca/food-safety) — Cook, customer, and platform responsibilities for food safety, allergen accuracy, safe pickup/delivery/storage, and how 7eats handles safety reports and recalls.
+- [Refund and Cancellation Policy](https://www.7eats.ca/refund-policy) — How cancellations, refunds, deposits, subscriptions, no-shows, and payment disputes work on 7eats.
+- [Community Guidelines](https://www.7eats.ca/community-guidelines) — Expectations for honest, respectful, and safe use of listings, reviews, messages, payments, and safety reports.

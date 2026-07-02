@@ -1,0 +1,490 @@
+/* ── Page ─────────────────────────────────────────────────────── */
+.page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 20px 20px 72px;
+  font-family: var(--font);
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--grey-700);
+  padding: 6px 0;
+  margin-bottom: 12px;
+}
+
+.back:hover {
+  color: var(--ink);
+}
+
+/* ── Hero ─────────────────────────────────────────────────────── */
+.hero {
+  background: var(--white);
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.cover {
+  position: relative;
+  height: 132px;
+  background: var(--grey-100);
+}
+
+.coverImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.coverFallback {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(115deg, var(--ink) 0%, var(--grey-900) 100%);
+}
+
+.heroBody {
+  padding: 0 22px 22px;
+}
+
+.avatar {
+  position: relative;
+  width: 84px;
+  height: 84px;
+  margin-top: -42px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--ink);
+  color: var(--white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30px;
+  font-weight: 700;
+  border: 3px solid var(--white);
+}
+
+.avatar img,
+.avatarImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.heroRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.heroId {
+  min-width: 0;
+}
+
+.name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: clamp(22px, 3vw, 26px);
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+  color: var(--ink);
+}
+
+.verified {
+  color: var(--red);
+  flex-shrink: 0;
+  position: relative;
+  top: 1px;
+}
+
+.heroSub {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin-top: 3px;
+}
+
+.kitchen {
+  font-size: 14.5px;
+  font-weight: 500;
+  color: var(--grey-700);
+}
+
+.socialLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--red);
+}
+
+.socialLink:hover {
+  color: var(--red-deep);
+}
+
+/* ── Follow ───────────────────────────────────────────────────── */
+.followBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  padding: 8px 16px;
+  background: transparent;
+  border: 1px solid var(--grey-300);
+  border-radius: var(--radius-pill);
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  transition:
+    border-color 0.12s,
+    background 0.12s,
+    color 0.12s;
+}
+
+.followBtn:hover {
+  border-color: var(--ink);
+}
+
+.followBtnActive {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--white);
+}
+
+/* ── Tag groups (cuisine / specialties / dietary) ─────────────── */
+.tagGroups {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.tagGroup {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.tagLabel {
+  flex-shrink: 0;
+  width: 76px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--grey-500);
+  padding-top: 4px;
+}
+
+.pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pill {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--grey-700);
+  background: var(--white);
+  border: 1px solid var(--grey-300);
+  border-radius: var(--radius-pill);
+  padding: 4px 11px;
+}
+
+/* ── Rating row ───────────────────────────────────────────────── */
+.ratingRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 13px;
+  font-size: 13.5px;
+}
+
+.ratingStar {
+  color: var(--red);
+}
+
+.ratingVal {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.reviewLink {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--grey-700);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  padding: 0;
+}
+
+.reviewLink:hover {
+  color: var(--ink);
+}
+
+.ratingLoc {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--grey-700);
+  margin-left: auto;
+}
+
+/* ── Meta line (meals made · member since) ────────────────────── */
+.metaLine {
+  font-size: 13px;
+  color: var(--grey-500);
+  margin-top: 16px;
+}
+
+/* ── Sections ─────────────────────────────────────────────────── */
+.section {
+  margin-top: 28px;
+}
+
+.sectionTitle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  margin-bottom: 12px;
+}
+
+.sectionMeta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--grey-700);
+}
+
+.sectionMeta svg {
+  color: var(--red);
+}
+
+.bio {
+  font-size: 14.5px;
+  line-height: 1.65;
+  color: var(--grey-900);
+  white-space: pre-wrap;
+}
+
+/* ── Availability facts ───────────────────────────────────────── */
+.facts {
+  display: grid;
+  gap: 11px;
+  border: 1px solid var(--grey-200);
+  border-radius: 12px;
+  padding: 16px 18px;
+}
+
+.fact {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.fact dt {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--grey-700);
+  flex-shrink: 0;
+}
+
+.fact dd {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+  text-align: right;
+}
+
+/* ── View-menu CTA (in hero) ──────────────────────────────────── */
+.orderBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 48px;
+  margin-top: 20px;
+  background: var(--red);
+  color: var(--white);
+  border-radius: var(--radius-pill);
+  font-size: 14.5px;
+  font-weight: 700;
+  transition: background 0.12s;
+}
+
+.orderBtn:hover {
+  background: var(--red-deep);
+}
+
+/* ── Reviews ──────────────────────────────────────────────────── */
+.reviewsEmpty {
+  font-size: 14px;
+  color: var(--grey-500);
+  padding: 8px 0;
+}
+
+.reviewList {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.reviewCard {
+  border: 1px solid var(--grey-200);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.reviewTop {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.reviewerAvatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--grey-100);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--grey-700);
+  flex-shrink: 0;
+}
+
+.reviewerInfo {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.reviewerName {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.reviewDate {
+  font-size: 12px;
+  color: var(--grey-500);
+}
+
+.stars {
+  display: flex;
+  gap: 1px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.starFilled {
+  color: var(--red);
+}
+
+.starEmpty {
+  color: var(--grey-300);
+}
+
+.reviewComment {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--grey-900);
+  margin-top: 11px;
+}
+
+.reviewDish {
+  display: inline-block;
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--grey-500);
+}
+
+@media (max-width: 767px) {
+  .page {
+    padding: 12px 16px 12px;
+  }
+
+  .back {
+    margin-bottom: 10px;
+  }
+
+  .cover {
+    height: 112px;
+  }
+
+  .heroBody {
+    padding: 0 16px 18px;
+  }
+
+  .avatar {
+    width: 72px;
+    height: 72px;
+    margin-top: -36px;
+    font-size: 26px;
+  }
+
+  .tagGroup {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .tagLabel {
+    width: auto;
+    padding-top: 0;
+  }
+
+  .ratingRow {
+    gap: 4px 8px;
+  }
+
+  .ratingLoc {
+    margin-left: 0;
+    flex-basis: 100%;
+  }
+
+  .section {
+    margin-top: 24px;
+  }
+
+  .section:last-child {
+    margin-bottom: 0;
+  }
+
+  .reviewsEmpty {
+    padding: 14px 16px;
+    border: 1px solid var(--grey-200);
+    border-radius: 12px;
+    text-align: center;
+  }
+}

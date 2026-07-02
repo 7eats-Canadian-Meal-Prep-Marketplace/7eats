@@ -1,0 +1,141 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.zone {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 140px;
+  padding: 28px 24px;
+  border: 2px dashed var(--grey-300);
+  border-radius: var(--radius-sm);
+  background: var(--white);
+  color: var(--grey-500);
+  cursor: pointer;
+  overflow: hidden;
+  transition:
+    border-color 0.15s,
+    background 0.15s,
+    color 0.15s;
+}
+
+.zone:hover {
+  border-color: var(--grey-500);
+  color: var(--grey-600, #6b7280);
+}
+
+.dragging {
+  border-color: var(--ink);
+  border-style: solid;
+  background: var(--grey-100, #f7f6f5);
+  color: var(--ink);
+}
+
+.hasFile {
+  border-style: solid;
+  border-color: #27ae60;
+  background: rgba(39, 174, 96, 0.03);
+}
+
+.preview {
+  width: 100%;
+  max-height: 160px;
+  object-fit: contain;
+  border-radius: 6px;
+}
+
+.icon {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 10px;
+  color: inherit;
+}
+
+.fileName {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 0 0 4px;
+  word-break: break-all;
+  text-align: center;
+}
+
+.sub {
+  font-size: 12px;
+  color: var(--grey-500);
+  margin: 0;
+  text-align: center;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 600;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.zone.hasFile:hover .overlay,
+.zone.hasFile:focus-visible .overlay,
+.dragging .overlay {
+  opacity: 1;
+}
+
+.errorOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--red, #c0392b);
+  color: #fff;
+  animation: dropzoneFadeIn 0.12s ease both;
+}
+
+.errorMsg {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--red, #c0392b);
+  margin: 0;
+  animation: dropzoneFadeIn 0.12s ease both;
+}
+
+@keyframes dropzoneFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.instruction {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--grey-700);
+  margin: 0;
+}
+
+.note {
+  font-size: 12px;
+  color: var(--grey-500);
+  margin: 0;
+  text-align: center;
+}

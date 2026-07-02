@@ -1,0 +1,221 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("@/db", () => ({ db: { insert: vi.fn() } }));
+vi.mock("@/db/schema", () => ({
+  cookApplications: { id: "id" },
+  legalAcceptances: {},
+}));
+vi.mock("@/lib/cookie", () => ({
+  generateSignedValue: vi.fn(() => "signed-cookie-value"),
+}));
+vi.mock("@/lib/cook-application-conflicts", () => ({
+  findCookApplicationConflict: vi.fn().mockResolvedValue(null),
+  cookApplicationConflictMessage: vi.fn((conflict: { kind: string }) => {
+    if (conflict.kind === "application_filed") {
+      return "You've already filed an application with this email. Our team will reach out within 2 business days. Contact us if you need to update your details.";
+    }
+    if (conflict.kind === "cook_account") {
+      return "This email is already linked to a cook account. Sign in to manage your kitchen, or contact us if you need help.";
+    }
+    return "Conflict";
+  }),
+}));
+vi.mock("@/lib/phone-availability", () => ({
+  isUniqueViolation: vi.fn(() => false),
+}));
+vi.mock("@/lib/rate-limit", () => ({
+  logAndCheckRateLimit: vi.fn().mockResolvedValue(true),
+}));
+vi.mock("resend", () => ({
+  Resend: vi.fn().mockImplementation(() => ({
+    emails: { send: vi.fn().mockResolvedValue({}) },
+  })),
+}));
+
+import { POST } from "@/app/api/business/application/route";
+import { db } from "@/db";
+import { cookApplications } from "@/db/schema";
+import { findCookApplicationConflict } from "@/lib/cook-application-conflicts";
+import { isUniqueViolation } from "@/lib/phone-availability";
+
+function makeRequest(body: unknown): Request {
+  return new Request("http://localhost/api/business/application", {
+    method: "POST",
+    body: typeof body === "string" ? body : JSON.stringify(body),
+    headers: { "content-type": "application/json" },
+  });
+}
+
+const validBody = {
+  kitchenName: "Mama's Kitchen",
+  kitchenType: "licensed_home",
+  yearsOperating: "3",
+  streetAddress: "123 Main St",
+  city: "Toronto",
+  province: "ON",
+  postalCode: "M5V 3L9",
+  businessPhone: "(416) 555-0100",
+  businessEmail: "info@mamas.ca",
+  contactFirstName: "Jane",
+  contactLastName: "Doe",
+  role: "Owner",
+  phone: "(416) 555-0101",
+  email: "jane@mamas.ca",
+  acceptedTerms: true,
+};
+
+let valuesSpy: ReturnType<typeof vi.fn>;
+let returningSpy: ReturnType<typeof vi.fn>;
+
+describe("POST /api/business/application", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(findCookApplicationConflict).mockResolvedValue(null);
+    vi.mocked(isUniqueViolation).mockReturnValue(false);
+    returningSpy = vi.fn().mockResolvedValue([{ id: "application_123" }]);
+    valuesSpy = vi.fn(() => ({
+      returning: returningSpy,
+    }));
+    const legalValuesSpy = vi.fn().mockResolvedValue(undefined);
+    vi.mocked(db.insert).mockImplementation((table) => {
+      if (table === cookApplications) {
+        return { values: valuesSpy } as never;
+      }
+      return { values: legalValuesSpy } as never;
+    });
+  });
+
+  it("returns 200 with redirect on a valid body", async () => {
+    const res = await POST(makeRequest(validBody));
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.redirect).toBe("/business/application-confirmation");
+  });
+
+  it("sets application_submitted cookie on success", async () => {
+    const res = await POST(makeRequest(validBody));
+
+    const cookies = res.headers.getSetCookie();
+    expect(cookies.length).toBeGreaterThan(0);
+    expect(cookies[0]).toContain("application_submitted=");
+    expect(cookies[0]).toContain("HttpOnly");
+    expect(cookies[0]).toContain("SameSite=lax");
+  });
+
+  it("normalizes businessEmail and contactEmail to lowercase", async () => {
+    const body = {
+      ...validBody,
+      businessEmail: "INFO@Mamas.CA",
+      email: "JANE@Mamas.CA",
+    };
+
+    const res = await POST(makeRequest(body));
+    expect(res.status).toBe(200);
+
+    expect(valuesSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        businessEmail: "info@mamas.ca",
+        contactEmail: "jane@mamas.ca",
+      }),
+    );
+  });
+
+  it("normalizes postal code (strips spaces and uppercases)", async () => {
+    const res = await POST(
+      makeRequest({ ...validBody, postalCode: "m5v 3l9" }),
+    );
+    expect(res.status).toBe(200);
+
+    expect(valuesSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ postalCode: "M5V3L9" }),
+    );
+  });
+
+  it("returns 400 for an invalid postal code", async () => {
+    const res = await POST(makeRequest({ ...validBody, postalCode: "12345" }));
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error).toBe("Please check all fields and try again.");
+    expect(valuesSpy).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 for an invalid kitchenType", async () => {
+    const res = await POST(
+      makeRequest({ ...validBody, kitchenType: "food_truck" }),
+    );
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error).toBe("Please check all fields and try again.");
+    expect(valuesSpy).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 when a required field is missing (kitchenName empty)", async () => {
+    const res = await POST(makeRequest({ ...validBody, kitchenName: "" }));
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error).toBe("Please check all fields and try again.");
+    expect(valuesSpy).not.toHaveBeenCalled();
+  });
+
+  it("returns 409 when DB reports a unique violation (code 23505)", async () => {
+    const uniqueViolation = Object.assign(new Error("duplicate key"), {
+      code: "23505",
+    });
+    returningSpy.mockRejectedValue(uniqueViolation);
+    vi.mocked(isUniqueViolation).mockReturnValue(true);
+
+    const res = await POST(makeRequest(validBody));
+    const body = await res.json();
+
+    expect(res.status).toBe(409);
+    expect(body.error).toContain("already filed an application");
+  });
+
+  it("returns 409 when an application is already on file for the email", async () => {
+    vi.mocked(findCookApplicationConflict).mockResolvedValueOnce({
+      kind: "application_filed",
+    });
+
+    const res = await POST(makeRequest(validBody));
+    const body = await res.json();
+
+    expect(res.status).toBe(409);
+    expect(body.error).toContain("already filed an application");
+    expect(valuesSpy).not.toHaveBeenCalled();
+  });
+
+  it("returns 409 when the email is already linked to a cook account", async () => {
+    vi.mocked(findCookApplicationConflict).mockResolvedValueOnce({
+      kind: "cook_account",
+    });
+
+    const res = await POST(makeRequest(validBody));
+    const body = await res.json();
+
+    expect(res.status).toBe(409);
+    expect(body.error).toContain("cook account");
+    expect(valuesSpy).not.toHaveBeenCalled();
+  });
+
+  it("returns 500 on an unexpected DB error", async () => {
+    returningSpy.mockRejectedValue(new Error("connection reset"));
+
+    const res = await POST(makeRequest(validBody));
+    expect(res.status).toBe(500);
+  });
+
+  it("returns 400 for an invalid email format in contactEmail", async () => {
+    const res = await POST(
+      makeRequest({ ...validBody, email: "not-an-email" }),
+    );
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error).toBe("Please check all fields and try again.");
+    expect(valuesSpy).not.toHaveBeenCalled();
+  });
+});

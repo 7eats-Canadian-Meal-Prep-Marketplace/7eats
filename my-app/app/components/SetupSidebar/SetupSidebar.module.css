@@ -1,0 +1,128 @@
+.sidebar {
+  background: var(--ink);
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow: hidden;
+}
+
+@media (max-width: 960px) {
+  .sidebar {
+    display: none;
+  }
+}
+
+.inner {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 44px 32px 56px;
+}
+
+.top {
+  flex-shrink: 0;
+  margin-bottom: auto;
+}
+
+.logo {
+  display: block;
+  width: fit-content;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.eyebrow {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+  margin-bottom: 24px;
+}
+
+/* ── Step list ───────────────────────────────────────────────── */
+.stepsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.stepRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  position: relative;
+}
+
+.stepRow:first-child {
+  padding-top: 0;
+}
+
+.stepBullet {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.3);
+  transition:
+    background 0.2s,
+    border-color 0.2s,
+    color 0.2s;
+}
+
+.stepBulletActive {
+  background: var(--red);
+  border-color: var(--red);
+  color: var(--white);
+}
+
+.stepBulletDone {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
+}
+
+.stepText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 4px;
+}
+
+.stepSubLabel {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.25);
+}
+
+.stepName {
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.35);
+  transition: color 0.2s;
+}
+
+.stepNameActive {
+  color: var(--white);
+  font-weight: 600;
+}
+
+.stepNameDone {
+  color: rgba(255, 255, 255, 0.6);
+}

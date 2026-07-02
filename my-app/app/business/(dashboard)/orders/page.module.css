@@ -1,0 +1,1520 @@
+/* ─── Page layout ────────────────────────────────────────────────────────────── */
+.page {
+  display: flex;
+  margin: -28px -32px;
+  min-height: calc(100vh - 64px);
+}
+
+/* ─── List panel ─────────────────────────────────────────────────────────────── */
+.listPanel {
+  flex: 1;
+  min-width: 0;
+  border-right: 1px solid var(--grey-200);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+/* ─── List head ──────────────────────────────────────────────────────────────── */
+.listHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px 14px;
+  border-bottom: 1px solid var(--grey-200);
+  position: sticky;
+  top: 0;
+  background: var(--white);
+  z-index: 2;
+  flex: none;
+}
+
+.listTitle {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+
+.listHeadLeft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.listNeedsAction {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--white);
+  background: var(--red);
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  box-shadow: 0 1px 4px rgba(214, 64, 69, 0.35);
+  letter-spacing: 0.01em;
+}
+
+.listHeadCount {
+  font-size: 13px;
+  font-weight: 700;
+  color: #8a8a96;
+}
+
+/* ─── List row ───────────────────────────────────────────────────────────────── */
+.listRow {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 18px 13px 18px;
+  border: none;
+  border-bottom: 1px solid var(--grey-200);
+  border-left: 3px solid transparent;
+  background: var(--white);
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  transition:
+    background 0.1s,
+    border-left-color 0.12s;
+}
+
+.listRow:hover {
+  background: #f7f7f9;
+}
+
+.listRowPending {
+  border-left-color: #c89010;
+}
+
+.listRowFocused {
+  background: #f2f2f5;
+}
+
+.listRowFocused:hover {
+  background: #ededf0;
+}
+
+.listRowLeft {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.listRowCustomer {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.listRowMeta {
+  font-size: 12px;
+  color: #8a8a96;
+}
+
+.listRowQty {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+/* ─── Client status tag ──────────────────────────────────────────────────────── */
+.clientTagDeleted {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 7px;
+  padding: 2px 7px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--grey-700);
+  background: var(--white);
+  border: 1px solid var(--grey-300);
+  border-radius: 999px;
+  vertical-align: middle;
+}
+
+/* ─── Status badge ───────────────────────────────────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 88px;
+  padding: 3px 0;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  flex: none;
+  border: 1.5px solid transparent;
+}
+
+/* yellow hollow — needs action */
+.badgePending {
+  background: transparent;
+  color: #b07800;
+  border-color: #c89010;
+}
+
+/* hollow ink — acknowledged, cooking */
+.badgeConfirmed {
+  background: transparent;
+  color: var(--ink);
+  border-color: var(--ink);
+}
+
+/* ink filled — food done, waiting on customer */
+.badgeReady {
+  background: var(--ink);
+  color: var(--white);
+  border-color: var(--ink);
+}
+
+/* muted hollow — terminal state */
+.badgeFulfilled {
+  background: transparent;
+  color: #a0a0aa;
+  border-color: #d0d0d8;
+}
+
+/* red hollow — cancelled */
+.badgeCancelled {
+  background: transparent;
+  color: var(--red);
+  border-color: var(--red);
+}
+
+/* ─── Detail panel ───────────────────────────────────────────────────────────── */
+.detailPanel {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+}
+
+.emptyDetail {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13.5px;
+  color: var(--grey-500);
+}
+
+/* ─── Detail content ─────────────────────────────────────────────────────────── */
+.detail {
+  padding: 28px 32px;
+  position: relative;
+}
+
+.detailClose {
+  position: absolute;
+  top: 22px;
+  right: 22px;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--grey-500);
+  transition:
+    background 0.12s,
+    color 0.12s;
+}
+
+.detailBack {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  width: fit-content;
+  min-height: 44px;
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-sm);
+  background: var(--white);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    border-color 0.12s,
+    background 0.12s;
+}
+
+.detailBack:hover {
+  border-color: var(--grey-300);
+  background: var(--grey-100);
+}
+
+.detailClose:hover {
+  background: var(--grey-100);
+  color: var(--ink);
+}
+
+.detailHeader {
+  margin-bottom: 18px;
+}
+
+.detailHeaderTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.detailTitle {
+  font-size: 21px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.03em;
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.detailSubMeta {
+  margin: 6px 0 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: #8a8a96;
+}
+
+/* ─── Fulfillment time ───────────────────────────────────────────────────────── */
+.timeCard {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 0 18px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid var(--grey-200);
+}
+
+.timeCardLabel {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #8a8a96;
+}
+
+.timeCardValue {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+  text-align: right;
+  letter-spacing: -0.02em;
+}
+
+.chatBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 16px;
+  margin-bottom: 20px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+  background: none;
+  border: 1.5px solid var(--ink);
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  transition:
+    background 0.12s,
+    color 0.12s;
+}
+
+.chatBtn:hover {
+  background: var(--ink);
+  color: var(--white);
+}
+
+.detailActions {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.detailActions .chatBtn {
+  width: auto;
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.prefsBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex: 1;
+  padding: 10px 16px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+  background: none;
+  border: 1.5px solid var(--grey-300);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition:
+    background 0.12s,
+    border-color 0.12s;
+}
+
+.prefsBtn:hover {
+  background: transparent;
+  border-color: var(--ink);
+}
+
+/* ─── Receipt ────────────────────────────────────────────────────────────────── */
+.receipt {
+  margin-bottom: 24px;
+}
+
+.receiptLabel {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #8a8a96;
+  margin: 0 0 12px;
+  padding: 0;
+}
+
+.receiptItems {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.receiptRow {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--grey-200);
+}
+
+.receiptRow:last-child {
+  border-bottom: none;
+}
+
+.receiptQty {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--ink);
+  font-feature-settings: "tnum";
+  flex: none;
+  min-width: 26px;
+}
+
+.receiptItemMain {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.receiptItemName {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.receiptItemUnit {
+  font-size: 12px;
+  color: #8a8a96;
+}
+
+.receiptPromo {
+  color: var(--red);
+  font-weight: 600;
+}
+
+.receiptLineTotal {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  font-feature-settings: "tnum";
+  flex: none;
+}
+
+.receiptTotals {
+  padding: 14px 0 0;
+  margin-top: 4px;
+  border-top: 1px solid var(--ink);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.receiptTotalRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #6e6e7a;
+}
+
+.receiptTotalRow span:last-child {
+  font-feature-settings: "tnum";
+  color: var(--ink);
+}
+
+.receiptGrandTotal {
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid var(--grey-200);
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.02em;
+}
+
+.receiptGrandTotal span:last-child {
+  font-weight: 800;
+}
+
+.receiptDiscountNote {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  font-weight: 500;
+  color: #6e6e7a;
+}
+
+.cookEarnRow {
+  margin-top: 6px;
+  padding-top: 12px;
+  border-top: 1px solid var(--ink);
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.02em;
+}
+
+.cookEarnRow span:last-child {
+  font-weight: 800;
+}
+
+.payoutDeduct {
+  color: var(--red);
+  font-feature-settings: "tnum";
+}
+
+/* ─── Cook earnings breakdown (legacy) ─────────────────────────────────────── */
+.payout {
+  padding: 18px 0 0;
+  margin-top: 2px;
+  border-top: 1px solid var(--grey-200);
+}
+
+.payoutLabel {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #8a8a96;
+  margin: 0 0 12px;
+}
+
+.payoutRows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.payoutRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #6e6e7a;
+}
+
+.payoutRow span:last-child {
+  font-feature-settings: "tnum";
+  color: var(--ink);
+}
+
+.payoutRow span.payoutDeduct {
+  color: var(--red);
+}
+
+.payoutNet {
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--ink);
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.02em;
+}
+
+.payoutNet span:last-child {
+  font-weight: 800;
+}
+
+.payoutNote {
+  margin: 12px 0 0;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: #8a8a96;
+}
+
+/* ─── Customer note ──────────────────────────────────────────────────────────── */
+.notesBlock {
+  padding: 13px 16px;
+  margin-bottom: 20px;
+  background: none;
+  border: 1px solid #d92d20;
+  border-radius: var(--radius-sm);
+}
+
+.notesLabel {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #d92d20;
+  margin: 0 0 5px;
+}
+
+.notesText {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--ink);
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ─── Action zone ────────────────────────────────────────────────────────────── */
+.actionZone {
+  border-top: 1px solid var(--grey-200);
+  padding-top: 20px;
+  margin-top: 4px;
+}
+
+.actionBtns {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.advanceBtn {
+  padding: 10px 22px;
+  background: var(--ink);
+  color: var(--white);
+  font-size: 13.5px;
+  font-weight: 700;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transition: opacity 0.12s;
+}
+
+.advanceBtn:hover {
+  opacity: 0.82;
+}
+
+.advanceBtn:disabled {
+  background: var(--grey-200);
+  color: #9a9aa4;
+  cursor: not-allowed;
+  box-shadow: none;
+  opacity: 1;
+}
+
+.readyHint {
+  margin-top: 12px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: #8a8a96;
+}
+
+.cancelBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  background: none;
+  color: var(--red);
+  font-size: 13.5px;
+  font-weight: 600;
+  border: 1px solid rgba(214, 64, 69, 0.4);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition:
+    border-color 0.12s,
+    color 0.12s;
+}
+
+.cancelBtn:hover {
+  border-color: var(--red);
+  color: #b42318;
+}
+
+/* ─── Revert block ───────────────────────────────────────────────────────────── */
+.revertBlock {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--grey-200);
+}
+
+.revertPrompt {
+  font-size: 13px;
+  font-weight: 500;
+  color: #8a8a96;
+}
+
+.revertBtn {
+  padding: 8px 20px;
+  background: var(--ink);
+  color: var(--white);
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transition: opacity 0.12s;
+}
+
+.revertBtn:hover {
+  opacity: 0.82;
+}
+
+/* ─── Cancel confirm ─────────────────────────────────────────────────────────── */
+.cancelConfirm {
+  padding: 16px 0;
+  background: transparent;
+  border-top: 1px solid var(--grey-200);
+}
+
+.cancelConfirmHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.cancelConfirmIcon {
+  color: var(--red);
+  flex: none;
+}
+
+.cancelConfirmTitle {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+
+.cancelConfirmText {
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--ink);
+  margin: 0 0 8px;
+}
+
+.cancelConfirmWarn {
+  margin: 0 0 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #8a8a96;
+}
+
+.cancelConfirmBtns {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cancelConfirmYes {
+  padding: 11px 16px;
+  background: var(--red);
+  color: var(--white);
+  font-size: 13.5px;
+  font-weight: 700;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: opacity 0.12s;
+}
+
+.cancelConfirmYes:hover {
+  opacity: 0.9;
+}
+
+.cancelConfirmYes:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.cancelConfirmNo {
+  padding: 11px 16px;
+  background: var(--white);
+  color: var(--ink);
+  font-size: 13.5px;
+  font-weight: 600;
+  border: 1.5px solid var(--grey-300);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition:
+    border-color 0.12s,
+    background 0.12s;
+}
+
+.cancelConfirmNo:hover {
+  border-color: var(--ink);
+  background: var(--white);
+}
+
+/* ─── Button spinner ─────────────────────────────────────────────────────────── */
+.btnLoading {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  opacity: 0.9;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation-duration: 1.4s;
+  }
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ─── Confirm dialog (state-changing actions) ────────────────────────────────── */
+.confirmRoot {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.confirmOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 15, 15, 0.45);
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: default;
+  animation: confirmFade 0.14s ease both;
+}
+
+.confirmModal {
+  position: relative;
+  width: 100%;
+  max-width: 380px;
+  background: var(--white);
+  border-radius: var(--radius-md, 14px);
+  padding: 24px;
+  box-shadow:
+    0 18px 48px rgba(0, 0, 0, 0.22),
+    0 2px 8px rgba(0, 0, 0, 0.12);
+  animation: confirmPop 0.16s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.confirmModalWide {
+  max-width: 420px;
+}
+
+.confirmTitle {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--ink);
+  margin: 0 0 8px;
+}
+
+.confirmText {
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--grey-500);
+  margin: 0 0 20px;
+}
+
+.confirmTextTight {
+  margin-bottom: 16px;
+}
+
+/* ─── Delivery "mark ready" step (in confirm dialog) ─────────────────────────── */
+.readyStep {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 0 0 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--grey-200);
+}
+
+.readyStepMeta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.readyStepMeta svg {
+  flex: none;
+  color: #8a8a96;
+}
+
+.addrBlock,
+.deliverToCard {
+  padding: 0 0 18px;
+  margin-bottom: 18px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--grey-200);
+  border-radius: 0;
+}
+
+/* Read-only delivery address in confirm dialog. */
+.readyStep .addrBlock {
+  padding: 0 0 16px;
+  margin: 0;
+  border: none;
+  border-bottom: 1px solid var(--grey-200);
+  border-radius: 0;
+}
+
+.addrLabel,
+.deliverToLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #8a8a96;
+}
+
+.addrText,
+.deliverToText {
+  margin: 6px 0 0;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--ink);
+}
+
+.deliveryDetailsText {
+  margin: 10px 0 0;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--ink);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ─── Arrival-time picker ────────────────────────────────────────────────────── */
+.arrivalField {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.arrivalLabel {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.arrivalReq {
+  color: var(--red);
+}
+
+.arrivalSelectWrap {
+  position: relative;
+}
+
+.arrivalSelectWrap::after {
+  content: "";
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 10px;
+  height: 6px;
+  background-color: #8a8a96;
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  pointer-events: none;
+}
+
+.arrivalSelect {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 36px 10px 14px;
+  font-family: var(--font);
+  /* 16px avoids iOS Safari auto-zoom on focus. */
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--white);
+  border: 1.5px solid var(--grey-300);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  transition:
+    border-color 0.12s,
+    box-shadow 0.12s;
+}
+
+.arrivalSelect:focus {
+  outline: none;
+  border-color: var(--red);
+  box-shadow: 0 0 0 3px rgba(214, 64, 69, 0.16);
+}
+
+.arrivalSelectEmpty {
+  color: #8a8a96;
+}
+
+.arrivalSelect option[value=""] {
+  color: #8a8a96;
+}
+
+.arrivalSelect option {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.arrivalHelp {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #8a8a96;
+}
+
+.arrivalNote {
+  margin: 0;
+  padding: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: #8a8a96;
+  background: transparent;
+  border: none;
+}
+
+.confirmBtns {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.confirmYes {
+  padding: 11px 18px;
+  background: var(--ink);
+  color: var(--white);
+  font-size: 13.5px;
+  font-weight: 700;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transition: opacity 0.12s;
+}
+
+.confirmYes:hover {
+  opacity: 0.82;
+}
+
+.confirmYes:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.confirmYesDanger {
+  background: #d92d20;
+}
+
+.confirmNo {
+  padding: 11px 18px;
+  background: none;
+  color: #444444;
+  font-size: 13.5px;
+  font-weight: 500;
+  border: 1px solid #d0d0d8;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition:
+    border-color 0.12s,
+    color 0.12s;
+}
+
+.confirmNo:hover {
+  border-color: #a0a0aa;
+  color: var(--ink);
+}
+
+.confirmNo:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+@keyframes confirmFade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes confirmPop {
+  from {
+    transform: scale(0.96);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* ─── Verify code ────────────────────────────────────────────────────────────── */
+.verifyForm {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.verifyLabel {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--ink);
+  margin: 0;
+}
+
+.verifyRow {
+  display: flex;
+  gap: 8px;
+}
+
+.verifyInput {
+  flex: 1;
+  padding: 10px 14px;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  font-feature-settings: "tnum";
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-sm);
+  background: var(--white);
+  color: var(--ink);
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.12s;
+}
+
+.verifyInput:focus {
+  border-color: var(--grey-500);
+}
+
+.verifyInput::placeholder {
+  letter-spacing: 0.18em;
+  color: var(--grey-300);
+}
+
+.verifyBtn {
+  padding: 10px 20px;
+  background: var(--ink);
+  color: var(--white);
+  font-size: 13.5px;
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: opacity 0.12s;
+  flex: none;
+}
+
+.verifyBtn:hover {
+  opacity: 0.82;
+}
+
+.verifyBtn:disabled {
+  opacity: 0.38;
+  cursor: default;
+}
+
+.verifyError {
+  font-size: 12.5px;
+  color: var(--red);
+  margin: 0;
+}
+
+.verifyLocked {
+  font-size: 13.5px;
+  color: var(--grey-500);
+  padding: 12px 0;
+  background: transparent;
+  border-top: 1px solid var(--grey-200);
+}
+
+/* ─── Status notes ───────────────────────────────────────────────────────────── */
+.statusNote {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--grey-200);
+  font-size: 13.5px;
+  color: var(--grey-500);
+}
+
+/* Calm completed state — shown when reopening an already-finished order. */
+.completedCalm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--grey-200);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--grey-500);
+}
+
+.completedCalm svg {
+  color: #a0a0aa;
+  flex: none;
+}
+
+/* ─── Order complete celebration ─────────────────────────────────────────────── */
+.complete {
+  position: relative;
+  margin-top: 4px;
+  padding: 30px 16px 10px;
+  border-top: 1px solid var(--grey-200);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  overflow: hidden;
+}
+
+.completeSeal {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 16px;
+}
+
+.completeRing {
+  position: absolute;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--red);
+  opacity: 0;
+  transform: scale(0.6);
+  animation: sealRing 0.9s ease-out 0.12s both;
+}
+
+.completeCheck {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  transform: scale(0.5);
+  opacity: 0;
+  animation: sealPop 0.42s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.completeCheckCircle {
+  fill: var(--red);
+}
+
+.completeCheckMark {
+  stroke: var(--white);
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 40;
+  stroke-dashoffset: 40;
+  animation: sealDraw 0.4s ease-out 0.34s forwards;
+}
+
+.completeTitle {
+  margin: 0 0 6px;
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  opacity: 0;
+  animation: completeRise 0.4s ease-out 0.36s both;
+}
+
+.completeText {
+  max-width: 280px;
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #555560;
+  opacity: 0;
+  animation: completeRise 0.4s ease-out 0.44s both;
+}
+
+.completePayout {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--grey-500);
+  opacity: 0;
+  animation: completeRise 0.4s ease-out 0.52s both;
+}
+
+.confetti {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  pointer-events: none;
+}
+
+.confettiPiece {
+  position: absolute;
+  top: 6px;
+  width: 7px;
+  height: 11px;
+  border-radius: 2px;
+  opacity: 0;
+  transform: translateY(-12px) rotate(var(--rot, 0deg));
+  animation: confettiFall 1.15s cubic-bezier(0.2, 0.6, 0.3, 1) both;
+}
+
+@keyframes sealPop {
+  from {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes sealRing {
+  from {
+    transform: scale(0.6);
+    opacity: 0.3;
+  }
+  to {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+}
+
+@keyframes sealDraw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes completeRise {
+  from {
+    transform: translateY(8px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes confettiFall {
+  0% {
+    transform: translateY(-12px) rotate(var(--rot, 0deg));
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(190px) rotate(calc(var(--rot, 0deg) * 4));
+    opacity: 0;
+  }
+}
+
+/* Honour reduced-motion: show the final, settled state with no animation. */
+@media (prefers-reduced-motion: reduce) {
+  .completeRing {
+    animation: none;
+    opacity: 0;
+  }
+
+  .completeCheck {
+    animation: none;
+    transform: none;
+    opacity: 1;
+  }
+
+  .completeCheckMark {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+
+  .completeTitle,
+  .completeText,
+  .completePayout {
+    animation: none;
+    opacity: 1;
+  }
+
+  .confettiPiece {
+    animation: none;
+    display: none;
+  }
+}
+
+/* ─── Tablet ─────────────────────────────────────────────────────────────────── */
+@media (max-width: 1024px) and (min-width: 768px) {
+  .listPanel {
+    flex: 0 0 340px;
+  }
+
+  .detail {
+    padding: 20px 20px;
+  }
+}
+
+/* ─── Mobile ─────────────────────────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  .page {
+    margin: -20px -16px;
+    overflow-x: clip;
+  }
+
+  .listPanel {
+    width: 100%;
+    border-right: none;
+  }
+
+  .detailPanel {
+    display: none;
+  }
+
+  .slideOver .detail {
+    padding: 16px;
+  }
+
+  .detailBack {
+    display: inline-flex;
+  }
+
+  .detailClose {
+    display: none;
+  }
+}
+
+/* ─── Mobile slide-over ──────────────────────────────────────────────────────── */
+.slideOverlay {
+  position: fixed;
+  inset: 64px 0 0 0;
+  background: rgba(15, 15, 15, 0.35);
+  z-index: 39;
+  border: none;
+  padding: 0;
+  cursor: default;
+}
+
+.slideOver {
+  position: fixed;
+  top: 64px;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: var(--white);
+  z-index: 40;
+  overflow-y: auto;
+  animation: slideIn 0.22s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(40px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@media (min-width: 768px) {
+  .slideOverlay,
+  .slideOver {
+    display: none;
+  }
+}

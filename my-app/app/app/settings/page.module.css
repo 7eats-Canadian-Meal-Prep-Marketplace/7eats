@@ -1,0 +1,1482 @@
+/* ─── Page layout ────────────────────────────────────────────────────────── */
+.page {
+  background: var(--white);
+  min-height: 100%;
+}
+
+.inner {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 32px 20px 80px;
+}
+
+/* ─── Profile header ─────────────────────────────────────────────────────── */
+.profileCard {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.avatarLg {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--white);
+  font-size: 18px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  letter-spacing: -0.02em;
+  overflow: hidden;
+}
+
+.avatarLgImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.profileName {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+
+.profileEmail {
+  font-size: 13px;
+  color: var(--grey-500);
+  margin-top: 3px;
+  line-height: 1.4;
+}
+
+/* ─── Tabs ───────────────────────────────────────────────────────────────── */
+.tabs {
+  display: flex;
+  border-bottom: 1px solid var(--grey-200);
+  margin-bottom: 0;
+  gap: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.tab {
+  padding: 10px 0;
+  margin-right: 28px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--grey-500);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  cursor: pointer;
+  font-family: inherit;
+  line-height: 1;
+  transition:
+    color 0.12s,
+    border-color 0.12s;
+  white-space: nowrap;
+}
+
+.tab:hover {
+  color: var(--ink);
+}
+
+.tabActive {
+  color: var(--ink);
+  border-bottom-color: var(--ink);
+}
+
+/* ─── Tab content ────────────────────────────────────────────────────────── */
+.tabContent {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 24px;
+}
+
+/* ─── Card ───────────────────────────────────────────────────────────────── */
+.card {
+  background: var(--white);
+  border: 1px solid var(--grey-200);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.cardTitle {
+  padding: 18px 22px 16px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+  border-bottom: 1px solid var(--grey-200);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cardSectionHead {
+  padding: 18px 22px 16px;
+  border-bottom: 1px solid var(--grey-200);
+}
+
+.cardSectionTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+
+.cardSectionDesc {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--grey-500);
+  line-height: 1.55;
+}
+
+.cardBody {
+  padding: 18px 22px 22px;
+}
+
+.photoSaveRow {
+  margin-top: 14px;
+}
+
+.secondaryActionBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 44px;
+  padding: 12px 18px;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: inherit;
+  letter-spacing: -0.01em;
+  border-radius: var(--radius-pill);
+  border: 1.5px solid var(--grey-200);
+  background: var(--white);
+  color: var(--ink);
+  cursor: pointer;
+  transition:
+    border-color 0.12s,
+    background 0.12s,
+    opacity 0.12s;
+}
+
+.secondaryActionBtn:hover:not(:disabled) {
+  border-color: var(--grey-400);
+}
+
+.secondaryActionBtn:active:not(:disabled) {
+  background: var(--grey-100);
+}
+
+.secondaryActionBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.secondaryActionBtnDanger {
+  color: var(--red);
+  border-color: color-mix(in srgb, var(--red) 35%, var(--grey-200));
+}
+
+.secondaryActionBtnDanger:hover:not(:disabled) {
+  border-color: var(--grey-400);
+  background: var(--white);
+}
+
+.secondaryActionBtnDanger:active:not(:disabled) {
+  background: var(--grey-100);
+}
+
+.passwordHint {
+  margin: 0 0 14px;
+  font-size: 13px;
+  color: var(--grey-500);
+  line-height: 1.45;
+}
+
+.phoneDisplay {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.phoneBadge {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink);
+  background: var(--white);
+  padding: 4px 8px;
+  border: 1px solid var(--grey-300);
+  border-radius: 100px;
+}
+
+.phoneSection {
+  padding: 12px 22px 20px;
+}
+
+.phoneSectionOpen {
+  border-top: 1px solid var(--grey-200);
+  padding-top: 18px;
+}
+
+.phoneChangePanel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.phonePanelHead {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.phonePanelTitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+
+.phonePanelDesc {
+  margin: 0;
+  font-size: 13px;
+  color: var(--grey-500);
+  line-height: 1.45;
+}
+
+.phoneField {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.phoneFieldLabel {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--grey-700);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.phoneFieldInput,
+.phoneFieldInputOtp {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--grey-200);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 15px;
+  font-family: inherit;
+  color: var(--ink);
+  background: var(--white);
+  outline: none;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+
+.phoneFieldInput {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+.phoneFieldInputOtp {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.22em;
+  text-align: center;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.phoneFieldInput:focus,
+.phoneFieldInputOtp:focus {
+  border-color: var(--ink);
+  box-shadow: 0 0 0 1px var(--ink);
+}
+
+.phoneFieldInput:disabled,
+.phoneFieldInputOtp:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.phoneActionRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.phonePrimaryBtn,
+.phonePrimaryBtnFull {
+  padding: 11px 18px;
+  background: var(--ink);
+  color: var(--white);
+  font-size: 13px;
+  font-weight: 800;
+  border: none;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  font-family: inherit;
+  letter-spacing: -0.01em;
+  transition: opacity 0.12s;
+}
+
+.phonePrimaryBtnFull {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.phonePrimaryBtn:hover:not(:disabled),
+.phonePrimaryBtnFull:hover:not(:disabled) {
+  opacity: 0.82;
+}
+
+.phonePrimaryBtn:disabled,
+.phonePrimaryBtnFull:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+.phoneGhostBtn {
+  padding: 11px 14px;
+  background: none;
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--grey-600);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.phoneGhostBtn:hover:not(:disabled) {
+  color: var(--ink);
+}
+
+.phoneGhostBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.phoneSecondaryRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+.phoneTextBtn {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--grey-600);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.phoneTextBtn:hover:not(:disabled) {
+  color: var(--ink);
+}
+
+.phoneTextBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.fieldError {
+  margin: 0;
+  font-size: 13px;
+  color: var(--red);
+  line-height: 1.4;
+}
+
+.cardDesc {
+  font-size: 13px;
+  color: var(--grey-500);
+  margin: -4px 0 16px;
+  line-height: 1.5;
+}
+
+.cardBody .cardDesc {
+  margin: 0 0 16px;
+}
+
+.card > .cardDesc {
+  padding: 0 22px;
+  margin: 0 0 16px;
+}
+
+/* ─── Profile info read-only rows ────────────────────────────────────────── */
+.profileInfoList {
+  padding: 0 22px;
+}
+
+.profileInfoRow {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--grey-200);
+}
+
+.profileInfoRow:last-child {
+  border-bottom: none;
+}
+
+.profileInfoLabel {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--grey-500);
+  width: 110px;
+  flex-shrink: 0;
+}
+
+.profileInfoVal {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.profileInfoEmpty {
+  font-size: 14px;
+  color: var(--grey-300);
+  font-style: italic;
+}
+
+/* ─── Edit profile button ────────────────────────────────────────────────── */
+.editProfileBtn {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--grey-700);
+  background: none;
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-pill);
+  padding: 4px 12px;
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    border-color 0.12s,
+    color 0.12s;
+}
+
+.editProfileBtn:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+/* ─── Edit profile action row ────────────────────────────────────────────── */
+.editProfileActions {
+  display: flex;
+  gap: 10px;
+}
+
+.cancelProfileBtn {
+  flex: 1;
+  padding: 13px 22px;
+  background: none;
+  color: var(--grey-700);
+  font-size: 13px;
+  font-weight: 600;
+  border: 1.5px solid var(--grey-200);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    border-color 0.12s,
+    color 0.12s;
+}
+
+.cancelProfileBtn:hover {
+  border-color: var(--grey-500);
+  color: var(--ink);
+}
+
+/* ─── Email read-only card ───────────────────────────────────────────────── */
+.emailReadOnlyBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px 22px 18px;
+}
+
+.emailReadOnlyVal {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.emailReadOnlyNote {
+  font-size: 12px;
+  color: var(--grey-500);
+  line-height: 1.5;
+}
+
+/* ─── Form ───────────────────────────────────────────────────────────────── */
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 20px;
+  padding: 20px 22px 0;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px 22px 0;
+}
+
+/* Remove double top padding when formGroup is inside formGrid */
+.formGrid .formGroup {
+  padding: 0;
+  margin-bottom: 16px;
+}
+
+.label {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--grey-700);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.input {
+  background: transparent;
+  border: none;
+  border-bottom: 1.5px solid var(--grey-200);
+  border-radius: 0;
+  padding: 10px 0;
+  font-size: 14.5px;
+  font-family: inherit;
+  color: var(--ink);
+  outline: none;
+  transition: border-color 0.15s;
+  width: 100%;
+}
+
+.input::placeholder {
+  color: var(--grey-300);
+}
+
+.pwInputWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.pwInputWrap .input {
+  padding-right: 32px;
+}
+
+.pwEyeBtn {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  color: var(--grey-500);
+  display: flex;
+  align-items: center;
+  line-height: 1;
+  transition: color 0.15s;
+}
+
+.pwEyeBtn:hover {
+  color: var(--ink);
+}
+
+.input:focus {
+  border-bottom-color: var(--ink);
+}
+
+.cardFooter {
+  padding: 18px 22px;
+  margin-top: 20px;
+  border-top: 1px solid var(--grey-200);
+}
+
+.saveBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 13px 22px;
+  background: var(--ink);
+  color: var(--white);
+  font-size: 13px;
+  font-weight: 800;
+  border: none;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  font-family: inherit;
+  letter-spacing: -0.01em;
+  transition: opacity 0.12s;
+}
+
+.editProfileActions .saveBtn {
+  flex: 2;
+  width: auto;
+}
+
+.saveBtn:hover {
+  opacity: 0.82;
+}
+
+.saveBtn:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+.saveBtn:disabled:hover {
+  opacity: 0.38;
+}
+
+.saveSuccessBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  margin: 0;
+  padding: 13px 22px;
+  background: var(--white);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 700;
+  font-style: normal;
+  border: 1.5px solid var(--grey-200);
+  border-radius: var(--radius-pill);
+  font-family: inherit;
+  letter-spacing: -0.01em;
+}
+
+.cardBody .saveBtn {
+  width: 100%;
+}
+
+/* ─── Danger card ────────────────────────────────────────────────────────── */
+.dangerCard {
+  border-color: var(--grey-200);
+  border-left: 3px solid var(--red);
+  border-radius: 12px;
+}
+
+.dangerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 18px 22px;
+}
+
+.dangerTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 4px;
+  letter-spacing: -0.01em;
+}
+
+.dangerDesc {
+  font-size: 12.5px;
+  color: var(--grey-500);
+  line-height: 1.55;
+}
+
+.deleteBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  background: none;
+  color: var(--red);
+  font-size: 12.5px;
+  font-weight: 700;
+  border: 1.5px solid var(--red);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  font-family: inherit;
+  flex-shrink: 0;
+  white-space: nowrap;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.deleteBtn:hover {
+  background: var(--red);
+  color: var(--white);
+}
+
+/* ─── Preferences ────────────────────────────────────────────────────────── */
+.prefIntro {
+  font-size: 13.5px;
+  color: var(--grey-700);
+  line-height: 1.65;
+  margin-bottom: 4px;
+}
+
+.prefCard {
+  background: var(--white);
+  border: 1px solid var(--grey-200);
+  border-radius: 12px;
+  padding: 16px 20px;
+}
+
+.prefHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.prefQuestion {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+}
+
+.editPrefBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 12px;
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--grey-500);
+  background: none;
+  cursor: pointer;
+  font-family: inherit;
+  flex-shrink: 0;
+  white-space: nowrap;
+  transition:
+    color 0.12s,
+    border-color 0.12s;
+}
+
+.editPrefBtn:hover {
+  color: var(--ink);
+  border-color: var(--grey-700);
+}
+
+.prefAnswers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.answerTag {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border: 1px solid var(--grey-300);
+  border-radius: var(--radius-pill);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink);
+  background: transparent;
+  letter-spacing: -0.01em;
+}
+
+.unanswered {
+  font-size: 13px;
+  color: var(--grey-300);
+  font-style: italic;
+}
+
+.prefOptions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.optionChip {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 14px;
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-pill);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--white);
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    border-color 0.1s,
+    background 0.1s,
+    color 0.1s;
+}
+
+.optionChip:hover {
+  border-color: var(--grey-500);
+}
+
+.optionChipSelected {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--white);
+}
+
+/* ─── Notifications ──────────────────────────────────────────────────────── */
+.notifRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--grey-200);
+}
+
+.notifRow:last-child {
+  border-bottom: none;
+}
+
+.notifInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.notifLabel {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+
+.notifDesc {
+  font-size: 12.5px;
+  color: var(--grey-500);
+  line-height: 1.5;
+}
+
+.notifPhone {
+  white-space: nowrap;
+}
+
+/* ─── Toggle ─────────────────────────────────────────────────────────────── */
+.toggle {
+  position: relative;
+  width: 40px;
+  height: 22px;
+  border-radius: var(--radius-pill);
+  background: var(--grey-300);
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-top: 1px;
+  transition: background 0.2s;
+}
+
+.toggleOn {
+  background: var(--ink);
+}
+
+.toggleDisabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.channelError {
+  font-size: 12px;
+  color: var(--red);
+  margin: 8px 0 0;
+}
+
+.toggleKnob {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--white);
+  top: 3px;
+  left: 3px;
+  transition: transform 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 3px rgba(15, 15, 15, 0.18);
+}
+
+.toggleOn .toggleKnob {
+  transform: translateX(18px);
+}
+
+/* ─── Payment tab ────────────────────────────────────────────────────────── */
+
+.paymentEmptyPanel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 28px 8px 8px;
+}
+
+.paymentEmptyCta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 20px;
+  padding: 11px 20px;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--white);
+  background: var(--ink);
+  border: none;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  font-family: inherit;
+  letter-spacing: -0.01em;
+  transition: opacity 0.12s;
+}
+
+.paymentEmptyCta:hover {
+  opacity: 0.86;
+}
+
+.cardsEmptyIcon {
+  color: var(--grey-400);
+  margin-bottom: 12px;
+}
+
+.cardsEmptyText {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0 0 6px;
+  letter-spacing: -0.01em;
+}
+
+.cardsEmptyDesc {
+  font-size: 13px;
+  color: var(--grey-500);
+  margin: 0;
+  line-height: 1.45;
+  max-width: 240px;
+}
+
+.paymentTrustNote {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 20px 0 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--grey-200);
+  font-size: 12px;
+  color: var(--grey-500);
+  line-height: 1.5;
+}
+
+.paymentTrustIcon {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--grey-400);
+}
+
+.addCardLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 14px;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity 0.12s;
+}
+
+.addCardLink:hover {
+  opacity: 0.7;
+}
+
+.cardList {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--grey-200);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.paymentRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 14px;
+  border-bottom: 1px solid var(--grey-200);
+  background: var(--white);
+}
+
+.paymentRow:last-child {
+  border-bottom: none;
+}
+
+.paymentRowLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.paymentIcon {
+  color: var(--grey-500);
+  flex-shrink: 0;
+}
+
+.paymentInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.paymentBrand {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  font-family: monospace;
+  letter-spacing: 0.04em;
+}
+
+.paymentExp {
+  font-size: 11.5px;
+  color: var(--grey-500);
+}
+
+.defaultCheck {
+  color: #16a34a;
+  flex-shrink: 0;
+}
+
+.paymentRowActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.setDefaultBtn {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--grey-700);
+  background: none;
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-pill);
+  padding: 4px 10px;
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    border-color 0.12s,
+    color 0.12s;
+}
+
+.setDefaultBtn:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.removeCardBtn {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: none;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--grey-400, #c0c0c0);
+  cursor: pointer;
+  transition:
+    color 0.12s,
+    background 0.12s;
+}
+
+.removeCardBtn:hover {
+  color: var(--red);
+  background: rgba(214, 64, 69, 0.07);
+}
+
+/* ─── Subscriptions tab ──────────────────────────────────────────────────── */
+.subEmpty {
+  text-align: center;
+  padding: 48px 0;
+}
+
+.subEmptyIcon {
+  color: var(--grey-300);
+  margin: 0 auto 16px;
+  display: block;
+}
+
+.subEmptyText {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0 0 6px;
+}
+
+.subEmptyDesc {
+  font-size: 13.5px;
+  color: var(--grey-500);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.subCard {
+  border: 1px solid var(--grey-200);
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 12px;
+  background: var(--white);
+}
+
+.subCardTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.subCardInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.subCardTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.015em;
+}
+
+.subCardCook {
+  font-size: 12.5px;
+  color: var(--grey-500);
+}
+
+.subCardRight {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  flex-shrink: 0;
+  align-self: stretch;
+}
+
+.subStatus {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+  border: 1.5px solid transparent;
+}
+
+.subStatusActive {
+  color: var(--ink);
+  border-color: var(--ink);
+}
+
+.subStatusPaused,
+.subStatusCancelled {
+  color: var(--grey-500);
+  border-color: var(--grey-300);
+}
+
+.subPrice {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.025em;
+}
+
+.subInterval {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--grey-500);
+  letter-spacing: 0;
+}
+
+.subCardFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--grey-200);
+}
+
+.subNextDate {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12.5px;
+  color: var(--red);
+  font-weight: 500;
+}
+
+.cancelSubBtn {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--red);
+  background: none;
+  border: 1px solid rgba(214, 64, 69, 0.3);
+  border-radius: var(--radius-pill);
+  padding: 5px 14px;
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    background 0.12s,
+    border-color 0.12s;
+}
+
+.cancelSubBtn:hover {
+  background: rgba(214, 64, 69, 0.06);
+  border-color: var(--red);
+}
+
+.cancelSubBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.subCancelledNote {
+  font-size: 12.5px;
+  color: var(--grey-500);
+}
+
+/* ─── Subscription cancel confirmation ───────────────────────────────────── */
+.subCancelConfirm {
+  padding: 18px 22px;
+  border: 1px solid var(--grey-200);
+  background: var(--white);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: fadeIn 0.15s ease;
+}
+
+.subCancelConfirmText {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.subCancelConfirmTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.subCancelConfirmPolicy {
+  font-size: 13px;
+  color: var(--grey-700);
+  line-height: 1.5;
+}
+
+.subCancelConfirmActions {
+  display: flex;
+  gap: 8px;
+}
+
+.subCancelKeep {
+  flex: 1;
+  padding: 9px 16px;
+  border: 1.5px solid var(--grey-200);
+  border-radius: 8px;
+  background: var(--white);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--grey-700);
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.12s;
+}
+
+.subCancelKeep:hover {
+  border-color: var(--grey-500);
+}
+
+.subCancelConfirmBtn {
+  flex: 2;
+  padding: 9px 16px;
+  border: none;
+  border-radius: 8px;
+  background: var(--red);
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--white);
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.12s;
+}
+
+.subCancelConfirmBtn:hover {
+  background: var(--red-deep);
+}
+
+/* ─── Delete confirm inline row ──────────────────────────────────────────── */
+.deleteConfirmRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 14px;
+  border-bottom: 1px solid var(--grey-200);
+  background: var(--white);
+  box-shadow: inset 3px 0 0 var(--red);
+  animation: fadeIn 0.15s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.deleteConfirmRow:last-child {
+  border-bottom: none;
+}
+
+.deleteConfirmText {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.deleteConfirmActions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.deleteConfirmCancel {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--grey-700);
+  background: none;
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-pill);
+  padding: 5px 12px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.12s;
+}
+
+.deleteConfirmCancel:hover {
+  border-color: var(--grey-500);
+}
+
+.deleteConfirmRemove {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--white);
+  background: var(--red);
+  border: none;
+  border-radius: var(--radius-pill);
+  padding: 5px 12px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.12s;
+}
+
+.deleteConfirmRemove:hover {
+  background: var(--red-deep);
+}
+
+/* ─── Mobile responsive ──────────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .inner {
+    padding: 20px 16px calc(80px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Collapse 2-col form grid to single column */
+  .formGrid {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .prefCard {
+    padding: 14px 16px;
+  }
+
+  .optionChip {
+    min-height: 44px;
+    padding: 10px 16px;
+  }
+
+  .notifRow {
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+  }
+
+  /* Danger row: stack text + button vertically */
+  .dangerRow {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+  }
+
+  .deleteBtn {
+    align-self: flex-start;
+  }
+
+  /* Subscription cancel confirm actions: full-width buttons */
+  .subCancelConfirmActions {
+    flex-direction: column;
+  }
+
+  .subCancelKeep,
+  .subCancelConfirmBtn {
+    flex: unset;
+    width: 100%;
+  }
+}
