@@ -58,6 +58,21 @@ const COOK_FAQS: Faq[] = [
   },
 ];
 
+const ALL_FAQS = [...CUSTOMER_FAQS, ...COOK_FAQS];
+
+const faqSchema = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: ALL_FAQS.map((item) => ({
+    "@type": "Question",
+    name: item.q,
+    acceptedAnswer: {
+      "@type": "Answer",
+      text: item.a,
+    },
+  })),
+};
+
 function FaqList({ items }: { items: Faq[] }) {
   return (
     <div className={styles.faqList}>
@@ -77,6 +92,12 @@ function FaqList({ items }: { items: Faq[] }) {
 export default function HelpPage() {
   return (
     <div className={styles.page}>
+      {/* JSON-LD structured data — native script tag required (not next/script) */}
+      <script
+        type="application/ld+json"
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: JSON-LD structured data, not user input
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+      />
       <main className={styles.main}>
         <header className={styles.hero}>
           <p className={styles.eyebrow}>Help center</p>

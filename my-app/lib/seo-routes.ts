@@ -26,6 +26,7 @@ export const PUBLIC_ROUTES: readonly PublicRoute[] = [
   { path: "/app/browse", changeFrequency: "daily", priority: 0.8 },
   { path: "/business/application", changeFrequency: "monthly", priority: 0.7 },
   { path: "/public/team", changeFrequency: "monthly", priority: 0.5 },
+  { path: "/help", changeFrequency: "monthly", priority: 0.5 },
   { path: "/terms", changeFrequency: "yearly", priority: 0.3 },
   { path: "/cook-terms", changeFrequency: "yearly", priority: 0.3 },
   { path: "/privacy", changeFrequency: "yearly", priority: 0.3 },
