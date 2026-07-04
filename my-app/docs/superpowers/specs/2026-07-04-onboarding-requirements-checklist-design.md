@@ -138,6 +138,40 @@ presentational component with no data fetching. No `app/api/setup/**` route,
 underlying conditions that gate `stepComplete` and API submission are
 identical before and after — only their visibility to the user changes.
 
+## Addendum (post-visual-QA revisions)
+
+After the first implementation pass, visual review surfaced four adjustments,
+applied on top of the design above:
+
+- **Checklist container style:** changed from a filled `var(--grey-100)`
+  background to `var(--white)` with a `1.5px solid var(--red)` border, so it
+  reads as a callout rather than a neutral card.
+- **Required-field markers:** every required text/select/pill-group field
+  label across all 6 steps now has a `<span className={styles.requiredStar}>*</span>`
+  (color `var(--red)`). Checkboxes and the Stripe Connect panel are not
+  starred — the checklist already covers those.
+- **Profile photo is now an enforced requirement in step 1.** It was already
+  labeled "required" in the UI copy but was never actually checked by
+  `validate()`/`stepComplete`, nor by the server route
+  (`app/api/setup/onboarding/[step]/route.ts` step1). Fixed by adding a
+  "Profile photo added" checklist item and a matching `validate()` check,
+  met when `form.existingPhotoUrl` (returning cook) or `form.photoFileName`
+  (freshly chosen file) is present. **Deliberately client-only**: the server
+  route was left unchanged to avoid adding new server-side enforcement that
+  could retroactively block an already-in-progress cook who revisits step 1
+  via the Back button without ever having set a photo (the one live-data risk
+  identified during this change). If full server-side enforcement is wanted
+  later, that's a separate, explicit follow-up.
+- **Fixed a pre-existing text bug**, unrelated to this feature but discovered
+  during visual QA: "Set a pickup window…" / "Set a delivery window…" hint
+  text under the pickup/delivery days pickers rendered with the space
+  missing ("pickupwindow"). Root cause: a Next 16/Turbopack JSX whitespace
+  quirk that drops a literal space when JSX text on the same line directly
+  follows an interpolated expression (`{kind} window`). Fixed by building the
+  string with a template literal (`` {`Set a ${kind} window...`} ``) instead
+  of mixed JSX text/expression children — the same pattern already used
+  safely elsewhere in this file (e.g. `Bio{" "}`).
+
 ## Testing / verification plan
 
 1. `pnpm exec tsc --noEmit` and `pnpm lint` on touched files.
