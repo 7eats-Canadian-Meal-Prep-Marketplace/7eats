@@ -446,6 +446,9 @@ export default function OnboardingWizard({
   })();
 
   const stepComplete = stepRequirements.every((r) => r.met);
+  // Show only the next unmet requirement so the "To continue" box stays a
+  // single line instead of listing every remaining item at once.
+  const nextRequirement = stepRequirements.find((r) => !r.met);
 
   const advance = () => {
     setStepError("");
@@ -623,10 +626,10 @@ export default function OnboardingWizard({
             </p>
           )}
 
-          {!stepComplete && (
+          {nextRequirement && (
             <div className={styles.requirementsWrap}>
               <p className={styles.requirementsHeading}>To continue:</p>
-              <RequirementsChecklist items={stepRequirements} />
+              <RequirementsChecklist items={[nextRequirement]} />
             </div>
           )}
 
