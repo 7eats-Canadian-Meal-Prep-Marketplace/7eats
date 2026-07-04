@@ -1,4 +1,4 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db, dbPool } from "@/db";
 import {
@@ -41,7 +41,7 @@ export async function POST(
     case "2":
       return step2(req, session.user.id);
     case "3":
-      return step3(req, session.user.id);
+      return step3(req, session.user.id, session.user.name);
     case "4":
       return step4(req, session.user.id);
     default:
@@ -372,35 +372,9 @@ async function step2(req: Request, userId: string) {
 
 // ── Step 3: Compliance certificate ────────────────────────────
 
-async function step3(req: Request, userId: string) {
+async function step3(req: Request, userId: string, userName: string) {
   const fd = await req.formData();
-  const certIdNumber = ((fd.get("certIdNumber") as string) ?? "").trim();
-  const certFullName = ((fd.get("certFullName") as string) ?? "").trim();
-  const certExpiry = ((fd.get("certExpiry") as string) ?? "").trim();
   const certPhoto = fd.get("certPhoto") as File | null;
-
-  if (!certIdNumber)
-    return NextResponse.json(
-      { error: "Certificate ID number is required." },
-      { status: 400 },
-    );
-  if (!certFullName)
-    return NextResponse.json(
-      { error: "Full name on certificate is required." },
-      { status: 400 },
-    );
-  if (!certExpiry)
-    return NextResponse.json(
-      { error: "Certificate expiry date is required." },
-      { status: 400 },
-    );
-
-  const expiresAt = new Date(certExpiry);
-  if (Number.isNaN(expiresAt.getTime()) || expiresAt <= new Date())
-    return NextResponse.json(
-      { error: "Certificate expiry must be a future date." },
-      { status: 400 },
-    );
 
   const [profile] = await db
     .select({
@@ -413,7 +387,21 @@ async function step3(req: Request, userId: string) {
   if (!profile)
     return NextResponse.json({ error: "Profile not found." }, { status: 404 });
 
-  let fileUrl: string | undefined;
+  const [existingCert] = await db
+    .select({ fileUrl: cookCertifications.fileUrl })
+    .from(cookCertifications)
+    .where(
+      and(
+        eq(cookCertifications.cookId, profile.id),
+        eq(cookCertifications.status, "pending_review"),
+      ),
+    )
+    .orderBy(desc(cookCertifications.createdAt))
+    .limit(1);
+
+  // Carries the previously uploaded file forward when the cook resubmits
+  // this step without choosing a new one (e.g. going back then continuing).
+  let fileUrl = existingCert?.fileUrl ?? undefined;
   if (certPhoto && certPhoto.size > 0) {
     const allowed = ["image/jpeg", "image/png", "application/pdf"];
     if (!allowed.includes(certPhoto.type))
@@ -448,6 +436,12 @@ async function step3(req: Request, userId: string) {
     }
   }
 
+  if (!fileUrl)
+    return NextResponse.json(
+      { error: "Upload a photo of your certificate to continue." },
+      { status: 400 },
+    );
+
   await dbPool.transaction(async (tx) => {
     await tx
       .delete(cookCertifications)
@@ -461,10 +455,8 @@ async function step3(req: Request, userId: string) {
     await tx.insert(cookCertifications).values({
       cookId: profile.id,
       name: "Food Handler Certificate",
-      holderName: certFullName,
-      certificateNumber: certIdNumber,
-      expiresAt,
-      ...(fileUrl !== undefined ? { fileUrl } : {}),
+      holderName: userName,
+      fileUrl,
     });
 
     await tx

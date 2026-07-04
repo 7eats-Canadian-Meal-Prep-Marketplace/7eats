@@ -118,9 +118,6 @@ type FormState = {
   acceptsSpecialRequests: boolean;
   cancellationAllowed: boolean;
   // Step 3
-  certIdNumber: string;
-  certExpiry: string;
-  certFullName: string;
   certPhotoFileName: string;
   // Step 4
   stripeConnected: boolean;
@@ -158,9 +155,6 @@ type InitialData = {
   currentSetupStep?: number;
   platformFeePct?: string | null;
   stripeConnected?: boolean;
-  certIdNumber?: string;
-  certFullName?: string;
-  certExpiry?: string;
   certPhotoFileName?: string;
   tosAccepted?: boolean;
 };
@@ -281,9 +275,6 @@ export default function OnboardingWizard({
     leadTimeCutoff: initialData?.leadTimeCutoff ?? DEFAULT_LEAD_TIME_CUTOFF,
     acceptsSpecialRequests: initialData?.acceptsSpecialRequests ?? false,
     cancellationAllowed: initialData?.cancellationAllowed ?? false,
-    certIdNumber: initialData?.certIdNumber ?? "",
-    certExpiry: initialData?.certExpiry ?? "",
-    certFullName: initialData?.certFullName ?? "",
     certPhotoFileName: initialData?.certPhotoFileName ?? "",
     stripeConnected: initialData?.stripeConnected ?? false,
     tosAccepted: initialData?.tosAccepted ?? false,
@@ -354,16 +345,8 @@ export default function OnboardingWizard({
       }
     }
     if (step === 3) {
-      if (!form.certIdNumber.trim()) {
-        setStepError("Certificate ID number is required.");
-        return false;
-      }
-      if (!form.certFullName.trim()) {
-        setStepError("Full name on certificate is required.");
-        return false;
-      }
-      if (!form.certExpiry) {
-        setStepError("Certificate expiry date is required.");
+      if (!form.certPhotoFileName) {
+        setStepError("Upload a photo of your certificate to continue.");
         return false;
       }
     }
@@ -448,14 +431,9 @@ export default function OnboardingWizard({
     if (step === 3) {
       return [
         {
-          label: "Certificate ID number added",
-          met: form.certIdNumber.trim() !== "",
+          label: "Certificate photo uploaded",
+          met: form.certPhotoFileName !== "",
         },
-        {
-          label: "Full name on certificate added",
-          met: form.certFullName.trim() !== "",
-        },
-        { label: "Certificate expiry date added", met: form.certExpiry !== "" },
       ];
     }
     if (step === 4) {
@@ -551,9 +529,6 @@ export default function OnboardingWizard({
     if (step === 3) {
       startTransition(async () => {
         const fd = new FormData();
-        fd.set("certIdNumber", form.certIdNumber);
-        fd.set("certFullName", form.certFullName);
-        fd.set("certExpiry", form.certExpiry);
         if (certFileRef.current) fd.set("certPhoto", certFileRef.current);
         const res = await fetch("/api/setup/onboarding/3", {
           method: "POST",
@@ -1241,61 +1216,16 @@ function Step3({
         </div>
         <h2 className={styles.formTitle}>Compliance</h2>
         <p className={styles.formSub}>
-          Your food handler certificate details. Reviewed by our team before
-          your menu goes live.
+          Upload a photo of your food handler certificate. Our team reviews the
+          details before your menu goes live.
         </p>
       </div>
 
       <div className={styles.fields}>
         <div className={styles.field}>
-          <label htmlFor="certIdNumber" className={styles.label}>
-            Certificate ID number <span className={styles.requiredStar}>*</span>
+          <label htmlFor="cert-photo" className={styles.label}>
+            Photo of certificate <span className={styles.requiredStar}>*</span>
           </label>
-          <input
-            id="certIdNumber"
-            type="text"
-            className={styles.input}
-            value={form.certIdNumber}
-            onChange={(e) => set("certIdNumber", e.target.value)}
-            placeholder="Found on your physical certificate"
-          />
-        </div>
-
-        <div className={styles.field}>
-          <label htmlFor="certFullName" className={styles.label}>
-            Full name as it appears on the certificate{" "}
-            <span className={styles.requiredStar}>*</span>
-          </label>
-          <input
-            id="certFullName"
-            type="text"
-            className={styles.input}
-            value={form.certFullName}
-            onChange={(e) => set("certFullName", e.target.value)}
-            placeholder="e.g. Oluwaseun Adeyemi"
-          />
-        </div>
-
-        <div className={styles.field}>
-          <label htmlFor="certExpiry" className={styles.label}>
-            Expiry date <span className={styles.requiredStar}>*</span>
-          </label>
-          <input
-            id="certExpiry"
-            type="date"
-            className={styles.input}
-            value={form.certExpiry}
-            onChange={(e) => set("certExpiry", e.target.value)}
-            min={new Date().toISOString().split("T")[0]}
-          />
-          <p className={styles.hint}>We will remind you before it expires.</p>
-        </div>
-
-        <div className={styles.field}>
-          <span className={styles.label}>
-            Photo of certificate{" "}
-            <span className={styles.labelNote}>(optional)</span>
-          </span>
           <DocumentDropzone
             id="cert-photo"
             fileName={form.certPhotoFileName || undefined}

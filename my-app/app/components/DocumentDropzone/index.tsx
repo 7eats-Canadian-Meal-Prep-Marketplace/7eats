@@ -136,14 +136,18 @@ export default function DocumentDropzone({
       >
         {hasFile && preview && !rejected ? (
           // biome-ignore lint/performance/noImgElement: blob preview
-          <img src={preview} alt="" className={styles.preview} />
+          <img
+            src={preview}
+            alt={fileName ? `Preview of ${fileName}` : ""}
+            className={styles.preview}
+          />
         ) : hasFile && !rejected ? (
           <span className={styles.icon}>
-            <FileText size={28} strokeWidth={1.5} />
+            <FileText size={28} strokeWidth={1.5} aria-hidden="true" />
           </span>
         ) : (
           <span className={styles.icon}>
-            <Upload size={28} strokeWidth={1.5} />
+            <Upload size={28} strokeWidth={1.5} aria-hidden="true" />
           </span>
         )}
 
@@ -152,7 +156,7 @@ export default function DocumentDropzone({
             <p className={styles.fileName}>{fileName}</p>
             <p className={styles.sub}>Click or drop to replace</p>
             <span className={styles.overlay}>
-              <Upload size={16} strokeWidth={2} />
+              <Upload size={16} strokeWidth={2} aria-hidden="true" />
               <span>Change</span>
             </span>
           </>
@@ -169,7 +173,7 @@ export default function DocumentDropzone({
 
         {rejected && (
           <span className={styles.errorOverlay}>
-            <TriangleAlert size={26} strokeWidth={2} />
+            <TriangleAlert size={26} strokeWidth={2} aria-hidden="true" />
           </span>
         )}
       </button>
@@ -190,7 +194,7 @@ export default function DocumentDropzone({
       ) : (
         !hasFile && (
           <p className={styles.instruction}>
-            <Upload size={13} strokeWidth={2} />
+            <Upload size={13} strokeWidth={2} aria-hidden="true" />
             Accepted: {allowedLabel}
           </p>
         )

@@ -14,14 +14,6 @@ import {
 import { auth } from "@/lib/auth";
 import { formatDbLeadTimeCutoff } from "@/lib/lead-time";
 
-function formatCertExpiry(value: Date | null | undefined): string {
-  if (!value) return "";
-  const y = value.getFullYear();
-  const m = String(value.getMonth() + 1).padStart(2, "0");
-  const d = String(value.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-}
-
 function certFileLabel(fileUrl: string | null | undefined): string | undefined {
   if (!fileUrl) return undefined;
   const segment = fileUrl.split("/").pop();
@@ -92,9 +84,6 @@ export default async function OnboardingPage() {
     profile
       ? db
           .select({
-            certificateNumber: cookCertifications.certificateNumber,
-            holderName: cookCertifications.holderName,
-            expiresAt: cookCertifications.expiresAt,
             fileUrl: cookCertifications.fileUrl,
           })
           .from(cookCertifications)
@@ -174,9 +163,6 @@ export default async function OnboardingPage() {
                 currentSetupStep: profile.currentSetupStep,
                 platformFeePct: profile.platformFeePct,
                 stripeConnected: false,
-                certIdNumber: cert?.certificateNumber ?? "",
-                certFullName: cert?.holderName ?? "",
-                certExpiry: formatCertExpiry(cert?.expiresAt ?? null),
                 certPhotoFileName: certFileLabel(cert?.fileUrl),
                 tosAccepted: !!profile.tosAcceptedAt,
               }
