@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { desc, eq, inArray } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db, dbPool } from "@/db";
 import {
@@ -387,15 +387,13 @@ async function step3(req: Request, userId: string, userName: string) {
   if (!profile)
     return NextResponse.json({ error: "Profile not found." }, { status: 404 });
 
+  // Not filtered by status: once admin review changes a certification's
+  // status away from pending_review, the cook must still be able to carry
+  // the file forward on resubmit rather than being forced to re-upload.
   const [existingCert] = await db
     .select({ fileUrl: cookCertifications.fileUrl })
     .from(cookCertifications)
-    .where(
-      and(
-        eq(cookCertifications.cookId, profile.id),
-        eq(cookCertifications.status, "pending_review"),
-      ),
-    )
+    .where(eq(cookCertifications.cookId, profile.id))
     .orderBy(desc(cookCertifications.createdAt))
     .limit(1);
 
@@ -445,12 +443,7 @@ async function step3(req: Request, userId: string, userName: string) {
   await dbPool.transaction(async (tx) => {
     await tx
       .delete(cookCertifications)
-      .where(
-        and(
-          eq(cookCertifications.cookId, profile.id),
-          eq(cookCertifications.status, "pending_review"),
-        ),
-      );
+      .where(eq(cookCertifications.cookId, profile.id));
 
     await tx.insert(cookCertifications).values({
       cookId: profile.id,

@@ -1,4 +1,4 @@
-import { and, asc, desc, eq } from "drizzle-orm";
+import { asc, desc, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
@@ -87,12 +87,7 @@ export default async function OnboardingPage() {
             fileUrl: cookCertifications.fileUrl,
           })
           .from(cookCertifications)
-          .where(
-            and(
-              eq(cookCertifications.cookId, profile.id),
-              eq(cookCertifications.status, "pending_review"),
-            ),
-          )
+          .where(eq(cookCertifications.cookId, profile.id))
           .orderBy(desc(cookCertifications.createdAt))
           .limit(1)
           .then((rows) => rows[0] ?? null)
