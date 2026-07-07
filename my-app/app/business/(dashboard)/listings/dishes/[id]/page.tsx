@@ -1,17 +1,11 @@
 "use client";
 
-import {
-  Camera,
-  ImageOff,
-  Plus,
-  Trash2,
-  UtensilsCrossed,
-  X,
-} from "lucide-react";
+import { Camera, ImageOff, UtensilsCrossed, X } from "lucide-react";
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import IngredientsInput from "@/app/components/IngredientsInput";
 import { deepEqual } from "@/lib/forms/use-dirty";
 import {
   DISH_PHOTO_ACCEPT,
@@ -636,20 +630,6 @@ function NutritionTab() {
       )
     : false;
 
-  function addIngredient() {
-    setIngredients((prev) => [...prev, { id: `ing-${Date.now()}`, name: "" }]);
-  }
-
-  function removeIngredient(id: string) {
-    setIngredients((prev) => prev.filter((i) => i.id !== id));
-  }
-
-  function updateIngredient(id: string, value: string) {
-    setIngredients((prev) =>
-      prev.map((i) => (i.id === id ? { ...i, name: value } : i)),
-    );
-  }
-
   function toggleAllergen(allergen: string) {
     if (noneApplies) setNoneApplies(false);
     if (allergen === "Other") {
@@ -724,50 +704,20 @@ function NutritionTab() {
           </p>
         </div>
 
-        {ingredients.length === 0 ? (
-          <div className={styles.emptyState}>
-            <UtensilsCrossed size={22} className={styles.emptyIcon} />
-            <p className={styles.emptyText}>No ingredients yet</p>
-            <p className={styles.emptySub}>
-              Add each ingredient one at a time. Diners use this to avoid
-              allergens.
-            </p>
-          </div>
-        ) : (
-          <div className={styles.ingList}>
-            {ingredients.map((ing) => (
-              <div key={ing.id} className={styles.ingRow}>
-                <input
-                  type="text"
-                  aria-label="Ingredient name"
-                  autoComplete="off"
-                  spellCheck={false}
-                  className={styles.formInput}
-                  value={ing.name}
-                  placeholder="e.g. Tomato paste"
-                  onChange={(e) => updateIngredient(ing.id, e.target.value)}
-                />
-                <button
-                  type="button"
-                  className={styles.ingRemove}
-                  onClick={() => removeIngredient(ing.id)}
-                  aria-label="Remove ingredient"
-                >
-                  <Trash2 size={15} />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <button
-          type="button"
-          className={styles.addIngBtn}
-          onClick={addIngredient}
-        >
-          <Plus size={14} />
-          Add ingredient
-        </button>
+        <IngredientsInput
+          ingredients={ingredients}
+          onChange={setIngredients}
+          emptyState={
+            <div className={styles.emptyState}>
+              <UtensilsCrossed size={22} className={styles.emptyIcon} />
+              <p className={styles.emptyText}>No ingredients yet</p>
+              <p className={styles.emptySub}>
+                Add each ingredient one at a time, or paste a comma-separated
+                list. Diners use this to avoid allergens.
+              </p>
+            </div>
+          }
+        />
       </div>
 
       <div className={styles.card}>

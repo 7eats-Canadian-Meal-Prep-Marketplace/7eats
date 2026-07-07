@@ -62,6 +62,11 @@
   color: var(--grey-700);
 }
 
+.requiredStar {
+  color: var(--red);
+  margin-left: 2px;
+}
+
 /* ── Inputs ──────────────────────────────────────────────────── */
 .input {
   width: 100%;
@@ -149,4 +154,10 @@
 /* ── CTA ─────────────────────────────────────────────────────── */
 .ctaBtn {
   width: 100%;
+}
+
+.ctaBtnDisabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(0.3);
 }

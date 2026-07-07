@@ -478,18 +478,19 @@ function ShellInner({
 
   const isOnboarding = pathname.startsWith("/app-auth/onboarding");
   const isCheckout = pathname.startsWith("/app/checkout");
+  const isLanding = pathname === "/app";
   const showFulfillmentToggle =
     pathname === "/app/browse" || pathname === "/app/search";
-  const hideBottomNav = isOnboarding || isCheckout;
+  const hideBottomNav = isOnboarding || isCheckout || isLanding;
 
   const bottomNavItems = isLoggedIn ? BOTTOM_NAV_LOGGED_IN : BOTTOM_NAV_GUEST;
 
   return (
     <div className={styles.shell}>
-      {!isOnboarding && (
+      {!isOnboarding && !isLanding && (
         <header className={styles.header}>
           <div className={styles.headerInner}>
-            <Link href="/app/browse" className={styles.brandLink}>
+            <Link href="/app" className={styles.brandLink}>
               <Image
                 src="/7eats-logo.svg"
                 alt="7eats"
@@ -626,7 +627,7 @@ function ShellInner({
       )}
 
       <main
-        className={`${styles.main} ${isOnboarding ? styles.mainOnboarding : ""}`}
+        className={`${styles.main} ${isOnboarding ? styles.mainOnboarding : ""} ${isLanding ? styles.mainLanding : ""}`}
       >
         {children}
       </main>

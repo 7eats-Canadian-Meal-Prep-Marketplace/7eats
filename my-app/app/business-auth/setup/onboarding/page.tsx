@@ -1,4 +1,4 @@
-import { and, asc, desc, eq } from "drizzle-orm";
+import { asc, desc, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
@@ -13,14 +13,6 @@ import {
 } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { formatDbLeadTimeCutoff } from "@/lib/lead-time";
-
-function formatCertExpiry(value: Date | null | undefined): string {
-  if (!value) return "";
-  const y = value.getFullYear();
-  const m = String(value.getMonth() + 1).padStart(2, "0");
-  const d = String(value.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-}
 
 function certFileLabel(fileUrl: string | null | undefined): string | undefined {
   if (!fileUrl) return undefined;
@@ -92,18 +84,10 @@ export default async function OnboardingPage() {
     profile
       ? db
           .select({
-            certificateNumber: cookCertifications.certificateNumber,
-            holderName: cookCertifications.holderName,
-            expiresAt: cookCertifications.expiresAt,
             fileUrl: cookCertifications.fileUrl,
           })
           .from(cookCertifications)
-          .where(
-            and(
-              eq(cookCertifications.cookId, profile.id),
-              eq(cookCertifications.status, "pending_review"),
-            ),
-          )
+          .where(eq(cookCertifications.cookId, profile.id))
           .orderBy(desc(cookCertifications.createdAt))
           .limit(1)
           .then((rows) => rows[0] ?? null)
@@ -174,9 +158,6 @@ export default async function OnboardingPage() {
                 currentSetupStep: profile.currentSetupStep,
                 platformFeePct: profile.platformFeePct,
                 stripeConnected: false,
-                certIdNumber: cert?.certificateNumber ?? "",
-                certFullName: cert?.holderName ?? "",
-                certExpiry: formatCertExpiry(cert?.expiresAt ?? null),
                 certPhotoFileName: certFileLabel(cert?.fileUrl),
                 tosAccepted: !!profile.tosAcceptedAt,
               }

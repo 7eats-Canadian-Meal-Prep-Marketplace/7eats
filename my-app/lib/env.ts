@@ -32,10 +32,6 @@ const FEATURE: Record<string, string> = {
   R2_ACCESS_KEY_ID: "image uploads will fail",
   R2_SECRET_ACCESS_KEY: "image uploads will fail",
   CRON_SECRET: "the payment reconciliation cron cannot be triggered",
-  INTERNAL_API_KEY:
-    "internal admin routes (issue-link) will reject all requests",
-  INTERNAL_API_ALLOWLIST:
-    "internal admin routes will reject all requests in production",
 };
 
 let validated = false;

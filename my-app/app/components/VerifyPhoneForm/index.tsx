@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import RequirementsChecklist from "@/app/components/RequirementsChecklist";
 import styles from "./VerifyPhoneForm.module.css";
 
 type Stage = "phone" | "code";
@@ -112,7 +113,7 @@ export default function VerifyPhoneForm({
         <div className={styles.fields}>
           <div className={styles.field}>
             <label htmlFor="otp" className={styles.label}>
-              Verification code
+              Verification code <span className={styles.requiredStar}>*</span>
             </label>
             <input
               id="otp"
@@ -130,12 +131,27 @@ export default function VerifyPhoneForm({
             />
           </div>
 
-          {error && <p className={styles.fieldError}>{error}</p>}
+          <RequirementsChecklist
+            items={[
+              {
+                label: `6-digit code entered (${otp.length}/6)`,
+                met: otp.length === 6,
+              },
+            ]}
+            touched={otp.length > 0}
+          />
+
+          {error && (
+            <p className={styles.fieldError} role="alert">
+              {error}
+            </p>
+          )}
 
           <button
             type="submit"
-            className={`btn btn-primary ${styles.ctaBtn}`}
+            className={`btn btn-primary ${styles.ctaBtn} ${otp.length !== 6 ? styles.ctaBtnDisabled : ""}`}
             disabled={isPending}
+            aria-disabled={otp.length !== 6}
           >
             {isPending ? "Verifying…" : "Verify"}
           </button>
@@ -181,7 +197,7 @@ export default function VerifyPhoneForm({
       <div className={styles.fields}>
         <div className={styles.field}>
           <label htmlFor="phone" className={styles.label}>
-            Mobile number
+            Mobile number <span className={styles.requiredStar}>*</span>
           </label>
           <input
             id="phone"
@@ -198,12 +214,27 @@ export default function VerifyPhoneForm({
           />
         </div>
 
-        {error && <p className={styles.fieldError}>{error}</p>}
+        <RequirementsChecklist
+          items={[
+            {
+              label: `Valid 10-digit phone number (${phone.length}/${PHONE_DIGITS})`,
+              met: isValidPhone(phone),
+            },
+          ]}
+          touched={phone.length > 0}
+        />
+
+        {error && (
+          <p className={styles.fieldError} role="alert">
+            {error}
+          </p>
+        )}
 
         <button
           type="submit"
-          className={`btn btn-primary ${styles.ctaBtn}`}
+          className={`btn btn-primary ${styles.ctaBtn} ${!isValidPhone(phone) ? styles.ctaBtnDisabled : ""}`}
           disabled={isPending}
+          aria-disabled={!isValidPhone(phone)}
         >
           {isPending ? "Sending…" : "Send code"}
         </button>
