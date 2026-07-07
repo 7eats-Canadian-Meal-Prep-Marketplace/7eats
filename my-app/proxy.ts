@@ -14,6 +14,7 @@ const ONBOARDED_COOKIE = "7eats-onboarded";
 
 /** Consumer routes anyone can view (no session required). */
 const CLIENT_PUBLIC_EXACT = new Set([
+  "/app",
   "/app/browse",
   "/app/search",
   "/app/cart",

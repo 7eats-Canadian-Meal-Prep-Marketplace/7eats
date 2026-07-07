@@ -921,6 +921,11 @@
   padding-bottom: 0;
 }
 
+.mainLanding {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
 /* ─── Bottom nav (mobile only) ──────────────────────────────────────────────── */
 .bottomNav {
   position: fixed;
