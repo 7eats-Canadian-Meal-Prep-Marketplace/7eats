@@ -3,6 +3,7 @@
 import { Eye, EyeOff } from "lucide-react";
 import { useState, useTransition } from "react";
 import PasswordChecklist from "@/app/components/PasswordChecklist";
+import RequirementsChecklist from "@/app/components/RequirementsChecklist";
 import { isPasswordValid, validatePassword } from "@/lib/password";
 import styles from "./CreatePasswordForm.module.css";
 
@@ -56,7 +57,7 @@ export default function CreatePasswordForm({ token }: { token: string }) {
       <div className={styles.fields}>
         <div className={styles.field}>
           <label htmlFor="password" className={styles.label}>
-            Password
+            Password <span className={styles.requiredStar}>*</span>
           </label>
           <div className={styles.inputWrap}>
             <input
@@ -85,7 +86,7 @@ export default function CreatePasswordForm({ token }: { token: string }) {
 
         <div className={styles.field}>
           <label htmlFor="confirm" className={styles.label}>
-            Confirm password
+            Confirm password <span className={styles.requiredStar}>*</span>
           </label>
           <div className={styles.inputWrap}>
             <input
@@ -113,8 +114,21 @@ export default function CreatePasswordForm({ token }: { token: string }) {
         </div>
 
         <PasswordChecklist password={password} />
+        <RequirementsChecklist
+          items={[
+            {
+              label: "Passwords match",
+              met: confirm.length > 0 && confirm === password,
+            },
+          ]}
+          touched={confirm.length > 0}
+        />
 
-        {error && <p className={styles.fieldError}>{error}</p>}
+        {error && (
+          <p className={styles.fieldError} role="alert">
+            {error}
+          </p>
+        )}
 
         <button
           type="submit"

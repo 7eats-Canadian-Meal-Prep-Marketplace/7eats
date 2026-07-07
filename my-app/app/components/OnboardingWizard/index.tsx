@@ -5,6 +5,9 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import DocumentDropzone from "@/app/components/DocumentDropzone";
 import ImageDropzone from "@/app/components/ImageDropzone";
 import LeadTimeCutoffField from "@/app/components/LeadTimeCutoffField";
+import RequirementsChecklist, {
+  type RequirementItem,
+} from "@/app/components/RequirementsChecklist";
 import SetupSidebar from "@/app/components/SetupSidebar";
 import StripeConnectPanel from "@/app/components/StripeConnectPanel";
 import { AddressSearchInput } from "@/components/AddressSearchInput";
@@ -115,9 +118,6 @@ type FormState = {
   acceptsSpecialRequests: boolean;
   cancellationAllowed: boolean;
   // Step 3
-  certIdNumber: string;
-  certExpiry: string;
-  certFullName: string;
   certPhotoFileName: string;
   // Step 4
   stripeConnected: boolean;
@@ -155,9 +155,6 @@ type InitialData = {
   currentSetupStep?: number;
   platformFeePct?: string | null;
   stripeConnected?: boolean;
-  certIdNumber?: string;
-  certFullName?: string;
-  certExpiry?: string;
   certPhotoFileName?: string;
   tosAccepted?: boolean;
 };
@@ -278,9 +275,6 @@ export default function OnboardingWizard({
     leadTimeCutoff: initialData?.leadTimeCutoff ?? DEFAULT_LEAD_TIME_CUTOFF,
     acceptsSpecialRequests: initialData?.acceptsSpecialRequests ?? false,
     cancellationAllowed: initialData?.cancellationAllowed ?? false,
-    certIdNumber: initialData?.certIdNumber ?? "",
-    certExpiry: initialData?.certExpiry ?? "",
-    certFullName: initialData?.certFullName ?? "",
     certPhotoFileName: initialData?.certPhotoFileName ?? "",
     stripeConnected: initialData?.stripeConnected ?? false,
     tosAccepted: initialData?.tosAccepted ?? false,
@@ -302,6 +296,10 @@ export default function OnboardingWizard({
     if (step === 1) {
       if (!form.displayName.trim()) {
         setStepError("Display name is required.");
+        return false;
+      }
+      if (!form.existingPhotoUrl && !form.photoFileName) {
+        setStepError("Add a profile photo to continue.");
         return false;
       }
       if (form.bio.trim().length < 100) {
@@ -347,16 +345,8 @@ export default function OnboardingWizard({
       }
     }
     if (step === 3) {
-      if (!form.certIdNumber.trim()) {
-        setStepError("Certificate ID number is required.");
-        return false;
-      }
-      if (!form.certFullName.trim()) {
-        setStepError("Full name on certificate is required.");
-        return false;
-      }
-      if (!form.certExpiry) {
-        setStepError("Certificate expiry date is required.");
+      if (!form.certPhotoFileName) {
+        setStepError("Upload a photo of your certificate to continue.");
         return false;
       }
     }
@@ -374,45 +364,91 @@ export default function OnboardingWizard({
   };
 
   // Mirrors validate()'s mandatory checks without side effects, to drive the
-  // button's disabled look (same pattern as the application form).
-  const stepComplete = ((): boolean => {
+  // button's disabled look and the requirements checklist (same pattern as
+  // the application form).
+  const stepRequirements: RequirementItem[] = ((): RequirementItem[] => {
     if (step === 1) {
       const bioLen = form.bio.trim().length;
-      return (
-        form.displayName.trim() !== "" &&
-        bioLen >= 100 &&
-        bioLen <= 500 &&
-        form.cuisines.length > 0 &&
-        isValidOptionalUrl(form.socialLink)
-      );
+      const items: RequirementItem[] = [
+        { label: "Display name added", met: form.displayName.trim() !== "" },
+        {
+          label: "Profile photo added",
+          met: form.existingPhotoUrl !== null || form.photoFileName !== "",
+        },
+        {
+          label:
+            bioLen < 100
+              ? `Bio is at least 100 characters (${bioLen}/100)`
+              : "Bio is at least 100 characters",
+          met: bioLen >= 100 && bioLen <= 500,
+        },
+        {
+          label: "At least 1 cuisine type selected",
+          met: form.cuisines.length > 0,
+        },
+      ];
+      if (form.socialLink.trim() !== "") {
+        items.push({
+          label: "Social link is a valid URL",
+          met: isValidOptionalUrl(form.socialLink),
+        });
+      }
+      return items;
     }
     if (step === 2) {
       const offersPickup = form.fulfillment !== "delivery";
       const offersDelivery = form.fulfillment !== "pickup";
-      return (
-        form.pickupStreet.trim() !== "" &&
-        form.pickupCity.trim() !== "" &&
-        form.pickupProvince.trim() !== "" &&
-        form.pickupPostal.trim() !== "" &&
-        form.pickupLat !== null &&
-        form.pickupLng !== null &&
-        form.leadTime !== "" &&
-        (!offersPickup || form.pickupDays.length > 0) &&
-        (!offersDelivery || form.deliveryDays.length > 0)
-      );
+      const items: RequirementItem[] = [
+        {
+          label: "Valid pickup address selected",
+          met:
+            form.pickupStreet.trim() !== "" &&
+            form.pickupCity.trim() !== "" &&
+            form.pickupProvince.trim() !== "" &&
+            form.pickupPostal.trim() !== "" &&
+            form.pickupLat !== null &&
+            form.pickupLng !== null,
+        },
+      ];
+      if (offersPickup) {
+        items.push({
+          label: "At least 1 pickup day selected",
+          met: form.pickupDays.length > 0,
+        });
+      }
+      if (offersDelivery) {
+        items.push({
+          label: "At least 1 delivery day selected",
+          met: form.deliveryDays.length > 0,
+        });
+      }
+      items.push({
+        label: "Order lead time selected",
+        met: form.leadTime !== "",
+      });
+      return items;
     }
     if (step === 3) {
-      return (
-        form.certIdNumber.trim() !== "" &&
-        form.certFullName.trim() !== "" &&
-        form.certExpiry !== ""
-      );
+      return [
+        {
+          label: "Certificate photo uploaded",
+          met: form.certPhotoFileName !== "",
+        },
+      ];
     }
     if (step === 4) {
-      return form.stripeConnected && form.tosAccepted;
+      return [
+        { label: "Stripe account connected", met: form.stripeConnected },
+        { label: "Terms of service accepted", met: form.tosAccepted },
+      ];
     }
-    return true;
+    return [];
   })();
+
+  const stepComplete = stepRequirements.every((r) => r.met);
+  // Show only the next unmet requirement so the "To continue" box stays a
+  // single line instead of listing every remaining item at once.
+  const nextRequirement = stepRequirements.find((r) => !r.met);
 
   const advance = () => {
     setStepError("");
@@ -496,9 +532,6 @@ export default function OnboardingWizard({
     if (step === 3) {
       startTransition(async () => {
         const fd = new FormData();
-        fd.set("certIdNumber", form.certIdNumber);
-        fd.set("certFullName", form.certFullName);
-        fd.set("certExpiry", form.certExpiry);
         if (certFileRef.current) fd.set("certPhoto", certFileRef.current);
         const res = await fetch("/api/setup/onboarding/3", {
           method: "POST",
@@ -587,7 +620,18 @@ export default function OnboardingWizard({
             />
           )}
 
-          {stepError && <p className={styles.stepError}>{stepError}</p>}
+          {stepError && (
+            <p className={styles.stepError} role="alert">
+              {stepError}
+            </p>
+          )}
+
+          {nextRequirement && (
+            <div className={styles.requirementsWrap}>
+              <p className={styles.requirementsHeading}>To continue:</p>
+              <RequirementsChecklist items={[nextRequirement]} />
+            </div>
+          )}
 
           <div className={styles.actions}>
             <button
@@ -654,7 +698,7 @@ function Step1({
       <div className={styles.fields}>
         <div className={styles.field}>
           <label htmlFor="displayName" className={styles.label}>
-            Display name
+            Display name <span className={styles.requiredStar}>*</span>
           </label>
           <input
             id="displayName"
@@ -671,7 +715,9 @@ function Step1({
         </div>
 
         <div className={styles.field}>
-          <span className={styles.label}>Profile photo</span>
+          <span className={styles.label}>
+            Profile photo <span className={styles.requiredStar}>*</span>
+          </span>
           <ImageDropzone
             id="profile-photo"
             variant="avatar"
@@ -719,7 +765,7 @@ function Step1({
 
         <div className={styles.field}>
           <label htmlFor="bio" className={styles.label}>
-            Bio{" "}
+            Bio <span className={styles.requiredStar}>*</span>{" "}
             <span
               className={`${styles.charCount} ${bioLen < 100 ? styles.charCountUnder : ""}`}
             >
@@ -738,7 +784,9 @@ function Step1({
         </div>
 
         <div className={styles.field}>
-          <span className={styles.label}>Cuisine types</span>
+          <span className={styles.label}>
+            Cuisine types <span className={styles.requiredStar}>*</span>
+          </span>
           <div className={styles.pillGroup}>
             {cuisineOptions.map((c) => (
               <button
@@ -871,7 +919,9 @@ function Step2({
       kind === "pickup" ? "Pickup days & hours" : "Delivery days & hours";
     return (
       <div className={styles.field}>
-        <span className={styles.label}>{title}</span>
+        <span className={styles.label}>
+          {title} <span className={styles.requiredStar}>*</span>
+        </span>
         <div className={styles.pillGroup}>
           {DAYS.map((d) => (
             <button
@@ -919,7 +969,7 @@ function Step2({
           </div>
         )}
         <p className={styles.hint}>
-          Set a {kind} window for each day you&apos;re available.
+          {`Set a ${kind} window for each day you're available.`}
         </p>
       </div>
     );
@@ -938,7 +988,9 @@ function Step2({
 
       <div className={styles.fields}>
         <div className={styles.field}>
-          <span className={styles.label}>Pickup Address</span>
+          <span className={styles.label}>
+            Pickup Address <span className={styles.requiredStar}>*</span>
+          </span>
           <AddressSearchInput
             id="onboarding-pickup"
             className={styles.input}
@@ -1025,7 +1077,9 @@ function Step2({
         {offersDelivery && renderDaysHours("delivery")}
 
         <div className={styles.field}>
-          <span className={styles.label}>Order lead time</span>
+          <span className={styles.label}>
+            Order lead time <span className={styles.requiredStar}>*</span>
+          </span>
           <div className={styles.radioGroup}>
             {LEAD_TIME_OPTIONS.map(({ value, label }) => (
               <label
@@ -1165,60 +1219,16 @@ function Step3({
         </div>
         <h2 className={styles.formTitle}>Compliance</h2>
         <p className={styles.formSub}>
-          Your food handler certificate details. Reviewed by our team before
-          your menu goes live.
+          Upload a photo of your food handler certificate. Our team reviews the
+          details before your menu goes live.
         </p>
       </div>
 
       <div className={styles.fields}>
         <div className={styles.field}>
-          <label htmlFor="certIdNumber" className={styles.label}>
-            Certificate ID number
+          <label htmlFor="cert-photo" className={styles.label}>
+            Photo of certificate <span className={styles.requiredStar}>*</span>
           </label>
-          <input
-            id="certIdNumber"
-            type="text"
-            className={styles.input}
-            value={form.certIdNumber}
-            onChange={(e) => set("certIdNumber", e.target.value)}
-            placeholder="Found on your physical certificate"
-          />
-        </div>
-
-        <div className={styles.field}>
-          <label htmlFor="certFullName" className={styles.label}>
-            Full name as it appears on the certificate
-          </label>
-          <input
-            id="certFullName"
-            type="text"
-            className={styles.input}
-            value={form.certFullName}
-            onChange={(e) => set("certFullName", e.target.value)}
-            placeholder="e.g. Oluwaseun Adeyemi"
-          />
-        </div>
-
-        <div className={styles.field}>
-          <label htmlFor="certExpiry" className={styles.label}>
-            Expiry date
-          </label>
-          <input
-            id="certExpiry"
-            type="date"
-            className={styles.input}
-            value={form.certExpiry}
-            onChange={(e) => set("certExpiry", e.target.value)}
-            min={new Date().toISOString().split("T")[0]}
-          />
-          <p className={styles.hint}>We will remind you before it expires.</p>
-        </div>
-
-        <div className={styles.field}>
-          <span className={styles.label}>
-            Photo of certificate{" "}
-            <span className={styles.labelNote}>(optional)</span>
-          </span>
           <DocumentDropzone
             id="cert-photo"
             fileName={form.certPhotoFileName || undefined}

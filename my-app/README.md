@@ -102,13 +102,10 @@ Cook accounts are created through a team-gated onboarding flow, not open self-re
 
 --- team reviews, calls the cook, then issues a magic link ---
 
-POST /api/internal/issue-link   (x-internal-key header required)
-  Marks the application approved, generates a one-time setup token,
-  and emails the cook a 3-day link to /business-auth/setup/create-password?token=.
-
-POST /api/internal/reissue-link   (x-internal-key header required)
-  Expires all existing unconsumed tokens for an approved application
-  and sends the cook a fresh 3-day link. Use when the cook loses the email.
+Approving an application and (re)issuing the setup link is handled by the
+admin panel in the separate 7eats-admin repo, which writes directly to the
+shared database and emails the cook a 3-day link to
+/business-auth/setup/create-password?token=.
 
 /business-auth/setup/create-password?token=
   Token validated server-side (existence, expiry, not yet consumed).
@@ -134,26 +131,6 @@ POST /api/internal/reissue-link   (x-internal-key header required)
 
 Returning cooks sign in at `/business-auth/login`. Sessions are managed by Better Auth (7-day sliding expiry, HTTP-only cookie). Forgot-password flow is not yet implemented.
 
-### Internal API usage
-
-Issue a setup link after approving an application:
-
-```bash
-curl -X POST http://localhost:3000/api/internal/issue-link \
-  -H "Content-Type: application/json" \
-  -H "x-internal-key: <INTERNAL_API_KEY>" \
-  -d '{"applicationId":"<uuid>"}'
-```
-
-Re-issue if the cook lost the email:
-
-```bash
-curl -X POST http://localhost:3000/api/internal/reissue-link \
-  -H "Content-Type: application/json" \
-  -H "x-internal-key: <INTERNAL_API_KEY>" \
-  -d '{"applicationId":"<uuid>"}'
-```
-
 When `RESEND_API_KEY` is not set (local dev), the magic link is printed to the `pnpm dev` terminal instead of being emailed.
 
 ### Required environment variables
@@ -164,7 +141,6 @@ When `RESEND_API_KEY` is not set (local dev), the magic link is printed to the `
 | `BETTER_AUTH_SECRET` | Secret used by Better Auth to sign sessions |
 | `NEXT_PUBLIC_APP_URL` | Base URL for magic links (e.g. `https://7eats.ca`) |
 | `COOKIE_SECRET` | HMAC key for signing `application_submitted` and `pending_phone` cookies |
-| `INTERNAL_API_KEY` | Shared secret for `/api/internal/*` endpoints — never expose to clients |
 | `RESEND_API_KEY` | Resend API key for transactional email (optional in dev — link logged to terminal) |
 | `RESEND_FROM_EMAIL` | From address for outbound email |
 | `RESEND_TEAM_EMAIL` | Internal address that receives new application notifications |

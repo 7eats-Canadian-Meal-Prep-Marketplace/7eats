@@ -1,11 +1,26 @@
 "use client";
 
-import { Check, ImagePlus, Plus, Trash2, Upload, X } from "lucide-react";
+import { Check, ImagePlus, Upload, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import IngredientsInput, {
+  type IngredientRow,
+} from "@/app/components/IngredientsInput";
+import RequirementsChecklist from "@/app/components/RequirementsChecklist";
+import {
+  EMPTY_MEAL_FORM,
+  EMPTY_MEAL_NUTRITION,
+  isEmptyMealDraft,
+  MEAL_DESCRIPTION_MAX,
+  type MealDraft,
+  parseMealDraft,
+  step1Requirements,
+  step2Requirements,
+} from "@/lib/dishes/new-meal-form";
+import { useDebounce } from "@/lib/hooks/use-debounce";
 import { mealToastError, mealToastSuccess } from "@/lib/meal-toast";
-import { isPriceKeystroke, isValidPrice } from "@/lib/price";
+import { isPriceKeystroke } from "@/lib/price";
 import {
   DISH_PHOTO_ACCEPT,
   validateDishPhotoFile,
@@ -14,11 +29,10 @@ import styles from "./page.module.css";
 
 // ─── Constants ──────────────────────────────────────────────────────────────────
 
-type Ingredient = { id: string; name: string };
 type LocalPhoto = { id: string; file: File; preview: string };
 
-const DESCRIPTION_MAX = 500;
 const MAX_PHOTOS = 8;
+const DRAFT_KEY = "7eats:new-meal-draft:v1";
 
 const ALLERGENS = [
   "Gluten",
@@ -37,34 +51,11 @@ const STEPS: { n: 1 | 2; label: string }[] = [
   { n: 2, label: "Nutrition & ingredients" },
 ];
 
-const EMPTY_FORM = {
-  name: "",
-  price: "",
-  description: "",
-};
-
-const EMPTY_NUTRITION = { calories: "", protein: "", carbs: "", fat: "" };
-
-function step1Complete(form: typeof EMPTY_FORM, hasPhoto: boolean): boolean {
-  return (
-    !!form.name.trim() &&
-    isValidPrice(form.price) &&
-    !!form.description.trim() &&
-    form.description.length <= DESCRIPTION_MAX &&
-    hasPhoto
-  );
-}
-
-function step2Complete(
-  ingredients: Ingredient[],
-  allergens: string[],
-  noneApplies: boolean,
-): boolean {
-  const ingredientsOk =
-    ingredients.length > 0 &&
-    ingredients.every((i) => i.name.trim().length > 0);
-  const allergensOk = noneApplies || allergens.length > 0;
-  return ingredientsOk && allergensOk;
+function readDraft(): MealDraft | null {
+  if (typeof window === "undefined") return null;
+  const raw = window.localStorage.getItem(DRAFT_KEY);
+  if (!raw) return null;
+  return parseMealDraft(raw);
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -74,13 +65,17 @@ export default function NewDishPage() {
   const [step, setStep] = useState<1 | 2>(1);
   const [submitting, setSubmitting] = useState(false);
 
-  const [form, setForm] = useState(EMPTY_FORM);
-  const [ingredients, setIngredients] = useState<Ingredient[]>([]);
-  const [nutrition, setNutrition] = useState(EMPTY_NUTRITION);
+  // Seeded with SSR-safe empty defaults; the actual draft (if any) is only
+  // known client-side, so it's restored in an effect below rather than a
+  // lazy useState initializer — reading localStorage there would make the
+  // client's first render disagree with the server-rendered HTML.
+  const [draftRestored, setDraftRestored] = useState(false);
+
+  const [form, setForm] = useState(EMPTY_MEAL_FORM);
+  const [ingredients, setIngredients] = useState<IngredientRow[]>([]);
+  const [nutrition, setNutrition] = useState(EMPTY_MEAL_NUTRITION);
   const [allergens, setAllergens] = useState<string[]>([]);
   const [noneApplies, setNoneApplies] = useState(false);
-  const [showIngErrors, setShowIngErrors] = useState(false);
-  const [showAllergenError, setShowAllergenError] = useState(false);
   const [photos, setPhotos] = useState<LocalPhoto[]>([]);
   const [dragging, setDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -98,6 +93,54 @@ export default function NewDishPage() {
       for (const p of photosRef.current) URL.revokeObjectURL(p.preview);
     };
   }, []);
+
+  // Client-only: restore a saved draft after mount so the first render still
+  // matches the server-rendered (empty) HTML.
+  useEffect(() => {
+    const draft = readDraft();
+    if (!draft) return;
+    setForm(draft.form);
+    setIngredients(draft.ingredients);
+    setNutrition(draft.nutrition);
+    setAllergens(draft.allergens);
+    setNoneApplies(draft.noneApplies);
+    setDraftRestored(true);
+  }, []);
+
+  // Autosave the in-progress meal to this browser so a closed tab or crash
+  // doesn't lose the cook's progress. Photos are intentionally excluded —
+  // File objects aren't serializable, so they're re-attached on resume.
+  const draftSnapshot: MealDraft = {
+    form,
+    ingredients,
+    nutrition,
+    allergens,
+    noneApplies,
+  };
+  const debouncedDraft = useDebounce(draftSnapshot, 400);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (isEmptyMealDraft(debouncedDraft)) {
+      window.localStorage.removeItem(DRAFT_KEY);
+      return;
+    }
+    window.localStorage.setItem(DRAFT_KEY, JSON.stringify(debouncedDraft));
+  }, [debouncedDraft]);
+
+  function discardDraft() {
+    window.localStorage.removeItem(DRAFT_KEY);
+    setForm(EMPTY_MEAL_FORM);
+    setIngredients([]);
+    setNutrition(EMPTY_MEAL_NUTRITION);
+    setAllergens([]);
+    setNoneApplies(false);
+    setPhotos((prev) => {
+      for (const p of prev) URL.revokeObjectURL(p.preview);
+      return [];
+    });
+    setStep(1);
+  }
 
   function addFiles(files: File[]) {
     if (files.length === 0) return;
@@ -169,29 +212,8 @@ export default function NewDishPage() {
     return allOk;
   }
 
-  function addIngredient() {
-    if (ingredients.some((i) => !i.name.trim())) {
-      setShowIngErrors(true);
-      toast.error("Fill in the current ingredient before adding another.");
-      return;
-    }
-    setIngredients((prev) => [...prev, { id: `ing-${Date.now()}`, name: "" }]);
-  }
-
-  function removeIngredient(id: string) {
-    setIngredients((prev) => prev.filter((i) => i.id !== id));
-  }
-
-  function updateIngredient(id: string, value: string) {
-    setIngredients((prev) =>
-      prev.map((i) => (i.id === id ? { ...i, name: value } : i)),
-    );
-    if (value.trim()) setShowIngErrors(false);
-  }
-
   function toggleAllergen(allergen: string) {
     if (noneApplies) setNoneApplies(false);
-    setShowAllergenError(false);
     setAllergens((prev) =>
       prev.includes(allergen)
         ? prev.filter((a) => a !== allergen)
@@ -200,74 +222,20 @@ export default function NewDishPage() {
   }
 
   function handleNoneApplies() {
-    setShowAllergenError(false);
     setNoneApplies((prev) => {
       if (!prev) setAllergens([]);
       return !prev;
     });
   }
 
-  function validateStep1(): boolean {
-    if (!form.name.trim()) {
-      toast.error("Enter a dish name.");
-      return false;
-    }
-    if (!isValidPrice(form.price)) {
-      toast.error("Enter a valid price with up to 2 decimal places.");
-      return false;
-    }
-    if (!form.description.trim()) {
-      toast.error("Enter a description.");
-      return false;
-    }
-    if (form.description.length > DESCRIPTION_MAX) {
-      toast.error(
-        `Description must be ${DESCRIPTION_MAX} characters or fewer.`,
-      );
-      return false;
-    }
-    if (photos.length === 0) {
-      toast.error("Upload at least one photo before continuing.");
-      return false;
-    }
-    return true;
-  }
-
   function handleStep1Continue() {
-    if (!validateStep1()) return;
     if (ingredients.length === 0) {
       setIngredients([{ id: `ing-${Date.now()}`, name: "" }]);
     }
     setStep(2);
   }
 
-  function validateStep2(): boolean {
-    let ok = true;
-    if (ingredients.length === 0 || ingredients.some((i) => !i.name.trim())) {
-      setShowIngErrors(true);
-      toast.error(
-        ingredients.length === 0
-          ? "Add at least one ingredient."
-          : "Every ingredient must have a name.",
-      );
-      ok = false;
-    }
-    if (!noneApplies && allergens.length === 0) {
-      setShowAllergenError(true);
-      toast.error("Select allergens or check “None of these apply”.");
-      ok = false;
-    }
-    return ok;
-  }
-
   async function handleCreate() {
-    if (!validateStep2()) return;
-    if (photos.length === 0) {
-      toast.error("At least one photo is required.");
-      setStep(1);
-      return;
-    }
-
     setSubmitting(true);
     try {
       const priceNum = Number(form.price);
@@ -313,6 +281,7 @@ export default function NewDishPage() {
         }
       }
 
+      window.localStorage.removeItem(DRAFT_KEY);
       mealToastSuccess("Meal created");
       router.push("/business/listings");
     } catch {
@@ -332,15 +301,27 @@ export default function NewDishPage() {
     }
   }
 
-  const canContinue = step1Complete(form, hasPhoto);
-  const canCreate =
-    step2Complete(ingredients, allergens, noneApplies) && !submitting;
+  const stepRequirements =
+    step === 1
+      ? step1Requirements(form, hasPhoto)
+      : step2Requirements(ingredients, allergens, noneApplies);
+  const stepComplete = stepRequirements.every((r) => r.met);
+  const nextRequirement = stepRequirements.find((r) => !r.met);
 
   return (
     <div className={styles.page}>
       <div className={styles.header}>
         <h1 className={styles.title}>New meal</h1>
       </div>
+
+      {draftRestored && (
+        <div className={styles.draftBanner}>
+          <span>Resumed your saved draft.</span>
+          <button type="button" onClick={discardDraft}>
+            Discard and start over
+          </button>
+        </div>
+      )}
 
       <div className={styles.steps}>
         {STEPS.map((s, i) => (
@@ -408,7 +389,7 @@ export default function NewDishPage() {
                 className={styles.formTextarea}
                 value={form.description}
                 rows={4}
-                maxLength={DESCRIPTION_MAX}
+                maxLength={MEAL_DESCRIPTION_MAX}
                 placeholder="Describe the dish."
                 onChange={(e) =>
                   setForm((f) => ({ ...f, description: e.target.value }))
@@ -416,12 +397,12 @@ export default function NewDishPage() {
               />
               <span
                 className={`${styles.charCount} ${
-                  form.description.length >= DESCRIPTION_MAX
+                  form.description.length >= MEAL_DESCRIPTION_MAX
                     ? styles.charCountLimit
                     : ""
                 }`}
               >
-                {form.description.length}/{DESCRIPTION_MAX}
+                {form.description.length}/{MEAL_DESCRIPTION_MAX}
               </span>
             </div>
 
@@ -512,6 +493,13 @@ export default function NewDishPage() {
               />
             </div>
 
+            {nextRequirement && (
+              <div className={styles.requirementsWrap}>
+                <p className={styles.requirementsHeading}>To continue:</p>
+                <RequirementsChecklist items={[nextRequirement]} />
+              </div>
+            )}
+
             <div className={styles.formActions}>
               <button
                 type="button"
@@ -523,7 +511,7 @@ export default function NewDishPage() {
               <button
                 type="button"
                 className={styles.saveBtn}
-                disabled={!canContinue}
+                disabled={!stepComplete}
                 onClick={handleStep1Continue}
               >
                 Continue
@@ -542,52 +530,10 @@ export default function NewDishPage() {
                 Add at least one ingredient. Names only, no amounts.
               </p>
 
-              {ingredients.length > 0 && (
-                <div className={styles.ingList}>
-                  {ingredients.map((ing) => (
-                    <div key={ing.id} className={styles.ingRowSimple}>
-                      <input
-                        type="text"
-                        aria-label="Ingredient name"
-                        aria-invalid={
-                          showIngErrors && !ing.name.trim() ? true : undefined
-                        }
-                        className={`${styles.formInput} ${
-                          showIngErrors && !ing.name.trim()
-                            ? styles.fieldError
-                            : ""
-                        }`}
-                        value={ing.name}
-                        placeholder="e.g. Tomato paste"
-                        onChange={(e) =>
-                          updateIngredient(ing.id, e.target.value)
-                        }
-                      />
-                      <button
-                        type="button"
-                        className={styles.ingRemoveBtn}
-                        onClick={() => removeIngredient(ing.id)}
-                        aria-label="Remove ingredient"
-                      >
-                        <Trash2 size={12} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {ingredients.length === 0 && (
-                <p className={styles.emptyNote}>Add at least one ingredient.</p>
-              )}
-
-              <button
-                type="button"
-                className={styles.addIngBtn}
-                onClick={addIngredient}
-              >
-                <Plus size={13} />
-                Add ingredient
-              </button>
+              <IngredientsInput
+                ingredients={ingredients}
+                onChange={setIngredients}
+              />
             </section>
 
             <section className={styles.section}>
@@ -655,11 +601,7 @@ export default function NewDishPage() {
                 </div>
               </div>
 
-              <div
-                className={`${styles.allergensWrap} ${
-                  showAllergenError ? styles.fieldErrorWrap : ""
-                }`}
-              >
+              <div className={styles.allergensWrap}>
                 <span className={styles.formLabel}>
                   Allergens <span className={styles.required}>*</span>
                 </span>
@@ -698,6 +640,13 @@ export default function NewDishPage() {
               </div>
             </section>
 
+            {nextRequirement && (
+              <div className={styles.requirementsWrap}>
+                <p className={styles.requirementsHeading}>To continue:</p>
+                <RequirementsChecklist items={[nextRequirement]} />
+              </div>
+            )}
+
             <div className={styles.formActions}>
               <button
                 type="button"
@@ -718,7 +667,7 @@ export default function NewDishPage() {
               <button
                 type="button"
                 className={styles.saveBtn}
-                disabled={!canCreate}
+                disabled={!stepComplete || submitting}
                 onClick={handleCreate}
               >
                 {submitting ? "Creating…" : "Create meal"}

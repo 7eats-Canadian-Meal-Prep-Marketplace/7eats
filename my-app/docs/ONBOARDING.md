@@ -197,6 +197,8 @@ What the cook fills in:
 
 Validation:
 - Display name required
+- Profile photo required (client-side only; a returning cook's existing photo
+  counts, so this does not retroactively block cooks already past this step)
 - Bio minimum 100 characters
 - At least one cuisine type required
 
