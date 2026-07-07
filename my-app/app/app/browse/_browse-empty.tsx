@@ -33,7 +33,8 @@ export function BrowseEmpty({
 
   if (region?.kind === "active-province") {
     title = `7eats is coming to ${region.place} soon`;
-    desc = `We're not serving ${region.place} just yet. Join the waitlist and we'll let you know the moment home cooks near you go live.`;
+    desc =
+      "Join the waitlist and we'll let you know the moment home cooks near you go live.";
   } else if (region?.kind === "other-province") {
     title = `7eats is coming to ${region.place} soon`;
     desc = `We're expanding across Canada one neighbourhood at a time. Join the waitlist and we'll tell you when we reach ${region.place}.`;
@@ -143,7 +144,7 @@ export function BrowseEmpty({
           className={styles.changeAddressLink}
           onClick={openAddressEditor}
         >
-          Entered the wrong address? Update it
+          Wrong address? Update it
         </button>
       )}
     </div>
