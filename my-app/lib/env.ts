@@ -32,6 +32,8 @@ const FEATURE: Record<string, string> = {
   R2_ACCESS_KEY_ID: "image uploads will fail",
   R2_SECRET_ACCESS_KEY: "image uploads will fail",
   CRON_SECRET: "the payment reconciliation cron cannot be triggered",
+  NEXT_PUBLIC_MAPBOX_TOKEN:
+    "address autocomplete will fall back to plain manual entry (inlined at build time — setting it after this deploy requires a rebuild)",
 };
 
 let validated = false;
