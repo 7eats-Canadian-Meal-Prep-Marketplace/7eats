@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import Image from "next/image";
 import Link from "next/link";
 import CalendlyButton from "@/app/components/CalendlyButton";
@@ -72,21 +73,26 @@ const breadcrumbSchema = {
   ],
 };
 
-export default function WaitlistPage() {
+export default async function WaitlistPage() {
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
+
   return (
     <>
       <script
         type="application/ld+json"
+        nonce={nonce}
         // biome-ignore lint/security/noDangerouslySetInnerHtml: JSON-LD structured data, not user input
         dangerouslySetInnerHTML={{ __html: JSON.stringify(marketplaceSchema) }}
       />
       <script
         type="application/ld+json"
+        nonce={nonce}
         // biome-ignore lint/security/noDangerouslySetInnerHtml: JSON-LD structured data, not user input
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
       />
       <script
         type="application/ld+json"
+        nonce={nonce}
         // biome-ignore lint/security/noDangerouslySetInnerHtml: JSON-LD structured data, not user input
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
       />

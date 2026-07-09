@@ -1,29 +1,9 @@
 import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 
-const isDev = process.env.NODE_ENV === "development";
-
+// Content-Security-Policy is built per-request in proxy.ts (needs a fresh
+// nonce on every request) instead of here as a static header.
 const securityHeaders = [
-  {
-    key: "Content-Security-Policy",
-    value: [
-      "default-src 'self'",
-      "base-uri 'self'",
-      "form-action 'self'",
-      "frame-ancestors 'none'",
-      "object-src 'none'",
-      "img-src 'self' data: blob: https:",
-      "font-src 'self' data: https://fonts.gstatic.com",
-      // Calendly widget CSS + the Google Fonts stylesheet it injects at runtime.
-      "style-src 'self' 'unsafe-inline' https://assets.calendly.com https://fonts.googleapis.com",
-      // React dev mode uses eval for debugging; production builds do not.
-      `script-src 'self' 'unsafe-inline' https://js.stripe.com https://assets.calendly.com${isDev ? " 'unsafe-eval'" : ""}`,
-      "connect-src 'self' https://api.stripe.com https://api.mapbox.com https://events.mapbox.com https://calendly.com",
-      "worker-src 'self' blob:",
-      "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://calendly.com",
-      ...(isDev ? [] : ["upgrade-insecure-requests"]),
-    ].join("; "),
-  },
   {
     key: "Strict-Transport-Security",
     value: "max-age=63072000; includeSubDomains; preload",
