@@ -1,4 +1,3 @@
-import Image from "next/image";
 import styles from "./_cook-visual.module.css";
 
 type CookVisualProps = {
@@ -23,13 +22,8 @@ export function OrderCookCover({
       aria-hidden
     >
       {coverUrl ? (
-        <Image
-          src={coverUrl}
-          alt=""
-          fill
-          className={styles.coverImg}
-          sizes="72px"
-        />
+        // biome-ignore lint/performance/noImgElement: R2 CDN cover
+        <img src={coverUrl} alt="" className={styles.coverImg} />
       ) : (
         <div className={styles.coverFallback}>
           <span className={styles.coverInitials}>{initials ?? "?"}</span>
@@ -56,13 +50,8 @@ export function OrderCookHero({
     <div className={styles.hero}>
       <div className={styles.heroBanner}>
         {bannerUrl ? (
-          <Image
-            src={bannerUrl}
-            alt=""
-            fill
-            className={styles.heroBannerImg}
-            sizes="(max-width: 768px) 100vw, 640px"
-          />
+          // biome-ignore lint/performance/noImgElement: R2 CDN banner
+          <img src={bannerUrl} alt="" className={styles.heroBannerImg} />
         ) : (
           <div className={styles.heroBannerFallback} />
         )}
@@ -70,12 +59,11 @@ export function OrderCookHero({
       <div className={styles.heroBody}>
         <div className={styles.heroAvatar}>
           {photoUrl ? (
-            <Image
+            // biome-ignore lint/performance/noImgElement: R2 CDN avatar
+            <img
               src={photoUrl}
               alt={cookName}
-              fill
               className={styles.heroAvatarImg}
-              sizes="64px"
             />
           ) : (
             <span>{initials ?? "?"}</span>
