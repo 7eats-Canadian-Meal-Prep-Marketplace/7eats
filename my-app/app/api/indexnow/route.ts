@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { constantTimeEqual } from "@/lib/constant-time-compare";
 import { submitToIndexNow } from "@/lib/indexnow";
 import { publicUrls } from "@/lib/seo-routes";
 
@@ -14,7 +15,11 @@ import { publicUrls } from "@/lib/seo-routes";
 export async function GET(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
   const provided = req.headers.get("authorization");
-  if (!secret || provided !== `Bearer ${secret}`) {
+  if (
+    !secret ||
+    !provided ||
+    !constantTimeEqual(provided, `Bearer ${secret}`)
+  ) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 

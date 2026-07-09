@@ -2,6 +2,7 @@ import { and, eq, gt, isNotNull, isNull, lt } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { orderPayments, orders } from "@/db/schema";
+import { constantTimeEqual } from "@/lib/constant-time-compare";
 import { sendMail } from "@/lib/email";
 import { cancelStaleAbandonedCheckouts } from "@/lib/orders/abandoned-checkout";
 import { settleCookSubsidy } from "@/lib/orders/settle-subsidy";
@@ -19,7 +20,11 @@ const STALE_HOURS = 48;
 export async function GET(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
   const provided = req.headers.get("authorization");
-  if (!secret || provided !== `Bearer ${secret}`) {
+  if (
+    !secret ||
+    !provided ||
+    !constantTimeEqual(provided, `Bearer ${secret}`)
+  ) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 

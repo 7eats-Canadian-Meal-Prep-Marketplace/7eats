@@ -1,6 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { loadCookCards } from "@/lib/cooks/load-cards";
+import { hashIp } from "@/lib/hash";
+import { logAndCheckRateLimit } from "@/lib/rate-limit";
+import { getClientIp } from "@/lib/request-ip";
 import { SEARCH_DEFAULT_LIMIT, SEARCH_MAX_LIMIT } from "@/lib/search/config";
 import { normalizeQuery } from "@/lib/search/normalize";
 import { searchCooks } from "@/lib/search/query";
@@ -15,6 +18,18 @@ const querySchema = z.object({
 });
 
 export async function GET(req: NextRequest) {
+  const ip = getClientIp(req);
+  const allowed = await logAndCheckRateLimit(`search:${hashIp(ip)}`, {
+    windowMinutes: 15,
+    maxAttempts: 60,
+  });
+  if (!allowed) {
+    return NextResponse.json(
+      { success: false, error: "Too many requests. Please try again later." },
+      { status: 429 },
+    );
+  }
+
   const sp = new URL(req.url).searchParams;
   const parsed = querySchema.safeParse({
     q: sp.get("q") ?? "",
