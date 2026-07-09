@@ -1,6 +1,7 @@
 export * from "./admin";
 export * from "./applications";
 export * from "./auth";
+export * from "./auth-rate-limit";
 export * from "./cook_pickup_windows";
 export * from "./cooks";
 export * from "./discounts";

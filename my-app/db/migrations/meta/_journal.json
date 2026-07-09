@@ -148,6 +148,13 @@
       "when": 1783900000000,
       "tag": "0020_pending_platform_discount",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1784000000000,
+      "tag": "0021_refund_and_auth_rate_limit_hardening",
+      "breakpoints": true
     }
   ]
 }
