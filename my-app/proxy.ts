@@ -3,6 +3,10 @@ import { type NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { authUser, cookProfiles } from "@/db/schema";
 import { auth } from "@/lib/auth";
+import {
+  GUEST_ADDRESS_COOKIE,
+  hasGuestAddressCookie,
+} from "@/lib/guest/address-cookie";
 
 const isDev = process.env.NODE_ENV === "development";
 
@@ -69,6 +73,10 @@ function hasSession(req: NextRequest): boolean {
 
 function isOnboarded(req: NextRequest): boolean {
   return req.cookies.get(ONBOARDED_COOKIE)?.value === "1";
+}
+
+function hasGuestAddress(req: NextRequest): boolean {
+  return hasGuestAddressCookie(req.cookies.get(GUEST_ADDRESS_COOKIE)?.value);
 }
 
 /** Cookie or session timestamp — avoids re-onboarding when cookie was cleared. */
@@ -243,6 +251,10 @@ async function routeRequest(
     pathname.startsWith("/business/inbox/")
   ) {
     return NextResponse.redirect(new URL("/business/dashboard", req.url));
+  }
+
+  if (pathname === "/app" && !hasSession(req) && hasGuestAddress(req)) {
+    return NextResponse.redirect(new URL("/app/browse", req.url));
   }
 
   // ═══════════════════════════════════════════════════════════════════════════

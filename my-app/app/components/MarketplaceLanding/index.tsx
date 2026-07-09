@@ -4,7 +4,7 @@ import { Bike, Check, ChefHat, MapPin } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { type FormEvent, useState } from "react";
+import { type ComponentProps, useEffect, useState } from "react";
 import { useApp } from "@/app/app/_app-context";
 import { useServiceAddress } from "@/app/app/_service-address-context";
 import CookiePreferencesLink from "@/app/components/CookiePreferencesLink";
@@ -66,6 +66,10 @@ const COOK_PERKS = [
   "Payouts handled through Stripe",
 ] as const;
 
+type FormSubmitEvent = Parameters<
+  NonNullable<ComponentProps<"form">["onSubmit"]>
+>[0];
+
 export default function MarketplaceLanding({
   isLoggedIn,
 }: {
@@ -82,6 +86,12 @@ export default function MarketplaceLanding({
   const [hint, setHint] = useState<string | null>(null);
 
   const complete = isCompleteAddress(pending);
+
+  useEffect(() => {
+    if (!isLoggedIn && guest.hydrated && guest.addresses.length > 0) {
+      router.replace("/app/browse");
+    }
+  }, [guest.addresses.length, guest.hydrated, isLoggedIn, router]);
 
   async function persistAddress(resolved: ResolvedAddress) {
     const normalized = toNormalized(resolved);
@@ -119,7 +129,7 @@ export default function MarketplaceLanding({
     }
   }
 
-  function handleSubmit(e: FormEvent<HTMLFormElement>) {
+  function handleSubmit(e: FormSubmitEvent) {
     e.preventDefault();
     if (saving) return;
     if (!complete) {
