@@ -1,13 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { cancelPiMock, refundPiMock, captureMock } = vi.hoisted(() => ({
-  cancelPiMock: vi.fn().mockResolvedValue(undefined),
-  refundPiMock: vi.fn().mockResolvedValue("re_test"),
-  captureMock: vi.fn().mockResolvedValue(undefined),
-}));
+const { cancelPiMock, refundPiMock, captureMock, lockMock, settleSubsidyMock } =
+  vi.hoisted(() => ({
+    cancelPiMock: vi.fn().mockResolvedValue(undefined),
+    refundPiMock: vi.fn().mockResolvedValue("re_test"),
+    captureMock: vi.fn().mockResolvedValue(undefined),
+    lockMock: vi.fn().mockResolvedValue(undefined),
+    settleSubsidyMock: vi.fn().mockResolvedValue(undefined),
+  }));
 
 vi.mock("@/db", () => ({
   db: { select: vi.fn(), update: vi.fn() },
+  dbPool: { transaction: vi.fn() },
 }));
 vi.mock("@/db/schema", () => ({
   orderPayments: {},
@@ -22,6 +26,13 @@ vi.mock("@/lib/stripe/payments", () => ({
   cancelPaymentIntent: cancelPiMock,
   refundPaymentIntent: refundPiMock,
   capturePaymentIntent: captureMock,
+  reverseCookSubsidyTransfer: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock("@/lib/orders/order-lock", () => ({
+  acquireOrderStatusLock: lockMock,
+}));
+vi.mock("@/lib/orders/settle-subsidy", () => ({
+  settleCookSubsidy: settleSubsidyMock,
 }));
 vi.mock("@/lib/orders/pricing", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/orders/pricing")>();
@@ -35,7 +46,7 @@ vi.mock("@/lib/emails/order-events", () => ({
 
 import { NextRequest } from "next/server";
 import { DELETE } from "@/app/api/orders/[orderId]/route";
-import { db } from "@/db";
+import { db, dbPool } from "@/db";
 import { auth } from "@/lib/auth";
 
 const ORDER_ID = "c3d4e5f6-a7b8-4c9d-8e1f-a2b3c4d5e6f7";
@@ -70,6 +81,9 @@ function updateChain() {
 
 const FUTURE = new Date(Date.now() + 7 * 86400_000);
 
+let txSelectQueue: unknown[][];
+let txSelectIndex: number;
+
 function orderRow(over: Record<string, unknown> = {}) {
   return {
     id: ORDER_ID,
@@ -87,10 +101,19 @@ function orderRow(over: Record<string, unknown> = {}) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  txSelectQueue = [];
+  txSelectIndex = 0;
   vi.mocked(auth.api.getSession).mockResolvedValue({
     user: { id: "user-1", role: "client", email: "c@t.com" },
   } as never);
   vi.mocked(db.update).mockReturnValue(updateChain());
+  vi.mocked(dbPool.transaction).mockImplementation(async (fn) =>
+    fn({
+      execute: vi.fn().mockResolvedValue(undefined),
+      select: vi.fn(() => chain(txSelectQueue[txSelectIndex++] ?? [])),
+      update: vi.fn(() => updateChain()),
+    } as never),
+  );
 });
 
 describe("DELETE /api/orders/[orderId]", () => {
@@ -114,6 +137,7 @@ describe("DELETE /api/orders/[orderId]", () => {
     vi.mocked(db.select).mockImplementation(
       selectQueue([[orderRow({ status: "fulfilled" })]]),
     );
+    txSelectQueue = [[orderRow({ status: "fulfilled" })]];
     const res = await DELETE(makeRequest(), {
       params: Promise.resolve({ orderId: ORDER_ID }),
     });
@@ -124,7 +148,6 @@ describe("DELETE /api/orders/[orderId]", () => {
     vi.mocked(db.select).mockImplementation(
       selectQueue([
         [orderRow()],
-        [{ id: "p1", status: "authorized", stripePaymentIntentId: "pi_1" }],
         [
           {
             cookEmail: "k@t.com",
@@ -136,6 +159,10 @@ describe("DELETE /api/orders/[orderId]", () => {
         [{ dishName: "Soup", quantity: 1 }],
       ]),
     );
+    txSelectQueue = [
+      [orderRow()],
+      [{ id: "p1", status: "authorized", stripePaymentIntentId: "pi_1" }],
+    ];
 
     const res = await DELETE(makeRequest(), {
       params: Promise.resolve({ orderId: ORDER_ID }),
@@ -151,7 +178,6 @@ describe("DELETE /api/orders/[orderId]", () => {
     vi.mocked(db.select).mockImplementation(
       selectQueue([
         [orderRow({ cancellationAllowed: false })],
-        [{ id: "p1", status: "authorized", stripePaymentIntentId: "pi_1" }],
         [
           {
             cookEmail: "k@t.com",
@@ -163,6 +189,10 @@ describe("DELETE /api/orders/[orderId]", () => {
         [{ dishName: "Soup", quantity: 1 }],
       ]),
     );
+    txSelectQueue = [
+      [orderRow({ cancellationAllowed: false })],
+      [{ id: "p1", status: "authorized", stripePaymentIntentId: "pi_1" }],
+    ];
 
     const res = await DELETE(makeRequest(), {
       params: Promise.resolve({ orderId: ORDER_ID }),
@@ -178,7 +208,6 @@ describe("DELETE /api/orders/[orderId]", () => {
     vi.mocked(db.select).mockImplementation(
       selectQueue([
         [orderRow({ status: "confirmed", cancellationAllowed: false })],
-        [{ id: "p1", status: "authorized", stripePaymentIntentId: "pi_1" }],
         [
           {
             cookEmail: "k@t.com",
@@ -190,6 +219,17 @@ describe("DELETE /api/orders/[orderId]", () => {
         [{ dishName: "Soup", quantity: 1 }],
       ]),
     );
+    txSelectQueue = [
+      [orderRow({ status: "confirmed", cancellationAllowed: false })],
+      [
+        {
+          id: "p1",
+          type: "full",
+          status: "authorized",
+          stripePaymentIntentId: "pi_1",
+        },
+      ],
+    ];
 
     const res = await DELETE(makeRequest(), {
       params: Promise.resolve({ orderId: ORDER_ID }),
