@@ -8,6 +8,10 @@ import {
   refundCutoffExclusive,
 } from "@/lib/orders/pricing";
 import { computeOrderChargeBreakdown } from "@/lib/orders/totals";
+import { zonedParts, zonedTimeToUtc } from "@/lib/timezone";
+
+const at = (year: number, month: number, day: number, hour = 12, minute = 0) =>
+  zonedTimeToUtc(year, month, day, hour, minute, 0);
 
 describe("computeOrderChargeBreakdown (tax collection enabled)", () => {
   const prev = process.env.NEXT_PUBLIC_TAX_COLLECTION_ENABLED;
@@ -148,52 +152,47 @@ describe("lead time", () => {
   });
 
   it("computes earliest pickup using local calendar days", () => {
-    const now = new Date(2026, 5, 18, 14, 30); // 2026-06-18 2:30pm local
+    const now = at(2026, 6, 18, 14, 30); // 2026-06-18 2:30pm Toronto
     const earliest = earliestPickup("1_day", now);
-    expect(earliest.getFullYear()).toBe(2026);
-    expect(earliest.getMonth()).toBe(5);
-    expect(earliest.getDate()).toBe(19);
-    expect(earliest.getHours()).toBe(0);
+    expect(zonedParts(earliest)).toMatchObject({
+      year: 2026,
+      month: 6,
+      day: 19,
+      hour: 0,
+    });
 
     const sameDay = earliestPickup("same_day", now);
     expect(sameDay.getTime()).toBe(now.getTime());
   });
 
   it("refund cutoff uses calendar days before pickup", () => {
-    const pickup = new Date(2026, 5, 18, 18, 0); // Thu Jun 18 6pm
+    const pickup = at(2026, 6, 18, 18); // Thu Jun 18 6pm Toronto
     const cutoff = refundCutoffExclusive(pickup, "3_days", "23:59:59");
-    expect(cutoff?.getFullYear()).toBe(2026);
-    expect(cutoff?.getMonth()).toBe(5);
-    expect(cutoff?.getDate()).toBe(15); // just after Mon 23:59:59
+    expect(cutoff && zonedParts(cutoff)).toMatchObject({
+      year: 2026,
+      month: 6,
+      day: 15, // just after Mon 23:59:59
+      hour: 23,
+      minute: 59,
+      second: 59,
+    });
 
     expect(
-      isRefundEligible(
-        pickup,
-        "3_days",
-        true,
-        new Date(2026, 5, 15, 23, 0),
-        "23:59:59",
-      ),
+      isRefundEligible(pickup, "3_days", true, at(2026, 6, 15, 23), "23:59:59"),
     ).toBe(true);
     expect(
-      isRefundEligible(
-        pickup,
-        "3_days",
-        true,
-        new Date(2026, 5, 16, 0, 0),
-        "23:59:59",
-      ),
+      isRefundEligible(pickup, "3_days", true, at(2026, 6, 16, 0), "23:59:59"),
     ).toBe(false);
   });
 
   it("refund cutoff honors a 10pm order-by time", () => {
-    const pickup = new Date(2026, 5, 20, 11, 0);
+    const pickup = at(2026, 6, 20, 11);
     expect(
       isRefundEligible(
         pickup,
         "2_days",
         true,
-        new Date(2026, 5, 18, 21, 59),
+        at(2026, 6, 18, 21, 59),
         "22:00:00",
       ),
     ).toBe(true);
@@ -202,7 +201,7 @@ describe("lead time", () => {
         pickup,
         "2_days",
         true,
-        new Date(2026, 5, 18, 22, 1),
+        at(2026, 6, 18, 22, 1),
         "22:00:00",
       ),
     ).toBe(false);
