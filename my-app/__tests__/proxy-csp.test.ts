@@ -79,3 +79,16 @@ describe("proxy CSP nonce", () => {
     expect(nonce1).not.toBe(nonce2);
   });
 });
+
+describe("proxy app landing redirects", () => {
+  it("redirects guests with a saved address marker from /app to browse", async () => {
+    const req = new NextRequest("http://localhost/app", {
+      headers: { cookie: "7eats-guest-address=1" },
+    });
+
+    const res = await proxy(req);
+
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toBe("http://localhost/app/browse");
+  });
+});

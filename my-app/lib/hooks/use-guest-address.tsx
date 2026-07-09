@@ -9,6 +9,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { GUEST_ADDRESS_COOKIE } from "@/lib/guest/address-cookie";
 
 export type GuestAddress = {
   id: string;
@@ -29,6 +30,7 @@ type GuestAddressStore = {
 
 const STORAGE_KEY = "7eats_guest_addresses";
 const LEGACY_KEY = "7eats_guest_address";
+const ADDRESS_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 
 function newId(): string {
   try {
@@ -70,10 +72,18 @@ function readStore(): GuestAddressStore {
   return { addresses: [], selectedId: null };
 }
 
+function writeAddressCookie(hasAddress: boolean) {
+  // biome-ignore lint/suspicious/noDocumentCookie: lightweight marker lets the proxy skip the landing page for returning guests.
+  document.cookie = hasAddress
+    ? `${GUEST_ADDRESS_COOKIE}=1; Path=/; Max-Age=${ADDRESS_COOKIE_MAX_AGE}; SameSite=Lax`
+    : `${GUEST_ADDRESS_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax`;
+}
+
 function writeStore(store: GuestAddressStore) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
     localStorage.removeItem(LEGACY_KEY);
+    writeAddressCookie(store.addresses.length > 0);
   } catch {}
 }
 
@@ -144,7 +154,9 @@ export function GuestAddressProvider({
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    setStore(readStore());
+    const next = readStore();
+    setStore(next);
+    writeAddressCookie(next.addresses.length > 0);
     setHydrated(true);
   }, []);
 
