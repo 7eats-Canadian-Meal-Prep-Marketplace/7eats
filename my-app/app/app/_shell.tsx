@@ -490,7 +490,7 @@ function ShellInner({
       {!isOnboarding && !isLanding && (
         <header className={styles.header}>
           <div className={styles.headerInner}>
-            <Link href="/app" className={styles.brandLink}>
+            <Link href="/app/browse" className={styles.brandLink}>
               <Image
                 src="/7eats-logo.svg"
                 alt="7eats"

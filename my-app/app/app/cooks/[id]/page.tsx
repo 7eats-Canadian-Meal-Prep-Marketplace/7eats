@@ -8,7 +8,6 @@ import {
   MapPin,
   Star,
 } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import { notFound, useRouter } from "next/navigation";
 import { use, useEffect, useState } from "react";
@@ -287,14 +286,8 @@ export default function CookProfilePage({
       <header className={styles.hero}>
         <div className={styles.cover}>
           {cook.bannerUrl ? (
-            <Image
-              src={cook.bannerUrl}
-              alt=""
-              fill
-              className={styles.coverImg}
-              sizes="(max-width: 768px) 100vw, 960px"
-              priority
-            />
+            // biome-ignore lint/performance/noImgElement: R2 CDN banner
+            <img src={cook.bannerUrl} alt="" className={styles.coverImg} />
           ) : (
             <div className={styles.coverFallback} />
           )}
@@ -303,12 +296,11 @@ export default function CookProfilePage({
         <div className={styles.heroBody}>
           <div className={styles.avatar}>
             {cook.photoUrl ? (
-              <Image
+              // biome-ignore lint/performance/noImgElement: R2 CDN avatar
+              <img
                 src={cook.photoUrl}
                 alt={cook.name}
-                fill
                 className={styles.avatarImg}
-                sizes="80px"
               />
             ) : (
               <span>{nameInitials(cook.name)}</span>

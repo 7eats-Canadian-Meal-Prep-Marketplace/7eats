@@ -47,55 +47,67 @@ vi.mock("@/lib/hash", () => ({
   hashIp: vi.fn((ip: string) => ip),
 }));
 
-describe("POST /api/auth/guest-checkout — validation (no DB)", () => {
-  it("returns 400 when email is missing", async () => {
-    const { POST } = await import("@/app/api/auth/guest-checkout/route");
-    const req = new Request("http://localhost/api/auth/guest-checkout", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        firstName: "Jane",
-        lastName: "Doe",
-        phone: "6471234567",
-        acceptedTerms: true,
-      }),
+// Importing App Router route modules can be slow on CI/Windows (first-load transform),
+// so give this suite a bit more time than the default 5s.
+describe(
+  "POST /api/auth/guest-checkout — validation (no DB)",
+  { timeout: 15_000 },
+  () => {
+    it("returns 400 when email is missing", async () => {
+      const { POST } = await import("@/app/api/auth/guest-checkout/route");
+      const req = new Request("http://localhost/api/auth/guest-checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          firstName: "Jane",
+          lastName: "Doe",
+          phone: "6471234567",
+          acceptedTerms: true,
+        }),
+      });
+      const res = await POST(
+        req as unknown as import("next/server").NextRequest,
+      );
+      expect(res.status).toBe(400);
     });
-    const res = await POST(req as unknown as import("next/server").NextRequest);
-    expect(res.status).toBe(400);
-  });
 
-  it("returns 400 when phone is missing", async () => {
-    const { POST } = await import("@/app/api/auth/guest-checkout/route");
-    const req = new Request("http://localhost/api/auth/guest-checkout", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        firstName: "Jane",
-        lastName: "Doe",
-        email: "jane@example.com",
-        acceptedTerms: true,
-      }),
+    it("returns 400 when phone is missing", async () => {
+      const { POST } = await import("@/app/api/auth/guest-checkout/route");
+      const req = new Request("http://localhost/api/auth/guest-checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          firstName: "Jane",
+          lastName: "Doe",
+          email: "jane@example.com",
+          acceptedTerms: true,
+        }),
+      });
+      const res = await POST(
+        req as unknown as import("next/server").NextRequest,
+      );
+      expect(res.status).toBe(400);
     });
-    const res = await POST(req as unknown as import("next/server").NextRequest);
-    expect(res.status).toBe(400);
-  });
 
-  it("returns 400 when firstName is missing", async () => {
-    const { POST } = await import("@/app/api/auth/guest-checkout/route");
-    const req = new Request("http://localhost/api/auth/guest-checkout", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        lastName: "Doe",
-        email: "jane@example.com",
-        phone: "6471234567",
-        acceptedTerms: true,
-      }),
+    it("returns 400 when firstName is missing", async () => {
+      const { POST } = await import("@/app/api/auth/guest-checkout/route");
+      const req = new Request("http://localhost/api/auth/guest-checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          lastName: "Doe",
+          email: "jane@example.com",
+          phone: "6471234567",
+          acceptedTerms: true,
+        }),
+      });
+      const res = await POST(
+        req as unknown as import("next/server").NextRequest,
+      );
+      expect(res.status).toBe(400);
     });
-    const res = await POST(req as unknown as import("next/server").NextRequest);
-    expect(res.status).toBe(400);
-  });
-});
+  },
+);
 
 describe("service-area distance logic (haversine)", () => {
   it("correctly classifies an in-range address (~5 km)", () => {

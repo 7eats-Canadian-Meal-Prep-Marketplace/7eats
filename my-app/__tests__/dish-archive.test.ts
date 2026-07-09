@@ -77,9 +77,34 @@ function makePost(): NextRequest {
 
 const params = { params: Promise.resolve({ dishId: DISH_ID }) };
 
-const activeDish = { id: DISH_ID, status: "active" };
-const archivedDish = { id: DISH_ID, status: "inactive" };
-const updatedDish = { id: DISH_ID, status: "inactive", name: "Test" };
+const dishBase = {
+  id: DISH_ID,
+  cookId: COOK_ID,
+  name: "Test",
+  description: null,
+  cuisine: null,
+  categories: [],
+  isHalal: false,
+  isVegan: false,
+  isVegetarian: false,
+  isGlutenFree: false,
+  isDairyFree: false,
+  isNutFree: false,
+  isKosher: false,
+  servingSize: null,
+  price: "12.00",
+  createdAt: new Date("2026-01-01T00:00:00.000Z"),
+  updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+};
+
+const activeDish = { ...dishBase, status: "active" as const };
+const archivedDish = { ...dishBase, status: "inactive" as const };
+const updatedDish = { ...dishBase, status: "inactive" as const };
+const updatedDishResponse = {
+  ...updatedDish,
+  createdAt: updatedDish.createdAt.toISOString(),
+  updatedAt: updatedDish.updatedAt.toISOString(),
+};
 
 describe("POST /api/business/listings/dishes/[dishId]/archive", () => {
   beforeEach(() => {
@@ -175,7 +200,7 @@ describe("POST /api/business/listings/dishes/[dishId]/archive", () => {
 
     expect(res.status).toBe(200);
     expect(body.success).toBe(true);
-    expect(body.data).toEqual(updatedDish);
+    expect(body.data).toEqual(updatedDishResponse);
     expect(body.hiddenFromBrowse).toBe(true);
   });
 

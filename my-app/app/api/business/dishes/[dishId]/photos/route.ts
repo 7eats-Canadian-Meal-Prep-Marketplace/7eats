@@ -9,22 +9,12 @@ import {
 import { db, dbPool } from "@/db";
 import { dishes, dishPhotos } from "@/db/schema";
 
+import { r2ImageOrigins } from "@/lib/storage/image-hosts";
+
 type Params = { params: Promise<{ dishId: string }> };
 
 function allowedPhotoOrigins(): string[] {
-  return [
-    process.env.R2_PUBLIC_BUCKET_URL_LISTINGS,
-    process.env.R2_PUBLIC_BUCKET_URL_AVATARS,
-  ]
-    .filter((v): v is string => Boolean(v))
-    .map((v) => {
-      try {
-        return new URL(v).origin;
-      } catch {
-        return "";
-      }
-    })
-    .filter(Boolean);
+  return r2ImageOrigins();
 }
 
 const postSchema = z

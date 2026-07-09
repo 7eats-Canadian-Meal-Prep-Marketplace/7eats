@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import MarketplaceLanding from "@/app/components/MarketplaceLanding";
 import { auth } from "@/lib/auth";
 
@@ -39,6 +40,10 @@ export default async function AppLandingPage() {
     isLoggedIn = session?.user?.role === "client";
   } catch {
     // Public landing — treat as guest if session lookup fails.
+  }
+
+  if (isLoggedIn) {
+    redirect("/app/browse");
   }
 
   return (

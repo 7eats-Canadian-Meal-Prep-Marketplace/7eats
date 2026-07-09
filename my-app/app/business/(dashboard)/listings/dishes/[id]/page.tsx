@@ -1,7 +1,6 @@
 "use client";
 
 import { Camera, ImageOff, UtensilsCrossed, X } from "lucide-react";
-import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -512,11 +511,10 @@ function DetailsTab() {
                   draggable={false}
                 />
               ) : (
-                <Image
+                // biome-ignore lint/performance/noImgElement: R2 CDN dish photo
+                <img
                   src={photo.url}
-                  alt="Dish photo"
-                  fill
-                  sizes="200px"
+                  alt="Dish"
                   className={styles.photoImg}
                   draggable={false}
                 />
