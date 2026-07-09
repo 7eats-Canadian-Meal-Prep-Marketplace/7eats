@@ -1,5 +1,6 @@
 import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
+import { r2ImageHostnames } from "./lib/storage/image-hosts";
 
 // Content-Security-Policy is built per-request in proxy.ts (needs a fresh
 // nonce on every request) instead of here as a static header.
@@ -17,21 +18,9 @@ const securityHeaders = [
   },
 ];
 
-// Allow next/image to optimize the public R2 buckets that host listing covers
-// and cook avatars. Derived from the same env vars the storage layer uses so the
-// allowlist stays in sync if the buckets change.
-const r2ImageHosts = [
-  process.env.R2_PUBLIC_BUCKET_URL_LISTINGS,
-  process.env.R2_PUBLIC_BUCKET_URL_AVATARS,
-]
-  .map((url) => {
-    try {
-      return url ? new URL(url).hostname : null;
-    } catch {
-      return null;
-    }
-  })
-  .filter((host): host is string => Boolean(host));
+// Allow next/image to optimize public R2 CDN images. remotePatterns is fixed at
+// build time — see lib/storage/image-hosts.ts for the canonical hostname list.
+const r2ImageHosts = r2ImageHostnames();
 
 const nextConfig: NextConfig = {
   images: {
