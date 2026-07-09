@@ -11,30 +11,35 @@ import {
   orderDeadlineForPickupDay,
   resolveOrderLeadTimeRules,
 } from "@/lib/lead-time";
+import { zonedDayOfWeek, zonedParts, zonedTimeToUtc } from "@/lib/timezone";
+
+const at = (year: number, month: number, day: number, hour = 12, minute = 0) =>
+  zonedTimeToUtc(year, month, day, hour, minute, 0);
 
 describe("lead-time cutoff", () => {
   it("defaults midnight behavior for 3-day lead", () => {
-    const pickup = new Date(2026, 5, 18, 18, 0);
+    const pickup = at(2026, 6, 18, 18);
     const deadline = cancelByDate(pickup, {
       leadTime: "3_days",
       leadTimeCutoff: "23:59:59",
     });
-    expect(deadline?.getFullYear()).toBe(2026);
-    expect(deadline?.getMonth()).toBe(5);
-    expect(deadline?.getDate()).toBe(15);
-    expect(deadline?.getHours()).toBe(23);
-    expect(deadline?.getMinutes()).toBe(59);
+    expect(deadline && zonedParts(deadline)).toMatchObject({
+      year: 2026,
+      month: 6,
+      day: 15,
+      hour: 23,
+      minute: 59,
+    });
   });
 
   it("uses 10pm cutoff for 2-day lead", () => {
-    const pickup = new Date(2026, 5, 20, 11, 0); // Saturday
+    const pickup = at(2026, 6, 20, 11); // Saturday
     const deadline = orderDeadlineForPickupDay(pickup, 2, "22:00:00");
-    expect(deadline.getDay()).toBe(4); // Thursday
-    expect(deadline.getHours()).toBe(22);
-    expect(deadline.getMinutes()).toBe(0);
+    expect(zonedDayOfWeek(deadline)).toBe(4); // Thursday
+    expect(zonedParts(deadline)).toMatchObject({ hour: 22, minute: 0 });
 
-    const before = new Date(2026, 5, 18, 21, 30); // Thu 9:30pm
-    const after = new Date(2026, 5, 18, 22, 30); // Thu 10:30pm
+    const before = at(2026, 6, 18, 21, 30); // Thu 9:30pm
+    const after = at(2026, 6, 18, 22, 30); // Thu 10:30pm
     expect(isPickupDayBookable(pickup, 2, "22:00:00", before)).toBe(true);
     expect(isPickupDayBookable(pickup, 2, "22:00:00", after)).toBe(false);
   });
@@ -43,38 +48,38 @@ describe("lead-time cutoff", () => {
     const windows = [
       { dayOfWeek: "saturday", fromTime: "11:00:00", toTime: "14:00:00" },
     ];
-    const now = new Date(2026, 5, 18, 22, 30); // Thu 10:30pm
+    const now = at(2026, 6, 18, 22, 30); // Thu 10:30pm
     const slots = generateFulfillmentSlotIsos(
       windows,
       { leadTime: "2_days", leadTimeCutoff: "22:00:00" },
       now,
     );
     expect(slots.length).toBeGreaterThan(0);
-    expect(new Date(slots[0]).getDate()).toBe(27); // next Saturday, not Jun 20
+    expect(zonedParts(new Date(slots[0])).day).toBe(27); // next Saturday, not Jun 20
   });
 
   it("includes the next open day once the cutoff passes", () => {
     const windows = [
       { dayOfWeek: "saturday", fromTime: "11:00:00", toTime: "14:00:00" },
     ];
-    const now = new Date(2026, 5, 18, 21, 0); // Thu 9pm
+    const now = at(2026, 6, 18, 21); // Thu 9pm
     const slots = generateFulfillmentSlotIsos(
       windows,
       { leadTime: "2_days", leadTimeCutoff: "22:00:00" },
       now,
     );
     expect(slots.length).toBeGreaterThan(0);
-    expect(new Date(slots[0]).getDay()).toBe(6);
+    expect(zonedDayOfWeek(new Date(slots[0]))).toBe(6);
   });
 
   it("refund eligibility respects the cutoff time", () => {
-    const pickup = new Date(2026, 5, 20, 11, 0);
+    const pickup = at(2026, 6, 20, 11);
     expect(
       isRefundEligible(
         pickup,
         { leadTime: "2_days", leadTimeCutoff: "22:00:00" },
         true,
-        new Date(2026, 5, 18, 21, 59),
+        at(2026, 6, 18, 21, 59),
       ),
     ).toBe(true);
     expect(
@@ -82,7 +87,7 @@ describe("lead-time cutoff", () => {
         pickup,
         { leadTime: "2_days", leadTimeCutoff: "22:00:00" },
         true,
-        new Date(2026, 5, 18, 22, 1),
+        at(2026, 6, 18, 22, 1),
       ),
     ).toBe(false);
   });

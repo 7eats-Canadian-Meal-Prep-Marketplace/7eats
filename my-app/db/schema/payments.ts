@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   check,
+  integer,
   numeric,
   pgPolicy,
   pgTable,
@@ -127,6 +128,9 @@ export const orderPayments = pgTable(
     }),
     // The separate Stripe transfer that pays platformSubsidyAmount to the cook.
     stripeTopupTransferId: text("stripe_topup_transfer_id"),
+    // Cumulative amount refunded on this charge so far, in Stripe cents. Mirrors
+    // Stripe's running total (charge.amount_refunded), not a per-refund delta.
+    amountRefundedCents: integer("amount_refunded_cents").notNull().default(0),
     authorizedAt: timestamp("authorized_at", { withTimezone: true }),
     heldAt: timestamp("held_at", { withTimezone: true }),
     releasedAt: timestamp("released_at", { withTimezone: true }),

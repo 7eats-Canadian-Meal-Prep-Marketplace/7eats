@@ -4,6 +4,7 @@ import {
   ShieldCheck,
   TrendingUp,
 } from "lucide-react";
+import { headers } from "next/headers";
 import Link from "next/link";
 import styles from "./page.module.css";
 
@@ -61,11 +62,14 @@ const cookPlatformSchema = {
   },
 };
 
-export default function BusinessHomePage() {
+export default async function BusinessHomePage() {
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
+
   return (
     <main>
       <script
         type="application/ld+json"
+        nonce={nonce}
         // biome-ignore lint/security/noDangerouslySetInnerHtml: JSON-LD structured data, not user input
         dangerouslySetInnerHTML={{ __html: JSON.stringify(cookPlatformSchema) }}
       />

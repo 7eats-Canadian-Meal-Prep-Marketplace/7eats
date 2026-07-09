@@ -1,6 +1,7 @@
 "use client";
 import { AddressAutofill } from "@mapbox/search-js-react";
-import { type ComponentProps, useRef } from "react";
+import * as Sentry from "@sentry/nextjs";
+import { type ComponentProps, useEffect, useRef } from "react";
 import { normalizeProvinceCode } from "@/lib/address";
 
 type AddressAutofillProps = ComponentProps<typeof AddressAutofill>;
@@ -43,7 +44,15 @@ export function AddressSearchInput({
   placeholder = "Start typing your address…",
 }: AddressSearchInputProps) {
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
-  if (!token) throw new Error("NEXT_PUBLIC_MAPBOX_TOKEN is not configured");
+
+  useEffect(() => {
+    if (!token) {
+      Sentry.captureMessage(
+        "NEXT_PUBLIC_MAPBOX_TOKEN is not configured — address autocomplete degraded to manual entry",
+        "error",
+      );
+    }
+  }, [token]);
 
   // Street line of the most recently selected suggestion. Right after onRetrieve,
   // AddressAutofill echoes a native change event carrying just this line; we use
@@ -83,6 +92,25 @@ export function AddressSearchInput({
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     // Keep Enter from submitting a parent form while picking an address.
     if (e.key === "Enter") e.preventDefault();
+  }
+
+  // Without a token, AddressAutofill can't initialize. Fall back to a plain
+  // input so the page still works (manual entry, no suggestions) instead of
+  // crashing — this component has no error boundary above it on /app.
+  if (!token) {
+    return (
+      <input
+        id={id}
+        type="text"
+        name="address-line1"
+        autoComplete="address-line1"
+        placeholder={placeholder}
+        className={className}
+        value={value}
+        onChange={handleChange}
+        onKeyDown={handleKeyDown}
+      />
+    );
   }
 
   return (

@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  cookCardSchedule,
   earliestFulfillmentWindow,
   type FulfillmentWindow,
   nextFulfillmentWindowLabel,
 } from "@/lib/cooks/card-schedule";
+import { zonedDayOfWeek, zonedParts, zonedTimeToUtc } from "@/lib/timezone";
 
 const pickupWindows: FulfillmentWindow[] = [
   { dayOfWeek: "friday", fromTime: "11:00:00", toTime: "14:00:00" },
@@ -32,9 +34,9 @@ describe("earliestFulfillmentWindow", () => {
       "23:59:59",
     );
     expect(result).not.toBeNull();
-    expect(result?.start.getDay()).toBe(5); // Friday — Mon/Tue skipped by 2-day lead
-    expect(result?.start.getHours()).toBe(11);
-    expect(result?.end.getHours()).toBe(14);
+    expect(zonedDayOfWeek(result?.start as Date)).toBe(5); // Friday - Mon/Tue skipped by 2-day lead
+    expect(zonedParts(result?.start as Date).hour).toBe(11);
+    expect(zonedParts(result?.end as Date).hour).toBe(14);
   });
 
   it("returns the earliest matching weekday window range", () => {
@@ -47,11 +49,15 @@ describe("earliestFulfillmentWindow", () => {
       now,
     );
     expect(result).not.toBeNull();
-    expect(result?.start.getDay()).toBe(5); // Friday Jun 19
-    expect(result?.start.getHours()).toBe(11);
-    expect(result?.start.getMinutes()).toBe(0);
-    expect(result?.end.getHours()).toBe(14);
-    expect(result?.end.getMinutes()).toBe(0);
+    expect(zonedDayOfWeek(result?.start as Date)).toBe(5); // Friday Jun 19
+    expect(zonedParts(result?.start as Date)).toMatchObject({
+      hour: 11,
+      minute: 0,
+    });
+    expect(zonedParts(result?.end as Date)).toMatchObject({
+      hour: 14,
+      minute: 0,
+    });
   });
 
   it("uses delivery windows when mode is delivery", () => {
@@ -64,13 +70,13 @@ describe("earliestFulfillmentWindow", () => {
       now,
     );
     expect(result).not.toBeNull();
-    expect(result?.start.getDay()).toBe(6); // Saturday
-    expect(result?.start.getHours()).toBe(16);
-    expect(result?.end.getHours()).toBe(19);
+    expect(zonedDayOfWeek(result?.start as Date)).toBe(6); // Saturday
+    expect(zonedParts(result?.start as Date).hour).toBe(16);
+    expect(zonedParts(result?.end as Date).hour).toBe(19);
   });
 
   it("respects a 10pm cutoff when generating the next window", () => {
-    const now = new Date(2026, 5, 18, 22, 30, 0); // Thu 10:30pm
+    const now = zonedTimeToUtc(2026, 6, 18, 22, 30, 0); // Thu 10:30pm Eastern
     const result = earliestFulfillmentWindow(
       "pickup",
       [{ dayOfWeek: "saturday", fromTime: "10:00:00", toTime: "13:00:00" }],
@@ -80,8 +86,8 @@ describe("earliestFulfillmentWindow", () => {
       "22:00:00",
     );
     expect(result).not.toBeNull();
-    expect(result?.start.getDay()).toBe(6);
-    expect(result?.start.getDate()).toBe(27);
+    expect(zonedDayOfWeek(result?.start as Date)).toBe(6);
+    expect(zonedParts(result?.start as Date).day).toBe(27);
   });
 });
 
@@ -98,5 +104,32 @@ describe("nextFulfillmentWindowLabel", () => {
     expect(label).toMatch(/Delivery ·/);
     expect(label).toMatch(/4pm–7pm/);
     expect(label).not.toMatch(/4:00/);
+  });
+
+  it("uses the business timezone weekday when the slot falls on the next UTC day", () => {
+    const label = nextFulfillmentWindowLabel(
+      "pickup",
+      [{ dayOfWeek: "wednesday", fromTime: "22:00:00", toTime: "23:00:00" }],
+      [],
+      null,
+      new Date("2026-07-15T23:30:00.000Z"), // Wednesday 7:30pm Eastern
+    );
+
+    expect(label).toContain("Wed");
+    expect(label).toContain("10pm–11pm");
+  });
+});
+
+describe("cookCardSchedule", () => {
+  it("uses the business timezone weekday when matching the next card window", () => {
+    const card = cookCardSchedule(
+      "pickup",
+      [{ dayOfWeek: "wednesday", fromTime: "22:00:00", toTime: "23:00:00" }],
+      [],
+      null,
+      new Date("2026-07-15T23:30:00.000Z"), // Wednesday 7:30pm Eastern
+    );
+
+    expect(card?.schedule).toBe("Next pickup Wed · 10pm–11pm");
   });
 });

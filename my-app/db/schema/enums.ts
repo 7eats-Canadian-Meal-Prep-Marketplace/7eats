@@ -60,6 +60,7 @@ export const paymentStatus = pgEnum("payment_status", [
   "held",
   "released",
   "refunded",
+  "partially_refunded",
   "disputed",
 ]);
 export const payoutStatus = pgEnum("payout_status", [

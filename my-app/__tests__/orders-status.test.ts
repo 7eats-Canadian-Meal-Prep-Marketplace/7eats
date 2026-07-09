@@ -5,6 +5,7 @@ vi.mock("@/lib/auth", () => ({
 }));
 vi.mock("@/db", () => ({
   db: { select: vi.fn(), update: vi.fn() },
+  dbPool: { transaction: vi.fn() },
 }));
 vi.mock("@/db/schema", () => ({
   orders: {},
@@ -16,6 +17,9 @@ vi.mock("@/db/schema", () => ({
 vi.mock("drizzle-orm", () => ({
   eq: vi.fn(),
   and: vi.fn(),
+}));
+vi.mock("@/lib/orders/order-lock", () => ({
+  acquireOrderStatusLock: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock("@/lib/stripe/payments", () => ({
   capturePaymentIntent: vi.fn().mockResolvedValue(undefined),
@@ -32,7 +36,7 @@ vi.mock("@/lib/emails/order-events", () => ({
 
 import { NextRequest } from "next/server";
 import { PATCH } from "@/app/api/business/dashboard/orders/[orderId]/status/route";
-import { db } from "@/db";
+import { db, dbPool } from "@/db";
 import { auth } from "@/lib/auth";
 import {
   sendOrderCancelledByCookEmailToClient,
@@ -40,6 +44,7 @@ import {
   sendOrderNotReadyEmailToClient,
   sendOrderReadyEmailToClient,
 } from "@/lib/emails/order-events";
+import { acquireOrderStatusLock } from "@/lib/orders/order-lock";
 import {
   cancelPaymentIntent,
   capturePaymentIntent,
@@ -197,19 +202,65 @@ function emailLookupChain() {
   ]);
 }
 
+/**
+ * Sequences `db.select` calls that happen OUTSIDE the locked transaction:
+ * 1. cook lookup (getCookId)
+ * 2+. the post-commit fire-and-forget email/dish lookups (shape-agnostic).
+ */
+function setupDbSelect(cookFound = true) {
+  let call = 0;
+  vi.mocked(db.select).mockImplementation(() => {
+    call++;
+    return call === 1 ? mockCook(cookFound) : emailLookupChain();
+  });
+}
+
+// `tx.select`/`tx.update` for the current test, wired up by
+// `setupTransactionMock` below. Reassigned per test via `sequenceTxSelect` /
+// `mockUpdate`; defaults throw so a test that reaches the transaction without
+// configuring them fails loudly instead of silently returning `undefined`.
+let txSelectImpl: () => unknown = () => {
+  throw new Error("tx.select was not configured for this test");
+};
+let txUpdateImpl: () => unknown = () => {
+  throw new Error("tx.update was not configured for this test");
+};
+
+/** Wires `dbPool.transaction` to invoke the callback with a fake `tx`. */
+function setupTransactionMock() {
+  vi.mocked(dbPool.transaction).mockImplementation(async (cb) => {
+    const tx = {
+      select: vi.fn(() => txSelectImpl()),
+      update: vi.fn(() => txUpdateImpl()),
+    };
+    return cb(tx as never);
+  });
+}
+
+/** Sequences the `tx.select` calls made inside the locked transaction. */
+function sequenceTxSelect(chains: Array<() => unknown>) {
+  let call = 0;
+  txSelectImpl = () => {
+    const idx = Math.min(call, chains.length - 1);
+    call++;
+    return chains[idx]();
+  };
+}
+
+/** Wires `tx.update(...).set(...).where(...).returning()` to resolve `[row]`. */
 function mockUpdate(row: object) {
   const returning = vi.fn().mockResolvedValue([row]);
   const where = vi.fn(() => ({ returning }));
   const set = vi.fn(() => ({ where }));
-  vi.mocked(db.update).mockReturnValue({ set } as never);
+  txUpdateImpl = () => ({ set });
   return { set };
 }
 
 /**
- * Sequences db.select calls for a "ready" path:
- * 1. cook lookup
- * 2. order fetch
- * 3. payment readiness guard lookup
+ * Sets up both the outer `db.select` (cook lookup) and the in-transaction
+ * `tx.select` sequence for a "ready" path:
+ * 1. order fetch
+ * 2. payment readiness guard lookup
  */
 function withOrderForReady(
   timing: OrderTiming = {},
@@ -217,72 +268,65 @@ function withOrderForReady(
     { type: "full", status: "authorized" },
   ],
 ) {
-  let call = 0;
-  vi.mocked(db.select).mockImplementation(() => {
-    call++;
-    if (call === 1) return mockCook(true);
-    if (call === 2) return orderChain("confirmed", timing);
-    if (call === 3) return readyPaymentsChain(payments);
-    return emailLookupChain();
-  });
+  setupDbSelect(true);
+  sequenceTxSelect([
+    () => orderChain("confirmed", timing),
+    () => readyPaymentsChain(payments),
+  ]);
 }
 
 /**
- * Sequences db.select calls for a "confirm" path:
- * 1. cook lookup
- * 2. order fetch
- * 3. deposit payment lookup
+ * Sets up a "confirm" path:
+ * 1. order fetch
+ * 2. deposit payment lookup
  */
 function withOrderForConfirm(orderStatus: string, hasDeposit = false) {
-  let call = 0;
-  vi.mocked(db.select).mockImplementation(() => {
-    call++;
-    if (call === 1) return mockCook(true);
-    if (call === 2) return orderChain(orderStatus);
-    if (call === 3)
-      return hasDeposit ? depositPaymentChain() : noDepositPayment();
-    return emailLookupChain();
-  });
+  setupDbSelect(true);
+  sequenceTxSelect([
+    () => orderChain(orderStatus),
+    () => (hasDeposit ? depositPaymentChain() : noDepositPayment()),
+  ]);
 }
 
 /**
- * Sequences db.select calls for a "cancel" path:
- * 1. cook lookup
- * 2. order fetch
- * 3. all-payments fetch
- * 4. cookProfiles userId lookup
+ * Sets up a "cancel" path:
+ * 1. order fetch
+ * 2. all-payments fetch
+ * 3. cookProfiles userId lookup
  */
 function withOrderForCancel(
   orderStatus: string,
   payments: Parameters<typeof allPaymentsChain>[0] = [],
 ) {
-  let call = 0;
-  vi.mocked(db.select).mockImplementation(() => {
-    call++;
-    if (call === 1) return mockCook(true);
-    if (call === 2) return orderChain(orderStatus);
-    if (call === 3) return allPaymentsChain(payments);
-    if (call === 4) return cookUserChain();
-    return emailLookupChain();
-  });
+  setupDbSelect(true);
+  sequenceTxSelect([
+    () => orderChain(orderStatus),
+    () => allPaymentsChain(payments),
+    () => cookUserChain(),
+  ]);
 }
 
 /**
  * Simple helper for tests that don't care about the payment side (e.g. invalid
- * transition, not-found). Only needs cook + order calls.
+ * transition, not-found). Only needs the order fetch.
  */
 function withOrder(status: string) {
-  let call = 0;
-  vi.mocked(db.select).mockImplementation(() => {
-    call++;
-    return call === 1 ? mockCook(true) : orderChain(status);
-  });
+  setupDbSelect(true);
+  sequenceTxSelect([() => orderChain(status)]);
 }
 
 describe("PATCH /api/business/dashboard/orders/[orderId]/status", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockSession(USER_ID);
+    vi.mocked(acquireOrderStatusLock).mockResolvedValue(undefined);
+    txSelectImpl = () => {
+      throw new Error("tx.select was not configured for this test");
+    };
+    txUpdateImpl = () => {
+      throw new Error("tx.update was not configured for this test");
+    };
+    setupTransactionMock();
   });
 
   // ─── Auth / input validation ───────────────────────────────────────────────
@@ -314,13 +358,59 @@ describe("PATCH /api/business/dashboard/orders/[orderId]/status", () => {
   });
 
   it("returns 404 when the order does not belong to the cook", async () => {
-    let call = 0;
-    vi.mocked(db.select).mockImplementation(() => {
-      call++;
-      return call === 1 ? mockCook(true) : orderChainEmpty();
-    });
+    setupDbSelect(true);
+    sequenceTxSelect([() => orderChainEmpty()]);
     const res = await PATCH(makePatch({ status: "confirmed" }), { params });
     expect(res.status).toBe(404);
+  });
+
+  // ─── Locking ────────────────────────────────────────────────────────────────
+
+  it("runs the critical section inside a single dbPool transaction", async () => {
+    withOrderForConfirm("pending", false);
+    mockUpdate({ id: ORDER_ID, status: "confirmed" });
+    const res = await PATCH(makePatch({ status: "confirmed" }), { params });
+    expect(res.status).toBe(200);
+    expect(dbPool.transaction).toHaveBeenCalledTimes(1);
+    // The write path goes through `tx`, never the plain `db` client.
+    expect(db.update).not.toHaveBeenCalled();
+  });
+
+  it("acquires the order-status lock before reading the order, inside the transaction", async () => {
+    const callLog: string[] = [];
+    vi.mocked(acquireOrderStatusLock).mockImplementation(async () => {
+      callLog.push("lock");
+    });
+    setupDbSelect(true);
+    sequenceTxSelect([
+      () => {
+        callLog.push("select-order");
+        return orderChain("pending");
+      },
+      () => noDepositPayment(),
+    ]);
+    mockUpdate({ id: ORDER_ID, status: "confirmed" });
+
+    const res = await PATCH(makePatch({ status: "confirmed" }), { params });
+
+    expect(res.status).toBe(200);
+    expect(callLog).toEqual(["lock", "select-order"]);
+    expect(acquireOrderStatusLock).toHaveBeenCalledWith(
+      expect.anything(),
+      ORDER_ID,
+    );
+  });
+
+  it("returns 400 for a transition that only became invalid on the locked re-read", async () => {
+    // Simulates another request having already moved the order to a terminal
+    // status between when this request was dispatched and when it acquired
+    // the lock: the single read now happens under the lock, so this is
+    // caught as an ordinary invalid-transition 400 rather than racing ahead.
+    withOrder("cancelled");
+    const res = await PATCH(makePatch({ status: "confirmed" }), { params });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Invalid status transition.");
   });
 
   // ─── Transition guard ──────────────────────────────────────────────────────
@@ -354,13 +444,7 @@ describe("PATCH /api/business/dashboard/orders/[orderId]/status", () => {
 
   it("captures the deposit PI on confirm when one exists", async () => {
     withOrderForConfirm("pending", true);
-    // mockUpdate needs to handle both the deposit update and the order update
-    const returning = vi
-      .fn()
-      .mockResolvedValue([{ id: ORDER_ID, status: "confirmed" }]);
-    const where = vi.fn(() => ({ returning }));
-    const set = vi.fn(() => ({ where }));
-    vi.mocked(db.update).mockReturnValue({ set } as never);
+    mockUpdate({ id: ORDER_ID, status: "confirmed" });
 
     const res = await PATCH(makePatch({ status: "confirmed" }), { params });
     expect(res.status).toBe(200);
@@ -585,12 +669,7 @@ describe("PATCH /api/business/dashboard/orders/[orderId]/status", () => {
       },
     ];
     withOrderForCancel("pending", payments);
-    const returning = vi
-      .fn()
-      .mockResolvedValue([{ id: ORDER_ID, status: "cancelled" }]);
-    const where = vi.fn(() => ({ returning }));
-    const set = vi.fn(() => ({ where }));
-    vi.mocked(db.update).mockReturnValue({ set } as never);
+    mockUpdate({ id: ORDER_ID, status: "cancelled" });
 
     const res = await PATCH(makePatch({ status: "cancelled" }), { params });
     expect(res.status).toBe(200);
@@ -613,12 +692,7 @@ describe("PATCH /api/business/dashboard/orders/[orderId]/status", () => {
       },
     ];
     withOrderForCancel("confirmed", payments);
-    const returning = vi
-      .fn()
-      .mockResolvedValue([{ id: ORDER_ID, status: "cancelled" }]);
-    const where = vi.fn(() => ({ returning }));
-    const set = vi.fn(() => ({ where }));
-    vi.mocked(db.update).mockReturnValue({ set } as never);
+    mockUpdate({ id: ORDER_ID, status: "cancelled" });
 
     const res = await PATCH(makePatch({ status: "cancelled" }), { params });
     expect(res.status).toBe(200);
@@ -644,12 +718,7 @@ describe("PATCH /api/business/dashboard/orders/[orderId]/status", () => {
       },
     ];
     withOrderForCancel("confirmed", payments);
-    const returning = vi
-      .fn()
-      .mockResolvedValue([{ id: ORDER_ID, status: "cancelled" }]);
-    const where = vi.fn(() => ({ returning }));
-    const set = vi.fn(() => ({ where }));
-    vi.mocked(db.update).mockReturnValue({ set } as never);
+    mockUpdate({ id: ORDER_ID, status: "cancelled" });
 
     const res = await PATCH(makePatch({ status: "cancelled" }), { params });
     expect(res.status).toBe(200);
@@ -676,12 +745,7 @@ describe("PATCH /api/business/dashboard/orders/[orderId]/status", () => {
       },
     ];
     withOrderForCancel("confirmed", payments);
-    const returning = vi
-      .fn()
-      .mockResolvedValue([{ id: ORDER_ID, status: "cancelled" }]);
-    const where = vi.fn(() => ({ returning }));
-    const set = vi.fn(() => ({ where }));
-    vi.mocked(db.update).mockReturnValue({ set } as never);
+    mockUpdate({ id: ORDER_ID, status: "cancelled" });
 
     const res = await PATCH(
       makePatch({ status: "cancelled", reason: "client_no_show" }),
@@ -723,13 +787,8 @@ describe("PATCH /api/business/dashboard/orders/[orderId]/status", () => {
   });
 
   it("sends the not-ready email when reverting from ready to confirmed", async () => {
-    let call = 0;
-    vi.mocked(db.select).mockImplementation(() => {
-      call++;
-      if (call === 1) return mockCook(true);
-      if (call === 2) return orderChain("ready");
-      return emailLookupChain();
-    });
+    setupDbSelect(true);
+    sequenceTxSelect([() => orderChain("ready"), () => noDepositPayment()]);
     mockUpdate({ id: ORDER_ID, status: "confirmed" });
     const res = await PATCH(makePatch({ status: "confirmed" }), { params });
     expect(res.status).toBe(200);
@@ -752,15 +811,15 @@ describe("PATCH /api/business/dashboard/orders/[orderId]/status", () => {
   // ─── Error handling ────────────────────────────────────────────────────────
 
   it("returns 500 on a db error", async () => {
-    let call = 0;
-    vi.mocked(db.select).mockImplementation(() => {
-      call++;
-      if (call === 1) return mockCook(true);
-      const limit = vi.fn().mockRejectedValue(new Error("db down"));
-      const where = vi.fn(() => ({ limit }));
-      const from = vi.fn(() => ({ where }));
-      return { from } as never;
-    });
+    setupDbSelect(true);
+    sequenceTxSelect([
+      () => {
+        const limit = vi.fn().mockRejectedValue(new Error("db down"));
+        const where = vi.fn(() => ({ limit }));
+        const from = vi.fn(() => ({ where }));
+        return { from } as never;
+      },
+    ]);
     const res = await PATCH(makePatch({ status: "confirmed" }), { params });
     expect(res.status).toBe(500);
   });

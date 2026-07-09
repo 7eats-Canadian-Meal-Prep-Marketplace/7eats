@@ -31,6 +31,7 @@ vi.mock("@/db", () => ({
         },
       });
       return await fn({
+        execute: vi.fn().mockResolvedValue(undefined),
         insert: vi.fn().mockReturnValue({
           values: vi.fn().mockResolvedValue([]),
         }),
@@ -132,10 +133,8 @@ function chain(rows: unknown[]) {
   return proxy as never;
 }
 function selectQueue(results: unknown[][]) {
-  // The first db.select in POST is the rate-limit count check.
-  const all: unknown[][] = [[{ count: 0 }], ...results];
   let i = 0;
-  return () => chain(all[i++] ?? []);
+  return () => chain(results[i++] ?? []);
 }
 
 const _COOK_ROW = {
