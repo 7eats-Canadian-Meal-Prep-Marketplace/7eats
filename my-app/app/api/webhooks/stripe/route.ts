@@ -195,7 +195,7 @@ export async function POST(req: NextRequest) {
               stripeChargeId = latestCharge.id;
             }
           } catch {
-            // non-fatal — chargeId is best-effort
+            // non-fatal, chargeId is best-effort
           }
         }
 
@@ -454,6 +454,15 @@ export async function POST(req: NextRequest) {
 
       case "charge.refunded": {
         const charge = event.data.object as Stripe.Charge;
+        // Stripe fires this event on every refund, partial or full, and
+        // `amount_refunded` is always the running total for the charge (not a
+        // delta), so it can be compared directly against `amount` and written
+        // straight into amountRefundedCents.
+        const amountRefunded = charge.amount_refunded ?? 0;
+        const chargeAmount = charge.amount ?? 0;
+        const isFullyRefunded =
+          chargeAmount > 0 && amountRefunded >= chargeAmount;
+
         // Look up the affected payment(s) first so we can reverse any
         // platform-funded subsidy top-up before flipping the status.
         const refundedPayments = await db
@@ -461,22 +470,43 @@ export async function POST(req: NextRequest) {
             orderId: orderPayments.orderId,
             type: orderPayments.type,
             stripeTopupTransferId: orderPayments.stripeTopupTransferId,
+            platformSubsidyAmount: orderPayments.platformSubsidyAmount,
           })
           .from(orderPayments)
           .where(eq(orderPayments.stripeChargeId, charge.id));
+
         await db
           .update(orderPayments)
-          .set({ status: "refunded", refundedAt: new Date() })
+          .set({
+            status: isFullyRefunded ? "refunded" : "partially_refunded",
+            amountRefundedCents: amountRefunded,
+            refundedAt: new Date(),
+          })
           .where(eq(orderPayments.stripeChargeId, charge.id));
+
         // Claw back the subsidy top-up so the platform isn't out of pocket when
         // a released full payment is refunded. Best-effort; null top-up (refund
-        // before capture) is skipped cleanly.
+        // before capture) is skipped cleanly. A full refund reverses the whole
+        // transfer; a partial refund reverses only the proportional slice.
         for (const p of refundedPayments) {
           if (p.type !== "full" || !p.stripeTopupTransferId) continue;
+
+          let reversalAmountCents: number | undefined;
+          if (!isFullyRefunded) {
+            if (!p.platformSubsidyAmount || chargeAmount === 0) continue;
+            reversalAmountCents = Math.round(
+              Number(p.platformSubsidyAmount) *
+                100 *
+                (amountRefunded / chargeAmount),
+            );
+            if (reversalAmountCents <= 0) continue;
+          }
+
           try {
             await reverseCookSubsidyTransfer({
               transferId: p.stripeTopupTransferId,
-              idempotencyKey: `subsidy-reversal-${p.orderId}`,
+              idempotencyKey: `subsidy-reversal-${p.orderId}-${amountRefunded}-of-${chargeAmount}`,
+              amount: reversalAmountCents,
             });
           } catch (err) {
             console.error(

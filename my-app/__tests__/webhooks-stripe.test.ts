@@ -1,8 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { constructEventMock } = vi.hoisted(() => ({
-  constructEventMock: vi.fn(),
-}));
+const { constructEventMock, reverseCookSubsidyTransferMock } = vi.hoisted(
+  () => ({
+    constructEventMock: vi.fn(),
+    reverseCookSubsidyTransferMock: vi.fn().mockResolvedValue(undefined),
+  }),
+);
 
 vi.mock("@/db", () => ({
   db: {
@@ -16,6 +19,9 @@ vi.mock("@/db", () => ({
 }));
 vi.mock("@/lib/orders/platform-discount-repo", () => ({
   commitPendingPlatformDiscount: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock("@/lib/stripe/payments", () => ({
+  reverseCookSubsidyTransfer: reverseCookSubsidyTransferMock,
 }));
 vi.mock("@/db/schema", () => ({
   clientSubscriptions: {},
@@ -472,23 +478,141 @@ describe("one-time payment event handlers", () => {
     );
   });
 
-  it("charge.refunded sets status to refunded", async () => {
-    // The handler now looks up affected payment rows (to reverse any subsidy
-    // top-up) before flipping status — resolve that lookup to no rows.
-    const where = vi.fn().mockResolvedValue([]);
-    const from = vi.fn(() => ({ where }));
-    vi.mocked(db.select).mockReturnValue({ from } as never);
+  describe("charge.refunded", () => {
+    // The handler looks up affected payment rows (to reverse any subsidy
+    // top-up) before flipping status; each test resolves that lookup.
+    function mockRefundedPaymentsLookup(rows: unknown[]) {
+      const where = vi.fn().mockResolvedValue(rows);
+      const from = vi.fn(() => ({ where }));
+      vi.mocked(db.select).mockReturnValue({ from } as never);
+    }
 
-    const res = await POST(
-      makeRequest({
-        type: "charge.refunded",
-        data: { object: { id: "ch_1" } },
-      }),
-    );
-    expect(res.status).toBe(200);
-    expect(updateSet).toHaveBeenCalledWith(
-      expect.objectContaining({ status: "refunded" }),
-    );
+    it("sets status to refunded and records amountRefundedCents when the charge is fully refunded", async () => {
+      mockRefundedPaymentsLookup([]);
+
+      const res = await POST(
+        makeRequest({
+          type: "charge.refunded",
+          data: { object: { id: "ch_1", amount: 6000, amount_refunded: 6000 } },
+        }),
+      );
+      expect(res.status).toBe(200);
+      expect(updateSet).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: "refunded",
+          amountRefundedCents: 6000,
+        }),
+      );
+      expect(reverseCookSubsidyTransferMock).not.toHaveBeenCalled();
+    });
+
+    it("sets status to partially_refunded when amount_refunded is less than amount", async () => {
+      mockRefundedPaymentsLookup([]);
+
+      const res = await POST(
+        makeRequest({
+          type: "charge.refunded",
+          data: { object: { id: "ch_1", amount: 6000, amount_refunded: 1000 } },
+        }),
+      );
+      expect(res.status).toBe(200);
+      expect(updateSet).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: "partially_refunded",
+          amountRefundedCents: 1000,
+        }),
+      );
+      expect(reverseCookSubsidyTransferMock).not.toHaveBeenCalled();
+    });
+
+    it("reverses the full subsidy transfer when a released full payment is fully refunded", async () => {
+      mockRefundedPaymentsLookup([
+        {
+          orderId: "order-1",
+          type: "full",
+          stripeTopupTransferId: "tr_1",
+          platformSubsidyAmount: "5.00",
+        },
+      ]);
+
+      const res = await POST(
+        makeRequest({
+          type: "charge.refunded",
+          data: { object: { id: "ch_1", amount: 6000, amount_refunded: 6000 } },
+        }),
+      );
+      expect(res.status).toBe(200);
+      expect(reverseCookSubsidyTransferMock).toHaveBeenCalledWith({
+        transferId: "tr_1",
+        idempotencyKey: "subsidy-reversal-order-1-6000-of-6000",
+        amount: undefined,
+      });
+    });
+
+    it("reverses only a proportional slice of the subsidy transfer on a partial refund", async () => {
+      mockRefundedPaymentsLookup([
+        {
+          orderId: "order-1",
+          type: "full",
+          stripeTopupTransferId: "tr_1",
+          platformSubsidyAmount: "12.00",
+        },
+      ]);
+
+      const res = await POST(
+        makeRequest({
+          type: "charge.refunded",
+          data: { object: { id: "ch_1", amount: 6000, amount_refunded: 1000 } },
+        }),
+      );
+      expect(res.status).toBe(200);
+      // 12.00 subsidy dollars -> 1200 cents; refunded 1000 of 6000 (1/6) -> 200 cents.
+      expect(reverseCookSubsidyTransferMock).toHaveBeenCalledWith({
+        transferId: "tr_1",
+        idempotencyKey: "subsidy-reversal-order-1-1000-of-6000",
+        amount: 200,
+      });
+    });
+
+    it("skips the subsidy reversal when the proportional slice rounds to zero", async () => {
+      mockRefundedPaymentsLookup([
+        {
+          orderId: "order-1",
+          type: "full",
+          stripeTopupTransferId: "tr_1",
+          platformSubsidyAmount: "0.01",
+        },
+      ]);
+
+      const res = await POST(
+        makeRequest({
+          type: "charge.refunded",
+          data: { object: { id: "ch_1", amount: 100_000, amount_refunded: 1 } },
+        }),
+      );
+      expect(res.status).toBe(200);
+      expect(reverseCookSubsidyTransferMock).not.toHaveBeenCalled();
+    });
+
+    it("skips the subsidy reversal for deposit/balance rows even with a top-up transfer", async () => {
+      mockRefundedPaymentsLookup([
+        {
+          orderId: "order-1",
+          type: "deposit",
+          stripeTopupTransferId: "tr_1",
+          platformSubsidyAmount: "5.00",
+        },
+      ]);
+
+      const res = await POST(
+        makeRequest({
+          type: "charge.refunded",
+          data: { object: { id: "ch_1", amount: 6000, amount_refunded: 6000 } },
+        }),
+      );
+      expect(res.status).toBe(200);
+      expect(reverseCookSubsidyTransferMock).not.toHaveBeenCalled();
+    });
   });
 });
 
