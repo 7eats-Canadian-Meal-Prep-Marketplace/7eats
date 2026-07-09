@@ -1,7 +1,6 @@
 "use client";
 
 import { Search } from "lucide-react";
-import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useDebounce } from "@/lib/hooks/use-debounce";
@@ -206,12 +205,11 @@ export function AppSearchInput({
                   >
                     <span className={styles.suggestThumb}>
                       {k.photoUrl ? (
-                        <Image
+                        // biome-ignore lint/performance/noImgElement: R2 CDN avatar
+                        <img
                           src={k.photoUrl}
                           alt=""
-                          fill
                           className={styles.suggestThumbImg}
-                          sizes="40px"
                         />
                       ) : null}
                     </span>

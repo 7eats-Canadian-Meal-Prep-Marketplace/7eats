@@ -273,13 +273,8 @@ export default function DashboardShell({
                 aria-expanded={profileOpen}
               >
                 {photoUrl ? (
-                  <Image
-                    src={photoUrl}
-                    alt=""
-                    fill
-                    sizes="34px"
-                    className={styles.avatarImg}
-                  />
+                  // biome-ignore lint/performance/noImgElement: CDN avatar; plain img matches settings dropzone and avoids next/image allowlist drift
+                  <img src={photoUrl} alt="" className={styles.avatarImg} />
                 ) : (
                   initials
                 )}
