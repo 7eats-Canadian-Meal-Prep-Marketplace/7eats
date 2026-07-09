@@ -4,6 +4,9 @@ import { z } from "zod";
 import { db } from "@/db";
 import { kitchenDisplayName } from "@/lib/cooks/display";
 import { loadCookCards } from "@/lib/cooks/load-cards";
+import { hashIp } from "@/lib/hash";
+import { logAndCheckRateLimit } from "@/lib/rate-limit";
+import { getClientIp } from "@/lib/request-ip";
 import { SUGGEST_LIMIT } from "@/lib/search/config";
 import { normalizeQuery } from "@/lib/search/normalize";
 import { searchCooks } from "@/lib/search/query";
@@ -33,6 +36,18 @@ export type SuggestResponse = {
  * a short preview of the top reachable kitchens for the query.
  */
 export async function GET(req: NextRequest) {
+  const ip = getClientIp(req);
+  const allowed = await logAndCheckRateLimit(`search-suggest:${hashIp(ip)}`, {
+    windowMinutes: 15,
+    maxAttempts: 60,
+  });
+  if (!allowed) {
+    return NextResponse.json(
+      { success: false, error: "Too many requests. Please try again later." },
+      { status: 429 },
+    );
+  }
+
   const sp = new URL(req.url).searchParams;
   const parsed = querySchema.safeParse({
     q: sp.get("q") ?? "",

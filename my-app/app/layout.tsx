@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
+import { headers } from "next/headers";
 import Script from "next/script";
 import { Toaster } from "sonner";
 import CalendlyBadge from "@/app/components/CalendlyBadge";
@@ -96,11 +97,13 @@ const websiteSchema = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
+
   return (
     <html lang="en-CA" className={plusJakartaSans.variable}>
       <head>
@@ -112,6 +115,7 @@ export default function RootLayout({
         {/* JSON-LD structured data — native script tag required (not next/script) */}
         <script
           type="application/ld+json"
+          nonce={nonce}
           // biome-ignore lint/security/noDangerouslySetInnerHtml: JSON-LD structured data, not user input
           dangerouslySetInnerHTML={{
             __html: JSON.stringify(organizationSchema),
@@ -119,6 +123,7 @@ export default function RootLayout({
         />
         <script
           type="application/ld+json"
+          nonce={nonce}
           // biome-ignore lint/security/noDangerouslySetInnerHtml: JSON-LD structured data, not user input
           dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
         />

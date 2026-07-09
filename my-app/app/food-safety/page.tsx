@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import Footer from "@/app/components/Footer";
 
 export const metadata = {
@@ -273,11 +274,14 @@ const SECTIONS = [
   },
 ];
 
-export default function FoodSafetyPage() {
+export default async function FoodSafetyPage() {
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
+
   return (
     <>
       <script
         type="application/ld+json"
+        nonce={nonce}
         // biome-ignore lint/security/noDangerouslySetInnerHtml: JSON-LD structured data, not user input
         dangerouslySetInnerHTML={{ __html: JSON.stringify(webPageSchema) }}
       />

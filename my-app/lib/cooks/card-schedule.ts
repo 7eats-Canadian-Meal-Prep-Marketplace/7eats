@@ -5,6 +5,12 @@ import {
   generateFulfillmentSlotIsos,
   type LeadTimeRules,
 } from "@/lib/lead-time";
+import {
+  BUSINESS_TIMEZONE,
+  zonedDayOfWeek,
+  zonedParts,
+  zonedTimeToUtc,
+} from "@/lib/timezone";
 
 export type { FulfillmentWindow };
 
@@ -94,12 +100,13 @@ export function cookCardSchedule(
   }
 
   const first = new Date(slots[0]);
-  const dayKey = DAY_NAMES[first.getDay()];
+  const dayKey = DAY_NAMES[zonedDayOfWeek(first)];
   const win = windows.find((w) => normalizeDay(w.dayOfWeek) === dayKey);
   const dayLabel = DAY_SHORT[dayKey] ?? dayKey;
   const range = win
     ? `${fmtTime(win.fromTime)}–${fmtTime(win.toTime)}`
     : first.toLocaleTimeString("en-CA", {
+        timeZone: BUSINESS_TIMEZONE,
         hour: "numeric",
         minute: "2-digit",
       });
@@ -150,9 +157,10 @@ export function nextFulfillmentWindowLabel(
   if (slots.length === 0) return null;
 
   const first = new Date(slots[0]);
-  const dayKey = DAY_NAMES[first.getDay()];
+  const dayKey = DAY_NAMES[zonedDayOfWeek(first)];
   const win = windows.find((w) => normalizeDay(w.dayOfWeek) === dayKey) ?? null;
   const dayPart = first.toLocaleString("en-CA", {
+    timeZone: BUSINESS_TIMEZONE,
     weekday: "short",
     month: "short",
     day: "numeric",
@@ -194,15 +202,14 @@ export function earliestFulfillmentWindow(
   if (slots.length === 0) return null;
 
   const first = new Date(slots[0]);
-  const dayKey = DAY_NAMES[first.getDay()];
+  const dayKey = DAY_NAMES[zonedDayOfWeek(first)];
   const win = windows.find((w) => normalizeDay(w.dayOfWeek) === dayKey);
   if (!win) return null;
 
   const [fh, fm] = win.fromTime.split(":").map(Number);
   const [th, tm] = win.toTime.split(":").map(Number);
-  const start = new Date(first);
-  start.setHours(fh, fm, 0, 0);
-  const end = new Date(first);
-  end.setHours(th, tm, 0, 0);
+  const { year, month, day } = zonedParts(first);
+  const start = zonedTimeToUtc(year, month, day, fh, fm, 0);
+  const end = zonedTimeToUtc(year, month, day, th, tm, 0);
   return { start, end };
 }

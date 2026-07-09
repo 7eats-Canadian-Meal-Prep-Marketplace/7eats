@@ -7,6 +7,7 @@ import {
   authUser,
   authVerification,
 } from "@/db/schema/auth";
+import { authSecondaryStorage } from "@/lib/auth-secondary-storage";
 import { sendMail } from "@/lib/email";
 import {
   contactParagraph,
@@ -145,6 +146,9 @@ export const auth = betterAuth({
       "/forget-password": { window: 900, max: 5 },
     },
   },
+  // Shares rate-limit counters across serverless instances via Neon instead
+  // of Better Auth's default in-memory Map (see lib/auth-secondary-storage.ts).
+  secondaryStorage: authSecondaryStorage,
   secret:
     process.env.BETTER_AUTH_SECRET ??
     (() => {

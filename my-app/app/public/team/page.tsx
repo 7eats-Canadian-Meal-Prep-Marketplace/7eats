@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import Image from "next/image";
 import CtaSection from "@/app/components/CtaSection";
 import FounderTabs from "@/app/components/FounderTabs";
@@ -81,19 +82,23 @@ const teamBreadcrumbSchema = {
   ],
 };
 
-export default function TeamPage() {
+export default async function TeamPage() {
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
+
   return (
     <>
       {foundersSchema.map((schema) => (
         <script
           key={schema.name}
           type="application/ld+json"
+          nonce={nonce}
           // biome-ignore lint/security/noDangerouslySetInnerHtml: JSON-LD structured data, not user input
           dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
         />
       ))}
       <script
         type="application/ld+json"
+        nonce={nonce}
         // biome-ignore lint/security/noDangerouslySetInnerHtml: JSON-LD structured data, not user input
         dangerouslySetInnerHTML={{
           __html: JSON.stringify(teamBreadcrumbSchema),
