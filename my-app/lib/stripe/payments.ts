@@ -189,7 +189,7 @@ export async function createSubscriptionTransfer(params: {
  * Platform-funded discount top-up. When a platform discount exceeds the
  * destination charge's application fee, the destination charge alone can't pay
  * the cook in full, so the platform sends this separate transfer FROM ITS OWN
- * BALANCE to make the cook whole. Deliberately omits `source_transaction` —
+ * BALANCE to make the cook whole. Deliberately omits `source_transaction`,
  * these funds come from the platform balance, not from a specific charge.
  */
 export async function createCookSubsidyTransfer(params: {
@@ -213,16 +213,19 @@ export async function createCookSubsidyTransfer(params: {
 
 /**
  * Reverses a previously-sent cook subsidy top-up so the platform claws back the
- * funds when the customer is refunded after the order was released.
+ * funds when the customer is refunded after the order was released. Pass
+ * `amount` (Stripe cents) to reverse only part of the transfer, e.g. when the
+ * underlying charge was only partially refunded; omit it to reverse in full.
  */
 export async function reverseCookSubsidyTransfer(params: {
   transferId: string;
   idempotencyKey: string;
+  amount?: number;
 }): Promise<void> {
   const stripe = getStripe();
   await stripe.transfers.createReversal(
     params.transferId,
-    {},
+    params.amount !== undefined ? { amount: params.amount } : {},
     { idempotencyKey: params.idempotencyKey },
   );
 }

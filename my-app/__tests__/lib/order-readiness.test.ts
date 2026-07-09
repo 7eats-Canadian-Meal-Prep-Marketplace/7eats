@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { canMarkReady, readyAvailableFrom } from "@/lib/orders/readiness";
+import { zonedParts, zonedTimeToUtc } from "@/lib/timezone";
 
-// All dates are constructed with local-time fields to match the app's
-// runtime-local convention for fulfillment windows (see cook-card-schedule.ts).
+// All dates are constructed with Toronto wall-clock fields to match the app's
+// business timezone, regardless of the test runner's process timezone.
 const at = (y: number, mo: number, d: number, h = 12) =>
-  new Date(y, mo - 1, d, h, 0, 0, 0);
+  zonedTimeToUtc(y, mo, d, h, 0, 0);
 
 describe("canMarkReady", () => {
   const now = at(2026, 6, 25, 10); // Thu Jun 25 2026, 10:00 local
@@ -20,7 +21,7 @@ describe("canMarkReady", () => {
     // Fulfillment Fri Jun 26; `now` is Thu Jun 25 — the day before. Even at
     // 00:05 local on the 25th it should be allowed.
     const early = at(2026, 6, 25, 0);
-    early.setHours(0, 5, 0, 0);
+    early.setUTCMinutes(early.getUTCMinutes() + 5);
     expect(
       canMarkReady({ fulfillmentWindowStart: at(2026, 6, 26, 11) }, early),
     ).toBe(true);
@@ -74,11 +75,13 @@ describe("readyAvailableFrom", () => {
       fulfillmentWindowStart: at(2026, 6, 26, 11),
     });
     expect(from).not.toBeNull();
-    expect(from?.getFullYear()).toBe(2026);
-    expect(from?.getMonth()).toBe(5); // June (0-indexed)
-    expect(from?.getDate()).toBe(25);
-    expect(from?.getHours()).toBe(0);
-    expect(from?.getMinutes()).toBe(0);
+    expect(from && zonedParts(from)).toMatchObject({
+      year: 2026,
+      month: 6,
+      day: 25,
+      hour: 0,
+      minute: 0,
+    });
   });
 
   it("returns null when no schedule is set", () => {

@@ -1,5 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import { db } from "@/db";
+import { db, dbPool } from "@/db";
 import {
   authUser,
   cookProfiles,
@@ -20,6 +20,7 @@ import {
   isClientOrderCancellable,
   isClientRefundEligible,
 } from "@/lib/orders/client-cancel-policy";
+import { acquireOrderStatusLock } from "@/lib/orders/order-lock";
 import { settleCookSubsidy } from "@/lib/orders/settle-subsidy";
 import {
   cancelPaymentIntent,
@@ -156,123 +157,159 @@ async function executeCancellation(
   cancelledBy: string,
   options?: { guestAccessToken?: string },
 ): Promise<CancelOrderResult> {
-  if (!isClientOrderCancellable(order)) {
-    return {
-      ok: false,
-      status: 400,
-      error: "Order cannot be cancelled at this stage.",
-    };
-  }
+  const result = await dbPool.transaction(
+    async (tx): Promise<CancelOrderResult> => {
+      // acquireOrderStatusLock's shared signature is typed against the HTTP
+      // driver's transaction shape; dbPool.transaction here runs on the pool
+      // driver instead. Both simply proxy to `tx.execute(sql\`...\`)`, so the
+      // cast is safe at runtime.
+      await acquireOrderStatusLock(
+        tx as unknown as Parameters<typeof acquireOrderStatusLock>[0],
+        order.id,
+      );
 
-  const leadTimeRules = resolveOrderLeadTimeRules(order);
+      // Re-read the status-dependent fields under the lock: a concurrent cook
+      // status change (e.g. marking the order ready or cancelling it) may have
+      // altered them since the caller's initial fetch.
+      const [current] = await tx
+        .select({
+          status: orders.status,
+          cancellationAllowed: orders.cancellationAllowed,
+          pickupAt: orders.pickupAt,
+          fulfillmentWindowStart: orders.fulfillmentWindowStart,
+          fulfillmentMode: orders.fulfillmentMode,
+        })
+        .from(orders)
+        .where(eq(orders.id, order.id))
+        .limit(1);
 
-  const refundEligible = isClientRefundEligible({
-    status: order.status,
-    cancellationAllowed: order.cancellationAllowed,
-    pickupAt: order.pickupAt,
-    fulfillmentWindowStart: order.fulfillmentWindowStart,
-    cookLeadTime: leadTimeRules.leadTime,
-    cookLeadTimeCutoff: leadTimeRules.leadTimeCutoff,
-    fulfillmentMode:
-      order.fulfillmentMode === "delivery" || order.fulfillmentMode === "pickup"
-        ? order.fulfillmentMode
-        : null,
-  });
-  let clientRefunded = false;
+      if (!current || !isClientOrderCancellable(current)) {
+        return {
+          ok: false,
+          status: 400,
+          error: "Order cannot be cancelled at this stage.",
+        };
+      }
 
-  const payments = await db
-    .select({
-      id: orderPayments.id,
-      type: orderPayments.type,
-      status: orderPayments.status,
-      stripePaymentIntentId: orderPayments.stripePaymentIntentId,
-      stripeTopupTransferId: orderPayments.stripeTopupTransferId,
-    })
-    .from(orderPayments)
-    .where(eq(orderPayments.orderId, order.id));
+      const leadTimeRules = resolveOrderLeadTimeRules(order);
 
-  let fullPaymentReleased = false;
+      const refundEligible = isClientRefundEligible({
+        status: current.status,
+        cancellationAllowed: current.cancellationAllowed,
+        pickupAt: current.pickupAt,
+        fulfillmentWindowStart: current.fulfillmentWindowStart,
+        cookLeadTime: leadTimeRules.leadTime,
+        cookLeadTimeCutoff: leadTimeRules.leadTimeCutoff,
+        fulfillmentMode:
+          current.fulfillmentMode === "delivery" ||
+          current.fulfillmentMode === "pickup"
+            ? current.fulfillmentMode
+            : null,
+      });
+      let clientRefunded = false;
 
-  for (const payment of payments) {
-    if (!payment.stripePaymentIntentId) continue;
+      const payments = await tx
+        .select({
+          id: orderPayments.id,
+          type: orderPayments.type,
+          status: orderPayments.status,
+          stripePaymentIntentId: orderPayments.stripePaymentIntentId,
+          stripeTopupTransferId: orderPayments.stripeTopupTransferId,
+        })
+        .from(orderPayments)
+        .where(eq(orderPayments.orderId, order.id));
 
-    if (refundEligible) {
-      if (payment.status === "authorized" || payment.status === "pending") {
-        await cancelPaymentIntent(
-          payment.stripePaymentIntentId,
-          `client-cancel-${order.id}`,
-        );
-        await db
-          .update(orderPayments)
-          .set({ status: "refunded", refundedAt: new Date() })
-          .where(eq(orderPayments.id, payment.id));
-        clientRefunded = true;
-      } else if (payment.status === "held" || payment.status === "released") {
-        const refundId = await refundPaymentIntent({
-          paymentIntentId: payment.stripePaymentIntentId,
-          idempotencyKey: `client-cancel-refund-${order.id}`,
-        });
-        await db
-          .update(orderPayments)
-          .set({
-            status: "refunded",
-            stripeRefundId: refundId,
-            refundedAt: new Date(),
-          })
-          .where(eq(orderPayments.id, payment.id));
-        clientRefunded = true;
-        // If the full payment had a platform-funded subsidy top-up, claw it back
-        // so the platform isn't out of pocket when the customer is refunded.
-        // Refunds before capture leave stripeTopupTransferId null — skip those.
-        if (payment.type === "full" && payment.stripeTopupTransferId) {
-          try {
-            await reverseCookSubsidyTransfer({
-              transferId: payment.stripeTopupTransferId,
-              idempotencyKey: `subsidy-reversal-${order.id}`,
-            });
-          } catch (err) {
-            console.error(
-              `[cancelClientOrder] failed to reverse subsidy top-up for order ${order.id}`,
-              err,
+      let fullPaymentReleased = false;
+
+      for (const payment of payments) {
+        if (!payment.stripePaymentIntentId) continue;
+
+        if (refundEligible) {
+          if (payment.status === "authorized" || payment.status === "pending") {
+            await cancelPaymentIntent(
+              payment.stripePaymentIntentId,
+              `client-cancel-${order.id}`,
             );
+            await tx
+              .update(orderPayments)
+              .set({ status: "refunded", refundedAt: new Date() })
+              .where(eq(orderPayments.id, payment.id));
+            clientRefunded = true;
+          } else if (
+            payment.status === "held" ||
+            payment.status === "released"
+          ) {
+            const refundId = await refundPaymentIntent({
+              paymentIntentId: payment.stripePaymentIntentId,
+              idempotencyKey: `client-cancel-refund-${order.id}`,
+            });
+            await tx
+              .update(orderPayments)
+              .set({
+                status: "refunded",
+                stripeRefundId: refundId,
+                refundedAt: new Date(),
+              })
+              .where(eq(orderPayments.id, payment.id));
+            clientRefunded = true;
+            // If the full payment had a platform-funded subsidy top-up, claw it back
+            // so the platform isn't out of pocket when the customer is refunded.
+            // Refunds before capture leave stripeTopupTransferId null — skip those.
+            if (payment.type === "full" && payment.stripeTopupTransferId) {
+              try {
+                await reverseCookSubsidyTransfer({
+                  transferId: payment.stripeTopupTransferId,
+                  idempotencyKey: `subsidy-reversal-${order.id}`,
+                });
+              } catch (err) {
+                console.error(
+                  `[cancelClientOrder] failed to reverse subsidy top-up for order ${order.id}`,
+                  err,
+                );
+              }
+            }
           }
+        } else if (payment.status === "authorized") {
+          await capturePaymentIntent(
+            payment.stripePaymentIntentId,
+            `client-cancel-capture-${order.id}`,
+          );
+          await tx
+            .update(orderPayments)
+            .set({ status: "released", releasedAt: new Date() })
+            .where(eq(orderPayments.id, payment.id));
+          if (payment.type === "full") fullPaymentReleased = true;
         }
       }
-    } else if (payment.status === "authorized") {
-      await capturePaymentIntent(
-        payment.stripePaymentIntentId,
-        `client-cancel-capture-${order.id}`,
-      );
-      await db
-        .update(orderPayments)
-        .set({ status: "released", releasedAt: new Date() })
-        .where(eq(orderPayments.id, payment.id));
-      if (payment.type === "full") fullPaymentReleased = true;
+
+      // Not-refund-eligible cancel captured+released the full payment to the cook —
+      // pay any platform-funded discount top-up too (best-effort, idempotent).
+      if (fullPaymentReleased) {
+        await settleCookSubsidy(order.id);
+      }
+
+      await tx
+        .update(orders)
+        .set({
+          status: "cancelled",
+          cancelledAt: new Date(),
+          cancelledBy,
+        })
+        .where(eq(orders.id, order.id));
+
+      return { ok: true, refunded: clientRefunded };
+    },
+  );
+
+  if (result.ok) {
+    try {
+      await notifyOfClientCancellation(order, result.refunded, options);
+    } catch (err) {
+      console.error("[cancelClientOrder] email", err);
     }
   }
 
-  // Not-refund-eligible cancel captured+released the full payment to the cook —
-  // pay any platform-funded discount top-up too (best-effort, idempotent).
-  if (fullPaymentReleased) {
-    await settleCookSubsidy(order.id);
-  }
-
-  await db
-    .update(orders)
-    .set({
-      status: "cancelled",
-      cancelledAt: new Date(),
-      cancelledBy,
-    })
-    .where(eq(orders.id, order.id));
-
-  try {
-    await notifyOfClientCancellation(order, clientRefunded, options);
-  } catch (err) {
-    console.error("[cancelClientOrder] email", err);
-  }
-
-  return { ok: true, refunded: clientRefunded };
+  return result;
 }
 
 async function notifyOfClientCancellation(

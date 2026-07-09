@@ -7,6 +7,9 @@ import {
   DEFAULT_MAX_DELIVERY_KM,
   DELIVERY_MAX_KM_MAX,
 } from "@/lib/delivery/pricing";
+import { hashIp } from "@/lib/hash";
+import { logAndCheckRateLimit } from "@/lib/rate-limit";
+import { getClientIp } from "@/lib/request-ip";
 import { SEARCH_PICKUP_MAX_KM } from "@/lib/search/config";
 import { boundingBox } from "@/lib/search/normalize";
 
@@ -31,6 +34,18 @@ function parseFulfillmentMode(
 }
 
 export async function GET(req: NextRequest) {
+  const ip = getClientIp(req);
+  const allowed = await logAndCheckRateLimit(`cooks-browse:${hashIp(ip)}`, {
+    windowMinutes: 15,
+    maxAttempts: 60,
+  });
+  if (!allowed) {
+    return NextResponse.json(
+      { success: false, error: "Too many requests. Please try again later." },
+      { status: 429 },
+    );
+  }
+
   const params = new URL(req.url).searchParams;
   const lat = parseCoord(params.get("lat"), -90, 90);
   const lng = parseCoord(params.get("lng"), -180, 180);

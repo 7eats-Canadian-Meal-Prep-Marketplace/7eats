@@ -4,6 +4,31 @@ import { db } from "@/db";
 import { authUser, cookProfiles } from "@/db/schema";
 import { auth } from "@/lib/auth";
 
+const isDev = process.env.NODE_ENV === "development";
+
+// ─── Content-Security-Policy ───────────────────────────────────────────────────
+// Built per-request so inline scripts (our JSON-LD tags, Next.js's own
+// bootstrap scripts) can carry a nonce instead of relying on 'unsafe-inline'.
+function buildCsp(nonce: string): string {
+  return [
+    "default-src 'self'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+    "object-src 'none'",
+    "img-src 'self' data: blob: https:",
+    "font-src 'self' data: https://fonts.gstatic.com",
+    // Calendly widget CSS + the Google Fonts stylesheet it injects at runtime.
+    "style-src 'self' 'unsafe-inline' https://assets.calendly.com https://fonts.googleapis.com",
+    // React dev mode uses eval for debugging; production builds do not.
+    `script-src 'self' 'nonce-${nonce}' https://js.stripe.com https://assets.calendly.com${isDev ? " 'unsafe-eval'" : ""}`,
+    "connect-src 'self' https://api.stripe.com https://api.mapbox.com https://events.mapbox.com https://calendly.com",
+    "worker-src 'self' blob:",
+    "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://calendly.com",
+    ...(isDev ? [] : ["upgrade-insecure-requests"]),
+  ].join("; ");
+}
+
 // ─── Cookie names ─────────────────────────────────────────────────────────────
 // Better Auth sets the session cookie; we set the onboarding cookie server-side
 // via /api/auth/complete-onboarding and re-issue it on every sign-in.
@@ -168,7 +193,27 @@ async function enforceCookSetupProgress(
 
 // ─── Proxy ────────────────────────────────────────────────────────────────────
 
+/**
+ * Generates a per-request CSP nonce, forwards it to Server Components via the
+ * `x-nonce` request header, and stamps the resulting response with the CSP
+ * header before returning it. All routing logic lives in `routeRequest`; this
+ * wrapper is the single place the nonce and CSP header are attached so every
+ * exit path (redirects and pass-throughs alike) gets them.
+ */
 export async function proxy(req: NextRequest) {
+  const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
+  const requestHeaders = new Headers(req.headers);
+  requestHeaders.set("x-nonce", nonce);
+
+  const response = await routeRequest(req, requestHeaders);
+  response.headers.set("Content-Security-Policy", buildCsp(nonce));
+  return response;
+}
+
+async function routeRequest(
+  req: NextRequest,
+  requestHeaders: Headers,
+): Promise<NextResponse> {
   const { pathname } = req.nextUrl;
 
   // ── Root redirect ────────────────────────────────────────────────────────
@@ -217,7 +262,7 @@ export async function proxy(req: NextRequest) {
     if (await isClientOnboarded(req)) {
       return NextResponse.redirect(new URL("/app/browse", req.url));
     }
-    return NextResponse.next();
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
   // ── Client auth pages (login, signup) ────────────────────────────────────
@@ -243,9 +288,9 @@ export async function proxy(req: NextRequest) {
       // can switch to (or create) a separate customer account. Better Auth uses
       // a single session cookie, so signing in as a client overwrites the cook
       // session — effectively logging them out of the cook account.
-      return NextResponse.next();
+      return NextResponse.next({ request: { headers: requestHeaders } });
     }
-    return NextResponse.next();
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
   // ── Client account page ───────────────────────────────────────────────────
@@ -260,7 +305,7 @@ export async function proxy(req: NextRequest) {
     if (!(await isClientOnboarded(req))) {
       return NextResponse.redirect(new URL("/app-auth/onboarding", req.url));
     }
-    return NextResponse.next();
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
   // ── Client public routes ──────────────────────────────────────────────────
@@ -270,7 +315,7 @@ export async function proxy(req: NextRequest) {
     if (await shouldRedirectToClientOnboarding(req)) {
       return NextResponse.redirect(new URL("/app-auth/onboarding", req.url));
     }
-    return NextResponse.next();
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
   // ── Client protected routes ───────────────────────────────────────────────
@@ -282,7 +327,7 @@ export async function proxy(req: NextRequest) {
     if (!(await isClientOnboarded(req))) {
       return NextResponse.redirect(new URL("/app-auth/onboarding", req.url));
     }
-    return NextResponse.next();
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
   // ── Client app catch-all (/app, /app/* not matched above) ─────────────────
@@ -290,12 +335,12 @@ export async function proxy(req: NextRequest) {
     if (await shouldRedirectToClientOnboarding(req)) {
       return NextResponse.redirect(new URL("/app-auth/onboarding", req.url));
     }
-    return NextResponse.next();
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
   // ── Client auth catch-all (forgot-password, reset-password, etc.) ─────────
   if (pathname.startsWith("/app-auth/")) {
-    return NextResponse.next();
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -305,7 +350,7 @@ export async function proxy(req: NextRequest) {
     !pathname.startsWith("/business") &&
     !pathname.startsWith("/business-auth")
   ) {
-    return NextResponse.next();
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
   // ── Business marketing / application pages ───────────────────────────────
@@ -315,7 +360,7 @@ export async function proxy(req: NextRequest) {
     if (session && isCookOrAdminUser(session)) {
       return NextResponse.redirect(new URL("/business/dashboard", req.url));
     }
-    return NextResponse.next();
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
   // ── Application confirmation: requires the submission cookie ─────────────
@@ -323,7 +368,7 @@ export async function proxy(req: NextRequest) {
     if (!req.cookies.has("application_submitted")) {
       return NextResponse.redirect(new URL("/business/application", req.url));
     }
-    return NextResponse.next();
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
   // ── Business login ────────────────────────────────────────────────────────
@@ -333,7 +378,7 @@ export async function proxy(req: NextRequest) {
       return NextResponse.redirect(new URL("/business/dashboard", req.url));
     }
     // Guests and logged-in clients can sign in as a cook (separate account).
-    return NextResponse.next();
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
   // ── Public business auth (password recovery, magic-link setup) ────────────
@@ -366,7 +411,7 @@ export async function proxy(req: NextRequest) {
         }
       }
     }
-    return NextResponse.next();
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
   // ── Cook setup + dashboard (cook/admin only) ──────────────────────────────
@@ -378,7 +423,8 @@ export async function proxy(req: NextRequest) {
   ) {
     const { session, deny } = await requireCookSession(req);
     if (deny) return deny;
-    if (!session?.user?.id) return NextResponse.next();
+    if (!session?.user?.id)
+      return NextResponse.next({ request: { headers: requestHeaders } });
 
     const blocked = await enforceCookSetupProgress(
       req,
@@ -386,19 +432,19 @@ export async function proxy(req: NextRequest) {
       pathname,
     );
     if (blocked) return blocked;
-    return NextResponse.next();
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
   // ── Remaining business-auth pages ─────────────────────────────────────────
   if (pathname.startsWith("/business-auth/")) {
-    return NextResponse.next();
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
   if (pathname.startsWith("/business/") || pathname === "/business") {
-    return NextResponse.next();
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
-  return NextResponse.next();
+  return NextResponse.next({ request: { headers: requestHeaders } });
 }
 
 // ─── Session / DB helpers ─────────────────────────────────────────────────────
@@ -426,14 +472,18 @@ async function getCookState(userId: string) {
 }
 
 // ─── Matcher ──────────────────────────────────────────────────────────────────
-
+// Runs on every page route (not just /app and /business) so the CSP nonce
+// reaches every Server Component that renders a JSON-LD <script> tag,
+// including marketing/legal pages like /terms and /public/team. Excludes
+// API routes and static assets per Next.js's documented CSP-nonce matcher.
 export const config = {
   matcher: [
-    "/",
-    "/app",
-    "/app/:path*",
-    "/app-auth/:path*",
-    "/business/:path*",
-    "/business-auth/:path*",
+    {
+      source: "/((?!api|_next/static|_next/image|favicon.ico).*)",
+      missing: [
+        { type: "header", key: "next-router-prefetch" },
+        { type: "header", key: "purpose", value: "prefetch" },
+      ],
+    },
   ],
 };

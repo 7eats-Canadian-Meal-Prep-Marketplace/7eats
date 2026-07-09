@@ -30,9 +30,12 @@ const homepageSchema = {
 };
 
 export default async function AppLandingPage() {
+  const requestHeaders = await headers();
+  const nonce = requestHeaders.get("x-nonce") ?? undefined;
+
   let isLoggedIn = false;
   try {
-    const session = await auth.api.getSession({ headers: await headers() });
+    const session = await auth.api.getSession({ headers: requestHeaders });
     isLoggedIn = session?.user?.role === "client";
   } catch {
     // Public landing — treat as guest if session lookup fails.
@@ -42,6 +45,7 @@ export default async function AppLandingPage() {
     <>
       <script
         type="application/ld+json"
+        nonce={nonce}
         // biome-ignore lint/security/noDangerouslySetInnerHtml: JSON-LD structured data, not user input
         dangerouslySetInnerHTML={{ __html: JSON.stringify(homepageSchema) }}
       />

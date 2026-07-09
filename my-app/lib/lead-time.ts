@@ -1,4 +1,10 @@
 import type { leadTimeEnum } from "@/db/schema";
+import {
+  addZonedDays,
+  zonedDayOfWeek,
+  zonedParts,
+  zonedTimeToUtc,
+} from "@/lib/timezone";
 
 type LeadTime = (typeof leadTimeEnum.enumValues)[number];
 
@@ -173,13 +179,8 @@ export function orderDeadlineForPickupDay(
   const { hours, minutes, seconds } = parseCutoffParts(
     resolveLeadTimeCutoff(cutoffTime),
   );
-  const deadline = new Date(
-    pickupDay.getFullYear(),
-    pickupDay.getMonth(),
-    pickupDay.getDate() - leadDays,
-  );
-  deadline.setHours(hours, minutes, seconds, 0);
-  return deadline;
+  const { year, month, day } = zonedParts(pickupDay);
+  return zonedTimeToUtc(year, month, day - leadDays, hours, minutes, seconds);
 }
 
 export function isPickupDayBookable(
@@ -232,12 +233,7 @@ export function earliestPickup(
   now: Date = new Date(),
 ): Date {
   const days = leadTimeDays(rules.leadTime);
-  const dayFloor = new Date(
-    now.getFullYear(),
-    now.getMonth(),
-    now.getDate() + days,
-  );
-  dayFloor.setHours(0, 0, 0, 0);
+  const dayFloor = addZonedDays(now, days);
   return dayFloor.getTime() < now.getTime() ? now : dayFloor;
 }
 
@@ -258,18 +254,17 @@ export function generateFulfillmentSlotIsos(
   const slots: string[] = [];
 
   for (let d = 0; d < daysAhead; d++) {
-    const day = new Date(now.getFullYear(), now.getMonth(), now.getDate() + d);
+    const day = addZonedDays(now, d);
     if (!isPickupDayBookable(day, leadDays, cutoff, now)) continue;
 
-    const win = byDay.get(DAY_NAMES[day.getDay()]);
+    const win = byDay.get(DAY_NAMES[zonedDayOfWeek(day)]);
     if (!win) continue;
 
     const [fh, fm] = win.fromTime.split(":").map(Number);
     const [th, tm] = win.toTime.split(":").map(Number);
-    const start = new Date(day);
-    start.setHours(fh, fm, 0, 0);
-    const end = new Date(day);
-    end.setHours(th, tm, 0, 0);
+    const { year, month, day: dayOfMonth } = zonedParts(day);
+    const start = zonedTimeToUtc(year, month, dayOfMonth, fh, fm, 0);
+    const end = zonedTimeToUtc(year, month, dayOfMonth, th, tm, 0);
 
     for (
       let t = start;

@@ -1,5 +1,5 @@
 import { and, eq, gt, sql } from "drizzle-orm";
-import { db } from "@/db";
+import { dbPool } from "@/db";
 import { rateLimitLog } from "@/db/schema";
 
 const DEFAULT_WINDOW_MINUTES = Number(
@@ -16,20 +16,26 @@ export async function logAndCheckRateLimit(
 
   const windowStart = new Date(Date.now() - windowMinutes * 60 * 1000);
 
-  const result = await db
-    .select({ count: sql<number>`cast(count(*) as int)` })
-    .from(rateLimitLog)
-    .where(
-      and(
-        eq(rateLimitLog.ipHash, key),
-        gt(rateLimitLog.attemptedAt, windowStart),
-      ),
+  return dbPool.transaction(async (tx) => {
+    await tx.execute(
+      sql`SELECT pg_advisory_xact_lock(hashtext(${`rate-limit:${key}`}))`,
     );
 
-  if (result[0].count >= maxAttempts) {
-    return false;
-  }
+    const result = await tx
+      .select({ count: sql<number>`cast(count(*) as int)` })
+      .from(rateLimitLog)
+      .where(
+        and(
+          eq(rateLimitLog.ipHash, key),
+          gt(rateLimitLog.attemptedAt, windowStart),
+        ),
+      );
 
-  await db.insert(rateLimitLog).values({ ipHash: key });
-  return true;
+    if (result[0].count >= maxAttempts) {
+      return false;
+    }
+
+    await tx.insert(rateLimitLog).values({ ipHash: key });
+    return true;
+  });
 }

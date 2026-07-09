@@ -30,11 +30,16 @@ vi.mock("drizzle-orm", () => ({
   }),
 }));
 
+vi.mock("@/lib/rate-limit", () => ({
+  logAndCheckRateLimit: vi.fn().mockResolvedValue(true),
+}));
+
 import { NextRequest } from "next/server";
 import { GET as getCookReviews } from "@/app/api/cooks/[cookId]/reviews/route";
 import { GET as getCookById } from "@/app/api/cooks/[cookId]/route";
 import { GET as getCooks } from "@/app/api/cooks/route";
 import { db } from "@/db";
+import { logAndCheckRateLimit } from "@/lib/rate-limit";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -140,6 +145,17 @@ describe("GET /api/cooks", () => {
     expect(res.status).toBe(500);
     const body = await res.json();
     expect(body.error).toBeDefined();
+  });
+
+  it("returns 429 when rate limited, without querying the db", async () => {
+    vi.mocked(logAndCheckRateLimit).mockResolvedValueOnce(false);
+
+    const res = await getCooks(makeReq("http://localhost/api/cooks"));
+    expect(res.status).toBe(429);
+    const body = await res.json();
+    expect(body.success).toBe(false);
+    expect(body.error).toBeDefined();
+    expect(db.select).not.toHaveBeenCalled();
   });
 });
 
