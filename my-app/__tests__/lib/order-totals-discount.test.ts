@@ -28,32 +28,42 @@ describe("computeOrderChargeBreakdown — full-subsidy platform discount", () =>
     expect(b.subsidyTopUpCents).toBe(0);
   });
 
-  it("discount smaller than fee: funded entirely from the fee, no top-up", () => {
+  it("discount smaller than the discounted total: fee stays whole, subsidy equals the full discount", () => {
     const b = brk(30, 10, 2); // fee $3, discount $2
-    expect(b.totalCents).toBe(2800); // customer pays full discount
-    expect(b.applicationFeeCents).toBe(100); // 300 - 200
+    expect(b.totalCents).toBe(2800); // customer pays the discounted total
+    expect(b.applicationFeeCents).toBe(300); // full fee taken from the charge
     expect(b.cookPayoutCents).toBe(2700); // cook still whole
-    expect(b.subsidyTopUpCents).toBe(0);
+    expect(b.subsidyTopUpCents).toBe(200); // 7eats sends the full $2 discount
   });
 
-  it("discount equal to fee: fee exactly absorbs it", () => {
+  it("discount equal to fee: fee still taken whole, subsidy still the full discount", () => {
     const b = brk(30, 10, 3);
     expect(b.totalCents).toBe(2700);
-    expect(b.applicationFeeCents).toBe(0);
+    expect(b.applicationFeeCents).toBe(300);
     expect(b.cookPayoutCents).toBe(2700);
-    expect(b.subsidyTopUpCents).toBe(0);
+    expect(b.subsidyTopUpCents).toBe(300);
   });
 
-  it("discount larger than fee: platform tops up the shortfall", () => {
+  it("discount larger than fee: subsidy is still exactly the discount amount", () => {
     const b = brk(30, 10, 5); // fee $3, discount $5
     expect(b.totalCents).toBe(2500); // customer pays full $5 off
-    expect(b.applicationFeeCents).toBe(0); // floored, never negative
+    expect(b.applicationFeeCents).toBe(300); // fee unaffected by the discount
     expect(b.cookPayoutCents).toBe(2700); // cook still whole
-    expect(b.subsidyTopUpCents).toBe(200); // platform funds $2 from balance
+    expect(b.subsidyTopUpCents).toBe(500); // 7eats sends the full $5 discount
+  });
+
+  it("discount so large the fee can't fit in the charge: subsidy absorbs the shortfall", () => {
+    const b = brk(30, 10, 29); // fee $3, discounted total only $0.01
+    expect(b.totalCents).toBe(100);
+    expect(b.applicationFeeCents).toBe(100); // capped at the tiny charge amount
+    expect(b.cookPayoutCents).toBe(2700); // cook still whole
+    // discount ($29) minus the $2 of fee that couldn't be taken from the $0.01
+    // charge (that $2 comes out of the subsidy instead)
+    expect(b.subsidyTopUpCents).toBe(2900 - 200);
   });
 
   it("invariant: cook actually received (charge split + top-up) always equals full payout", () => {
-    for (const discount of [0, 1, 3, 5, 10, 25, 30]) {
+    for (const discount of [0, 1, 3, 5, 10, 25, 29, 30]) {
       const b = brk(30, 10, discount);
       const cookFromCharge = b.totalCents - b.applicationFeeCents;
       expect(cookFromCharge + b.subsidyTopUpCents).toBe(b.cookPayoutCents);

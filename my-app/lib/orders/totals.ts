@@ -19,11 +19,14 @@ export type OrderChargeBreakdown = {
    */
   cookPayoutCents: number;
   /**
-   * Extra amount the platform must transfer to the cook FROM ITS OWN BALANCE so
-   * the cook is paid in full when the discount exceeds the platform fee. The
-   * destination charge only covers the cook up to what the customer paid; this
-   * top-up is the shortfall = max(0, discount − fee − tax). 0 when the fee alone
-   * covers the discount. Settled at capture via a separate Stripe transfer.
+   * Amount the platform transfers to the cook FROM ITS OWN BALANCE to cover the
+   * discount, normally the full discount amount (not reduced by the platform
+   * fee). Sent as a second, separate Stripe transfer alongside the destination
+   * charge's payout so the split reads cleanly: client pays the discounted
+   * total, 7eats pays the discount, then the platform fee comes out of that
+   * combined pool. Only reduced below the discount in the pathological case
+   * where the fee+tax can't be fully collected from a heavily-discounted charge
+   * (see below). Settled at release via a separate Stripe transfer.
    */
   subsidyTopUpCents: number;
 };
@@ -36,11 +39,13 @@ export type OrderChargeBreakdown = {
  * - application_fee_amount: platform fee + tax so HST/GST stays on the platform.
  *
  * Platform discount (full subsidy): reduces the customer's total but NEVER the
- * cook payout. The platform funds the discount first out of its own application
- * fee (floored at 0); any remainder when the discount exceeds the fee is paid to
- * the cook as a separate platform-funded top-up transfer (`subsidyTopUpCents`),
- * so the cook is always made whole and the platform's net on the order goes
- * negative.
+ * cook payout. Two clean transfers make the cook whole: the destination charge
+ * pays out the discounted total minus the platform's normal commission, and a
+ * separate transfer pays the cook the full discount amount, funded from the
+ * platform's own balance. The platform fee is taken from the destination charge
+ * whenever the discounted total can cover it; if a discount is so large that
+ * the fee can't be taken from the charge, the shortfall is added to the subsidy
+ * transfer instead so the cook is always paid pre-discount-base minus the fee.
  */
 export function computeOrderChargeBreakdown(params: {
   subtotal: number;
@@ -69,20 +74,19 @@ export function computeOrderChargeBreakdown(params: {
   );
   const taxCents = Math.round(taxAmount * 100);
   const discountCents = Math.round(platformDiscount * 100);
-  // The platform funds the discount first out of its own fee (floored at 0).
-  const applicationFeeCents = Math.max(
-    0,
-    platformFeeCents + taxCents - discountCents,
-  );
+  // The platform fee always comes out of the destination charge in full, capped
+  // so application_fee_amount never exceeds the charge (Stripe requirement).
+  const feeAndTaxCents = platformFeeCents + taxCents;
+  const applicationFeeCents = Math.min(feeAndTaxCents, totalCents);
   // Cook is always paid in full: pre-discount base minus the platform commission.
-  // (Identical to `totalCents - applicationFeeCents` whenever the discount is
-  // fully absorbed by the fee; for larger discounts the gap is the top-up below.)
   const cookPayoutCents = preDiscountBaseCents - platformFeeCents;
-  // When the discount exceeds the fee (+tax), the destination charge can't cover
-  // the cook fully — the platform tops up the remainder from its own balance.
+  // The subsidy transfer is the full discount amount, funded from the platform's
+  // own balance. When the discount is so large the fee+tax can't be fully taken
+  // from the (small, heavily-discounted) charge above, the uncollected fee is
+  // deducted here instead so the cook still lands on exactly cookPayoutCents.
   const subsidyTopUpCents = Math.max(
     0,
-    discountCents - platformFeeCents - taxCents,
+    discountCents - Math.max(0, feeAndTaxCents - totalCents),
   );
 
   return {
