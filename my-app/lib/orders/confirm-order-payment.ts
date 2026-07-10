@@ -1,5 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import { db } from "@/db";
+import { db, dbPool } from "@/db";
 import {
   authUser,
   cookProfiles,
@@ -233,7 +233,7 @@ export async function markOrderPaymentAuthorized(
       ? pi.latest_charge
       : (pi.latest_charge?.id ?? null);
 
-  const updated = await db.transaction(async (tx) => {
+  const updated = await dbPool.transaction(async (tx) => {
     const rows = await tx
       .update(orderPayments)
       .set({ status: "authorized", authorizedAt: new Date(), stripeChargeId })

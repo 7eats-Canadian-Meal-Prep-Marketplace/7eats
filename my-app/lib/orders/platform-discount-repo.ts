@@ -178,7 +178,7 @@ export async function resolvePlatformDiscount(
 
 /** Copy a checkout reservation onto the order once payment is authorized. */
 export async function commitPendingPlatformDiscount(
-  tx: OrderDbTx,
+  tx: DiscountDb,
   orderId: string,
 ): Promise<void> {
   const [payment] = await tx

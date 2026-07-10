@@ -3,7 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const { retrieveMock } = vi.hoisted(() => ({ retrieveMock: vi.fn() }));
 
 vi.mock("@/db", () => ({
-  db: { select: vi.fn(), update: vi.fn(), transaction: vi.fn() },
+  db: { select: vi.fn(), update: vi.fn() },
+  dbPool: { transaction: vi.fn() },
 }));
 vi.mock("@/db/schema", () => ({
   authUser: {},
@@ -31,7 +32,7 @@ vi.mock("@/lib/guest/order-access", () => ({
   guestAccessTokensMatch: vi.fn(),
 }));
 
-import { db } from "@/db";
+import { db, dbPool } from "@/db";
 import { sendCookNewOrderSms } from "@/lib/cooks/order-notifications";
 import { markOrderPaymentAuthorized } from "@/lib/orders/confirm-order-payment";
 
@@ -125,7 +126,7 @@ function mockUpdate() {
   const where = vi.fn(() => ({ returning }));
   const set = vi.fn(() => ({ where }));
   const update = vi.fn(() => ({ set }));
-  vi.mocked(db.transaction).mockImplementation(async (fn) =>
+  vi.mocked(dbPool.transaction).mockImplementation(async (fn) =>
     fn({ update } as never),
   );
 }
