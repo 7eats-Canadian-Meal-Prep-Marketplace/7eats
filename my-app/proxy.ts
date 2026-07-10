@@ -2,7 +2,10 @@ import { eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { authUser, cookProfiles } from "@/db/schema";
-import { auth } from "@/lib/auth";
+import {
+  getRequestSession,
+  type RequestSession,
+} from "@/lib/auth/request-session";
 import {
   GUEST_ADDRESS_COOKIE,
   hasGuestAddressCookie,
@@ -36,7 +39,6 @@ function buildCsp(nonce: string): string {
 // ─── Cookie names ─────────────────────────────────────────────────────────────
 // Better Auth sets the session cookie; we set the onboarding cookie server-side
 // via /api/auth/complete-onboarding and re-issue it on every sign-in.
-const SESSION_COOKIE = "better-auth.session_token";
 const ONBOARDED_COOKIE = "7eats-onboarded";
 
 // ─── Client route classification ──────────────────────────────────────────────
@@ -67,10 +69,6 @@ function isClientProtectedRoute(pathname: string): boolean {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function hasSession(req: NextRequest): boolean {
-  return req.cookies.has(SESSION_COOKIE);
-}
-
 function isOnboarded(req: NextRequest): boolean {
   return req.cookies.get(ONBOARDED_COOKIE)?.value === "1";
 }
@@ -80,21 +78,22 @@ function hasGuestAddress(req: NextRequest): boolean {
 }
 
 /** Cookie or session timestamp — avoids re-onboarding when cookie was cleared. */
-async function isClientOnboarded(req: NextRequest): Promise<boolean> {
+async function isClientOnboarded(
+  req: NextRequest,
+  session?: RequestSession | null,
+): Promise<boolean> {
   if (isOnboarded(req)) return true;
-  if (!hasSession(req)) return false;
-  const session = await getSession(req);
-  if (session?.user.role !== "client") return false;
-  const completed = session.user.onboardingCompletedAt;
+  const resolved = session ?? (await getRequestSession(req));
+  if (!resolved || resolved.user.role !== "client") return false;
+  const completed = resolved.user.onboardingCompletedAt;
   return completed != null && completed !== "";
 }
 
 /** Client onboarding gate — cooks/admins browsing the marketplace are treated as guests. */
 async function shouldRedirectToClientOnboarding(req: NextRequest) {
-  if (!hasSession(req)) return false;
-  if (await isClientOnboarded(req)) return false;
-  const session = await getSession(req);
-  return session?.user.role === "client";
+  const session = await getRequestSession(req);
+  if (!session || session.user.role !== "client") return false;
+  return !(await isClientOnboarded(req, session));
 }
 
 function redirectToClientLogin(req: NextRequest, nextPath?: string) {
@@ -107,7 +106,7 @@ function redirectToBusinessLogin(req: NextRequest) {
   return NextResponse.redirect(new URL("/business-auth/login", req.url));
 }
 
-type AppSession = NonNullable<Awaited<ReturnType<typeof getSession>>>;
+type AppSession = RequestSession;
 
 function isClientUser(session: AppSession): boolean {
   return session.user.role === "client";
@@ -141,7 +140,7 @@ function isBusinessCookPortalRoute(pathname: string): boolean {
 }
 
 async function requireCookSession(req: NextRequest) {
-  const session = await getSession(req);
+  const session = await getRequestSession(req);
   if (!session || !isCookOrAdminUser(session)) {
     return { session: null as null, deny: redirectToBusinessLogin(req) };
   }
@@ -227,7 +226,7 @@ async function routeRequest(
   // ── Root redirect ────────────────────────────────────────────────────────
   // Business users go to their dashboard; everyone else goes to the client app.
   if (pathname === "/") {
-    const session = await getSession(req);
+    const session = await getRequestSession(req);
     if (
       session &&
       (session.user.role === "cook" || session.user.role === "admin")
@@ -253,8 +252,11 @@ async function routeRequest(
     return NextResponse.redirect(new URL("/business/dashboard", req.url));
   }
 
-  if (pathname === "/app" && !hasSession(req) && hasGuestAddress(req)) {
-    return NextResponse.redirect(new URL("/app/browse", req.url));
+  if (pathname === "/app") {
+    const session = await getRequestSession(req);
+    if (!session && hasGuestAddress(req)) {
+      return NextResponse.redirect(new URL("/app/browse", req.url));
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -263,15 +265,15 @@ async function routeRequest(
 
   // ── Client onboarding ────────────────────────────────────────────────────
   if (pathname.startsWith("/app-auth/onboarding")) {
-    if (!hasSession(req)) {
+    const session = await getRequestSession(req);
+    if (!session) {
       return redirectToClientLogin(req);
     }
-    const session = await getSession(req);
-    if (session?.user.role !== "client") {
+    if (session.user.role !== "client") {
       return NextResponse.redirect(new URL("/app/browse", req.url));
     }
     // Already completed onboarding — skip it
-    if (await isClientOnboarded(req)) {
+    if (await isClientOnboarded(req, session)) {
       return NextResponse.redirect(new URL("/app/browse", req.url));
     }
     return NextResponse.next({ request: { headers: requestHeaders } });
@@ -280,11 +282,11 @@ async function routeRequest(
   // ── Client auth pages (login, signup) ────────────────────────────────────
   // Signed-in clients are bounced to browse (or their intended destination).
   if (pathname === "/app-auth/login" || pathname === "/app-auth/signup") {
-    const session = await getSession(req);
+    const session = await getRequestSession(req);
     if (session) {
       const role = session.user.role;
       if (role === "client") {
-        if (!(await isClientOnboarded(req))) {
+        if (!(await isClientOnboarded(req, session))) {
           return NextResponse.redirect(
             new URL("/app-auth/onboarding", req.url),
           );
@@ -307,14 +309,14 @@ async function routeRequest(
 
   // ── Client account page ───────────────────────────────────────────────────
   if (pathname === "/app-auth/account") {
-    const session = await getSession(req);
+    const session = await getRequestSession(req);
     if (!session) {
       return redirectToClientLogin(req);
     }
     if (session?.user.role !== "client") {
       return NextResponse.redirect(new URL("/app/browse", req.url));
     }
-    if (!(await isClientOnboarded(req))) {
+    if (!(await isClientOnboarded(req, session))) {
       return NextResponse.redirect(new URL("/app-auth/onboarding", req.url));
     }
     return NextResponse.next({ request: { headers: requestHeaders } });
@@ -332,11 +334,11 @@ async function routeRequest(
 
   // ── Client protected routes ───────────────────────────────────────────────
   if (isClientProtectedRoute(pathname)) {
-    const session = await getSession(req);
+    const session = await getRequestSession(req);
     if (!session || !isClientUser(session)) {
       return redirectToClientLogin(req, pathname);
     }
-    if (!(await isClientOnboarded(req))) {
+    if (!(await isClientOnboarded(req, session))) {
       return NextResponse.redirect(new URL("/app-auth/onboarding", req.url));
     }
     return NextResponse.next({ request: { headers: requestHeaders } });
@@ -368,7 +370,7 @@ async function routeRequest(
   // ── Business marketing / application pages ───────────────────────────────
   // Public for guests and clients. Signed-in cooks/admins go to their dashboard.
   if (isBusinessMarketingRoute(pathname)) {
-    const session = await getSession(req);
+    const session = await getRequestSession(req);
     if (session && isCookOrAdminUser(session)) {
       return NextResponse.redirect(new URL("/business/dashboard", req.url));
     }
@@ -385,7 +387,7 @@ async function routeRequest(
 
   // ── Business login ────────────────────────────────────────────────────────
   if (pathname === "/business-auth/login") {
-    const session = await getSession(req);
+    const session = await getRequestSession(req);
     if (session && isCookOrAdminUser(session)) {
       return NextResponse.redirect(new URL("/business/dashboard", req.url));
     }
@@ -402,7 +404,7 @@ async function routeRequest(
     pathname === "/business-auth/reset-password"
   ) {
     if (pathname === "/business-auth/setup/create-password") {
-      const existing = await getSession(req);
+      const existing = await getRequestSession(req);
       if (existing && isCookOrAdminUser(existing)) {
         const state = await getCookState(existing.user.id);
         if (state) {
@@ -460,14 +462,6 @@ async function routeRequest(
 }
 
 // ─── Session / DB helpers ─────────────────────────────────────────────────────
-
-async function getSession(req: NextRequest) {
-  try {
-    return await auth.api.getSession({ headers: req.headers });
-  } catch {
-    return null;
-  }
-}
 
 async function getCookState(userId: string) {
   const [row] = await db
