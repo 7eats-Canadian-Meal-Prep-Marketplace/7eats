@@ -14,6 +14,11 @@ import PlatformDiscountSignupPrompt from "@/app/components/PlatformDiscountSignu
 import type { ResolvedAddress } from "@/components/AddressSearchInput";
 import { AddressSearchInput } from "@/components/AddressSearchInput";
 import {
+  clearStoredPendingCheckout,
+  readStoredPendingCheckout,
+  writeStoredPendingCheckout,
+} from "@/lib/checkout/pending-checkout-storage";
+import {
   type FulfillmentWindow,
   nextFulfillmentSlotIso,
 } from "@/lib/cooks/card-schedule";
@@ -430,10 +435,28 @@ export default function CheckoutPage() {
     clientSecret: string;
     guestAccessToken?: string;
   } | null>(null);
+  const commitPendingPayment = useCallback(
+    (payment: {
+      orderId: string;
+      clientSecret: string;
+      guestAccessToken?: string;
+    }) => {
+      if (!cookId) return;
+      setPendingPayment(payment);
+      writeStoredPendingCheckout({
+        orderId: payment.orderId,
+        clientSecret: payment.clientSecret,
+        cookId,
+        guestAccessToken: payment.guestAccessToken,
+      });
+    },
+    [cookId],
+  );
   const [unavailableItems, setUnavailableItems] = useState<
     UnavailableCartItem[]
   >([]);
   const [checkingAvailability, setCheckingAvailability] = useState(false);
+  const [checkoutPrepared, setCheckoutPrepared] = useState(false);
 
   const isDelivery = fulfillmentMode === "delivery";
   const displayAddress = pendingAddress ?? currentAddress;
@@ -487,6 +510,91 @@ export default function CheckoutPage() {
   useEffect(() => {
     void syncCartAvailability();
   }, [syncCartAvailability]);
+
+  const refreshDiscountPreview = useCallback(async () => {
+    if (!platformDiscountEligible || subtotal <= 0) {
+      setDiscount({ amount: 0, name: null });
+      return;
+    }
+    try {
+      const res = await fetch(`/api/discounts/preview?subtotal=${subtotal}`);
+      const j = (await res.json()) as {
+        amount?: number;
+        name?: string | null;
+        blocked?: boolean;
+        reason?: "pending_checkout" | "already_used";
+      };
+      setDiscount({
+        amount: j.amount ?? 0,
+        name: j.name ?? null,
+        blocked: j.blocked,
+        reason: j.reason,
+      });
+    } catch {
+      setDiscount({ amount: 0, name: null });
+    }
+  }, [platformDiscountEligible, subtotal]);
+
+  useEffect(() => {
+    void refreshDiscountPreview();
+  }, [refreshDiscountPreview]);
+
+  useEffect(() => {
+    if (!isLoggedIn || !cookId || ordered || checkoutPrepared) return;
+
+    let cancelled = false;
+    (async () => {
+      const stored = readStoredPendingCheckout();
+      const resumeOrderId =
+        stored?.cookId === cookId ? stored.orderId : undefined;
+
+      try {
+        const res = await fetch("/api/checkout/prepare", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ cookId, resumeOrderId }),
+        });
+        const json = (await res.json()) as {
+          data?: {
+            resumed?: {
+              orderId: string;
+              clientSecret: string;
+              paymentIntentStatus: string;
+            } | null;
+          };
+        };
+
+        if (cancelled) return;
+
+        const resumed = json.data?.resumed;
+        if (resumed) {
+          commitPendingPayment({
+            orderId: resumed.orderId,
+            clientSecret: resumed.clientSecret,
+          });
+        } else if (stored?.cookId === cookId) {
+          clearStoredPendingCheckout();
+        }
+
+        await refreshDiscountPreview();
+      } catch {
+        /* non-fatal — place-order also clears stale holds */
+      } finally {
+        if (!cancelled) setCheckoutPrepared(true);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    isLoggedIn,
+    cookId,
+    ordered,
+    checkoutPrepared,
+    commitPendingPayment,
+    refreshDiscountPreview,
+  ]);
 
   useEffect(() => {
     function onFocus() {
@@ -570,39 +678,6 @@ export default function CheckoutPage() {
       cancelled = true;
     };
   }, [isDelivery, cookId, subtotal, displayAddress?.lat, displayAddress?.lng]);
-
-  useEffect(() => {
-    let cancelled = false;
-    if (!platformDiscountEligible || subtotal <= 0) {
-      setDiscount({ amount: 0, name: null });
-      return;
-    }
-    fetch(`/api/discounts/preview?subtotal=${subtotal}`)
-      .then((r) => r.json())
-      .then(
-        (j: {
-          amount?: number;
-          name?: string | null;
-          blocked?: boolean;
-          reason?: "pending_checkout" | "already_used";
-        }) => {
-          if (!cancelled) {
-            setDiscount({
-              amount: j.amount ?? 0,
-              name: j.name ?? null,
-              blocked: j.blocked,
-              reason: j.reason,
-            });
-          }
-        },
-      )
-      .catch(() => {
-        if (!cancelled) setDiscount({ amount: 0, name: null });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [platformDiscountEligible, subtotal]);
 
   const grandTotal = useMemo(() => {
     const taxAmount =
@@ -835,7 +910,7 @@ export default function CheckoutPage() {
             return;
           }
 
-          setPendingPayment({
+          commitPendingPayment({
             orderId: guestData.data.orderId,
             clientSecret: guestData.data.clientSecret,
             guestAccessToken: guestData.data.accessToken,
@@ -863,7 +938,7 @@ export default function CheckoutPage() {
           return;
         }
 
-        setPendingPayment({
+        commitPendingPayment({
           orderId: data.data.orderId,
           clientSecret: data.data.clientSecret,
         });
@@ -903,6 +978,7 @@ export default function CheckoutPage() {
       }
 
       setOrdered(true);
+      clearStoredPendingCheckout();
       clearCart();
 
       if (pendingPayment.guestAccessToken) {

@@ -20,6 +20,7 @@ import {
   type UnavailableOrderDish,
 } from "@/lib/dishes/lifecycle-messages";
 import { formatDbLeadTimeCutoff } from "@/lib/lead-time";
+import { cancelClientPendingCheckouts } from "@/lib/orders/abandoned-checkout";
 import { computeLineTotal } from "@/lib/orders/pricing";
 import { computeOrderChargeBreakdown } from "@/lib/orders/totals";
 import {
@@ -381,6 +382,9 @@ export async function placeClientOrder(
   const discountCandidates = orderCandidatesByValue(activeDiscounts, subtotal);
 
   const isGuestCheckout = Boolean(guestMeta);
+
+  // A prior visit may have left an unpaid checkout that still reserves promos.
+  await cancelClientPendingCheckouts(client.id);
 
   // Resolved inside the transaction so the PaymentIntent amount, the order's
   // discount snapshot, and the per-user count are one atomic, locked decision.

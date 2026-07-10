@@ -124,6 +124,46 @@ export async function cancelAbandonedCheckoutOrder(
   return { ok: true, cancelled: true, orderId };
 }
 
+/** Unpaid checkout sessions for a client (order + full payment still pending). */
+export async function findClientPendingCheckoutOrderIds(
+  clientId: string,
+): Promise<string[]> {
+  const rows = await db
+    .select({ orderId: orders.id })
+    .from(orders)
+    .innerJoin(
+      orderPayments,
+      and(
+        eq(orderPayments.orderId, orders.id),
+        eq(orderPayments.type, "full"),
+        eq(orderPayments.status, "pending"),
+      ),
+    )
+    .where(and(eq(orders.clientId, clientId), eq(orders.status, "pending")));
+
+  return rows.map((row) => row.orderId);
+}
+
+/**
+ * Drop checkout sessions that never completed payment so promos and Stripe PIs
+ * are not left reserved when the customer starts a fresh checkout.
+ */
+export async function cancelClientPendingCheckouts(
+  clientId: string,
+  opts: { exceptOrderId?: string } = {},
+): Promise<string[]> {
+  const orderIds = await findClientPendingCheckoutOrderIds(clientId);
+  const cancelled: string[] = [];
+
+  for (const orderId of orderIds) {
+    if (opts.exceptOrderId && orderId === opts.exceptOrderId) continue;
+    const result = await cancelAbandonedCheckoutOrder(orderId);
+    if (result.ok && result.cancelled) cancelled.push(orderId);
+  }
+
+  return cancelled;
+}
+
 /** Cancel stale unpaid checkouts (run on a schedule). */
 export async function cancelStaleAbandonedCheckouts(
   ttlMs: number = ABANDONED_CHECKOUT_TTL_MS,
