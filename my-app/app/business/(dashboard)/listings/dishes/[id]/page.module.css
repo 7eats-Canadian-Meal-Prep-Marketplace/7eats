@@ -7,7 +7,7 @@
   --drag-ok-soft: rgba(22, 163, 74, 0.06);
   display: flex;
   flex-direction: column;
-  max-width: 820px;
+  max-width: 1100px;
   width: 100%;
   min-width: 0;
   margin: 0 auto;
@@ -53,28 +53,108 @@
 }
 
 /* ─── Content animation ────────────────────────────────────────────────────── */
+/* Opacity-only: a transform on this ancestor breaks position:sticky on the
+   meal footer (and would leave stickiness broken under fill-mode: both). */
 .content {
-  animation: fadeUp 0.14s ease both;
+  animation: fadeIn 0.14s ease both;
 }
 
-@keyframes fadeUp {
+@keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(4px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
-/* ─── Tab bodies ───────────────────────────────────────────────────────────── */
-.detailsTab,
-.nutritionTab,
+/* ─── Meal / promo tab bodies ──────────────────────────────────────────────── */
+.mealTab {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
 .promoTab {
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+/* ─── Two-column meal layout (mirrors settings) ────────────────────────────── */
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 160px;
+  gap: 64px;
+  align-items: start;
+  min-width: 0;
+}
+
+.sections {
+  display: flex;
+  flex-direction: column;
+  gap: 52px;
+  min-width: 0;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  scroll-margin-top: 32px;
+  min-width: 0;
+}
+
+.sectionTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.sectionBody {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ─── Sticky right section tracker ─────────────────────────────────────────── */
+.sideNav {
+  position: sticky;
+  top: 32px;
+  display: flex;
+  flex-direction: column;
+}
+
+.navItem {
+  display: block;
+  width: 100%;
+  padding: 7px 0 7px 16px;
+  border: none;
+  box-shadow: inset 2px 0 0 #e8e8ec;
+  background: none;
+  font-size: 13px;
+  font-weight: 500;
+  color: #8a8a96;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  transition:
+    color 0.12s,
+    box-shadow 0.12s;
+}
+
+.navItem:hover {
+  color: var(--ink);
+  box-shadow: inset 2px 0 0 #c0c0c8;
+}
+
+.navItemActive {
+  box-shadow: inset 3px 0 0 var(--ink);
+  color: var(--ink);
+  font-weight: 600;
 }
 
 /* ─── Cards ────────────────────────────────────────────────────────────────── */
@@ -512,17 +592,36 @@
   padding: 8px 0;
 }
 
-/* ─── Action footer ────────────────────────────────────────────────────────── */
-/* Static, at the strict bottom of the form. Not sticky: a lingering transform
-   on the animated .content ancestor breaks position:sticky and made the bar
-   float over the form. A plain block at the end can never overlap anything. */
+/* ─── Publish requirements (draft edit) ────────────────────────────────────── */
+.requirementsWrap {
+  margin-top: 8px;
+  margin-bottom: 4px;
+  padding: 16px 18px;
+  border-radius: var(--radius-sm);
+  background: var(--white);
+  border: 1.5px solid var(--red);
+}
+
+.requirementsHeading {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+  margin: 0 0 10px;
+}
+
+/* ─── Action footer (sticky on Meal tab) ───────────────────────────────────── */
 .footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-top: 8px;
-  padding: 18px 0 4px;
+  margin-top: 24px;
+  padding: 16px 0;
   background: var(--white);
   border-top: 1px solid var(--grey-200);
 }
@@ -853,6 +952,21 @@
 }
 
 /* ─── Responsive ───────────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .sideNav {
+    display: none;
+  }
+
+  .sections {
+    gap: 40px;
+  }
+}
+
 @media (max-width: 767px) {
   .tabRow {
     overflow-x: auto;

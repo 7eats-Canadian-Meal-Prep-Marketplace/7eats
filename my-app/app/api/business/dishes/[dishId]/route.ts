@@ -25,7 +25,7 @@ export type Params = { params: Promise<{ dishId: string }> };
 const updateDishSchema = z
   .object({
     name: z.string().min(1).max(255),
-    price: z.number().positive().multipleOf(0.01),
+    price: z.number().nonnegative().multipleOf(0.01),
     description: z.string().max(2000).optional(),
     cuisine: z.string().max(100).optional(),
     categories: z.array(z.string()).optional().default([]),
@@ -37,9 +37,22 @@ const updateDishSchema = z
     isNutFree: z.boolean().optional().default(false),
     isKosher: z.boolean().optional().default(false),
     servingSize: z.string().max(100).optional(),
-    status: z.enum(["active", "inactive"]).optional(),
+    status: z.enum(["active", "inactive", "draft"]).optional(),
   })
-  .partial();
+  .partial()
+  .superRefine((data, ctx) => {
+    if (
+      data.status === "active" &&
+      data.price !== undefined &&
+      data.price <= 0
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Price must be greater than 0 to publish.",
+        path: ["price"],
+      });
+    }
+  });
 
 export async function GET(req: NextRequest, { params }: Params) {
   const cookId = await getCookId(req.headers);

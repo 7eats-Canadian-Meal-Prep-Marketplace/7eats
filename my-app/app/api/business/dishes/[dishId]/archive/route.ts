@@ -9,7 +9,7 @@ import { db } from "@/db";
 import { dishes } from "@/db/schema";
 import { getDishLifecycleInfo } from "@/lib/dishes/lifecycle";
 import { openOrdersArchiveError } from "@/lib/dishes/lifecycle-messages";
-import { isDishPaused, setDishPaused } from "@/lib/dishes/status";
+import { isDishDraft, isDishPaused, setDishPaused } from "@/lib/dishes/status";
 import { rebuildCookSearchIndexSafe } from "@/lib/search/index-builder";
 
 export type Params = { params: Promise<{ dishId: string }> };
@@ -29,6 +29,13 @@ export async function POST(req: NextRequest, { params }: Params) {
       .limit(1);
 
     if (!dish) return notFound("Dish");
+
+    if (isDishDraft(dish.status)) {
+      return NextResponse.json(
+        { error: "Drafts can't be paused. Publish or delete them instead." },
+        { status: 400 },
+      );
+    }
 
     if (isDishPaused(dish.status)) {
       return NextResponse.json(

@@ -95,3 +95,22 @@ export function step2Requirements(
   });
   return items;
 }
+
+/** Full publish checklist (single-page create / publish draft). */
+export function publishMealRequirements(
+  form: MealFormFields,
+  hasPhoto: boolean,
+  ingredients: IngredientRow[],
+  allergens: string[],
+  noneApplies: boolean,
+): RequirementItem[] {
+  return [
+    ...step1Requirements(form, hasPhoto),
+    ...step2Requirements(ingredients, allergens, noneApplies),
+  ];
+}
+
+/** Draft only needs a name. */
+export function draftMealRequirements(form: MealFormFields): RequirementItem[] {
+  return [{ label: "Dish name added", met: !!form.name.trim() }];
+}

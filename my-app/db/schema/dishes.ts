@@ -80,7 +80,11 @@ export const dishes = pgTable(
   },
   (t) => [
     index("dishes_cook_id_idx").on(t.cookId),
-    check("dishes_price_positive", sql`${t.price} > 0`),
+    // Drafts may use 0 as a placeholder until the cook sets a real price.
+    check(
+      "dishes_price_positive",
+      sql`(${t.status} = 'draft' AND ${t.price} >= 0) OR (${t.status} <> 'draft' AND ${t.price} > 0)`,
+    ),
     // Public: dish is active
     pgPolicy("dishes_select_public", {
       for: "select",
