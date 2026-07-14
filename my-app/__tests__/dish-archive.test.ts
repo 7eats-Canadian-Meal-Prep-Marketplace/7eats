@@ -26,19 +26,24 @@ vi.mock("@/lib/dishes/lifecycle", () => ({
   getDishLifecycleInfo: vi.fn(),
 }));
 vi.mock("@/lib/dishes/status", () => ({
-  isDishPaused: vi.fn((status: string) => status !== "active"),
+  isDishDraft: vi.fn((status: string) => status === "draft"),
+  isDishPaused: vi.fn(
+    (status: string) => status === "inactive" || status === "archived",
+  ),
   setDishPaused: vi.fn(),
+  setDishActive: vi.fn(),
 }));
 vi.mock("@/lib/search/index-builder", () => ({
   rebuildCookSearchIndexSafe: vi.fn(),
 }));
 
 import { NextRequest } from "next/server";
-import { POST } from "@/app/api/business/dishes/[dishId]/archive/route";
+import { POST as archivePost } from "@/app/api/business/dishes/[dishId]/archive/route";
+import { POST as unarchivePost } from "@/app/api/business/dishes/[dishId]/unarchive/route";
 import { db } from "@/db";
 import { auth } from "@/lib/auth";
 import { getDishLifecycleInfo } from "@/lib/dishes/lifecycle";
-import { setDishPaused } from "@/lib/dishes/status";
+import { setDishActive, setDishPaused } from "@/lib/dishes/status";
 
 const COOK_ID = "cook-uuid";
 const USER_ID = "user-uuid";
@@ -69,8 +74,14 @@ function mockTwoSelects(dishRow: object | null) {
   });
 }
 
-function makePost(): NextRequest {
+function makeArchivePost(): NextRequest {
   return new NextRequest("http://localhost/dishes/dish-uuid/archive", {
+    method: "POST",
+  });
+}
+
+function makeUnarchivePost(): NextRequest {
+  return new NextRequest("http://localhost/dishes/dish-uuid/unarchive", {
     method: "POST",
   });
 }
@@ -99,11 +110,18 @@ const dishBase = {
 
 const activeDish = { ...dishBase, status: "active" as const };
 const archivedDish = { ...dishBase, status: "inactive" as const };
+const draftDish = { ...dishBase, status: "draft" as const };
 const updatedDish = { ...dishBase, status: "inactive" as const };
+const activatedDish = { ...dishBase, status: "active" as const };
 const updatedDishResponse = {
   ...updatedDish,
   createdAt: updatedDish.createdAt.toISOString(),
   updatedAt: updatedDish.updatedAt.toISOString(),
+};
+const activatedDishResponse = {
+  ...activatedDish,
+  createdAt: activatedDish.createdAt.toISOString(),
+  updatedAt: activatedDish.updatedAt.toISOString(),
 };
 
 describe("POST /api/business/listings/dishes/[dishId]/archive", () => {
@@ -115,7 +133,7 @@ describe("POST /api/business/listings/dishes/[dishId]/archive", () => {
   it("returns 401 when session is null", async () => {
     mockSession(null);
 
-    const res = await POST(makePost(), params);
+    const res = await archivePost(makeArchivePost(), params);
     const body = await res.json();
 
     expect(res.status).toBe(401);
@@ -126,7 +144,7 @@ describe("POST /api/business/listings/dishes/[dishId]/archive", () => {
     mockSession(USER_ID);
     mockCookLookup(null);
 
-    const res = await POST(makePost(), params);
+    const res = await archivePost(makeArchivePost(), params);
     const body = await res.json();
 
     expect(res.status).toBe(401);
@@ -137,18 +155,30 @@ describe("POST /api/business/listings/dishes/[dishId]/archive", () => {
     mockSession(USER_ID);
     mockTwoSelects(null);
 
-    const res = await POST(makePost(), params);
+    const res = await archivePost(makeArchivePost(), params);
     const body = await res.json();
 
     expect(res.status).toBe(404);
     expect(body.error).toMatch(/not found/i);
   });
 
+  it("returns 400 when the dish is a draft", async () => {
+    mockSession(USER_ID);
+    mockTwoSelects(draftDish);
+
+    const res = await archivePost(makeArchivePost(), params);
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error).toMatch(/draft/i);
+    expect(setDishPaused).not.toHaveBeenCalled();
+  });
+
   it("returns 400 when the dish is already archived", async () => {
     mockSession(USER_ID);
     mockTwoSelects(archivedDish);
 
-    const res = await POST(makePost(), params);
+    const res = await archivePost(makeArchivePost(), params);
     const body = await res.json();
 
     expect(res.status).toBe(400);
@@ -159,7 +189,7 @@ describe("POST /api/business/listings/dishes/[dishId]/archive", () => {
     mockSession(USER_ID);
     mockTwoSelects({ id: DISH_ID, status: "archived" });
 
-    const res = await POST(makePost(), params);
+    const res = await archivePost(makeArchivePost(), params);
     const body = await res.json();
 
     expect(res.status).toBe(400);
@@ -176,7 +206,7 @@ describe("POST /api/business/listings/dishes/[dishId]/archive", () => {
       canDelete: false,
     });
 
-    const res = await POST(makePost(), params);
+    const res = await archivePost(makeArchivePost(), params);
     const body = await res.json();
 
     expect(res.status).toBe(409);
@@ -195,7 +225,7 @@ describe("POST /api/business/listings/dishes/[dishId]/archive", () => {
     });
     vi.mocked(setDishPaused).mockResolvedValue(updatedDish);
 
-    const res = await POST(makePost(), params);
+    const res = await archivePost(makeArchivePost(), params);
     const body = await res.json();
 
     expect(res.status).toBe(200);
@@ -215,8 +245,78 @@ describe("POST /api/business/listings/dishes/[dishId]/archive", () => {
     });
     vi.mocked(setDishPaused).mockRejectedValue(new Error("DB error"));
 
-    const res = await POST(makePost(), params);
+    const res = await archivePost(makeArchivePost(), params);
 
     expect(res.status).toBe(500);
+  });
+});
+
+describe("POST /api/business/listings/dishes/[dishId]/unarchive", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(db.execute).mockResolvedValue({ rows: [] } as never);
+  });
+
+  it("returns 401 when session is null", async () => {
+    mockSession(null);
+
+    const res = await unarchivePost(makeUnarchivePost(), params);
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 404 when the dish is not found", async () => {
+    mockSession(USER_ID);
+    mockTwoSelects(null);
+
+    const res = await unarchivePost(makeUnarchivePost(), params);
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 400 when activating a draft", async () => {
+    mockSession(USER_ID);
+    mockTwoSelects(draftDish);
+
+    const res = await unarchivePost(makeUnarchivePost(), params);
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error).toMatch(/draft/i);
+    expect(setDishActive).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 when the meal is already active", async () => {
+    mockSession(USER_ID);
+    mockTwoSelects(activeDish);
+
+    const res = await unarchivePost(makeUnarchivePost(), params);
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error).toBe("Meal is already active.");
+    expect(setDishActive).not.toHaveBeenCalled();
+  });
+
+  it("returns 200 when reactivating an inactive meal", async () => {
+    mockSession(USER_ID);
+    mockTwoSelects(archivedDish);
+    vi.mocked(setDishActive).mockResolvedValue(activatedDish);
+
+    const res = await unarchivePost(makeUnarchivePost(), params);
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.success).toBe(true);
+    expect(body.data).toEqual(activatedDishResponse);
+    expect(setDishActive).toHaveBeenCalledWith(DISH_ID, COOK_ID);
+  });
+
+  it("returns 200 when reactivating a legacy archived meal", async () => {
+    mockSession(USER_ID);
+    mockTwoSelects({ ...dishBase, status: "archived" });
+    vi.mocked(setDishActive).mockResolvedValue(activatedDish);
+
+    const res = await unarchivePost(makeUnarchivePost(), params);
+    expect(res.status).toBe(200);
+    expect(setDishActive).toHaveBeenCalled();
   });
 });

@@ -12,7 +12,7 @@ import {
 } from "@/lib/dishes/status";
 import { rebuildCookSearchIndexSafe } from "@/lib/search/index-builder";
 
-const VALID_STATUSES = ["active", "inactive"] as const;
+const VALID_STATUSES = ["active", "inactive", "draft"] as const;
 
 const nutritionSchema = z
   .object({
@@ -23,32 +23,48 @@ const nutritionSchema = z
   })
   .optional();
 
-const createDishSchema = z
-  .object({
-    name: z.string().min(1).max(255),
-    price: z.number().positive().multipleOf(0.01),
-    description: z.string().max(500).optional(),
-    categories: z.array(z.string()).optional().default([]),
-    isHalal: z.boolean().optional().default(false),
-    isVegan: z.boolean().optional().default(false),
-    isVegetarian: z.boolean().optional().default(false),
-    isGlutenFree: z.boolean().optional().default(false),
-    isDairyFree: z.boolean().optional().default(false),
-    isNutFree: z.boolean().optional().default(false),
-    isKosher: z.boolean().optional().default(false),
-    servingSize: z.string().max(100).optional(),
-    status: z.enum(["active", "inactive"]).optional().default("active"),
-    ingredients: z
-      .array(z.object({ name: z.string().min(1).max(255) }))
-      .optional()
-      .default([]),
-    allergens: z.array(z.string().min(1).max(255)).default([]),
-    allergenNoneApplies: z.boolean().optional().default(false),
-    nutrition: nutritionSchema,
-  })
-  .refine((d) => d.allergens.length > 0 || d.allergenNoneApplies, {
-    message: "Allergen declaration is required.",
-  });
+const createDishBaseSchema = z.object({
+  name: z.string().trim().min(1).max(255),
+  price: z.number().nonnegative().multipleOf(0.01).optional(),
+  description: z.string().max(500).optional(),
+  categories: z.array(z.string()).optional().default([]),
+  isHalal: z.boolean().optional().default(false),
+  isVegan: z.boolean().optional().default(false),
+  isVegetarian: z.boolean().optional().default(false),
+  isGlutenFree: z.boolean().optional().default(false),
+  isDairyFree: z.boolean().optional().default(false),
+  isNutFree: z.boolean().optional().default(false),
+  isKosher: z.boolean().optional().default(false),
+  servingSize: z.string().max(100).optional(),
+  status: z.enum(["active", "inactive", "draft"]).optional().default("active"),
+  ingredients: z
+    .array(z.object({ name: z.string().min(1).max(255) }))
+    .optional()
+    .default([]),
+  allergens: z.array(z.string().min(1).max(255)).optional().default([]),
+  allergenNoneApplies: z.boolean().optional().default(false),
+  nutrition: nutritionSchema,
+});
+
+const createDishSchema = createDishBaseSchema.superRefine((data, ctx) => {
+  if (data.status === "draft") return;
+
+  if (data.price === undefined || data.price <= 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Price must be greater than 0.",
+      path: ["price"],
+    });
+  }
+
+  if (data.allergens.length === 0 && !data.allergenNoneApplies) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Allergen declaration is required.",
+      path: ["allergens"],
+    });
+  }
+});
 
 export async function GET(req: NextRequest) {
   const cookId = await getCookId(req.headers);
@@ -129,6 +145,11 @@ export async function POST(req: NextRequest) {
     ...rest
   } = parsed.data;
 
+  const priceValue =
+    status === "draft"
+      ? String((price ?? 0).toFixed(2))
+      : String((price as number).toFixed(2));
+
   try {
     const dbStatus = await mapDishStatusForDb(status);
     const inserted = await dbPool.transaction(async (tx) => {
@@ -137,8 +158,8 @@ export async function POST(req: NextRequest) {
         .values({
           cookId,
           ...rest,
-          price: String(price),
-          status: dbStatus as "active",
+          price: priceValue,
+          status: dbStatus as "active" | "inactive" | "draft",
         })
         .returning();
 
@@ -182,8 +203,10 @@ export async function POST(req: NextRequest) {
       return dish;
     });
 
-    // Keep the search index in sync with the cook's dish catalogue.
-    rebuildCookSearchIndexSafe(cookId);
+    // Drafts are not public — only reindex when publishing/creating active meals.
+    if (status !== "draft") {
+      rebuildCookSearchIndexSafe(cookId);
+    }
 
     return NextResponse.json(
       {
@@ -209,7 +232,7 @@ export async function POST(req: NextRequest) {
     }
     console.error("[dishes]", err);
     return NextResponse.json(
-      { error: "Failed to create dish." },
+      { error: "Could not save your meal. Please try again." },
       { status: 500 },
     );
   }

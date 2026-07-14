@@ -1,12 +1,17 @@
 import "server-only";
 
-import { and, eq, ne, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { dishes } from "@/db/schema";
 import { type DishStatus, normalizeDishStatus } from "@/lib/dishes/status-core";
 
 export type { DishStatus } from "@/lib/dishes/status-core";
-export { isDishPaused, normalizeDishStatus } from "@/lib/dishes/status-core";
+export {
+  isDishDraft,
+  isDishOrderable,
+  isDishPaused,
+  normalizeDishStatus,
+} from "@/lib/dishes/status-core";
 
 let pausedDbLabel: "inactive" | "archived" | null = null;
 
@@ -28,8 +33,9 @@ export async function getPausedDishStatusValue(): Promise<
 
 export async function mapDishStatusForDb(
   status: DishStatus,
-): Promise<"active" | "inactive" | "archived"> {
+): Promise<"active" | "inactive" | "archived" | "draft"> {
   if (status === "active") return "active";
+  if (status === "draft") return "draft";
   return getPausedDishStatusValue();
 }
 
@@ -58,10 +64,14 @@ export async function setDishActive(dishId: string, cookId: string) {
     : undefined;
 }
 
-/** Filter dishes by active/inactive for the cook dashboard. */
+/** Filter dishes by status for the cook dashboard. */
 export function dishStatusFilter(cookId: string, status: DishStatus) {
   if (status === "inactive") {
-    return and(eq(dishes.cookId, cookId), ne(dishes.status, "active"));
+    // Prefer exact inactive; legacy archived rows (pre-0005) also count as inactive.
+    return and(
+      eq(dishes.cookId, cookId),
+      sql`${dishes.status}::text IN ('inactive', 'archived')`,
+    );
   }
-  return and(eq(dishes.cookId, cookId), eq(dishes.status, "active"));
+  return and(eq(dishes.cookId, cookId), eq(dishes.status, status));
 }

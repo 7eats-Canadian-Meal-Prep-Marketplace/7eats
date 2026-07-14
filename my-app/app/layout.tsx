@@ -105,7 +105,11 @@ export default async function RootLayout({
   const nonce = (await headers()).get("x-nonce") ?? undefined;
 
   return (
-    <html lang="en-CA" className={plusJakartaSans.variable}>
+    <html
+      lang="en-CA"
+      className={plusJakartaSans.variable}
+      data-scroll-behavior="smooth"
+    >
       <head>
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         <link

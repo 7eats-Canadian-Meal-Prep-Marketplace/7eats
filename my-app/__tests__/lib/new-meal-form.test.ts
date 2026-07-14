@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  draftMealRequirements,
   EMPTY_MEAL_FORM,
   EMPTY_MEAL_NUTRITION,
   isEmptyMealDraft,
   type MealDraft,
   parseMealDraft,
+  publishMealRequirements,
   step1Requirements,
   step2Requirements,
 } from "@/lib/dishes/new-meal-form";
@@ -147,5 +149,38 @@ describe("step2Requirements", () => {
       true,
     );
     expect(withNoneApplies.every((i) => i.met)).toBe(true);
+  });
+});
+
+describe("draftMealRequirements", () => {
+  it("only requires a dish name", () => {
+    expect(draftMealRequirements(EMPTY_MEAL_FORM)[0].met).toBe(false);
+    expect(
+      draftMealRequirements({ ...EMPTY_MEAL_FORM, name: "Jollof" })[0].met,
+    ).toBe(true);
+  });
+});
+
+describe("publishMealRequirements", () => {
+  it("combines details + ingredients + allergens", () => {
+    const items = publishMealRequirements(
+      { name: "Jollof", price: "14.00", description: "Good" },
+      true,
+      [{ id: "1", name: "Rice" }],
+      [],
+      true,
+    );
+    expect(items.every((i) => i.met)).toBe(true);
+  });
+
+  it("fails when photos are missing", () => {
+    const items = publishMealRequirements(
+      { name: "Jollof", price: "14.00", description: "Good" },
+      false,
+      [{ id: "1", name: "Rice" }],
+      [],
+      true,
+    );
+    expect(items.some((i) => !i.met)).toBe(true);
   });
 });

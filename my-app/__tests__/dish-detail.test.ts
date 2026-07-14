@@ -4,7 +4,7 @@ vi.mock("@/lib/auth", () => ({
   auth: { api: { getSession: vi.fn() } },
 }));
 vi.mock("@/db", () => ({
-  db: { select: vi.fn(), insert: vi.fn(), update: vi.fn() },
+  db: { select: vi.fn(), insert: vi.fn(), update: vi.fn(), delete: vi.fn() },
 }));
 vi.mock("@/db/schema", () => ({
   dishes: {},
@@ -14,6 +14,7 @@ vi.mock("@/db/schema", () => ({
   dishTags: {},
   tags: {},
   cookProfiles: {},
+  orderDishes: {},
 }));
 vi.mock("drizzle-orm", () => ({
   eq: vi.fn(),
@@ -31,11 +32,30 @@ vi.mock("@/lib/dishes/lifecycle", () => ({
     canDelete: true,
   }),
 }));
+vi.mock("@/lib/dishes/status", async (importOriginal) => {
+  const mod = await importOriginal<typeof import("@/lib/dishes/status")>();
+  return {
+    ...mod,
+    mapDishStatusForDb: vi.fn(
+      async (status: "active" | "inactive" | "draft") =>
+        status === "inactive"
+          ? "inactive"
+          : status === "draft"
+            ? "draft"
+            : "active",
+    ),
+  };
+});
+vi.mock("@/lib/search/index-builder", () => ({
+  rebuildCookSearchIndexSafe: vi.fn(),
+}));
 
 import { NextRequest } from "next/server";
-import { GET, PATCH } from "@/app/api/business/dishes/[dishId]/route";
+import { DELETE, GET, PATCH } from "@/app/api/business/dishes/[dishId]/route";
 import { db } from "@/db";
 import { auth } from "@/lib/auth";
+import { mapDishStatusForDb } from "@/lib/dishes/status";
+import { rebuildCookSearchIndexSafe } from "@/lib/search/index-builder";
 
 const COOK_ID = "cook-uuid";
 const USER_ID = "user-uuid";
@@ -63,6 +83,12 @@ function makePatch(body: unknown): NextRequest {
   });
 }
 
+function makeDelete(): NextRequest {
+  return new NextRequest("http://localhost/dishes/dish-uuid", {
+    method: "DELETE",
+  });
+}
+
 function mockSession(userId: string | null) {
   vi.mocked(auth.api.getSession).mockResolvedValue(
     userId ? ({ user: { id: userId, role: "cook" } } as never) : null,
@@ -74,6 +100,23 @@ function mockUpdate(row: object) {
   const where = vi.fn(() => ({ returning }));
   const set = vi.fn(() => ({ where }));
   vi.mocked(db.update).mockReturnValue({ set } as never);
+}
+
+function mockOwnershipSelect() {
+  let callCount = 0;
+  vi.mocked(db.select).mockImplementation(() => {
+    callCount++;
+    if (callCount === 1) {
+      const limit = vi.fn().mockResolvedValue([{ id: COOK_ID }]);
+      const where = vi.fn(() => ({ limit }));
+      const from = vi.fn(() => ({ where }));
+      return { from } as never;
+    }
+    const limit = vi.fn().mockResolvedValue([{ id: mockDish.id }]);
+    const where = vi.fn(() => ({ limit }));
+    const from = vi.fn(() => ({ where }));
+    return { from } as never;
+  });
 }
 
 describe("GET /api/business/listings/dishes/[dishId]", () => {
@@ -372,5 +415,154 @@ describe("PATCH /api/business/listings/dishes/[dishId]", () => {
     expect(res.status).toBe(500);
     const body = await res.json();
     expect(body.error).toBeDefined();
+  });
+
+  it("accepts draft status and zero price on draft save", async () => {
+    mockSession(USER_ID);
+    mockOwnershipSelect();
+    const updatedDish = { ...mockDish, status: "draft", price: "0.00" };
+    mockUpdate(updatedDish);
+
+    const res = await PATCH(
+      makePatch({ name: "WIP", price: 0, status: "draft" }),
+      { params },
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+    expect(body.data.status).toBe("draft");
+    expect(mapDishStatusForDb).toHaveBeenCalledWith("draft");
+  });
+
+  it("publishes draft to active when status=active and price > 0", async () => {
+    mockSession(USER_ID);
+    mockOwnershipSelect();
+    const updatedDish = { ...mockDish, status: "active", price: "14.00" };
+    mockUpdate(updatedDish);
+
+    const res = await PATCH(
+      makePatch({ name: "Ready", price: 14, status: "active" }),
+      { params },
+    );
+    expect(res.status).toBe(200);
+    expect(mapDishStatusForDb).toHaveBeenCalledWith("active");
+  });
+
+  it("rejects publishing with price 0", async () => {
+    mockSession(USER_ID);
+    mockOwnershipSelect();
+
+    const res = await PATCH(
+      makePatch({ name: "Ready", price: 0, status: "active" }),
+      { params },
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toMatch(/price/i);
+  });
+
+  it("accepts inactive status (pause via patch)", async () => {
+    mockSession(USER_ID);
+    mockOwnershipSelect();
+    mockUpdate({ ...mockDish, status: "inactive" });
+
+    const res = await PATCH(makePatch({ status: "inactive" }), { params });
+    expect(res.status).toBe(200);
+    expect(mapDishStatusForDb).toHaveBeenCalledWith("inactive");
+  });
+});
+
+describe("DELETE /api/business/listings/dishes/[dishId]", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("returns 401 when unauthenticated", async () => {
+    mockSession(null);
+    const res = await DELETE(makeDelete(), { params });
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 404 when dish not found", async () => {
+    mockSession(USER_ID);
+    let callCount = 0;
+    vi.mocked(db.select).mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) {
+        const limit = vi.fn().mockResolvedValue([{ id: COOK_ID }]);
+        const where = vi.fn(() => ({ limit }));
+        const from = vi.fn(() => ({ where }));
+        return { from } as never;
+      }
+      const limit = vi.fn().mockResolvedValue([]);
+      const where = vi.fn(() => ({ limit }));
+      const from = vi.fn(() => ({ where }));
+      return { from } as never;
+    });
+
+    const res = await DELETE(makeDelete(), { params });
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 409 when meal has order history", async () => {
+    mockSession(USER_ID);
+    let callCount = 0;
+    vi.mocked(db.select).mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) {
+        const limit = vi.fn().mockResolvedValue([{ id: COOK_ID }]);
+        const where = vi.fn(() => ({ limit }));
+        const from = vi.fn(() => ({ where }));
+        return { from } as never;
+      }
+      if (callCount === 2) {
+        const limit = vi.fn().mockResolvedValue([{ id: mockDish.id }]);
+        const where = vi.fn(() => ({ limit }));
+        const from = vi.fn(() => ({ where }));
+        return { from } as never;
+      }
+      // orderDishes lookup
+      const limit = vi.fn().mockResolvedValue([{ dishId: mockDish.id }]);
+      const where = vi.fn(() => ({ limit }));
+      const from = vi.fn(() => ({ where }));
+      return { from } as never;
+    });
+
+    const res = await DELETE(makeDelete(), { params });
+    const body = await res.json();
+    expect(res.status).toBe(409);
+    expect(body.error).toMatch(/ordered before/i);
+    expect(db.delete).not.toHaveBeenCalled();
+  });
+
+  it("returns 200 and deletes draft/unpaid meals with no order history", async () => {
+    mockSession(USER_ID);
+    let callCount = 0;
+    vi.mocked(db.select).mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) {
+        const limit = vi.fn().mockResolvedValue([{ id: COOK_ID }]);
+        const where = vi.fn(() => ({ limit }));
+        const from = vi.fn(() => ({ where }));
+        return { from } as never;
+      }
+      if (callCount === 2) {
+        const limit = vi.fn().mockResolvedValue([{ id: mockDish.id }]);
+        const where = vi.fn(() => ({ limit }));
+        const from = vi.fn(() => ({ where }));
+        return { from } as never;
+      }
+      const limit = vi.fn().mockResolvedValue([]);
+      const where = vi.fn(() => ({ limit }));
+      const from = vi.fn(() => ({ where }));
+      return { from } as never;
+    });
+    const where = vi.fn().mockResolvedValue(undefined);
+    vi.mocked(db.delete).mockReturnValue({ where } as never);
+
+    const res = await DELETE(makeDelete(), { params });
+    const body = await res.json();
+    expect(res.status).toBe(200);
+    expect(body.success).toBe(true);
+    expect(db.delete).toHaveBeenCalled();
+    expect(rebuildCookSearchIndexSafe).toHaveBeenCalledWith(COOK_ID);
   });
 });

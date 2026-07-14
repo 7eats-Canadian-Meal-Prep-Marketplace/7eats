@@ -4,7 +4,7 @@ import { and, eq, inArray, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { dishes, orderDishes, orders } from "@/db/schema";
 import type { UnavailableOrderDish } from "@/lib/dishes/lifecycle-messages";
-import { isDishPaused } from "@/lib/dishes/status-core";
+import { isDishOrderable } from "@/lib/dishes/status-core";
 
 export type { UnavailableOrderDish } from "@/lib/dishes/lifecycle-messages";
 
@@ -60,7 +60,7 @@ export async function getDishLifecycleInfo(
   const totalOrders = Number(orderStats?.totalOrders ?? 0);
   const openOrderCount = Number(orderStats?.openOrderCount ?? 0);
   const isLastActiveDish =
-    !isDishPaused(dish.status) && Number(otherActive?.count ?? 0) === 0;
+    isDishOrderable(dish.status) && Number(otherActive?.count ?? 0) === 0;
 
   return {
     totalOrders,
@@ -94,7 +94,7 @@ export async function resolveUnavailableOrderDishes(
       });
       continue;
     }
-    if (isDishPaused(row.status)) {
+    if (!isDishOrderable(row.status)) {
       unavailable.push({
         dishId: row.id,
         name: row.name,

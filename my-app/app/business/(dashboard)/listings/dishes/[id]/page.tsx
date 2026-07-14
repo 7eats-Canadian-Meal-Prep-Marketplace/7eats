@@ -1,10 +1,19 @@
 "use client";
 
 import { Camera, ImageOff, UtensilsCrossed, X } from "lucide-react";
-import { useParams, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useParams } from "next/navigation";
+import {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { toast } from "sonner";
 import IngredientsInput from "@/app/components/IngredientsInput";
+import RequirementsChecklist from "@/app/components/RequirementsChecklist";
+import { publishMealRequirements } from "@/lib/dishes/new-meal-form";
 import { deepEqual } from "@/lib/forms/use-dirty";
 import {
   DISH_PHOTO_ACCEPT,
@@ -21,16 +30,41 @@ import { PromotionsTab } from "./_promotions-tab";
 import { DishDetailSkeleton } from "./_skeletons";
 import styles from "./page.module.css";
 
-type Tab = "details" | "nutrition" | "promotions";
+type TopTab = "meal" | "promotions";
+type MealSectionId = "details" | "nutrition";
 
 const MAX_PHOTOS = 8;
 const DESCRIPTION_MAX = 500;
 
-// ─── Details tab ──────────────────────────────────────────────────────────────
+type SaveOpts = { publish?: boolean };
+
+type DetailsPublishSnapshot = {
+  name: string;
+  price: string;
+  description: string;
+  photoCount: number;
+};
+
+type NutritionPublishSnapshot = {
+  ingredients: IngredientRow[];
+  allergens: string[];
+  noneApplies: boolean;
+};
+
+export type DetailsSectionHandle = {
+  dirty: boolean;
+  photoCount: number;
+  save: (opts?: SaveOpts) => Promise<boolean>;
+};
+
+export type NutritionSectionHandle = {
+  dirty: boolean;
+  save: (opts?: SaveOpts) => Promise<boolean>;
+};
 
 // A photo in the working set: either an existing server photo (has serverId)
 // or a newly added local file (has file + a blob: preview url). Changes stay
-// local until "Save changes" so leaving the page never mutates the dish.
+// local until save so leaving the page never mutates the dish.
 type WorkingPhoto = {
   key: string;
   serverId?: string;
@@ -42,23 +76,31 @@ function isBlobUrl(url: string): boolean {
   return url.startsWith("blob:");
 }
 
-function DetailsTab() {
+// ─── Details section ──────────────────────────────────────────────────────────
+
+const DetailsSection = forwardRef<
+  DetailsSectionHandle,
+  {
+    onDirtyChange?: (dirty: boolean) => void;
+    onPhotoCountChange?: (n: number) => void;
+    onPublishSnapshotChange?: (snapshot: DetailsPublishSnapshot) => void;
+  }
+>(function DetailsSection(
+  { onDirtyChange, onPhotoCountChange, onPublishSnapshotChange },
+  ref,
+) {
   const { dishId, stats, form, photos, saveDetails, reload, loading } =
     useDishDetail();
-  const router = useRouter();
   const [localForm, setLocalForm] = useState({
     name: "",
     price: "",
     description: "",
-    status: "active" as "active" | "inactive",
+    status: "active" as "active" | "inactive" | "draft",
   });
   const [workingPhotos, setWorkingPhotos] = useState<WorkingPhoto[]>([]);
-  const [saving, setSaving] = useState(false);
   const [initialized, setInitialized] = useState(false);
-  // Index of the thumbnail being dragged, and the slot it's hovering over.
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [overIndex, setOverIndex] = useState<number | null>(null);
-  // True while files are being dragged in from the desktop.
   const [fileDragActive, setFileDragActive] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const photoKeyRef = useRef(0);
@@ -69,7 +111,6 @@ function DetailsTab() {
     workingRef.current = workingPhotos;
   }, [workingPhotos]);
 
-  // Revoke any object URLs still held when the tab unmounts.
   useEffect(() => {
     return () => {
       for (const p of workingRef.current) {
@@ -78,7 +119,6 @@ function DetailsTab() {
     };
   }, []);
 
-  // Initialise (and re-sync after a save) from the loaded dish.
   useEffect(() => {
     if (form && !initialized) {
       setLocalForm(form);
@@ -91,6 +131,148 @@ function DetailsTab() {
       setInitialized(true);
     }
   }, [form, photos, initialized]);
+
+  const photosDirty =
+    workingPhotos.some((p) => p.file) ||
+    workingPhotos
+      .filter((p) => p.serverId)
+      .map((p) => p.serverId)
+      .join(",") !== photos.map((p) => p.id).join(",");
+  const formDirty = form ? !deepEqual(localForm, form) : false;
+  const dirty = formDirty || photosDirty;
+
+  useEffect(() => {
+    onDirtyChange?.(dirty);
+  }, [dirty, onDirtyChange]);
+
+  useEffect(() => {
+    onPhotoCountChange?.(workingPhotos.length);
+  }, [workingPhotos.length, onPhotoCountChange]);
+
+  useEffect(() => {
+    onPublishSnapshotChange?.({
+      name: localForm.name,
+      price: localForm.price,
+      description: localForm.description,
+      photoCount: workingPhotos.length,
+    });
+  }, [
+    localForm.name,
+    localForm.price,
+    localForm.description,
+    workingPhotos.length,
+    onPublishSnapshotChange,
+  ]);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      get dirty() {
+        return dirty;
+      },
+      get photoCount() {
+        return workingPhotos.length;
+      },
+      async save(opts: SaveOpts = {}) {
+        const isDraft = localForm.status === "draft" && !opts.publish;
+        if (!isDraft && workingPhotos.length === 0) {
+          toast.error("Add at least one photo before saving.");
+          return false;
+        }
+        if (!localForm.name.trim()) {
+          toast.error("Enter a dish name.");
+          return false;
+        }
+        if (localForm.description.length > DESCRIPTION_MAX) {
+          toast.error(
+            `Description must be ${DESCRIPTION_MAX} characters or fewer.`,
+          );
+          return false;
+        }
+        if (opts.publish) {
+          const priceNum = Number(localForm.price);
+          if (
+            !localForm.price.trim() ||
+            !Number.isFinite(priceNum) ||
+            priceNum <= 0
+          ) {
+            toast.error("Enter a valid price before publishing.");
+            return false;
+          }
+          if (!localForm.description.trim()) {
+            toast.error("Add a description before publishing.");
+            return false;
+          }
+        }
+
+        try {
+          const survivingIds = new Set(
+            workingPhotos.filter((p) => p.serverId).map((p) => p.serverId),
+          );
+          const toDelete = photos.filter((p) => !survivingIds.has(p.id));
+          for (const p of toDelete) {
+            await fetch(`/api/business/dishes/${dishId}/photos/${p.id}`, {
+              method: "DELETE",
+            });
+          }
+
+          const orderedIds: string[] = [];
+          for (const wp of workingPhotos) {
+            if (wp.serverId) {
+              orderedIds.push(wp.serverId);
+              continue;
+            }
+            if (!wp.file) continue;
+            const fd = new FormData();
+            fd.set("photo", wp.file);
+            fd.set("isPrimary", "false");
+            const res = await fetch(
+              `/api/business/dishes/${dishId}/photos/upload`,
+              { method: "POST", body: fd },
+            );
+            if (!res.ok) {
+              toast.error("A photo failed to upload.");
+              continue;
+            }
+            const json = await res.json().catch(() => null);
+            if (json?.data?.id) orderedIds.push(json.data.id as string);
+          }
+
+          for (let i = 0; i < orderedIds.length; i++) {
+            await fetch(
+              `/api/business/dishes/${dishId}/photos/${orderedIds[i]}`,
+              {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ sortOrder: i, isPrimary: i === 0 }),
+              },
+            );
+          }
+
+          const nextStatus = opts.publish ? "active" : localForm.status;
+          const ok = await saveDetails({
+            name: localForm.name,
+            price: localForm.price,
+            description: localForm.description,
+            status: nextStatus,
+          });
+          if (!ok) {
+            toast.error("Could not save changes.");
+            await reload();
+            setInitialized(false);
+            return false;
+          }
+          return true;
+        } catch {
+          toast.error("Could not save changes.");
+          await reload();
+          setInitialized(false);
+          return false;
+        }
+      },
+    }),
+    [dirty, workingPhotos, localForm, photos, dishId, saveDetails, reload],
+  );
 
   function addLocalPhotos(files: File[]) {
     if (files.length === 0) return;
@@ -136,7 +318,6 @@ function DetailsTab() {
     });
   }
 
-  // Move a photo from one slot to another, keeping the working set immutable.
   function reorderPhotos(from: number, to: number) {
     if (from === to) return;
     setWorkingPhotos((prev) => {
@@ -150,7 +331,6 @@ function DetailsTab() {
     });
   }
 
-  // ── Thumbnail drag-to-reorder ──
   function handleThumbDragStart(idx: number) {
     setDragIndex(idx);
     setOverIndex(idx);
@@ -172,7 +352,6 @@ function DetailsTab() {
     setOverIndex(null);
   }
 
-  // Keyboard reordering — arrow keys move a focused photo, focus follows it.
   function handleThumbKeyDown(e: React.KeyboardEvent, idx: number) {
     let to = idx;
     if (e.key === "ArrowLeft" || e.key === "ArrowUp") to = idx - 1;
@@ -190,13 +369,11 @@ function DetailsTab() {
     });
   }
 
-  // ── Desktop file drag-and-drop onto the strip ──
   function isExternalFileDrag(e: React.DragEvent) {
     return Array.from(e.dataTransfer.types).includes("Files");
   }
 
   function handleStripDragOver(e: React.DragEvent) {
-    // Internal reordering is handled per-thumbnail; only react to OS files here.
     if (dragIndex !== null) return;
     if (!isExternalFileDrag(e)) return;
     e.preventDefault();
@@ -205,7 +382,6 @@ function DetailsTab() {
   }
 
   function handleStripDragLeave(e: React.DragEvent) {
-    // Ignore leave events that bubble up from child elements.
     if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
     setFileDragActive(false);
   }
@@ -231,107 +407,6 @@ function DetailsTab() {
     addLocalPhotos(files);
   }
 
-  function handleCancel() {
-    router.push("/business/listings");
-  }
-
-  async function handleSave() {
-    if (workingPhotos.length === 0) {
-      toast.error("Add at least one photo before saving.");
-      return;
-    }
-    if (!localForm.name.trim()) {
-      toast.error("Enter a dish name.");
-      return;
-    }
-    if (localForm.description.length > DESCRIPTION_MAX) {
-      toast.error(
-        `Description must be ${DESCRIPTION_MAX} characters or fewer.`,
-      );
-      return;
-    }
-
-    setSaving(true);
-    try {
-      // 1. Delete server photos the cook removed from the working set.
-      const survivingIds = new Set(
-        workingPhotos.filter((p) => p.serverId).map((p) => p.serverId),
-      );
-      const toDelete = photos.filter((p) => !survivingIds.has(p.id));
-      for (const p of toDelete) {
-        await fetch(`/api/business/dishes/${dishId}/photos/${p.id}`, {
-          method: "DELETE",
-        });
-      }
-
-      // 2. Walk the working set in display order, resolving each slot to a
-      //    server photo id — uploading new files as we go.
-      const orderedIds: string[] = [];
-      for (const wp of workingPhotos) {
-        if (wp.serverId) {
-          orderedIds.push(wp.serverId);
-          continue;
-        }
-        if (!wp.file) continue;
-        const fd = new FormData();
-        fd.set("photo", wp.file);
-        fd.set("isPrimary", "false");
-        const res = await fetch(
-          `/api/business/dishes/${dishId}/photos/upload`,
-          { method: "POST", body: fd },
-        );
-        if (!res.ok) {
-          toast.error("A photo failed to upload.");
-          continue;
-        }
-        const json = await res.json().catch(() => null);
-        if (json?.data?.id) orderedIds.push(json.data.id as string);
-      }
-
-      // 3. Persist the cook's order + cover: first slot is primary, the rest
-      //    follow in sequence.
-      for (let i = 0; i < orderedIds.length; i++) {
-        await fetch(`/api/business/dishes/${dishId}/photos/${orderedIds[i]}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sortOrder: i, isPrimary: i === 0 }),
-        });
-      }
-
-      // 4. Save the text details (this reloads the dish).
-      const ok = await saveDetails({
-        name: localForm.name,
-        price: localForm.price,
-        description: localForm.description,
-        status: localForm.status,
-      });
-      if (!ok) {
-        toast.error("Could not save changes.");
-        await reload();
-        setInitialized(false);
-        return;
-      }
-      toast.success("Changes saved.");
-      router.push("/business/listings");
-    } catch {
-      toast.error("Could not save changes.");
-      await reload();
-      setInitialized(false);
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  // Dirty when the text fields changed, or photos were added/removed.
-  const photosDirty =
-    workingPhotos.some((p) => p.file) ||
-    workingPhotos
-      .filter((p) => p.serverId)
-      .map((p) => p.serverId)
-      .join(",") !== photos.map((p) => p.id).join(",");
-  const formDirty = form ? !deepEqual(localForm, form) : false;
-  const dirty = formDirty || photosDirty;
-
   if (loading && !initialized) {
     return <p className={styles.loadingNote}>Loading dish…</p>;
   }
@@ -340,7 +415,7 @@ function DetailsTab() {
   const descOver = descCount > DESCRIPTION_MAX;
 
   return (
-    <div className={styles.detailsTab}>
+    <div className={styles.sectionBody}>
       <div className={styles.statsRow}>
         <div className={styles.statCard}>
           <span className={styles.statLabel}>Total orders</span>
@@ -553,43 +628,21 @@ function DetailsTab() {
           )}
         </div>
       </div>
-
-      <div className={styles.footer}>
-        {workingPhotos.length === 0 ? (
-          <span className={`${styles.footerHint} ${styles.footerHintError}`}>
-            Add at least one photo to save.
-          </span>
-        ) : (
-          <span className={styles.footerHint} />
-        )}
-        <div className={styles.footerBtns}>
-          <button
-            type="button"
-            className={styles.cancelBtn}
-            onClick={handleCancel}
-            disabled={saving}
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            className={styles.saveBtn}
-            onClick={handleSave}
-            disabled={workingPhotos.length === 0 || saving || !dirty}
-          >
-            {saving && <span className={styles.spinner} aria-hidden="true" />}
-            {saving ? "Saving…" : "Save changes"}
-          </button>
-        </div>
-      </div>
     </div>
   );
-}
+});
 
-// ─── Nutrition & Ingredients tab ──────────────────────────────────────────────
+// ─── Nutrition section ────────────────────────────────────────────────────────
 
-function NutritionTab() {
+const NutritionSection = forwardRef<
+  NutritionSectionHandle,
+  {
+    onDirtyChange?: (dirty: boolean) => void;
+    onPublishSnapshotChange?: (snapshot: NutritionPublishSnapshot) => void;
+  }
+>(function NutritionSection({ onDirtyChange, onPublishSnapshotChange }, ref) {
   const {
+    form,
     ingredients,
     setIngredients,
     nutrition,
@@ -597,11 +650,9 @@ function NutritionTab() {
     saveNutrition,
     loading,
   } = useDishDetail();
-  const router = useRouter();
   const [otherChecked, setOtherChecked] = useState(false);
   const [otherText, setOtherText] = useState("");
   const [noneApplies, setNoneApplies] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [initialized, setInitialized] = useState(false);
   const baselineRef = useRef<{
     ingredients: IngredientRow[];
@@ -628,6 +679,87 @@ function NutritionTab() {
       )
     : false;
 
+  useEffect(() => {
+    onDirtyChange?.(dirty);
+  }, [dirty, onDirtyChange]);
+
+  useEffect(() => {
+    const allergens = [
+      ...nutrition.allergens,
+      ...(otherChecked ? [otherText.trim() || "Other"] : []),
+    ];
+    onPublishSnapshotChange?.({
+      ingredients,
+      allergens,
+      noneApplies,
+    });
+  }, [
+    ingredients,
+    nutrition.allergens,
+    noneApplies,
+    otherChecked,
+    otherText,
+    onPublishSnapshotChange,
+  ]);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      get dirty() {
+        return dirty;
+      },
+      async save(opts: SaveOpts = {}) {
+        const isDraftSave = form?.status === "draft" && !opts.publish;
+        const namedIngredients = ingredients.filter((i) => i.name.trim());
+
+        if (!isDraftSave && ingredients.some((i) => !i.name.trim())) {
+          toast.error("All ingredients must have a name.");
+          return false;
+        }
+
+        if (opts.publish) {
+          if (namedIngredients.length < 1) {
+            toast.error("Add at least one ingredient before publishing.");
+            return false;
+          }
+        }
+
+        if (
+          !isDraftSave &&
+          !noneApplies &&
+          nutrition.allergens.length === 0 &&
+          !otherChecked
+        ) {
+          toast.error("Select allergens or check “None of these apply”.");
+          return false;
+        }
+
+        const ok = await saveNutrition({
+          ingredients: isDraftSave ? namedIngredients : ingredients,
+          nutrition,
+          otherChecked,
+          otherText,
+          noneApplies,
+        });
+        if (!ok) {
+          toast.error("Could not save nutrition.");
+          return false;
+        }
+        return true;
+      },
+    }),
+    [
+      dirty,
+      ingredients,
+      form?.status,
+      noneApplies,
+      nutrition,
+      otherChecked,
+      otherText,
+      saveNutrition,
+    ],
+  );
+
   function toggleAllergen(allergen: string) {
     if (noneApplies) setNoneApplies(false);
     if (allergen === "Other") {
@@ -647,35 +779,6 @@ function NutritionTab() {
     }));
   }
 
-  async function handleSave() {
-    if (ingredients.some((i) => !i.name.trim())) {
-      toast.error("All ingredients must have a name.");
-      return;
-    }
-    if (!noneApplies && nutrition.allergens.length === 0 && !otherChecked) {
-      toast.error("Select allergens or check “None of these apply”.");
-      return;
-    }
-    setSaving(true);
-    try {
-      const ok = await saveNutrition({
-        ingredients,
-        nutrition,
-        otherChecked,
-        otherText,
-        noneApplies,
-      });
-      if (!ok) {
-        toast.error("Could not save nutrition.");
-        return;
-      }
-      toast.success("Nutrition saved.");
-      router.push("/business/listings");
-    } finally {
-      setSaving(false);
-    }
-  }
-
   if (loading && !initialized) {
     return <p className={styles.loadingNote}>Loading nutrition…</p>;
   }
@@ -692,7 +795,7 @@ function NutritionTab() {
   ];
 
   return (
-    <div className={styles.nutritionTab}>
+    <div className={styles.sectionBody}>
       <div className={styles.card}>
         <div className={styles.cardHead}>
           <h3 className={styles.cardTitle}>Ingredients</h3>
@@ -791,14 +894,16 @@ function NutritionTab() {
               className={styles.allergenCheck}
               checked={noneApplies}
               onChange={() => {
-                setNoneApplies((prev) => {
-                  if (!prev) {
-                    setNutrition((n) => ({ ...n, allergens: [] }));
-                    setOtherChecked(false);
-                    setOtherText("");
-                  }
-                  return !prev;
-                });
+                // Keep sibling updates outside the setState updater — nested
+                // setNutrition here runs during render and throws in React 19.
+                if (!noneApplies) {
+                  setNutrition((n) => ({ ...n, allergens: [] }));
+                  setOtherChecked(false);
+                  setOtherText("");
+                  setNoneApplies(true);
+                } else {
+                  setNoneApplies(false);
+                }
               }}
             />
             None of these apply
@@ -816,27 +921,256 @@ function NutritionTab() {
           />
         )}
       </div>
+    </div>
+  );
+});
+
+// ─── Meal editor (scroll sections + shared footer) ────────────────────────────
+
+const MEAL_SECTIONS: { id: MealSectionId; label: string }[] = [
+  { id: "details", label: "Details" },
+  { id: "nutrition", label: "Ingredients & nutrition" },
+];
+
+function MealEditor() {
+  const { form } = useDishDetail();
+  const [activeSection, setActiveSection] = useState<MealSectionId>("details");
+  const [saving, setSaving] = useState(false);
+  const [detailsDirty, setDetailsDirty] = useState(false);
+  const [nutritionDirty, setNutritionDirty] = useState(false);
+  const [photoCount, setPhotoCount] = useState(0);
+  const [detailsSnapshot, setDetailsSnapshot] =
+    useState<DetailsPublishSnapshot>({
+      name: "",
+      price: "",
+      description: "",
+      photoCount: 0,
+    });
+  const [nutritionSnapshot, setNutritionSnapshot] =
+    useState<NutritionPublishSnapshot>({
+      ingredients: [],
+      allergens: [],
+      noneApplies: false,
+    });
+
+  const detailsRef = useRef<DetailsSectionHandle>(null);
+  const nutritionRef = useRef<NutritionSectionHandle>(null);
+  const detailsSectionRef = useRef<HTMLDivElement>(null);
+  const nutritionSectionRef = useRef<HTMLDivElement>(null);
+  const visibleIds = useRef(new Set<MealSectionId>());
+
+  const status = form?.status ?? "active";
+  const isDraft = status === "draft";
+  const dirty = detailsDirty || nutritionDirty;
+
+  const publishReqs = useMemo(
+    () =>
+      publishMealRequirements(
+        {
+          name: detailsSnapshot.name,
+          price: detailsSnapshot.price,
+          description: detailsSnapshot.description,
+        },
+        detailsSnapshot.photoCount > 0,
+        nutritionSnapshot.ingredients,
+        nutritionSnapshot.allergens,
+        nutritionSnapshot.noneApplies,
+      ),
+    [detailsSnapshot, nutritionSnapshot],
+  );
+  const publishReady = publishReqs.every((r) => r.met);
+  const nextPublishRequirement = publishReqs.find((r) => !r.met);
+
+  useEffect(() => {
+    const ORDER: MealSectionId[] = ["details", "nutrition"];
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          const id = entry.target.id as MealSectionId;
+          if (entry.isIntersecting) {
+            visibleIds.current.add(id);
+          } else {
+            visibleIds.current.delete(id);
+          }
+        }
+        for (const id of ORDER) {
+          if (visibleIds.current.has(id)) {
+            setActiveSection(id);
+            break;
+          }
+        }
+      },
+      { rootMargin: "0px 0px -60% 0px", threshold: 0 },
+    );
+    const refs = [detailsSectionRef, nutritionSectionRef];
+    for (const sectionRef of refs) {
+      if (sectionRef.current) observer.observe(sectionRef.current);
+    }
+    return () => observer.disconnect();
+  }, []);
+
+  function scrollTo(id: MealSectionId) {
+    const refMap: Record<
+      MealSectionId,
+      React.RefObject<HTMLDivElement | null>
+    > = {
+      details: detailsSectionRef,
+      nutrition: nutritionSectionRef,
+    };
+    const el = refMap[id].current;
+    if (!el) return;
+    const scroller = el.closest("main");
+    if (!scroller) return;
+    const top =
+      el.getBoundingClientRect().top -
+      scroller.getBoundingClientRect().top +
+      scroller.scrollTop -
+      16;
+    scroller.scrollTo({ top, behavior: "smooth" });
+  }
+
+  function handleCancel() {
+    window.location.assign(
+      isDraft ? "/business/listings?status=draft" : "/business/listings",
+    );
+  }
+
+  async function handleSave(opts: SaveOpts = {}) {
+    // Capture save fns before awaits — a mid-save remount would clear the refs.
+    const saveNutritionSection = nutritionRef.current?.save;
+    const saveDetailsSection = detailsRef.current?.save;
+    if (!saveNutritionSection || !saveDetailsSection) {
+      toast.error("Editor not ready. Try again.");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      // Nutrition first: both saves refresh context, and nutrition state lives
+      // there (would be wiped if details saved first). Details keeps a local
+      // working copy of form + photos, so it survives the nutrition refresh.
+      const nutritionOk = await saveNutritionSection(opts);
+      if (!nutritionOk) return;
+
+      const detailsOk = await saveDetailsSection(opts);
+      if (!detailsOk) return;
+
+      toast.success(
+        opts.publish
+          ? "Meal published"
+          : isDraft
+            ? "Draft saved"
+            : "Changes saved.",
+      );
+      // Always leave the editor after save — drafts return to the Drafts tab.
+      window.location.assign(
+        opts.publish
+          ? "/business/listings"
+          : isDraft
+            ? "/business/listings?status=draft"
+            : "/business/listings",
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className={styles.mealTab}>
+      <div className={styles.layout}>
+        <div className={styles.sections}>
+          <div id="details" ref={detailsSectionRef} className={styles.section}>
+            <h2 className={styles.sectionTitle}>Details</h2>
+            <DetailsSection
+              ref={detailsRef}
+              onDirtyChange={setDetailsDirty}
+              onPhotoCountChange={setPhotoCount}
+              onPublishSnapshotChange={setDetailsSnapshot}
+            />
+          </div>
+
+          <div
+            id="nutrition"
+            ref={nutritionSectionRef}
+            className={styles.section}
+          >
+            <h2 className={styles.sectionTitle}>Ingredients & nutrition</h2>
+            <NutritionSection
+              ref={nutritionRef}
+              onDirtyChange={setNutritionDirty}
+              onPublishSnapshotChange={setNutritionSnapshot}
+            />
+          </div>
+        </div>
+
+        <nav className={styles.sideNav} aria-label="Meal sections">
+          {MEAL_SECTIONS.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => scrollTo(s.id)}
+              className={`${styles.navItem} ${
+                activeSection === s.id ? styles.navItemActive : ""
+              }`}
+            >
+              {s.label}
+            </button>
+          ))}
+        </nav>
+      </div>
+
+      {isDraft && nextPublishRequirement && (
+        <div className={styles.requirementsWrap}>
+          <p className={styles.requirementsHeading}>To publish:</p>
+          <RequirementsChecklist items={[nextPublishRequirement]} />
+        </div>
+      )}
 
       <div className={styles.footer}>
-        <span className={styles.footerHint} />
+        {!isDraft && photoCount === 0 ? (
+          <span className={`${styles.footerHint} ${styles.footerHintError}`}>
+            Add at least one photo to save.
+          </span>
+        ) : isDraft && !publishReady ? (
+          <span className={styles.footerHint}>
+            Finish the items above to publish. You can still save as a draft.
+          </span>
+        ) : (
+          <span className={styles.footerHint} />
+        )}
         <div className={styles.footerBtns}>
           <button
             type="button"
             className={styles.cancelBtn}
-            onClick={() => router.push("/business/listings")}
+            onClick={handleCancel}
             disabled={saving}
           >
             Cancel
           </button>
           <button
             type="button"
-            className={styles.saveBtn}
-            onClick={handleSave}
-            disabled={!dirty || saving}
+            className={isDraft ? styles.cancelBtn : styles.saveBtn}
+            onClick={() => void handleSave()}
+            disabled={
+              (!isDraft && photoCount === 0) || saving || (!isDraft && !dirty)
+            }
           >
-            {saving && <span className={styles.spinner} aria-hidden="true" />}
-            {saving ? "Saving…" : "Save changes"}
+            {saving && !isDraft && (
+              <span className={styles.spinner} aria-hidden="true" />
+            )}
+            {saving ? "Saving…" : isDraft ? "Save draft" : "Save changes"}
           </button>
+          {isDraft && (
+            <button
+              type="button"
+              className={styles.saveBtn}
+              onClick={() => void handleSave({ publish: true })}
+              disabled={!publishReady || saving}
+            >
+              {saving && <span className={styles.spinner} aria-hidden="true" />}
+              {saving ? "Publishing…" : "Publish meal"}
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -845,9 +1179,8 @@ function NutritionTab() {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-const TABS: { id: Tab; label: string }[] = [
-  { id: "details", label: "Details" },
-  { id: "nutrition", label: "Nutrition & Ingredients" },
+const TABS: { id: TopTab; label: string }[] = [
+  { id: "meal", label: "Meal" },
   { id: "promotions", label: "Promotions" },
 ];
 
@@ -868,8 +1201,10 @@ export default function DishDetailPage() {
 
 function DishDetailContent() {
   const { loading, error } = useDishDetail();
-  const [tab, setTab] = useState<Tab>("details");
+  const [tab, setTab] = useState<TopTab>("meal");
 
+  // Only skeleton on the initial load. Quiet refreshes after save must not
+  // unmount MealEditor or the combined save aborts before details + redirect.
   if (loading) {
     return <DishDetailSkeleton />;
   }
@@ -898,8 +1233,7 @@ function DishDetailContent() {
       </div>
 
       <div className={styles.content} key={tab}>
-        {tab === "details" && <DetailsTab />}
-        {tab === "nutrition" && <NutritionTab />}
+        {tab === "meal" && <MealEditor />}
         {tab === "promotions" && <PromotionsTab />}
       </div>
     </div>

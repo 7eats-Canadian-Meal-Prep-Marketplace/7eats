@@ -2,6 +2,7 @@
 
 import { MoreHorizontal, Plus, Utensils } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { openOrdersArchiveError } from "@/lib/dishes/lifecycle-messages";
 import { mealToastError, mealToastSuccess } from "@/lib/meal-toast";
@@ -9,7 +10,7 @@ import { ConfirmDialog } from "../_components/ConfirmDialog";
 import { Skeleton } from "../_skeleton";
 import styles from "./page.module.css";
 
-type DishStatus = "active" | "inactive";
+type DishStatus = "active" | "inactive" | "draft";
 
 type Dish = {
   id: string;
@@ -23,13 +24,28 @@ type Dish = {
 const FILTERS: { value: DishStatus; label: string }[] = [
   { value: "active", label: "Active" },
   { value: "inactive", label: "Inactive" },
+  { value: "draft", label: "Drafts" },
 ];
 
+function statusFromSearch(search: string): DishStatus {
+  const raw = new URLSearchParams(search).get("status");
+  if (raw === "draft" || raw === "inactive" || raw === "active") return raw;
+  return "active";
+}
+
 function StatusPill({ status }: { status: DishStatus }) {
-  const dotCls = status === "active" ? styles.dotActive : styles.dotInactive;
-  const label = status === "active" ? "Active" : "Paused";
+  const dotCls =
+    status === "active"
+      ? styles.dotActive
+      : status === "draft"
+        ? styles.dotDraft
+        : styles.dotInactive;
+  const label =
+    status === "active" ? "Active" : status === "draft" ? "Draft" : "Inactive";
   return (
-    <span className={styles.statusBadge}>
+    <span
+      className={`${styles.statusBadge} ${status === "draft" ? styles.statusBadgeDraft : ""}`}
+    >
       <span className={`${styles.pillDot} ${dotCls}`} />
       {label}
     </span>
@@ -180,7 +196,7 @@ function DishMenu({ dish, onChanged }: { dish: Dish; onChanged: () => void }) {
       </button>
       {open && (
         <div className={styles.menuDropdown}>
-          {dish.status === "active" ? (
+          {dish.status === "active" && (
             <button
               type="button"
               className={styles.menuItem}
@@ -191,7 +207,8 @@ function DishMenu({ dish, onChanged }: { dish: Dish; onChanged: () => void }) {
             >
               Pause meal
             </button>
-          ) : (
+          )}
+          {dish.status === "inactive" && (
             <button
               type="button"
               className={styles.menuItem}
@@ -205,7 +222,7 @@ function DishMenu({ dish, onChanged }: { dish: Dish; onChanged: () => void }) {
           )}
           <button
             type="button"
-            className={`${styles.menuItem} ${styles.menuItemDanger}`}
+            className={`${styles.menuItem} ${styles.menuItemDanger}${dish.status === "draft" ? ` ${styles.menuItemDangerOnly}` : ""}`}
             disabled={!dish.canDelete}
             title={
               dish.canDelete
@@ -253,42 +270,96 @@ function DishMenu({ dish, onChanged }: { dish: Dish; onChanged: () => void }) {
   );
 }
 
-export default function MealsPage() {
-  const [dishes, setDishes] = useState<Dish[]>([]);
-  const [filter, setFilter] = useState<DishStatus>("active");
-  const [loading, setLoading] = useState(true);
+function mapDishRow(
+  row: Dish & { totalOrders?: number; canDelete?: boolean },
+): Dish {
+  return {
+    id: row.id,
+    name: row.name,
+    price: row.price,
+    status: row.status,
+    totalOrders: row.totalOrders ?? 0,
+    canDelete:
+      row.status === "draft"
+        ? true
+        : (row.canDelete ?? (row.totalOrders ?? 0) === 0),
+  };
+}
 
-  const load = useCallback(() => {
-    setLoading(true);
-    fetch(`/api/business/dishes?status=${filter}`)
-      .then((r) => (r.ok ? r.json() : { data: [] }))
-      .then((json) =>
-        setDishes(
-          Array.isArray(json.data)
-            ? json.data.map(
-                (
-                  row: Dish & { totalOrders?: number; canDelete?: boolean },
-                ) => ({
-                  id: row.id,
-                  name: row.name,
-                  price: row.price,
-                  status: row.status,
-                  totalOrders: row.totalOrders ?? 0,
-                  canDelete: row.canDelete ?? (row.totalOrders ?? 0) === 0,
-                }),
-              )
-            : [],
-        ),
-      )
-      .catch(() => setDishes([]))
-      .finally(() => setLoading(false));
+export default function MealsPage() {
+  const router = useRouter();
+  // null until we read ?status= — avoids fetching Active first and overwriting Drafts.
+  const [filter, setFilter] = useState<DishStatus | null>(null);
+  const [dishes, setDishes] = useState<Dish[]>([]);
+  const [loading, setLoading] = useState(true);
+  const loadGen = useRef(0);
+  const filterRef = useRef<DishStatus | null>(null);
+
+  useEffect(() => {
+    filterRef.current = filter;
   }, [filter]);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    setFilter(statusFromSearch(window.location.search));
+  }, []);
 
-  const showNewBtn = !loading && dishes.length > 0;
+  const selectFilter = useCallback(
+    (next: DishStatus) => {
+      setFilter(next);
+      const url =
+        next === "active"
+          ? "/business/listings"
+          : `/business/listings?status=${next}`;
+      router.replace(url, { scroll: false });
+    },
+    [router],
+  );
+
+  const loadDishes = useCallback(async (status: DishStatus) => {
+    const gen = ++loadGen.current;
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/business/dishes?status=${status}`);
+      const json = res.ok ? await res.json() : { data: [] };
+      if (gen !== loadGen.current) return;
+      setDishes(
+        Array.isArray(json.data)
+          ? json.data.map(
+              (row: Dish & { totalOrders?: number; canDelete?: boolean }) =>
+                mapDishRow(row),
+            )
+          : [],
+      );
+    } catch {
+      if (gen !== loadGen.current) return;
+      setDishes([]);
+    } finally {
+      if (gen === loadGen.current) setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!filter) return;
+    void loadDishes(filter);
+  }, [filter, loadDishes]);
+
+  const reload = useCallback(() => {
+    const status = filterRef.current;
+    if (status) void loadDishes(status);
+  }, [loadDishes]);
+
+  const showNewBtn = !loading && filter !== null && dishes.length > 0;
+
+  const emptyTitle =
+    filter === "draft"
+      ? "No draft meals"
+      : filter === "active"
+        ? "No active meals"
+        : "No inactive meals";
+  const emptyDesc =
+    filter === "draft"
+      ? "Save a draft from New meal to finish later."
+      : "Create a meal to start taking orders.";
 
   return (
     <div className={styles.page}>
@@ -300,7 +371,7 @@ export default function MealsPage() {
                 type="button"
                 key={f.value}
                 className={`${styles.filterBtn} ${filter === f.value ? styles.filterBtnActive : ""}`}
-                onClick={() => setFilter(f.value)}
+                onClick={() => selectFilter(f.value)}
               >
                 {f.label}
               </button>
@@ -316,7 +387,7 @@ export default function MealsPage() {
           )}
         </div>
 
-        {loading ? (
+        {loading || filter === null ? (
           <div className={styles.grid}>
             {[0, 1, 2, 3, 4, 5].map((i) => (
               <div key={i} className={styles.card} aria-hidden="true">
@@ -340,12 +411,8 @@ export default function MealsPage() {
             <div className={styles.emptyMark} aria-hidden>
               <Utensils size={22} strokeWidth={1.5} />
             </div>
-            <p className={styles.emptyTitle}>
-              No {filter === "active" ? "active" : "inactive"} meals
-            </p>
-            <p className={styles.emptyDesc}>
-              Create a meal to start taking orders.
-            </p>
+            <p className={styles.emptyTitle}>{emptyTitle}</p>
+            <p className={styles.emptyDesc}>{emptyDesc}</p>
             <Link
               href="/business/listings/dishes/new"
               className={styles.emptyBtn}
@@ -367,7 +434,7 @@ export default function MealsPage() {
                     </Link>
                     <div className={styles.cardTopActions}>
                       <StatusPill status={dish.status} />
-                      <DishMenu dish={dish} onChanged={load} />
+                      <DishMenu dish={dish} onChanged={reload} />
                     </div>
                   </div>
                   <Link
@@ -375,7 +442,9 @@ export default function MealsPage() {
                     className={styles.cardDetailLink}
                   >
                     <p className={styles.mealPrice}>
-                      ${Number(dish.price).toFixed(2)}
+                      {dish.status === "draft" && Number(dish.price) <= 0
+                        ? "Price not set"
+                        : `$${Number(dish.price).toFixed(2)}`}
                     </p>
                     {dish.totalOrders > 0 && (
                       <p className={styles.mealMeta}>

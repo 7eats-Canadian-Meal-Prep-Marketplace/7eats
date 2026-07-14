@@ -7,7 +7,7 @@ import {
 } from "@/app/api/business/_lib/cook-auth";
 import { db } from "@/db";
 import { dishes } from "@/db/schema";
-import { isDishPaused, setDishActive } from "@/lib/dishes/status";
+import { isDishDraft, isDishPaused, setDishActive } from "@/lib/dishes/status";
 import { rebuildCookSearchIndexSafe } from "@/lib/search/index-builder";
 
 export type Params = { params: Promise<{ dishId: string }> };
@@ -27,6 +27,16 @@ export async function POST(req: NextRequest, { params }: Params) {
       .limit(1);
 
     if (!dish) return notFound("Dish");
+
+    if (isDishDraft(dish.status)) {
+      return NextResponse.json(
+        {
+          error:
+            "Open the draft and use Publish meal after photos and details are complete.",
+        },
+        { status: 400 },
+      );
+    }
 
     if (!isDishPaused(dish.status)) {
       return NextResponse.json(

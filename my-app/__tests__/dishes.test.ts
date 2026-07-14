@@ -16,11 +16,19 @@ vi.mock("@/lib/dishes/status", async (importOriginal) => {
   const mod = await importOriginal<typeof import("@/lib/dishes/status")>();
   return {
     ...mod,
-    mapDishStatusForDb: vi.fn(async (status: "active" | "inactive") =>
-      status === "inactive" ? "inactive" : "active",
+    mapDishStatusForDb: vi.fn(
+      async (status: "active" | "inactive" | "draft") =>
+        status === "inactive"
+          ? "inactive"
+          : status === "draft"
+            ? "draft"
+            : "active",
     ),
   };
 });
+vi.mock("@/lib/search/index-builder", () => ({
+  rebuildCookSearchIndexSafe: vi.fn(),
+}));
 vi.mock("@/db/schema", () => ({
   dishes: {},
   dishPhotos: {},
@@ -203,6 +211,68 @@ describe("GET /api/business/listings/dishes", () => {
     expect(body.success).toBe(true);
   });
 
+  it("accepts ?status=draft filter and returns 200", async () => {
+    mockSession(USER_ID);
+    const mockDishes = [{ id: "draft-1", name: "WIP", status: "draft" }];
+    let callCount = 0;
+    vi.mocked(db.select).mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) {
+        const limit = vi.fn().mockResolvedValue([{ id: COOK_ID }]);
+        const where = vi.fn(() => ({ limit }));
+        const from = vi.fn(() => ({ where }));
+        return { from } as never;
+      }
+      const orderBy = vi
+        .fn()
+        .mockResolvedValue(
+          mockDishes.map((dish) => ({ dish, totalOrders: 0 })),
+        );
+      const where = vi.fn(() => ({ orderBy }));
+      const from = vi.fn(() => ({ where }));
+      return { from } as never;
+    });
+
+    const res = await GET(makeGet("http://localhost/dishes?status=draft"));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+    expect(body.data).toEqual([
+      expect.objectContaining({ id: "draft-1", status: "draft" }),
+    ]);
+  });
+
+  it("accepts ?status=inactive filter and returns 200", async () => {
+    mockSession(USER_ID);
+    const mockDishes = [{ id: "paused-1", name: "Paused", status: "inactive" }];
+    let callCount = 0;
+    vi.mocked(db.select).mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) {
+        const limit = vi.fn().mockResolvedValue([{ id: COOK_ID }]);
+        const where = vi.fn(() => ({ limit }));
+        const from = vi.fn(() => ({ where }));
+        return { from } as never;
+      }
+      const orderBy = vi
+        .fn()
+        .mockResolvedValue(
+          mockDishes.map((dish) => ({ dish, totalOrders: 0 })),
+        );
+      const where = vi.fn(() => ({ orderBy }));
+      const from = vi.fn(() => ({ where }));
+      return { from } as never;
+    });
+
+    const res = await GET(makeGet("http://localhost/dishes?status=inactive"));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+    expect(body.data).toEqual([
+      expect.objectContaining({ id: "paused-1", status: "inactive" }),
+    ]);
+  });
+
   it("ignores invalid ?status param and still returns 200", async () => {
     mockSession(USER_ID);
     let callCount = 0;
@@ -347,15 +417,68 @@ describe("POST /api/business/listings/dishes", () => {
     expect(body.error).toBeDefined();
   });
 
-  it("returns 500 on unexpected insert error", async () => {
+  it("returns 201 for a name-only draft without allergens or price", async () => {
     mockSession(USER_ID);
     mockCookLookup(COOK_ID);
+    const inserted = {
+      id: "draft-dish",
+      name: "Half done",
+      cookId: COOK_ID,
+      status: "draft",
+      price: "0.00",
+    };
+    mockTransaction(inserted);
 
-    vi.mocked(dbPool.transaction).mockRejectedValue(new Error("unexpected"));
-
-    const res = await POST(makePost(validCreateBody));
-    expect(res.status).toBe(500);
+    const res = await POST(makePost({ name: "Half done", status: "draft" }));
+    expect(res.status).toBe(201);
     const body = await res.json();
-    expect(body.error).toBeDefined();
+    expect(body.success).toBe(true);
+    expect(body.data.status).toBe("draft");
+  });
+
+  it("stores zero price placeholder when draft omits price", async () => {
+    mockSession(USER_ID);
+    mockCookLookup(COOK_ID);
+    let capturedPrice: string | undefined;
+    vi.mocked(dbPool.transaction).mockImplementation(async (fn) => {
+      const tx = {
+        insert: () => ({
+          values: (vals: { price?: string }) => {
+            capturedPrice = vals.price;
+            return {
+              returning: async () => [
+                {
+                  id: "draft-dish",
+                  name: "Half done",
+                  cookId: COOK_ID,
+                  status: "draft",
+                  price: vals.price,
+                },
+              ],
+            };
+          },
+        }),
+      };
+      return fn(tx as never);
+    });
+
+    await POST(makePost({ name: "Half done", status: "draft" }));
+    expect(capturedPrice).toBe("0.00");
+  });
+
+  it("rejects active create without allergen declaration", async () => {
+    mockSession(USER_ID);
+    mockCookLookup(COOK_ID);
+    const res = await POST(
+      makePost({ name: "Test Dish", price: 12.5, status: "active" }),
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 when draft has empty name", async () => {
+    mockSession(USER_ID);
+    mockCookLookup(COOK_ID);
+    const res = await POST(makePost({ name: "  ", status: "draft" }));
+    expect(res.status).toBe(400);
   });
 });

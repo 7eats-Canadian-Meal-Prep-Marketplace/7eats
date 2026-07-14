@@ -21,7 +21,7 @@ export const ALLERGENS = [
   "Other",
 ] as const;
 
-export type DishStatus = "active" | "inactive";
+export type DishStatus = "active" | "inactive" | "draft";
 
 export type DishPhoto = {
   id: string;
@@ -92,7 +92,7 @@ type DishDetailContextValue = {
     otherText: string;
     noneApplies: boolean;
   }) => Promise<boolean>;
-  reload: () => Promise<void>;
+  reload: (opts?: { quiet?: boolean }) => Promise<void>;
 };
 
 const DishDetailContext = createContext<DishDetailContextValue | null>(null);
@@ -133,56 +133,63 @@ export function DishDetailProvider({
     [],
   );
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(`/api/business/dishes/${dishId}`);
-      if (!res.ok) {
-        setError("Dish not found.");
-        return;
+  const load = useCallback(
+    async (opts?: { quiet?: boolean }) => {
+      // Quiet refresh keeps the editor mounted. A full loading=true swap would
+      // unmount MealEditor mid-save and abort the details PATCH + redirect.
+      if (!opts?.quiet) setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch(`/api/business/dishes/${dishId}`);
+        if (!res.ok) {
+          setError("Dish not found.");
+          return;
+        }
+        const json = await res.json();
+        const dish = json.data;
+        setStats(
+          dish.stats ?? {
+            listingCount: 0,
+            totalOrders: 0,
+            avgQtyPerOrder: 0,
+          },
+        );
+        setForm({
+          name: dish.name,
+          price: dish.price ?? "",
+          description: dish.description ?? "",
+          status: dish.status as DishStatus,
+        });
+        setPhotos(
+          (dish.photos ?? []).map((p: { id: string; url: string }) => ({
+            id: p.id,
+            url: p.url,
+          })),
+        );
+        const ingRows: ApiIngredient[] = dish.ingredients ?? [];
+        setRemoteIngredients(ingRows);
+        setIngredients(
+          ingRows
+            .filter((i) => !i.isAllergen)
+            .map((i) => ({ id: i.id, name: i.name })),
+        );
+        setNutrition({
+          calories: dish.nutrition?.calories ?? 0,
+          protein: dish.nutrition?.proteinG
+            ? Number(dish.nutrition.proteinG)
+            : 0,
+          carbs: dish.nutrition?.carbsG ? Number(dish.nutrition.carbsG) : 0,
+          fat: dish.nutrition?.fatG ? Number(dish.nutrition.fatG) : 0,
+          allergens: allergensFromIngredients(ingRows),
+        });
+      } catch {
+        setError("Failed to load dish.");
+      } finally {
+        if (!opts?.quiet) setLoading(false);
       }
-      const json = await res.json();
-      const dish = json.data;
-      setStats(
-        dish.stats ?? {
-          listingCount: 0,
-          totalOrders: 0,
-          avgQtyPerOrder: 0,
-        },
-      );
-      setForm({
-        name: dish.name,
-        price: dish.price ?? "",
-        description: dish.description ?? "",
-        status: dish.status as DishStatus,
-      });
-      setPhotos(
-        (dish.photos ?? []).map((p: { id: string; url: string }) => ({
-          id: p.id,
-          url: p.url,
-        })),
-      );
-      const ingRows: ApiIngredient[] = dish.ingredients ?? [];
-      setRemoteIngredients(ingRows);
-      setIngredients(
-        ingRows
-          .filter((i) => !i.isAllergen)
-          .map((i) => ({ id: i.id, name: i.name })),
-      );
-      setNutrition({
-        calories: dish.nutrition?.calories ?? 0,
-        protein: dish.nutrition?.proteinG ? Number(dish.nutrition.proteinG) : 0,
-        carbs: dish.nutrition?.carbsG ? Number(dish.nutrition.carbsG) : 0,
-        fat: dish.nutrition?.fatG ? Number(dish.nutrition.fatG) : 0,
-        allergens: allergensFromIngredients(ingRows),
-      });
-    } catch {
-      setError("Failed to load dish.");
-    } finally {
-      setLoading(false);
-    }
-  }, [dishId]);
+    },
+    [dishId],
+  );
 
   useEffect(() => {
     void load();
@@ -209,7 +216,7 @@ export function DishDetailProvider({
         body: JSON.stringify(body),
       });
       if (!res.ok) return false;
-      await load();
+      await load({ quiet: true });
       return true;
     },
     [dishId, load],
@@ -220,7 +227,7 @@ export function DishDetailProvider({
       method: "POST",
     });
     if (!res.ok) return false;
-    await load();
+    await load({ quiet: true });
     return true;
   }, [dishId, load]);
 
@@ -229,7 +236,7 @@ export function DishDetailProvider({
       method: "POST",
     });
     if (!res.ok) return false;
-    await load();
+    await load({ quiet: true });
     return true;
   }, [dishId, load]);
 
@@ -267,7 +274,7 @@ export function DishDetailProvider({
           { id: json.data.id, url: json.data.url },
         ]);
       } else {
-        await load();
+        await load({ quiet: true });
       }
       return true;
     },
@@ -360,7 +367,7 @@ export function DishDetailProvider({
         }),
       });
 
-      await load();
+      await load({ quiet: true });
       return true;
     },
     [dishId, load, remoteIngredients],

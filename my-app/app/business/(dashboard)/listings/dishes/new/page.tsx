@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ImagePlus, Upload, X } from "lucide-react";
+import { ImagePlus, Upload, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -9,14 +9,14 @@ import IngredientsInput, {
 } from "@/app/components/IngredientsInput";
 import RequirementsChecklist from "@/app/components/RequirementsChecklist";
 import {
+  draftMealRequirements,
   EMPTY_MEAL_FORM,
   EMPTY_MEAL_NUTRITION,
   isEmptyMealDraft,
   MEAL_DESCRIPTION_MAX,
   type MealDraft,
   parseMealDraft,
-  step1Requirements,
-  step2Requirements,
+  publishMealRequirements,
 } from "@/lib/dishes/new-meal-form";
 import { useDebounce } from "@/lib/hooks/use-debounce";
 import { mealToastError, mealToastSuccess } from "@/lib/meal-toast";
@@ -26,8 +26,6 @@ import {
   validateDishPhotoFile,
 } from "@/lib/upload-validation";
 import styles from "./page.module.css";
-
-// ─── Constants ──────────────────────────────────────────────────────────────────
 
 type LocalPhoto = { id: string; file: File; preview: string };
 
@@ -46,11 +44,6 @@ const ALLERGENS = [
   "Sesame",
 ] as const;
 
-const STEPS: { n: 1 | 2; label: string }[] = [
-  { n: 1, label: "Dish details" },
-  { n: 2, label: "Nutrition & ingredients" },
-];
-
 function readDraft(): MealDraft | null {
   if (typeof window === "undefined") return null;
   const raw = window.localStorage.getItem(DRAFT_KEY);
@@ -58,18 +51,11 @@ function readDraft(): MealDraft | null {
   return parseMealDraft(raw);
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
-
 export default function NewDishPage() {
   const router = useRouter();
-  const [step, setStep] = useState<1 | 2>(1);
   const [submitting, setSubmitting] = useState(false);
-
-  // Seeded with SSR-safe empty defaults; the actual draft (if any) is only
-  // known client-side, so it's restored in an effect below rather than a
-  // lazy useState initializer — reading localStorage there would make the
-  // client's first render disagree with the server-rendered HTML.
   const [draftRestored, setDraftRestored] = useState(false);
+  const [draftHint, setDraftHint] = useState(false);
 
   const [form, setForm] = useState(EMPTY_MEAL_FORM);
   const [ingredients, setIngredients] = useState<IngredientRow[]>([]);
@@ -94,8 +80,6 @@ export default function NewDishPage() {
     };
   }, []);
 
-  // Client-only: restore a saved draft after mount so the first render still
-  // matches the server-rendered (empty) HTML.
   useEffect(() => {
     const draft = readDraft();
     if (!draft) return;
@@ -107,9 +91,6 @@ export default function NewDishPage() {
     setDraftRestored(true);
   }, []);
 
-  // Autosave the in-progress meal to this browser so a closed tab or crash
-  // doesn't lose the cook's progress. Photos are intentionally excluded —
-  // File objects aren't serializable, so they're re-attached on resume.
   const draftSnapshot: MealDraft = {
     form,
     ingredients,
@@ -128,7 +109,7 @@ export default function NewDishPage() {
     window.localStorage.setItem(DRAFT_KEY, JSON.stringify(debouncedDraft));
   }, [debouncedDraft]);
 
-  function discardDraft() {
+  function discardLocalDraft() {
     window.localStorage.removeItem(DRAFT_KEY);
     setForm(EMPTY_MEAL_FORM);
     setIngredients([]);
@@ -139,7 +120,8 @@ export default function NewDishPage() {
       for (const p of prev) URL.revokeObjectURL(p.preview);
       return [];
     });
-    setStep(1);
+    setDraftRestored(false);
+    setDraftHint(false);
   }
 
   function addFiles(files: File[]) {
@@ -222,73 +204,103 @@ export default function NewDishPage() {
   }
 
   function handleNoneApplies() {
-    setNoneApplies((prev) => {
-      if (!prev) setAllergens([]);
-      return !prev;
-    });
-  }
-
-  function handleStep1Continue() {
-    if (ingredients.length === 0) {
-      setIngredients([{ id: `ing-${Date.now()}`, name: "" }]);
+    if (!noneApplies) {
+      setAllergens([]);
+      setNoneApplies(true);
+    } else {
+      setNoneApplies(false);
     }
-    setStep(2);
   }
 
-  async function handleCreate() {
+  function buildPayload(status: "active" | "draft") {
+    const priceNum = Number(form.price);
+    const num = (v: string) => {
+      const n = Number(v);
+      return v.trim() !== "" && Number.isFinite(n) && n >= 0 ? n : undefined;
+    };
+
+    const body: Record<string, unknown> = {
+      name: form.name.trim(),
+      description: form.description.trim() || undefined,
+      status,
+      ingredients: ingredients
+        .filter((i) => i.name.trim())
+        .map((i) => ({ name: i.name.trim() })),
+      allergens,
+      allergenNoneApplies: noneApplies,
+      nutrition: {
+        calories: num(nutrition.calories),
+        proteinG: num(nutrition.protein),
+        carbsG: num(nutrition.carbs),
+        fatG: num(nutrition.fat),
+      },
+    };
+
+    if (form.price.trim() !== "" && Number.isFinite(priceNum)) {
+      body.price = Math.round(priceNum * 100) / 100;
+    }
+
+    return body;
+  }
+
+  async function submitMeal(status: "active" | "draft") {
     setSubmitting(true);
     try {
-      const priceNum = Number(form.price);
-      const num = (v: string) => {
-        const n = Number(v);
-        return v.trim() !== "" && Number.isFinite(n) && n >= 0 ? n : undefined;
-      };
-
       const res = await fetch("/api/business/dishes", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          name: form.name.trim(),
-          price: Math.round(priceNum * 100) / 100,
-          description: form.description.trim(),
-          status: "active",
-          ingredients: ingredients
-            .filter((i) => i.name.trim())
-            .map((i) => ({ name: i.name.trim() })),
-          allergens,
-          allergenNoneApplies: noneApplies,
-          nutrition: {
-            calories: num(nutrition.calories),
-            proteinG: num(nutrition.protein),
-            carbsG: num(nutrition.carbs),
-            fatG: num(nutrition.fat),
-          },
-        }),
+        body: JSON.stringify(buildPayload(status)),
       });
       const data = await res.json();
       if (!res.ok) {
-        mealToastError(data.error ?? "Could not create the meal.");
+        mealToastError(
+          data.error ??
+            (status === "draft"
+              ? "Could not save draft."
+              : "Could not create the meal."),
+        );
         return;
       }
 
       const dishId: string | undefined = data.data?.id;
-      if (dishId) {
+      if (dishId && photos.length > 0) {
         const uploaded = await uploadPhotos(dishId);
         if (!uploaded) {
           mealToastError(
-            "Meal created but some photos failed to upload. Add them from the edit page.",
+            status === "draft"
+              ? "Draft saved but some photos failed. Add them from the draft later."
+              : "Meal created but some photos failed to upload. Add them from the edit page.",
           );
         }
       }
 
       window.localStorage.removeItem(DRAFT_KEY);
-      mealToastSuccess("Meal created");
-      router.push("/business/listings");
+      mealToastSuccess(status === "draft" ? "Draft saved" : "Meal created");
+      // Hard navigation so the Meals tab reads ?status=draft cleanly.
+      window.location.assign(
+        status === "draft"
+          ? "/business/listings?status=draft"
+          : "/business/listings",
+      );
     } catch {
       mealToastError("Network error. Please try again.");
     } finally {
       setSubmitting(false);
     }
+  }
+
+  function handleSaveDraft() {
+    const reqs = draftMealRequirements(form);
+    if (!reqs.every((r) => r.met)) {
+      setDraftHint(true);
+      return;
+    }
+    setDraftHint(false);
+    void submitMeal("draft");
+  }
+
+  function handleCreate() {
+    void submitMeal("active");
   }
 
   function handleCancel() {
@@ -301,380 +313,340 @@ export default function NewDishPage() {
     }
   }
 
-  const stepRequirements =
-    step === 1
-      ? step1Requirements(form, hasPhoto)
-      : step2Requirements(ingredients, allergens, noneApplies);
-  const stepComplete = stepRequirements.every((r) => r.met);
-  const nextRequirement = stepRequirements.find((r) => !r.met);
+  const publishReqs = publishMealRequirements(
+    form,
+    hasPhoto,
+    ingredients,
+    allergens,
+    noneApplies,
+  );
+  const publishComplete = publishReqs.every((r) => r.met);
+  const nextPublishRequirement = publishReqs.find((r) => !r.met);
+
+  const draftReqs = draftMealRequirements(form);
+  const nextDraftRequirement = draftReqs.find((r) => !r.met);
 
   return (
     <div className={styles.page}>
       <div className={styles.header}>
         <h1 className={styles.title}>New meal</h1>
+        <p className={styles.sectionHint} style={{ margin: 0 }}>
+          Save a draft anytime to finish on another device — photos can wait.
+        </p>
       </div>
 
       {draftRestored && (
         <div className={styles.draftBanner}>
-          <span>Resumed your saved draft.</span>
-          <button type="button" onClick={discardDraft}>
+          <span>Resumed your browser draft.</span>
+          <button type="button" onClick={discardLocalDraft}>
             Discard and start over
           </button>
         </div>
       )}
 
-      <div className={styles.steps}>
-        {STEPS.map((s, i) => (
-          <div key={s.n} className={styles.stepWrap}>
-            <button
-              type="button"
-              className={`${styles.step} ${step === s.n ? styles.stepActive : ""} ${
-                step > s.n ? styles.stepDone : ""
-              } ${step === 2 && s.n === 1 ? styles.stepClickable : ""}`}
-              disabled={!(step === 2 && s.n === 1)}
-              onClick={() => {
-                if (step === 2 && s.n === 1) setStep(1);
-              }}
-            >
-              <span className={styles.stepNum}>
-                {step > s.n ? <Check size={13} /> : s.n}
-              </span>
-              <span className={styles.stepLabel}>{s.label}</span>
-            </button>
-            {i < STEPS.length - 1 && <div className={styles.stepBar} />}
+      <div className={styles.content}>
+        <div className={styles.form}>
+          <div className={styles.formGroup}>
+            <label htmlFor="f-name" className={styles.formLabel}>
+              Name <span className={styles.required}>*</span>
+            </label>
+            <input
+              id="f-name"
+              type="text"
+              className={styles.formInput}
+              value={form.name}
+              placeholder="e.g. Jollof Rice & Chicken"
+              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+            />
           </div>
-        ))}
-      </div>
 
-      <div className={styles.content} key={step}>
-        {step === 1 && (
-          <div className={styles.form}>
-            <div className={styles.formGroup}>
-              <label htmlFor="f-name" className={styles.formLabel}>
-                Name <span className={styles.required}>*</span>
-              </label>
-              <input
-                id="f-name"
-                type="text"
-                className={styles.formInput}
-                value={form.name}
-                placeholder="e.g. Jollof Rice & Chicken"
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, name: e.target.value }))
-                }
-              />
-            </div>
+          <div className={styles.formGroup}>
+            <label htmlFor="f-price" className={styles.formLabel}>
+              Price per meal <span className={styles.required}>*</span>
+            </label>
+            <input
+              id="f-price"
+              type="text"
+              inputMode="decimal"
+              className={styles.formInput}
+              value={form.price}
+              placeholder="e.g. 14.00"
+              onChange={(e) => handlePriceChange(e.target.value)}
+            />
+          </div>
 
-            <div className={styles.formGroup}>
-              <label htmlFor="f-price" className={styles.formLabel}>
-                Price per meal <span className={styles.required}>*</span>
-              </label>
-              <input
-                id="f-price"
-                type="text"
-                inputMode="decimal"
-                className={styles.formInput}
-                value={form.price}
-                placeholder="e.g. 14.00"
-                onChange={(e) => handlePriceChange(e.target.value)}
-              />
-            </div>
+          <div className={styles.formGroup}>
+            <label htmlFor="f-description" className={styles.formLabel}>
+              Description <span className={styles.required}>*</span>
+            </label>
+            <textarea
+              id="f-description"
+              className={styles.formTextarea}
+              value={form.description}
+              rows={4}
+              maxLength={MEAL_DESCRIPTION_MAX}
+              placeholder="Describe the dish."
+              onChange={(e) =>
+                setForm((f) => ({ ...f, description: e.target.value }))
+              }
+            />
+            <span
+              className={`${styles.charCount} ${
+                form.description.length >= MEAL_DESCRIPTION_MAX
+                  ? styles.charCountLimit
+                  : ""
+              }`}
+            >
+              {form.description.length}/{MEAL_DESCRIPTION_MAX}
+            </span>
+          </div>
 
-            <div className={styles.formGroup}>
-              <label htmlFor="f-description" className={styles.formLabel}>
-                Description <span className={styles.required}>*</span>
-              </label>
-              <textarea
-                id="f-description"
-                className={styles.formTextarea}
-                value={form.description}
-                rows={4}
-                maxLength={MEAL_DESCRIPTION_MAX}
-                placeholder="Describe the dish."
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, description: e.target.value }))
-                }
-              />
-              <span
-                className={`${styles.charCount} ${
-                  form.description.length >= MEAL_DESCRIPTION_MAX
-                    ? styles.charCountLimit
-                    : ""
-                }`}
-              >
-                {form.description.length}/{MEAL_DESCRIPTION_MAX}
+          <div className={styles.formGroup}>
+            <div className={styles.photoLabelRow}>
+              <span className={styles.formLabel}>
+                Photos <span className={styles.required}>*</span>
+              </span>
+              <span className={styles.photoCount}>
+                {photos.length} / {MAX_PHOTOS}
               </span>
             </div>
+            <p className={styles.sectionHint}>
+              Required to publish. Skip for now if you&apos;ll upload from your
+              phone later. JPG, PNG, or WebP · max 10 MB.
+            </p>
 
-            <div className={styles.formGroup}>
-              <div className={styles.photoLabelRow}>
-                <span className={styles.formLabel}>
-                  Photos <span className={styles.required}>*</span>
-                </span>
-                <span className={styles.photoCount}>
-                  {photos.length} / {MAX_PHOTOS}
-                </span>
-              </div>
-              <p className={styles.sectionHint}>
-                The first photo is the cover. JPG, PNG, or WebP · max 10 MB.
-              </p>
-
-              {photos.length === 0 ? (
-                <button
-                  type="button"
-                  className={`${styles.dropzone} ${dragging ? styles.dropzoneActive : ""}`}
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    setDragging(true);
-                  }}
-                  onDragLeave={() => setDragging(false)}
-                  onDrop={handleDrop}
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <div className={styles.dropzoneEmpty}>
-                    <Upload size={22} strokeWidth={1.5} />
-                    <span>Drag and drop or click to upload</span>
-                    <span className={styles.dropzoneHint}>
-                      Add up to {MAX_PHOTOS} photos
-                    </span>
-                  </div>
-                </button>
-              ) : (
-                // biome-ignore lint/a11y/noStaticElementInteractions: drop target
-                <div
-                  className={styles.photoStrip}
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    setDragging(true);
-                  }}
-                  onDragLeave={() => setDragging(false)}
-                  onDrop={handleDrop}
-                >
-                  {photos.map((photo, i) => (
-                    <div key={photo.id} className={styles.photoThumb}>
-                      {/* biome-ignore lint/performance/noImgElement: local file preview */}
-                      <img
-                        src={photo.preview}
-                        alt={i === 0 ? "Cover preview" : "Dish photo"}
-                        className={styles.photoImg}
-                      />
-                      {i === 0 && (
-                        <span className={styles.coverTag}>Cover</span>
-                      )}
-                      <button
-                        type="button"
-                        className={styles.photoRemove}
-                        onClick={() => removePhoto(photo.id)}
-                        aria-label="Remove photo"
-                      >
-                        <X size={11} />
-                      </button>
-                    </div>
-                  ))}
-                  {photos.length < MAX_PHOTOS && (
+            {photos.length === 0 ? (
+              <button
+                type="button"
+                className={`${styles.dropzone} ${dragging ? styles.dropzoneActive : ""}`}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragging(true);
+                }}
+                onDragLeave={() => setDragging(false)}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <div className={styles.dropzoneEmpty}>
+                  <Upload size={22} strokeWidth={1.5} />
+                  <span>Drag and drop or click to upload</span>
+                  <span className={styles.dropzoneHint}>
+                    Add up to {MAX_PHOTOS} photos
+                  </span>
+                </div>
+              </button>
+            ) : (
+              // biome-ignore lint/a11y/noStaticElementInteractions: drop target
+              <div
+                className={styles.photoStrip}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragging(true);
+                }}
+                onDragLeave={() => setDragging(false)}
+                onDrop={handleDrop}
+              >
+                {photos.map((photo, i) => (
+                  <div key={photo.id} className={styles.photoThumb}>
+                    {/* biome-ignore lint/performance/noImgElement: local file preview */}
+                    <img
+                      src={photo.preview}
+                      alt={i === 0 ? "Cover preview" : "Dish photo"}
+                      className={styles.photoImg}
+                    />
+                    {i === 0 && <span className={styles.coverTag}>Cover</span>}
                     <button
                       type="button"
-                      className={styles.photoAdd}
-                      onClick={() => fileInputRef.current?.click()}
+                      className={styles.photoRemove}
+                      onClick={() => removePhoto(photo.id)}
+                      aria-label="Remove photo"
                     >
-                      <ImagePlus size={15} className={styles.photoAddIcon} />
-                      <span>Add photo</span>
+                      <X size={11} />
                     </button>
-                  )}
-                </div>
-              )}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept={DISH_PHOTO_ACCEPT}
-                multiple
-                hidden
-                onChange={handlePhotoSelect}
-              />
-            </div>
-
-            {nextRequirement && (
-              <div className={styles.requirementsWrap}>
-                <p className={styles.requirementsHeading}>To continue:</p>
-                <RequirementsChecklist items={[nextRequirement]} />
+                  </div>
+                ))}
+                {photos.length < MAX_PHOTOS && (
+                  <button
+                    type="button"
+                    className={styles.photoAdd}
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <ImagePlus size={15} className={styles.photoAddIcon} />
+                    <span>Add photo</span>
+                  </button>
+                )}
               </div>
             )}
-
-            <div className={styles.formActions}>
-              <button
-                type="button"
-                className={styles.secondaryBtn}
-                onClick={handleCancel}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                className={styles.saveBtn}
-                disabled={!stepComplete}
-                onClick={handleStep1Continue}
-              >
-                Continue
-              </button>
-            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept={DISH_PHOTO_ACCEPT}
+              multiple
+              hidden
+              onChange={handlePhotoSelect}
+            />
           </div>
-        )}
 
-        {step === 2 && (
-          <div className={styles.step2}>
-            <section className={styles.section}>
-              <h3 className={styles.sectionTitle}>
-                Ingredients <span className={styles.required}>*</span>
-              </h3>
-              <p className={styles.sectionHint}>
-                Add at least one ingredient. Names only, no amounts.
-              </p>
+          <section className={styles.section}>
+            <h3 className={styles.sectionTitle}>
+              Ingredients <span className={styles.required}>*</span>
+            </h3>
+            <p className={styles.sectionHint}>
+              Add at least one ingredient to publish. Names only, no amounts.
+            </p>
+            <IngredientsInput
+              ingredients={ingredients}
+              onChange={setIngredients}
+            />
+          </section>
 
-              <IngredientsInput
-                ingredients={ingredients}
-                onChange={setIngredients}
-              />
-            </section>
-
-            <section className={styles.section}>
-              <h3 className={styles.sectionTitle}>Nutrition per serving</h3>
-              <div className={styles.nutritionGrid}>
-                <div className={styles.formGroup}>
-                  <label htmlFor="f-calories" className={styles.formLabel}>
-                    Calories
-                  </label>
-                  <input
-                    id="f-calories"
-                    type="number"
-                    min={0}
-                    className={styles.formInput}
-                    value={nutrition.calories}
-                    onChange={(e) =>
-                      setNutrition((n) => ({ ...n, calories: e.target.value }))
-                    }
-                  />
-                </div>
-                <div className={styles.formGroup}>
-                  <label htmlFor="f-protein" className={styles.formLabel}>
-                    Protein (g)
-                  </label>
-                  <input
-                    id="f-protein"
-                    type="number"
-                    min={0}
-                    className={styles.formInput}
-                    value={nutrition.protein}
-                    onChange={(e) =>
-                      setNutrition((n) => ({ ...n, protein: e.target.value }))
-                    }
-                  />
-                </div>
-                <div className={styles.formGroup}>
-                  <label htmlFor="f-carbs" className={styles.formLabel}>
-                    Carbs (g)
-                  </label>
-                  <input
-                    id="f-carbs"
-                    type="number"
-                    min={0}
-                    className={styles.formInput}
-                    value={nutrition.carbs}
-                    onChange={(e) =>
-                      setNutrition((n) => ({ ...n, carbs: e.target.value }))
-                    }
-                  />
-                </div>
-                <div className={styles.formGroup}>
-                  <label htmlFor="f-fat" className={styles.formLabel}>
-                    Fat (g)
-                  </label>
-                  <input
-                    id="f-fat"
-                    type="number"
-                    min={0}
-                    className={styles.formInput}
-                    value={nutrition.fat}
-                    onChange={(e) =>
-                      setNutrition((n) => ({ ...n, fat: e.target.value }))
-                    }
-                  />
-                </div>
+          <section className={styles.section}>
+            <h3 className={styles.sectionTitle}>Nutrition per serving</h3>
+            <div className={styles.nutritionGrid}>
+              <div className={styles.formGroup}>
+                <label htmlFor="f-calories" className={styles.formLabel}>
+                  Calories
+                </label>
+                <input
+                  id="f-calories"
+                  type="number"
+                  min={0}
+                  className={styles.formInput}
+                  value={nutrition.calories}
+                  onChange={(e) =>
+                    setNutrition((n) => ({ ...n, calories: e.target.value }))
+                  }
+                />
               </div>
+              <div className={styles.formGroup}>
+                <label htmlFor="f-protein" className={styles.formLabel}>
+                  Protein (g)
+                </label>
+                <input
+                  id="f-protein"
+                  type="number"
+                  min={0}
+                  className={styles.formInput}
+                  value={nutrition.protein}
+                  onChange={(e) =>
+                    setNutrition((n) => ({ ...n, protein: e.target.value }))
+                  }
+                />
+              </div>
+              <div className={styles.formGroup}>
+                <label htmlFor="f-carbs" className={styles.formLabel}>
+                  Carbs (g)
+                </label>
+                <input
+                  id="f-carbs"
+                  type="number"
+                  min={0}
+                  className={styles.formInput}
+                  value={nutrition.carbs}
+                  onChange={(e) =>
+                    setNutrition((n) => ({ ...n, carbs: e.target.value }))
+                  }
+                />
+              </div>
+              <div className={styles.formGroup}>
+                <label htmlFor="f-fat" className={styles.formLabel}>
+                  Fat (g)
+                </label>
+                <input
+                  id="f-fat"
+                  type="number"
+                  min={0}
+                  className={styles.formInput}
+                  value={nutrition.fat}
+                  onChange={(e) =>
+                    setNutrition((n) => ({ ...n, fat: e.target.value }))
+                  }
+                />
+              </div>
+            </div>
 
-              <div className={styles.allergensWrap}>
-                <span className={styles.formLabel}>
-                  Allergens <span className={styles.required}>*</span>
-                </span>
-                <div className={styles.allergenList}>
-                  {ALLERGENS.map((allergen) => (
-                    <label
-                      key={allergen}
-                      htmlFor={`allergen-${allergen}`}
-                      className={styles.allergenLabel}
-                    >
-                      <input
-                        id={`allergen-${allergen}`}
-                        type="checkbox"
-                        className={styles.allergenCheck}
-                        checked={allergens.includes(allergen)}
-                        disabled={noneApplies}
-                        onChange={() => toggleAllergen(allergen)}
-                      />
-                      {allergen}
-                    </label>
-                  ))}
+            <div className={styles.allergensWrap}>
+              <span className={styles.formLabel}>
+                Allergens <span className={styles.required}>*</span>
+              </span>
+              <div className={styles.allergenList}>
+                {ALLERGENS.map((allergen) => (
                   <label
-                    htmlFor="allergen-none"
+                    key={allergen}
+                    htmlFor={`allergen-${allergen}`}
                     className={styles.allergenLabel}
                   >
                     <input
-                      id="allergen-none"
+                      id={`allergen-${allergen}`}
                       type="checkbox"
                       className={styles.allergenCheck}
-                      checked={noneApplies}
-                      onChange={handleNoneApplies}
+                      checked={allergens.includes(allergen)}
+                      disabled={noneApplies}
+                      onChange={() => toggleAllergen(allergen)}
                     />
-                    None of these apply
+                    {allergen}
                   </label>
-                </div>
+                ))}
+                <label htmlFor="allergen-none" className={styles.allergenLabel}>
+                  <input
+                    id="allergen-none"
+                    type="checkbox"
+                    className={styles.allergenCheck}
+                    checked={noneApplies}
+                    onChange={handleNoneApplies}
+                  />
+                  None of these apply
+                </label>
               </div>
-            </section>
-
-            {nextRequirement && (
-              <div className={styles.requirementsWrap}>
-                <p className={styles.requirementsHeading}>To continue:</p>
-                <RequirementsChecklist items={[nextRequirement]} />
-              </div>
-            )}
-
-            <div className={styles.formActions}>
-              <button
-                type="button"
-                className={styles.secondaryBtn}
-                onClick={() => setStep(1)}
-                disabled={submitting}
-              >
-                Back to details
-              </button>
-              <button
-                type="button"
-                className={styles.secondaryBtn}
-                onClick={handleCancel}
-                disabled={submitting}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                className={styles.saveBtn}
-                disabled={!stepComplete || submitting}
-                onClick={handleCreate}
-              >
-                {submitting ? "Creating…" : "Create meal"}
-              </button>
             </div>
+          </section>
+
+          {(nextPublishRequirement || (draftHint && nextDraftRequirement)) && (
+            <div className={styles.requirementsWrap}>
+              <p className={styles.requirementsHeading}>
+                {draftHint && nextDraftRequirement
+                  ? "To save draft:"
+                  : "To publish:"}
+              </p>
+              <RequirementsChecklist
+                items={
+                  draftHint && nextDraftRequirement
+                    ? [nextDraftRequirement]
+                    : nextPublishRequirement
+                      ? [nextPublishRequirement]
+                      : []
+                }
+              />
+            </div>
+          )}
+
+          <div className={styles.formActions}>
+            <button
+              type="button"
+              className={styles.secondaryBtn}
+              onClick={handleCancel}
+              disabled={submitting}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className={styles.secondaryBtn}
+              disabled={submitting}
+              onClick={handleSaveDraft}
+            >
+              {submitting ? "Saving…" : "Save draft"}
+            </button>
+            <button
+              type="button"
+              className={styles.saveBtn}
+              disabled={!publishComplete || submitting}
+              onClick={handleCreate}
+            >
+              {submitting ? "Creating…" : "Create meal"}
+            </button>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
